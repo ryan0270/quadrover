@@ -61,7 +61,7 @@ set (H ${H}
 	./cpp/QuadLogger.h
 )
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -fno-rtti -fno-exceptions")
 
 # set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 # Why doesn't this work?
