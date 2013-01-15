@@ -1,4 +1,5 @@
 #include "VisionProcessor.h"
+#include "Matcher.h"
 
 using namespace toadlet;
 //using namespace cv;
@@ -99,6 +100,7 @@ VisionProcessor::VisionProcessor()
 	mUseIbvs = false;
 	mFirstImageProcessed = false;
 	mLastImage.create(240, 320, CV_8UC3); mLastImage = cv::Scalar(0);
+	matcher = new Matcher("FAST_GRID","BRIEF");
 }
 
 void VisionProcessor::shutdown()
@@ -164,7 +166,11 @@ void VisionProcessor::processImage()
 {
 	System sys;
 	sys.msleep(100);
+
 	// do image processing here
+	if(matcher != NULL)
+		matcher->Track(mLastImage,true);	
+
 	Log::alert("Doing image processing");
 }
 

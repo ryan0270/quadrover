@@ -14,6 +14,7 @@ using toadlet::egg::String;
 
 #include "QuadLogger.h"
 #include "Common.h"
+#include "Matcher.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -96,6 +97,8 @@ class VisionProcessor : public toadlet::egg::Thread
 		toadlet::egg::Mutex mMutex_data, mMutex_image;
 
 		Collection<VisionProcessorListener*> mListeners;
+
+		Matcher *matcher;
 
 		void run();
 };
