@@ -7,8 +7,8 @@
 
 using namespace std;
 
-namespace HVISION
-{
+namespace ICSL { 
+namespace Quadrotor {
 class BRIEF
 {
 public:
@@ -231,8 +231,8 @@ void generateTestPoints()
 
   const int max_v = m_patch_size / 2;
 
-  std::default_random_engine generator;  
-std::normal_distribution<int> normal(g_mean, g_sigma);
+  mt19937 generator;  // a core engine class
+  normal_distribution<int> normal(g_mean, g_sigma);
 
   for(int i = 0; i < m_bit_length; ++i)
   {
@@ -292,5 +292,5 @@ protected:
 
 };
 }// end namespace bracket
-
+}
 #endif

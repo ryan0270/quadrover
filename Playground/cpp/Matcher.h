@@ -24,6 +24,7 @@ class Feature
 public:
 	cv::KeyPoint keypoint;
 	cv::Mat descriptor;
+	BRIEF::briefbit brief_descriptor;
 
         /// Scoring related variables
         float scoreFirst, scoreSecond;
@@ -46,6 +47,7 @@ public:
                 scoreSecond_back = feat.scoreSecond_back;
                 bestPos = feat.bestPos;
                 bestPos_back = feat.bestPos_back;
+		brief_descriptor = feat.brief_descriptor;
         }
 
         void ResetScore(void)
