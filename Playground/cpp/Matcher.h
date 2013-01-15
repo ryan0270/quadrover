@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <iostream>
 
+#include "BRIEF.h"
+
 namespace ICSL{
 namespace Quadrotor{
 
