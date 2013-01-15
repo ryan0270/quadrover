@@ -67,11 +67,9 @@ void ImageGrabber::run()
 	cv::Mat newImg;
 	mFinished = false;
 	Array2D<double> lastAtt(3,1,0.0);
-	Time imgAcqTime;
 	while(mRunning)
 	{          	
 		cap.grab();
-		double dt = imgAcqTime.getElapsedTimeMS();
 		cap.retrieve(newImg);
 		mMutex_image.lock();
 		newImg.copyTo(mLastImage);
@@ -145,14 +143,13 @@ void VisionProcessor::run()
 		mMutex_image.lock();
 		mImageGrabber.markBottleneck(false);
 
-		Time procStart;
 		mImageGrabber.copyImage(&mLastImage);
 
 		processImage();
 		mMutex_image.unlock();
-		mImgProcTimeUS = procStart.getElapsedTimeUS();
+		mImgProcTimeUS = 9999999;
 		{
-			String str = String()+" "+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
+			String str = String()+" "+999999 + "\t-600\t" + mImgProcTimeUS;
 			mQuadLogger->addLine(str,CAM_RESULTS);
 		}
 

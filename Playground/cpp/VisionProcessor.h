@@ -14,7 +14,6 @@ using toadlet::egg::String;
 
 #include "QuadLogger.h"
 #include "Common.h"
-#include "Time.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -35,7 +34,7 @@ class ImageGrabber : public toadlet::egg::Thread
 		TNT::Array2D<double> getImageAtt();
 		TNT::Array2D<double> getRotVel();
 
-		void setStartTime(Time t){mStartTime = t;}
+//		void setStartTime(Time t){mStartTime = t;}
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
 	protected:
@@ -44,7 +43,7 @@ class ImageGrabber : public toadlet::egg::Thread
 		cv::Mat mLastImage;
 		toadlet::egg::Mutex mMutex_image;
 
-		Time mStartTime;
+//		Time mStartTime;
 		QuadLogger *mQuadLogger;
 
 		void run();
@@ -70,7 +69,7 @@ class VisionProcessor : public toadlet::egg::Thread
 		void processImage();
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
-		void setStartTime(Time t){mStartTime = t; mImageGrabber.setStartTime(t);}
+//		void setStartTime(Time t){mStartTime = t; mImageGrabber.setStartTime(t);}
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log; mImageGrabber.setQuadLogger(log);}
 
 		void enableIbvs(bool enable);
@@ -86,7 +85,7 @@ class VisionProcessor : public toadlet::egg::Thread
 		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
 		cv::Mat	mLastImage;
-		Time mStartTime, mLastImgFoundTime;
+//		Time mStartTime, mLastImgFoundTime;
 
 		toadlet::uint64 mImgProcTimeUS;
 

@@ -17,7 +17,6 @@ using toadlet::egg::String;
 #include "TNT_Utils.h"
 #include "constants.h"
 #include "VisionProcessor.h"
-#include "Time.h"
 #include "QuadLogger.h"
 
 namespace ICSL {
@@ -39,7 +38,7 @@ public:
 	
 	// these functions are primarily for the jni interface
 	void copyImageData(cv::Mat *m);
-	int getImageProcTimeMS(){ return mVisionProcessor.getImageProcTimeMS();}
+	int getImageProcTimeMS(){ return -1; } // return mVisionProcessor.getImageProcTimeMS();}
 
 protected:
 	bool mRunning, mDone;
@@ -51,8 +50,6 @@ protected:
 	QuadLogger mQuadLogger;
 
 	TNT::Array2D<int> getCpuUsage();
-
-	Time mStartTime;
 
 	int mNumCpuCores;
 }; // class Playground

@@ -57,7 +57,6 @@ set (SRC ${SRC}
 # Headers
 set (H ${H}
 	./cpp/Playground.h
-	./cpp/Time.h
 	./cpp/VisionProcessor.h
 	./cpp/QuadLogger.h
 )
