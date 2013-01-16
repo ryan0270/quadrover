@@ -1,6 +1,7 @@
 #ifndef VISIONPROCESSOR_H
 #define VISIONPROCESSOR_H
 #include <sched.h>
+#include <math.h>
 
 #include <toadlet/egg.h>
 using toadlet::egg::String;
@@ -9,9 +10,12 @@ using toadlet::egg::String;
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/video/tracking.hpp>
 
 #include "TNT/tnt.h"
+#include "TNT_Utils.h"
 
+#include "ICSL/constants.h"
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Observer_Angular.h"
@@ -50,7 +54,7 @@ class ImageGrabber : public toadlet::egg::Thread
 		bool mNewImageReady, mIsBottleneck;
 		bool mRunning, mFinished;
 		bool mImgConversionDone;
-		cv::Mat mLastImage, mLastImageHSV, mLastImageGray;
+		cv::Mat mCurImage, mCurImageHSV, mCurImageGray;
 		toadlet::egg::Mutex mMutex_image, mMutex_data;
 		TNT::Array2D<double> mImgAtt, mImgRotVel;
 
@@ -131,7 +135,8 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 		bool mUseIbvs;
 		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
-		cv::Mat	mLastImage, mLastImageGray, mTempSum, mTempColor;
+		cv::Mat	mCurImage, mCurImageGray, mTempSum, mTempColor;
+		cv::Mat mLastImageGray;
 		cv::Mat mChanH, mChanS, mChanV, mTempS, mTempV;
 		toadlet::egg::Collection<cv::Point2f> mBoxCenters;
 		vector<cv::KeyPoint> mTempKeyPoints;
@@ -144,7 +149,7 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 		int mFiltAreaMin, mFiltAreaMax;
 		int mImgViewType;
 //		TNT::Array2D<double> mImgMoment, mDesImgMoment, mDesLinearVel;
-		Time mStartTime, mLastImgFoundTime;
+		Time mStartTime, mLastImgFoundTime, mLastProcessTime;
 
 		toadlet::uint32 mImgProcTimeUS;
 
