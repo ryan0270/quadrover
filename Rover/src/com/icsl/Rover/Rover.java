@@ -1,4 +1,4 @@
-package com.icsl.QuadPhone;
+package com.icsl.Rover;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -27,10 +27,10 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
-public class QuadPhone extends Activity implements Runnable
+public class Rover extends Activity implements Runnable
 {
-	public final static String EXTRA_MESSAGE = "com.icsl.QuadPhone.MESSAGE";
-	private static final String ME = "QuadPhone";
+	public final static String EXTRA_MESSAGE = "com.icsl.Rover.MESSAGE";
+	private static final String ME = "Rover";
 
 	private Mat mImage;
 	private Bitmap mBitmap;
@@ -76,7 +76,7 @@ public class QuadPhone extends Activity implements Runnable
 //						System.loadLibrary("opencv_ts");
 //						System.loadLibrary("opencv_videostab");
 //						System.loadLibrary("toadlet_egg");
-//						System.loadLibrary("QuadPhone");
+//						System.loadLibrary("Rover");
 //						mOpenCVManagerConnected = true;
 //					} break;
 //				default:
@@ -161,7 +161,15 @@ public class QuadPhone extends Activity implements Runnable
 		setNumCpuCores(getNumCores());
 
 		mImage = new Mat(240,320,CvType.CV_8UC3,new Scalar(127));
-		setLogDir(Environment.getExternalStorageDirectory().toString()+"/QuadPhone");
+		File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
+		if(!logDir.exists())
+		{
+			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
+			logDir.mkdir();
+		}
+		else
+			Log.i(ME,"Log dir: "+logDir.toString()+" already exists.");
+		setLogDir(logDir.toString());
 		startLogging();
 
 		populateVisionParams();
@@ -413,7 +421,7 @@ public class QuadPhone extends Activity implements Runnable
 //		System.loadLibrary("opencv_videostab");
 		System.loadLibrary("opencv_java");
 		System.loadLibrary("toadlet_egg");
-		System.loadLibrary("QuadPhone");
+		System.loadLibrary("Rover");
 	}
 }
 

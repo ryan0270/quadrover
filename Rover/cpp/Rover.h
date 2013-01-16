@@ -21,8 +21,6 @@ using toadlet::egg::String;
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
 #include "ICSL/constants.h"
-#include "ICSL/SisoController/SisoControllerPID/src/SisoControllerPID.h"
-#include "ICSL/SystemControllerPID/src/SystemControllerPID.h"
 #include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 #include "Observer_Angular.h"
 #include "QuadLogger.h"
@@ -35,15 +33,15 @@ using toadlet::egg::String;
 
 namespace ICSL {
 namespace Quadrotor {
-class ChadPhone: public Observer_AngularListener,
+class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public VisionProcessorListener,
 //				 public TranslationControllerListener,
 				 public toadlet::egg::Thread
 {
 public:
-	ChadPhone();
-	virtual ~ChadPhone();
+	Rover();
+	virtual ~Rover();
 
 	void initialize();
 	void shutdown();
@@ -72,15 +70,8 @@ public:
 	void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel);
 
 	// for CommManagerListener
-	void onNewCommRateCmd(toadlet::egg::Collection<float> const &data);
-//	void onNewCommMotorOn();
-//	void onNewCommMotorOff();
-	void onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float const yawPID[3]);
-	void onNewCommMotorTrim(int const trim[4]);
 	void onNewCommTimeSync(int time);
 	void onNewCommLogTransfer();
-//	void onNewCommSendMuControl(Collection<tbyte> const &buff);
-//	void onNewCommControlType(uint16 cntlType);
 	void onNewCommLogMask(uint32 mask);
 	void onNewCommLogClear();
 	void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
@@ -94,26 +85,16 @@ public:
 	void onImageLost(){onNewCommUseIbvs(false);}
 
 protected:
-//	Socket::ptr serverSocketArduino, mSocketArduino;
 	CommManager mCommManager;
 	bool mRunCommPC, mRunnerIsDone;
-//	bool mConnectedToArduino;
-//	bool mUseMotors;
 	bool mDoInnerControl, mDoOuterControl;
 	bool mDataIsSending, mImageIsSending;
 
-//	SystemControllerFeedbackLin mPosController;
 	TranslationController mTranslationController;
 	AttitudeThrustController mAttitudeThrustController;
 
 	uint16 mThrottlePC, mThrottleIbvs;
 	TNT::Array2D<double> mDesiredAtt, mDesAngularVelPC, mDesAngularVelIbvs;
-	ICSL::SisoControllerPID mRollPID, mPitchPID, mYawPID;
-	ICSL::SystemControllerPID mController;
-	ICSL::SisoControllerPID mRollPIDIbvs, mPitchPIDIbvs, mYawPIDIbvs;
-	ICSL::SystemControllerPID mControllerIbvs;
-//	ICSL::SystemModelLinear mCntlSys;
-//	int mCurCntlType;
 
 	Observer_Angular mObsvAngular;
 	Observer_Translational mObsvTranslational;
@@ -125,18 +106,12 @@ protected:
 
 	Mutex mMutex_cntl, mMutex_observer, mMutex_vision, mMutex_vicon;
 	
-	int mMotorTrim[4];
 	uint16 mLastMotorVal[4], mLastMotorValIbvs[4];
 	Time mLastInnerLoopCntlTime, mLastOuterLoopCntlTime;
-//	TNT::Array2D<double> mLastGyro, mLastAccel, mLastCompass;
 
 	uint32 mCntlCalcTimeUS;
 
 	void run();
-	void runOuterControlLoop();
-	void runInnerControlLoop();
-	void initControllers();
-//	void initCamera();
 	void transmitDataUDP();
 	void transmitImage();
 
@@ -190,7 +165,7 @@ protected:
 	int mNumCpuCores;
 
 	AAssetManager *mAssetManager;
-}; // class ChadPhone
+}; // class Rover
 
 } // namespace Quadrotor
 } // namespace ICSL
