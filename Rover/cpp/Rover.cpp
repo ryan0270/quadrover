@@ -1,5 +1,4 @@
 #include "Rover.h"
-#include <algorithm>
 
 using namespace std;
 using namespace TNT;
@@ -13,28 +12,6 @@ namespace Quadrotor {
 Rover::Rover() : 
 	mRotViconToQuad(3,3,0.0), 
 	mRotQuadToPhone(3,3,0.0), 
-	mCurFeat(3,1,0.0),
-	mDesFeat(3,1,0.0), 
-	mFeatErrInt(3,1,0.0),
-	mDesCentroid(3,1,0.0), 
-	mGainImg(3,1,0.1),
-	mGainFlow(3,1,0.5),
-	mGainFF(3,1,0.0),
-	mGainFlowInt(3,1,0.0),
-	mGainAngularRateIBVS(3,1,1.0),
-	mTorque2Cmd(3,1,0.0),
-	mRotErr(3,1,0.0),
-	mAttCmdOffset(3,1,0.0),
-	mAttBias(3,1,0.0),
-	mFlow(3,1,0.0),
-	mFlowErrInt(3,1,0.0),
-	mFlowErr_phone(3,1,0.0),
-	mDesFlow(3,1,0.0),
-	mCentroidErrInt(3,1,0.0),
-	mLastImageAtt(3,1,0.0),
-	mLastImageRotVel(3,1,0.0),
-	mCentroid(3,1,0.0),
-	mRotVelSum(3,1,0.0),
 	mRotCamToPhone(3,3,0.0),
 	mRotPhoneToCam(3,3,0.0),
 	mRotViconToPhone(3,3,0.0),
@@ -42,21 +19,8 @@ Rover::Rover() :
 	mCurAngularVel(3,1,0.0)
 {
 	mRunnerIsDone = true;
-	mDoInnerControl = false;
-	mDoOuterControl = false;
 	mDataIsSending = false;
 	mImageIsSending = false;
-
-	mMutex_cntl.unlock();
-	mMutex_vision.unlock();
-	mMutex_observer.unlock();
-//	mConnectedToArduino = false;
-
-	mThrottlePC = 0;
-	mThrottleIbvs = 0;
-	mDesiredAtt = Array2D<double>(3,1,0.0);
-	mDesAngularVelPC = Array2D<double>(3,1,0.0);
-	mDesAngularVelIbvs = Array2D<double>(3,1,0.0);
 
 //	mRotViconToQuad = createRotMat(0, (double)toadlet::egg::math::Math::PI);
 //	mRotQuadToPhone = matmult(createRotMat(2,-0.25*toadlet::egg::math::Math::PI),
@@ -72,52 +36,7 @@ Rover::Rover() :
 	mRotPhoneToCam = transpose(mRotCamToPhone);
 	mRotViconToPhone = matmult(mRotQuadToPhone, mRotViconToQuad);
 
-	mLastMotorVal[0] = mLastMotorVal[1] = mLastMotorVal[2] = mLastMotorVal[3] = 0;
-
-	mCntlCalcTimeUS = 0;
-
-	mUseIbvs = false;
-//	mVisionProcessor.enableIbvs(false);
-	mFirstImageProcessed = false;
-	mIbvsControlReady = false;
-	mBoxCenters.resize(4);
-	mBoxFound.resize(4);
-	for(int i=0; i<4; i++)
-	{
-		mBoxCenters[i] = cv::Point2f(0.0,0.0);
-		mBoxFound[i] = false;
-	}
-
-	mFocalLength = 3.7*320.0/5.76; // (focal length mm)*(img width px)/(ccd width mm)
-	mDesFeat[0][0] = 0;
-	mDesFeat[1][0] = 0;
-	mDesFeat[2][0] = 1;
-	mDesCentroid[0][0] = 0;
-	mDesCentroid[1][0] = 0;
-	mDesCentroid[2][0] = 1;
-
-	mStateVicon = Array2D<double>(12,1,0.0);
-	
-	mGainAngleIBVS = 1;
-	mTorque2Cmd[0][0] = mTorque2Cmd[1][0] = 30;
-	mTorque2Cmd[2][0] = 50;
-
-	mBoxProjections.resize(4);
-	for(int i=0; i<mBoxProjections.size(); i++)
-		mBoxProjections[i] = Array2D<double>(3,1,0.0);
-
-	mHeight = 1;
-	mRho = 1;
-
-	mGainDynamicIBVS = 0.1;
-
-	mRotVelSum_count = 0;
-
-	mThrottleBase = 500;
-
 	mNumCpuCores = 1;
-
-	mAssetManager = NULL;
 }
 
 Rover::~Rover()
@@ -135,13 +54,13 @@ void Rover::initialize()
 	mTranslationController.setStartTime(mStartTime);
 	mTranslationController.setQuadLogger(&mQuadLogger);
 	mTranslationController.initialize();
-	mTranslationController.start();
+//	mTranslationController.start();
 	mCommManager.addListener(&mTranslationController);
 
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
 	mAttitudeThrustController.initialize();
-	mAttitudeThrustController.start();
+//	mAttitudeThrustController.start();
 	mCommManager.addListener(&mAttitudeThrustController);
 	mTranslationController.addListener(&mAttitudeThrustController);
 	mMutex_cntl.unlock();
@@ -160,7 +79,7 @@ void Rover::initialize()
 	mObsvTranslational.setStartTime(mStartTime);
 	mObsvTranslational.setRotViconToPhone(mRotViconToPhone);
 	mObsvTranslational.initialize();
-	mObsvTranslational.start();
+//	mObsvTranslational.start();
 	mObsvTranslational.addListener(&mTranslationController);
 	mObsvAngular.addListener(&mObsvTranslational);
 	mCommManager.addListener(&mObsvTranslational);
@@ -168,9 +87,8 @@ void Rover::initialize()
 
 	mVisionProcessor.setStartTime(mStartTime);
 	mVisionProcessor.setQuadLogger(&mQuadLogger);
-	mVisionProcessor.addListener(this);
 	mVisionProcessor.setAttitudeObserver(&mObsvAngular);
-	mVisionProcessor.start();
+//	mVisionProcessor.start();
 
 	this->start(); // this should spawn a separate thread running the run() function
 
@@ -253,15 +171,6 @@ void Rover::run()
 		}
 
 
-		if(!mUseIbvs)
-		{
-			double alphaThrott = 0.05;
-			mThrottleBase = alphaThrott*mThrottlePC+(1-alphaThrott)*mThrottleBase;
-//			mMutex_observer.lock();
-//			mAttBias = alphaAttBias*mObsvAngular.getCurAttitude()+(1.0-alphaAttBias)*mAttBias;
-//			mMutex_observer.unlock();
-		}
-
 		if(mLastCpuUsageTime.getElapsedTimeMS() > 100)
 		{
 			cpuUsageCur = getCpuUsage();
@@ -322,7 +231,7 @@ void Rover::transmitDataUDP()
 		return;
 	}
 
-	Packet pArduinoStatus, pUseMotors, pState, pDesState, pGyro, pAccel, pComp, pBias, pCntl, pIntMem, pCntlType, pCntlCalcTime;
+	Packet pArduinoStatus, pUseMotors, pState, pDesState, pGyro, pAccel, pComp, pBias, pCntl, pIntMem, pCntlType;
 	Packet pImgProcTime, pUseIbvs;
 	mMutex_cntl.lock();
 	int arduinoStatus;
@@ -377,9 +286,6 @@ void Rover::transmitDataUDP()
 	int cntlType = mTranslationController.getControlType();
 	mMutex_cntl.unlock();
 	pCntlType.dataInt32.push_back(cntlType);
-
-	pCntlCalcTime.type = COMM_CNTL_CALC_TIME;
-	pCntlCalcTime.dataInt32.push_back(mCntlCalcTimeUS);
 
 	pImgProcTime.type = COMM_IMGPROC_TIME;
 	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
@@ -439,7 +345,6 @@ void Rover::transmitDataUDP()
 	pCntl.time = time;
 	pIntMem.time = time;
 	pCntlType.time = time;
-	pCntlCalcTime.time = time;
 	pImgProcTime.time = time;
 	pUseIbvs.time = time;
 
@@ -454,7 +359,6 @@ void Rover::transmitDataUDP()
 	mCommManager.transmitUDP(pCntl);
 	mCommManager.transmitUDP(pIntMem);
 	mCommManager.transmitUDP(pCntlType);
-	mCommManager.transmitUDP(pCntlCalcTime);
 	mCommManager.transmitUDP(pImgProcTime);
 	mCommManager.transmitUDP(pUseIbvs);
 
@@ -479,19 +383,6 @@ void Rover::transmitImage()
 //	params.push_back(CV_IMWRITE_PNG_COMPRESSION);
 //	params.push_back(3);
 
-	if(img.channels() == 3 && mUseIbvs)
-	{
-		// draw desired moment
-		cvtColor(img,img, CV_HSV2BGR);
-
-		cv::Mat alpha(img.size(), CV_8UC4, cv::Scalar(0,0,0,255));
-		cvtColor(alpha,alpha, CV_BGRA2BGR);
-
-		img += alpha;
-
-		alpha.release();
-	}
-
 	// now send it
 	code = 2000;
 	numRows = img.rows;
@@ -510,8 +401,6 @@ void Rover::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double
 	mCurAtt.inject(att);
 	mCurAngularVel.inject(angularVel);
 	mMutex_observer.unlock();
-
-	mDoInnerControl = true;
 }
 
 void Rover::startLogging(){
@@ -607,111 +496,12 @@ void Rover::onNewCommLogClear()
 	Log::alert(String()+"Log cleared");
 }
 
-void Rover::onNewCommStateVicon(Collection<float> const &data)
-{
-	mMutex_vicon.lock();
-	for(int i=0; i<mStateVicon.dim1(); i++)
-		mStateVicon[i][0] = data[i];
-	mMutex_vicon.unlock();
-}
-
-void Rover::onCommConnectionLost()
-{
-	Log::alert("gah");
-	mMutex_cntl.lock();
-	mUseIbvs = false;
-	mFirstImageProcessed = false;
-	mIbvsControlReady = false;
-	mVisionProcessor.enableIbvs(false);
-	for(int i=0; i<3; i++)
-	{
-		mDesiredAtt[i][0] = 0;
-		mDesAngularVelPC[i][0] = 0;
-		mDesAngularVelIbvs[i][0] = 0;
-	}
-	mThrottlePC = 0;
-	mThrottleIbvs = 0;
-
-	mMutex_cntl.unlock();
-}
-
-// gains in the in the order ....
-// image gain [0], [1], [2]
-// flow gain [0], [1], [2]
-// flow int gain [0], [1], [2]
-// att cmd offset [0], [1], [2]
-// angle rate gain [0], [1], [2]
-// angle gain [0]
-void Rover::onNewCommIbvsGains(Collection<float> const &gains)
-{
-	if(gains.size() < 20)
-	{
-		Log::alert("WARNING: Not enough gains sent for IBVS.");
-		return;
-	}
-	mMutex_vision.lock();
-	for(int i=0; i<3; i++)
-	{
-		mGainImg[i][0] = gains[i];
-		mGainFlow[i][0] = gains[i+3];
-		mGainFlowInt[i][0] = gains[i+6];
-		mGainFF[i][0] = gains[i+9];
-		mAttCmdOffset[i][0] = gains[i+12];
-		mGainAngularRateIBVS[i][0] = gains[i+15];
-	}
-	mGainAngleIBVS = gains[18];
-	mGainDynamicIBVS = gains[19];
-	
-	mMutex_vision.unlock();
-
-	{
-		String str = "Received gains:\n";
-		for(int i=0; i<gains.size(); i++)
-		{
-			if(i%3==0)
-				str = str+"\n";
-			str = str+gains[i]+"\t";
-		}
-		Log::alert(str);
-	}
-}
-
-void Rover::onNewCommUseIbvs(bool useIbvs)
-{
-	mUseIbvs = useIbvs;
-	mVisionProcessor.enableIbvs(useIbvs);
-	if(useIbvs)
-		mLastOuterLoopCntlTime.setTime();
-	mFirstImageProcessed = false;
-	mIbvsControlReady = false;
-}
-
-void Rover::onNewCommDesiredImageMoment(Collection<float> const &data)
-{
-}
-
 void Rover::copyImageData(cv::Mat *m)
 {
 	if(!mRunCommPC) // use this as an indicator that we are shutting down
 		return;
 
 	mVisionProcessor.getLastImage(m);
-
-	if(m->channels() == 3)
-	{
-		// draw desired moment
-		cvtColor(*m,*m, CV_HSV2BGR);
-
-		cv::Mat alpha(m->size(), CV_8UC4, cv::Scalar(0,0,0,255));
-		cvtColor(alpha,alpha, CV_BGRA2BGR);
-
-		*m += alpha;
-
-		alpha.release();
-	}
-	else if(m->channels() == 1)
-		cvtColor(*m,*m,CV_GRAY2BGR);
-
 }
 
 // assume p is sized for 16 elements
@@ -730,61 +520,6 @@ void Rover::setVisionParams(Collection<int> p)
 	mMutex_vision.unlock();
 }
 
-void Rover::onImageProcessed(Collection<cv::Point2f> const &boxCenters, Collection<bool> const &boxFound, Array2D<double> const &imgAtt, Array2D<double> const &rotVel)
-{
-	mMutex_vision.lock();
-	mLastImageAtt.inject(imgAtt);
-	mLastImageRotVel.inject(rotVel);
-	if(mBoxCenters.size() != boxCenters.size())
-		mBoxCenters.resize(boxCenters.size());
-
-	for(int i=0; i<mBoxCenters.size(); i++)
-	{
-		mBoxCenters[i].x = boxCenters[i].x-160;
-		mBoxCenters[i].y = boxCenters[i].y-120;
-	}
-
-	if(mBoxFound.size() != boxFound.size())
-		mBoxFound.resize(boxFound.size());
-	for(int i=0; i<mBoxFound.size(); i++)
-		mBoxFound[i] = boxFound[i];
-
-	if(!mFirstImageProcessed)
-	{
-		Collection<Array2D<double> > boxProjections;
-		Array2D<double> centroid(3,1,0.0);
-		float avgLength = 0;
-		for(int i=0; i<mBoxCenters.size(); i++)
-		{
-			Array2D<double> proj(3,1);
-			double fov = 75.0/180.0*PI;
-			double scale = tan(fov/2.0)/160.0;
-			proj[0][0] = scale*mBoxCenters[i].x;
-			proj[1][0] = scale*mBoxCenters[i].y;
-			proj[2][0] = 1;
-			proj = 1.0/norm2(proj)*proj;
-			centroid += proj;
-		}
-
-		// assume we always want the desired centroid to point down
-		mDesCentroid[0][0] = 0;
-		mDesCentroid[1][0] = 0;
-		mDesCentroid[2][0] = norm2(centroid); // set the target "height" to the current "height"
-		/////////////////////////// HACK //////////////////////
-//		mDesCentroid[2][0] = 3.8;
-		/////////////////////////// HACK //////////////////////
-
-		{
-			String str = "mDesCentroid: \t";
-			for(int i=0; i<mDesCentroid.dim1(); i++)
-				str = str+mDesCentroid[i][0]+"\t";
-			Log::alert(str);
-		}
-		mFirstImageProcessed = true;
-	}
-	mMutex_vision.unlock();
-}
-
 Array2D<double> Rover::getGyroValue()
 {
 	Array2D<double> temp;
@@ -792,7 +527,7 @@ Array2D<double> Rover::getGyroValue()
 	if(mObsvAngular.doingBurnIn())
 		temp = Array2D<double>(3,1,0.0);
 	else
-		temp = mObsvAngular.getLastGyro().copy();
+		temp = mObsvAngular.getLastGyro();
 	mMutex_observer.unlock();
 	return temp;
 }

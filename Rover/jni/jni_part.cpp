@@ -26,15 +26,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_onJNIStart(JNIEnv* env, jobject
 		rover = NULL;
 		rover = new ICSL::Quadrotor::Rover();
 	}
-}
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setAssetManager(JNIEnv* env, jobject thiz, jobject assetManager)
-{
-	if(rover == NULL)
-		return;
-
-	AAssetManager *mgr = AAssetManager_fromJava(env, assetManager);
-	rover->setAssetManager(mgr);
 	rover->initialize();
 }
 

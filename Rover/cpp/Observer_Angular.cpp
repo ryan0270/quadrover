@@ -44,7 +44,6 @@ Observer_Angular::Observer_Angular() :
 	mAccelSensor = NULL;
 	mGyroSensor = NULL;
 	mMagSensor = NULL;
-	mRotationSensor = NULL;
 
 	
 	mAccelDirNom[2][0] = 1; // accel is the opposite direction as gravity
@@ -78,15 +77,15 @@ void Observer_Angular::initialize()
 		ASensorEventQueue_enableSensor(mSensorEventQueue, mAccelSensor);
 		ASensorEventQueue_setEventRate(mSensorEventQueue, mAccelSensor, 10*1000); // this is the best it actually achieves
 	}
-	mGyroSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_GYROSCOPE);
-	if(mGyroSensor != NULL)
-	{
-		const char* name = ASensor_getName(mGyroSensor);
-		const char* vendor = ASensor_getVendor(mGyroSensor);
-		Log::alert(String()+"Gyro sensor:\n\t"+name+"\n\t"+vendor);
-		ASensorEventQueue_enableSensor(mSensorEventQueue, mGyroSensor);
-		ASensorEventQueue_setEventRate(mSensorEventQueue, mGyroSensor, 5*1000);
-	}
+  mGyroSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_GYROSCOPE);
+  if(mGyroSensor != NULL)
+  {
+  	const char* name = ASensor_getName(mGyroSensor);
+  	const char* vendor = ASensor_getVendor(mGyroSensor);
+  	Log::alert(String()+"Gyro sensor:\n\t"+name+"\n\t"+vendor);
+  	ASensorEventQueue_enableSensor(mSensorEventQueue, mGyroSensor);
+  	ASensorEventQueue_setEventRate(mSensorEventQueue, mGyroSensor, 5*1000);
+  }
 	mMagSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_MAGNETIC_FIELD);
 	if(mMagSensor != NULL)
 	{
@@ -95,17 +94,6 @@ void Observer_Angular::initialize()
 		Log::alert(String()+"Mag sensor:\n\t"+name+"\n\t"+vendor);
 		ASensorEventQueue_enableSensor(mSensorEventQueue, mMagSensor);
 		ASensorEventQueue_setEventRate(mSensorEventQueue, mMagSensor, 10*1000); // this is the best it actually achieves
-	}
-
-	const int ASENSOR_TYPE_ROTATION_VECTOR = 11; // not defined in NDK Sensor.h
-	mRotationSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_ROTATION_VECTOR);
-	if(mRotationSensor != NULL)
-	{
-		const char* name = ASensor_getName(mRotationSensor);
-		const char* vendor = ASensor_getVendor(mRotationSensor);
-		Log::alert(String()+"Rotation sensor:\n\t"+name+"\n\t"+vendor);
-		ASensorEventQueue_enableSensor(mSensorEventQueue, mRotationSensor);
-		ASensorEventQueue_setEventRate(mSensorEventQueue, mRotationSensor, 10*1000);
 	}
 
 //	// list out all available sensors
@@ -144,11 +132,8 @@ Log::alert("------------------------- Observer_Angular shutdown 3 --------------
 Log::alert("------------------------- Observer_Angular shutdown 4 --------------------------------------------------");
 	if(mGyroSensor != NULL)
 		ASensorEventQueue_disableSensor(mSensorEventQueue, mGyroSensor);
-Log::alert("------------------------- Observer_Angular shutdown 5 --------------------------------------------------");
-	if(mRotationSensor != NULL)
-		ASensorEventQueue_disableSensor(mSensorEventQueue, mRotationSensor);
 
-Log::alert("------------------------- Observer_Angular shutdown 6 --------------------------------------------------");
+Log::alert("------------------------- Observer_Angular shutdown 5 --------------------------------------------------");
 	if(mSensorManager != NULL && mSensorEventQueue != NULL)
 		ASensorManager_destroyEventQueue(mSensorManager, mSensorEventQueue);
 
@@ -301,33 +286,6 @@ void Observer_Angular::run()
 //						}
 						haveNewMagnometer = true;
 						mMutex_all.unlock();
-					}
-					break;
-//				case ASENSOR_TYPE_ROTATION_VECTOR:
-				case 11: // ASENSOR_TYPE_ROTATION_VECTOR not defined in Sensor.h
-					{
-//						// ignore this stuff since is really inaccurate for the quadrotor
-//						double q0 = event.data[3]; // Android defines this differently than normal
-//						double q1 = event.data[0];
-//						double q2 = event.data[1];
-//						double q3 = event.data[2];
-//						double roll = atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2));
-//						double pitch = asin(2*(q0*q2-q3*q1));
-//						double yaw = atan2(2*(q0*q3+q1*q2),1-2*(q2*q2+q3*q3));
-//
-//						String str = String()+" "+mStartTime.getElapsedTimeMS()+"\t11\t";
-//						str = str+roll+"\t"+pitch+"\t"+yaw;
-//						mQuadLogger->addLine(str,OBSV_UPDATE);
-//
-//						// TODO: make this efficient
-//						Array2D<double> R0 = createRotMat(0, roll);
-//						Array2D<double> R1 = createRotMat(1, pitch);
-//						Array2D<double> R2 = createRotMat(2, yaw);
-//						mCurRotMat = matmult(R2, matmult(R1, R0));
-//
-//						mCurAttitude[0][0] = roll;
-//						mCurAttitude[1][0] = pitch;
-//						mCurAttitude[2][0] = yaw;
 					}
 					break;
 				default:

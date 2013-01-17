@@ -22,7 +22,6 @@ ImageGrabber::ImageGrabber() :
 	mImgConversionDone= false;
 
 	mCurImage.create(240, 320, CV_8UC3); mCurImage = cv::Scalar(0);
-	mCurImageHSV.create(240, 320, CV_8UC3); mCurImageHSV = cv::Scalar(0);
 	mCurImageGray.create(240, 320, CV_8UC1); mCurImageGray = cv::Scalar(0);
 
 	mAttObserver = NULL;
@@ -32,14 +31,6 @@ void ImageGrabber::copyImage(cv::Mat *dstImage)
 {
 	mMutex_image.lock();
 	mCurImage.copyTo(*dstImage);
-	mNewImageReady = false;
-	mMutex_image.unlock();
-}
-
-void ImageGrabber::copyImageHSV(cv::Mat *dstImage)
-{
-	mMutex_image.lock();
-	mCurImageHSV.copyTo(*dstImage);
 	mNewImageReady = false;
 	mMutex_image.unlock();
 }
@@ -113,12 +104,12 @@ void ImageGrabber::run()
 		mMutex_image.lock();
 		newImg.copyTo(mCurImage);
 		mImgConversionDone = false;
-		if(!mIsBottleneck)
-		{
-			cvtColor(newImg, mCurImageHSV, CV_BGR2HSV);
+//		if(!mIsBottleneck)
+//		{
+//			cvtColor(newImg, mCurImageHSV, CV_BGR2HSV);
 			cvtColor(newImg, mCurImageGray, CV_BGR2GRAY);
 			mImgConversionDone = true;
-		}
+//		}
 		mMutex_image.unlock();
 		mNewImageReady = true;
 
@@ -257,19 +248,18 @@ void VisionProcessor::run()
 		rotVel.inject(mImageGrabber.getRotVel());
 
 		Time procStart;
-		if(mImageGrabber.imageConversionDone())
-		{
-			mImageGrabber.copyImageHSV(&mCurImage);
+		mImageGrabber.copyImage(&mCurImage);
+//		if(mImageGrabber.imageConversionDone())
+//		{
 			mImageGrabber.copyImageGray(&mCurImageGray);
-		}
-		else
-		{
-			mImageGrabber.copyImage(&mCurImage);
-			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
-			cvtColor(mCurImage, mCurImage, CV_BGR2HSV);
-		}
+//		}
+//		else
+//		{
+//			mImageGrabber.copyImage(&mCurImage);
+//			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
+//		}
 
-//		if(mUseIbvs || mImgViewType == 1)
+		if(mUseIbvs || mImgViewType == 1)
 			processImage(imgAtt, rotVel);
 		mMutex_image.unlock();
 		mImgProcTimeUS = procStart.getElapsedTimeUS();

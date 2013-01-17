@@ -153,12 +153,12 @@ cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
 %%
 if ~isempty(cpuUsage)
-	figure(2000); %set(gcf,'Name','Antibanding off, focus video, autograb, 2.4.3.2');
-	plot(cpuUsageTime,cpuUsage');
+	figure(2000); set(gcf,'Name','sensors')
+	plot(cpuUsageTime,cpuUsage(1,:)');
 	xlabel('Time [s]');
 	ylabel('Usage ratio');
 	legend('total','cpu0','cpu1','cpu2','cpu2')
-% 	axis([0 20 0 0.5])
+	axis([0 20 0 0.5])
 end
 
 return
