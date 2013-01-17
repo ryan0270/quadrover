@@ -31,7 +31,6 @@ class ImageGrabber : public toadlet::egg::Thread
 		virtual ~ImageGrabber(){};
 
 		void copyImage(cv::Mat *dstImage);
-		void copyImageHSV(cv::Mat *dstImage);
 		void copyImageGray(cv::Mat *dstImage);
 
 		void shutdown();
@@ -54,7 +53,7 @@ class ImageGrabber : public toadlet::egg::Thread
 		bool mNewImageReady, mIsBottleneck;
 		bool mRunning, mFinished;
 		bool mImgConversionDone;
-		cv::Mat mCurImage, mCurImageHSV, mCurImageGray;
+		cv::Mat mCurImage, mCurImageGray;
 		toadlet::egg::Mutex mMutex_image, mMutex_data;
 		TNT::Array2D<double> mImgAtt, mImgRotVel;
 

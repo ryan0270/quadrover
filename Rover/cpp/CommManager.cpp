@@ -8,9 +8,6 @@ namespace ICSL{
 namespace Quadrotor{
 CommManager::CommManager()
 {
-	mMutex_socketUDP.unlock();
-	mMutex_socketTCP.unlock();
-	
 	mLastCmdRcvTime.clear();
 	mLastPacketTime.clear();
 
@@ -19,6 +16,10 @@ CommManager::CommManager()
 	mDone = true; // need this to be true in case the run thread never gets started
 
 	mConnected = false;
+
+	mSocketUDP = NULL;
+	mSocketTCP = NULL;
+	mServerSocketTCP = NULL;
 }
 
 CommManager::~CommManager()
@@ -60,14 +61,15 @@ void CommManager::shutdown()
 	}
 
 Log::alert("CommManager::shutdown() - 1");
-	if(mSocketUDP != NULL)
-		mSocketUDP->close();
+	if(mSocketUDP != NULL) mSocketUDP->close();
 Log::alert("CommManager::shutdown() - 2");
-	if(mSocketTCP != NULL)
-		mSocketTCP->close();
+	if(mSocketTCP != NULL) mSocketTCP->close();
 Log::alert("CommManager::shutdown() - 3");
-	mServerSocketTCP->close();
+	if(mServerSocketTCP != NULL) mServerSocketTCP->close();
 Log::alert("CommManager::shutdown() - 4");
+
+	mSocketUDP = NULL;
+	mSocketTCP = NULL;
 	mServerSocketTCP = NULL;
 	
 	Log::alert("------------------ Comm Manager done --------------------");
