@@ -24,8 +24,13 @@ tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1012);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
 
-tranStateRefInterp = interp1(tranStateRefTime,tranStateRef',angleStateRefTime)';
-tranStateInterp = interp1(tranStateTime,tranState',angleStateTime)';
+if ~isempty(tranStateRef)
+	tranStateRefInterp = interp1(tranStateRefTime,tranStateRef',angleStateRefTime)';
+	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime)';
+else
+	tranStateRefInterp = zeros(size(angleStateRef));
+	tranStateInterp = zeros(size(angleState));
+end
 stateRefTime = angleStateRefTime;
 stateRef = [angleStateRef; tranStateRefInterp];
 stateTime = angleStateTime;
@@ -141,6 +146,22 @@ thrust = phoneData(thrustIndices,3)';
 accelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1234);
 accelEstTime = phoneData(accelEstIndices,1)'/1000;
 accelEst = phoneData(accelEstIndices,3:5)';
+
+cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
+cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
+cpuUsage = phoneData(cpuUsageIndices,3:end)';
+
+%%
+if ~isempty(cpuUsage)
+	figure(2000); %set(gcf,'Name','Antibanding off, focus video, autograb, 2.4.3.2');
+	plot(cpuUsageTime,cpuUsage');
+	xlabel('Time [s]');
+	ylabel('Usage ratio');
+	legend('total','cpu0','cpu1','cpu2','cpu2')
+% 	axis([0 20 0 0.5])
+end
+
+return
 
 
 %%
