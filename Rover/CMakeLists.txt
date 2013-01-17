@@ -26,6 +26,7 @@ set (INC ${INC}
 	${TOADLET_INCLUDE_DIR}
 	${OpenCV_INCLUDE_DIRS}
 	${MXML_DIR}/include
+	${TBB_DIR}/include # note that the TBB lib comes in with OpenCV libs
 	)
 include_directories (${INC})
 
@@ -44,10 +45,7 @@ set (LIBS
 	${TOADLET_EGG_LIB} 
 	${OpenCV_LIBS_OPT} 
 	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
-	-lz -llog -ldl)
-if (${ANDROID_NDK_API_LEVEL} GREATER 8)
-	SET (LIBS ${LIBS} EGL android)
-endif (${ANDROID_NDK_API_LEVEL} GREATER 8) 
+	-lz -llog -ldl EGL android)
 
 # Source files
 set (SRC ${SRC}
@@ -83,7 +81,7 @@ set (H ${H}
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
 )
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")
 
 set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 # Why doesn't this work?
