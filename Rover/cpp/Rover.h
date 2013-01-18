@@ -49,7 +49,7 @@ public:
 	TNT::Array2D<double> getMagValue();
 	TNT::Array2D<double> getAttitude();
 	int getImageProcTimeMS(){mMutex_vision.lock(); int temp = mVisionProcessor.getImageProcTimeMS(); mMutex_vision.unlock(); return temp;}
-	void toggleViewType(){mVisionProcessor.setViewType(mVisionProcessor.getImgViewType() == 0 ? 1 : 0);}
+	void toggleViewType(){Log::alert("Not implemented");}
 	void toggleUseIbvs(){onNewCommUseIbvs(!mUseIbvs);}
 	toadlet::egg::Collection<int> getVisionParams();
 	void setVisionParams(toadlet::egg::Collection<int> p);
