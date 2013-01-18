@@ -224,7 +224,7 @@ public class Rover extends Activity implements Runnable
 		mThreadRun = true;
 		while(mThreadRun)
 		{
-			if(!pcIsConnected() && false)
+			if(!pcIsConnected())
 			{
 				getImage(mImage.getNativeObjAddr());
 

@@ -88,7 +88,7 @@ void Rover::initialize()
 	mVisionProcessor.setStartTime(mStartTime);
 	mVisionProcessor.setQuadLogger(&mQuadLogger);
 	mVisionProcessor.setAttitudeObserver(&mObsvAngular);
-//	mVisionProcessor.start();
+	mVisionProcessor.start();
 
 	this->start(); // this should spawn a separate thread running the run() function
 
