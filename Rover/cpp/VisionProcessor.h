@@ -83,7 +83,7 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 
 		void shutdown();
 
-		void processImage(TNT::Array2D<double> const &imgAtt, TNT::Array2D<double> const &rotVel);
+		vector<vector<cv::Point2f> > getMatchingPoints();
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
 		void setVisionParams(toadlet::egg::Collection<int> const &p);
@@ -101,6 +101,9 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 
 		void addListener(VisionProcessorListener *listener){mListeners.push_back(listener);}
 
+		// this will eventually move to some listener
+		void calcOpticalFlow(vector<vector<cv::Point2f> > const &points);
+
 		// CommManagerListener functions
 
 	protected:
@@ -110,6 +113,9 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 		cv::Mat	mCurImage, mCurImageGray;
 		cv::Mat mLastImageGray;
 		vector<vector<double> > mMSERHuMoments;
+		vector<cv::Point2f> mMSERCentroids;
+
+		double mFocalLength;
 
 		Time mStartTime, mLastImgFoundTime, mLastProcessTime;
 
