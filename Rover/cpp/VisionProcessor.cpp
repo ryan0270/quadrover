@@ -158,6 +158,9 @@ VisionProcessor::VisionProcessor()
 
 	mImgProcTimeUS = 0;
 
+	mLastProcessTime.setTimeMS(0);
+
+ 	mFocalLength = 3.7*320.0/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 }
 
 void VisionProcessor::shutdown()
@@ -220,7 +223,12 @@ void VisionProcessor::run()
 //		}
 
 //		if(mUseIbvs)
-			processImage(imgAtt, rotVel);
+		{
+			vector<vector<cv::Point2f> > points = getMatchingPoints();
+			if(points.size() > 0)
+				calcOpticalFlow(points);
+		}
+
 		mMutex_image.unlock();
 		mImgProcTimeUS = procStart.getElapsedTimeUS();
 		{
@@ -230,30 +238,25 @@ void VisionProcessor::run()
 
 		mCurImageGray.copyTo(mLastImageGray);
 
-		sys.msleep(1);
+		sys.msleep(1000);
 	}
 
 	mFinished = true;
 }
 
-void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double> const &rotVel)
+vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints()
 {
  	cv::Mat pyrImg;
 	cv::pyrDown(mCurImageGray,pyrImg);
 	cv::pyrDown(pyrImg,pyrImg);
-
+	
 	// manually setting these parameters doesn't seem to work right
-//	int delta=5;
-//	int minArea = 60;
-//	int maxArea=14400;
-//	double maxVariation=0.25;
-//	double minDiversity=2;
-//	int maxEvolution=200; // color only
-//	double areaThreshold=1.01; // color only
-//	double minMargin = 0.003; // color only
-//	int edgeBlurSize=5; // color only
-//	cv::MSER regionDetector(delta,minArea,maxArea,maxVariation,minDiversity,maxEvolution,areaThreshold,minMargin,edgeBlurSize);
-	cv::MSER regionDetector;
+	int delta=5;
+	int minArea = 60;
+	int maxArea = pyrImg.rows*pyrImg.cols/4.0;
+	double maxVariation=0.2; //! prune the area have simliar size to its children -- smaller number means fewer regions found
+	double minDiversity=0.1; //! trace back to cut off mser with diversity < min_diversity -- smaller number means more regions found
+	cv::MSER regionDetector(delta,minArea,maxArea,maxVariation,minDiversity);
 
 	vector<vector<cv::Point> > regions;
 	regionDetector(pyrImg, regions); // the region is actually a point cloud I think
@@ -268,10 +271,12 @@ void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double
 	vector<vector<cv::Point> > hulls;
 	vector<vector<double> > huMoms;
 	cv::Moments mom;
+	vector<cv::Point2f> centroids;
 	for(int i=0; i<regions.size(); i++)
 	{
 		vector<cv::Point> hull;
 		cv::convexHull(regions[i],hull);
+		// scale the hull back to the original image size
 		for(int j=0; j<hull.size(); j++)
 		{
 			hull[j].x /= scaleX;
@@ -279,45 +284,119 @@ void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double
 		}
 		hulls.push_back(hull);
 
-		mom = moments(regions[i]);
+//		mom = moments(regions[i]); // regions[i] isn't scaled and I don't want to pay the cost to scale every point
+		mom = moments(hull);
+		cv::Point2f centroid;
+		centroid.x = mom.m10/mom.m00;
+		centroid.y = mom.m01/mom.m00;
+		centroids.push_back(centroid);
 		vector<double> huMom;
 		cv::HuMoments(mom, huMom);
 		huMoms.push_back(huMom);
 	}
 	
 	// find matches
-	vector<int> matchIndex1, matchIndex2;
+	vector<int> matchIndex0, matchIndex1;
 	double matchThreshold = 1;
-	for(int i=0; i<huMoms.size(); i++)
+	for(int index1=0; index1<huMoms.size(); index1++)
 	{
 		double bestScore = 999999999;
 		int bestIndex = -1;
-		for(int j=0; j<mMSERHuMoments.size(); j++)
+		for(int index0=0; index0<mMSERHuMoments.size(); index0++)
 		{
 			double score = 0;
 			for(int k=0; k<7; k++)
-				score += abs(huMoms[i][k]-mMSERHuMoments[j][k]);
-			if(score < bestScore)
+				score += abs(huMoms[index1][k]-mMSERHuMoments[index0][k]);
+//			score = norm(centroids[index1]-mMSERCentroids[index0]);
+			if(score < bestScore || bestIndex == -1)
 			{
 				bestScore = score;
-				bestIndex = j;
+				bestIndex = index0;
 			}
 		}
 
 		if(bestScore < matchThreshold)
 		{
-			matchIndex1.push_back(bestIndex);
-			matchIndex2.push_back(i);
+			matchIndex0.push_back(bestIndex);
+			matchIndex1.push_back(index1);
 		}
+	}
+
+	for(int i=0; i<matchIndex1.size(); i++)
+		cv::drawContours(mCurImage, hulls, matchIndex1[i], cv::Scalar(0,0,255));
+
+	Log::alert(String()+"MSER: \t" + regions.size() +" found and " + matchIndex1.size() + " matched.");
+
+	vector<vector<cv::Point2f> > points(2);
+	for(int i=0; i<matchIndex1.size(); i++)
+	{
+		points[0].push_back(mMSERCentroids[matchIndex0[i]]);
+		points[1].push_back(centroids[matchIndex1[i]]);
+		circle(mCurImage,points[0].back(),3,cv::Scalar(0,255,0),-1);
+		circle(mCurImage,points[1].back(),3,cv::Scalar(255,0,0),-1);
+		line(mCurImage,points[0].back(),points[1].back(),cv::Scalar(255,255,255),1);
 	}
 
 	// copy the moments over for the next image
 	mMSERHuMoments = huMoms;
+	mMSERCentroids = centroids;
 
-	for(int i=0; i<matchIndex2.size(); i++)
-		cv::drawContours(mCurImage, hulls, matchIndex2[i], cv::Scalar(0,0,255));
+	return points;
+}
 
-	Log::alert(String()+"MSER: \t" + regions.size() +" found and " + matchIndex2.size() + " matched.");
+void VisionProcessor::calcOpticalFlow(vector<vector<cv::Point2f> > const &points)
+{
+	if(mLastProcessTime.getMS() == 0)
+	{
+		mLastProcessTime.setTime();
+		return;
+	}
+	double dt = mLastProcessTime.getElapsedTimeUS()/1.0e6;
+ 	Array2D<double> curRotMat = createIdentity(3);
+ 	Array2D<double> curAngularVel(3,1,0.0);
+ 	Array2D<double> normDir(3,1,0.0);
+	
+	int numPoints = points[0].size();
+	Array2D<double> avgFlow(3,1,0.0);
+	double maxViewAngle = 0;
+	for(int i=0; i<numPoints; i++)
+	{
+		Array2D<double> p0(3,1), p1(3,1);
+		p0[0][0] = points[0][i].x;
+		p0[1][0] = points[0][i].y;
+		p0[2][0] = mFocalLength;
+		p0 = 1.0/norm2(p0)*p0;
+
+		p1[0][0] = points[1][i].x;
+		p1[1][0] = points[1][i].y;
+		p1[2][0] = mFocalLength;
+		p1 = 1.0/norm2(p1)*p1;
+		
+		avgFlow += 1.0/dt*(p1-p0);
+		avgFlow[0][0] = points[0][i].x-points[1][i].x;
+		avgFlow[1][0] = points[0][i].y-points[1][i].y;
+		avgFlow[2][0] = 0;
+
+		double viewAngle = acos(matmultS(transpose(p1),matmult(transpose(curRotMat),normDir)));
+		maxViewAngle = max(maxViewAngle,viewAngle);
+	}
+	avgFlow = 1.0/numPoints*avgFlow;
+printArray(transpose(avgFlow),"avgFlow: \t\t\t\t\t\t\t\t\t\t");
+ 
+ 	// Flow calc taken from
+ 	// Herisse et al (2012) - Landing a VTOL Unmanned Aerial Vehicle on a Moving Platform Using Optical Flow
+ 	double viewAngle = maxViewAngle;
+ 	double lambda = pow(sin(viewAngle),2)/(4.0-pow(sin(viewAngle),2));
+ 	Array2D<double> LambdaInv(3,3,0.0);
+ 	LambdaInv[0][0] = LambdaInv[1][1] = lambda;
+ 	LambdaInv[2][2] = 0.5;
+ 	LambdaInv = 4.0/PI/pow(sin(lambda),4)*LambdaInv;
+ 
+ 	normDir[2][0] = 1;
+ 	Array2D<double> transFlow = -1.0*matmult(LambdaInv,
+ 										matmult(curRotMat,
+ 											avgFlow + PI*pow(sin(viewAngle),2)*cross(curAngularVel, matmult(transpose(curRotMat),normDir))));
+//	printArray(transpose(transFlow),"transFlow: \t");
 }
 
 // void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double> const &rotVel)
