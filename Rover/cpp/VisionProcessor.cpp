@@ -1,9 +1,12 @@
 #include "VisionProcessor.h"
 
+#include "tbb/parallel_for.h"
+
 using namespace toadlet;
 //using namespace cv;
 using toadlet::egg::String;
 using namespace TNT;
+using namespace ICSL::Constants;
 
 namespace ICSL {
 namespace Quadrotor{
@@ -18,9 +21,8 @@ ImageGrabber::ImageGrabber() :
 	mNewImageReady = false;
 	mImgConversionDone= false;
 
-	mLastImage.create(240, 320, CV_8UC3); mLastImage = cv::Scalar(0);
-	mLastImageHSV.create(240, 320, CV_8UC3); mLastImageHSV = cv::Scalar(0);
-	mLastImageGray.create(240, 320, CV_8UC1); mLastImageGray = cv::Scalar(0);
+	mCurImage.create(240, 320, CV_8UC3); mCurImage = cv::Scalar(0);
+	mCurImageGray.create(240, 320, CV_8UC1); mCurImageGray = cv::Scalar(0);
 
 	mAttObserver = NULL;
 }
@@ -28,15 +30,7 @@ ImageGrabber::ImageGrabber() :
 void ImageGrabber::copyImage(cv::Mat *dstImage)
 {
 	mMutex_image.lock();
-	mLastImage.copyTo(*dstImage);
-	mNewImageReady = false;
-	mMutex_image.unlock();
-}
-
-void ImageGrabber::copyImageHSV(cv::Mat *dstImage)
-{
-	mMutex_image.lock();
-	mLastImageHSV.copyTo(*dstImage);
+	mCurImage.copyTo(*dstImage);
 	mNewImageReady = false;
 	mMutex_image.unlock();
 }
@@ -44,7 +38,7 @@ void ImageGrabber::copyImageHSV(cv::Mat *dstImage)
 void ImageGrabber::copyImageGray(cv::Mat *dstImage)
 {
 	mMutex_image.lock();
-	mLastImageGray.copyTo(*dstImage);
+	mCurImageGray.copyTo(*dstImage);
 	mNewImageReady = false;
 	mMutex_image.unlock();
 }
@@ -57,7 +51,7 @@ void ImageGrabber::shutdown()
 	while(!mFinished)
 		sys.msleep(5);
 
-	mLastImage.release();
+	mCurImage.release();
 	
 	Log::alert("-------------------------- Image grabber done ----------------------");
 }
@@ -76,9 +70,11 @@ void ImageGrabber::run()
 		cap.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
 //		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_TORCH); // for now just leave this on the whole time
 		cap.set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO);
+//		cap.set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_INFINITY);
 		cap.set(CV_CAP_PROP_EXPOSURE, -4);
 //		cap.set(CV_CAP_PROP_AUTO_EXPOSURE, 5);
-//		cap.set(CV_CAP_PROP_ANDROID_ANTIBANDING, CV_CAP_ANDROID_ANTIBANDING_OFF);
+		cap.set(CV_CAP_PROP_ANDROID_ANTIBANDING, CV_CAP_ANDROID_ANTIBANDING_OFF);
+		cap.set(CV_CAP_PROP_AUTOGRAB, 1); // any nonzero is "on"
 	}
 	else
 	{
@@ -106,14 +102,14 @@ void ImageGrabber::run()
 		mMutex_data.unlock();
 		cap.retrieve(newImg);
 		mMutex_image.lock();
-		newImg.copyTo(mLastImage);
+		newImg.copyTo(mCurImage);
 		mImgConversionDone = false;
-		if(!mIsBottleneck)
-		{
-			cvtColor(newImg, mLastImageHSV, CV_BGR2HSV);
-			cvtColor(newImg, mLastImageGray, CV_BGR2GRAY);
+//		if(!mIsBottleneck)
+//		{
+//			cvtColor(newImg, mCurImageHSV, CV_BGR2HSV);
+			cvtColor(newImg, mCurImageGray, CV_BGR2GRAY);
 			mImgConversionDone = true;
-		}
+//		}
 		mMutex_image.unlock();
 		mNewImageReady = true;
 
@@ -156,46 +152,15 @@ VisionProcessor::VisionProcessor()
 	mFinished = true;
 	mUseIbvs = false;
 	mFirstImageProcessed = false;
-	mImgViewType = 0;
-	mLastImage.create(240, 320, CV_8UC3); mLastImage = cv::Scalar(0);
-	mLastImageGray.create(240, 320, CV_8UC1); mLastImageGray = cv::Scalar(0);
+	mCurImage.create(240, 320, CV_8UC3); mCurImage = cv::Scalar(0);
+	mCurImageGray.create(240, 320, CV_8UC1); mCurImageGray = cv::Scalar(0);
+	mCurImageGray.copyTo(mLastImageGray);
 
-	mTempColor.create(240,320,CV_8UC1);
-	mTempColor.copyTo(mTempSum);
-	mTempColor.copyTo(mChanH);
-	mTempColor.copyTo(mChanS);
-	mTempColor.copyTo(mChanV);
-	mTempColor.copyTo(mTempS);
-	mTempColor.copyTo(mTempV);
-
-//	mBlobDetectRegions.resize(4);
-//	for(int i=0; i<mBlobDetectRegions.size(); i++)
-//	{
-//		mBlobDetectRegions[i].x = 0;
-//		mBlobDetectRegions[i].y = 0;
-//		mBlobDetectRegions[i].width = mLastImage.cols;
-//		mBlobDetectRegions[i].height = mLastImage.rows;
-//	}
-
-	mBoxCenters.resize(4);
-	for(int i=0; i<4; i++)
-		mBoxCenters[i] = cv::Point(0,0);
-	mFiltBoxColorCenter.resize(4);
-	mFiltBoxColorHalfWidth.resize(4);
-	mFiltBoxColorCenter[0] = 30; mFiltBoxColorHalfWidth[0] = 10;
-	mFiltBoxColorCenter[1] = 75; mFiltBoxColorHalfWidth[1] = 10;
-	mFiltBoxColorCenter[2] = 110; mFiltBoxColorHalfWidth[2] = 10;
-	mFiltBoxColorCenter[3] = 170; mFiltBoxColorHalfWidth[3] = 10;
-	mFiltSatMin = 100; mFiltSatMax = 255;
-	mFiltValMin = 50; mFiltValMax = 255;
-	mFiltCircMin = 0; mFiltCircMax = 100;
-	mFiltConvMin = 75; mFiltConvMax = 125;
-	mFiltAreaMin = 50; mFiltAreaMax = 9999999;
 	mImgProcTimeUS = 0;
 
-	mFiltBoxColorCenterActive.resize(4);
-	for(int i=0; i<4; i++)
-		mFiltBoxColorCenterActive[i] = mFiltBoxColorCenter[i];
+	mLastProcessTime.setTimeMS(0);
+
+ 	mFocalLength = 3.7*320.0/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 }
 
 void VisionProcessor::shutdown()
@@ -210,14 +175,9 @@ void VisionProcessor::shutdown()
 	}
 
 	mMutex_image.lock();
-	mLastImage.release();
-	mTempSum.release();
-	mTempColor.release();
-	mChanH.release();
-	mChanS.release();
-	mChanV.release();
-	mTempS.release();
-	mTempV.release();
+	mCurImage.release();
+	mCurImageGray.release();
+	mLastImageGray.release();
 	mMutex_image.unlock();
 
 	mImageGrabber.shutdown();
@@ -228,7 +188,7 @@ void VisionProcessor::shutdown()
 void VisionProcessor::getLastImage(cv::Mat *outImage)
 {
 	mMutex_image.lock();
-	mLastImage.copyTo(*outImage);
+	mCurImage.copyTo(*outImage);
 	mMutex_image.unlock();
 }
 
@@ -251,272 +211,346 @@ void VisionProcessor::run()
 		rotVel.inject(mImageGrabber.getRotVel());
 
 		Time procStart;
-		if(mImageGrabber.imageConversionDone())
+		mImageGrabber.copyImage(&mCurImage);
+//		if(mImageGrabber.imageConversionDone())
+//		{
+			mImageGrabber.copyImageGray(&mCurImageGray);
+//		}
+//		else
+//		{
+//			mImageGrabber.copyImage(&mCurImage);
+//			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
+//		}
+
+//		if(mUseIbvs)
 		{
-			mImageGrabber.copyImageHSV(&mLastImage);
-			mImageGrabber.copyImageGray(&mLastImageGray);
-		}
-		else
-		{
-			mImageGrabber.copyImage(&mLastImage);
-			cvtColor(mLastImage, mLastImageGray, CV_BGR2GRAY);
-			cvtColor(mLastImage, mLastImage, CV_BGR2HSV);
+			vector<vector<cv::Point2f> > points = getMatchingPoints();
+			if(points.size() > 0)
+				calcOpticalFlow(points);
 		}
 
-		if(mUseIbvs || mImgViewType == 1)
-			processImage(imgAtt, rotVel);
 		mMutex_image.unlock();
-		mImgProcTimeUS = Time::calcDiffUS(procStart,Time());
+		mImgProcTimeUS = procStart.getElapsedTimeUS();
 		{
 			String str = String()+" "+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
 			mQuadLogger->addLine(str,CAM_RESULTS);
 		}
 
-		sys.msleep(1);
+		mCurImageGray.copyTo(mLastImageGray);
+
+		sys.msleep(1000);
 	}
 
 	mFinished = true;
 }
 
-// imgAtt is only used to pass to the VisionProcessorListeners
-void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double> const &rotVel)
+vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints()
 {
-	// ensure these are sized correctly
-	// create only allocates new space if the size is different
-	mChanH.create(mLastImage.size(), CV_8UC1);
-	mChanS.create(mLastImage.size(), CV_8UC1);
-	mChanV.create(mLastImage.size(), CV_8UC1);
+ 	cv::Mat pyrImg;
+	cv::pyrDown(mCurImageGray,pyrImg);
+	cv::pyrDown(pyrImg,pyrImg);
+	
+	// manually setting these parameters doesn't seem to work right
+	int delta=5;
+	int minArea = 60;
+	int maxArea = pyrImg.rows*pyrImg.cols/4.0;
+	double maxVariation=0.2; //! prune the area have simliar size to its children -- smaller number means fewer regions found
+	double minDiversity=0.1; //! trace back to cut off mser with diversity < min_diversity -- smaller number means more regions found
+	cv::MSER regionDetector(delta,minArea,maxArea,maxVariation,minDiversity);
 
-	int fromToH[] = {0, 0};
-	int fromToS[] = {1, 0};
-	int fromToV[] = {2, 0};
-	mixChannels(&mLastImage,1,&mChanH,1,fromToH,1);
-	mixChannels(&mLastImage,1,&mChanS,1,fromToS,1);
-	mixChannels(&mLastImage,1,&mChanV,1,fromToV,1);
+	vector<vector<cv::Point> > regions;
+	regionDetector(pyrImg, regions); // the region is actually a point cloud I think
+	
+	// get hulls for first image
+	double scaleX = (double)pyrImg.size().width/mLastImageGray.size().width;
+	double scaleY = (double)pyrImg.size().height/mLastImageGray.size().height;
 
-	// get rid of white and black background
-	threshold(mChanS,mTempS,mFiltSatMax,0,cv::THRESH_TOZERO_INV);
-	threshold(mTempS,mTempS,mFiltSatMin,1,cv::THRESH_BINARY);
-	threshold(mChanV,mTempV,mFiltValMax,0,cv::THRESH_TOZERO_INV);
-	threshold(mTempV,mTempV,mFiltValMin,1,cv::THRESH_BINARY);
-
-	multiply(mTempS,mChanH,mChanH);
-	multiply(mTempV,mChanH,mChanH);
-
-	// Filter to have only the colors we believe to exist
-	mTempSum.create(mLastImage.size(), CV_8UC1);
-	mTempColor.create(mLastImage.size(), CV_8UC1);
-	mTempSum = cv::Scalar(0);
-	double alphaHue = 0.05/(1+0.05);
-	double alphaPos = 0.2;
-	alphaPos = 1;
-	int numFound = 0;
-	Collection<bool> boxFound(mBoxCenters.size());
-	for(int boxID=0; boxID<mFiltBoxColorCenterActive.size(); boxID++)
+	// get hulls for second image
+	scaleX = (double)pyrImg.size().width/mCurImageGray.size().width;
+	scaleY = (double)pyrImg.size().height/mCurImageGray.size().height;
+	vector<vector<cv::Point> > hulls;
+	vector<vector<double> > huMoms;
+	cv::Moments mom;
+	vector<cv::Point2f> centroids;
+	for(int i=0; i<regions.size(); i++)
 	{
-		threshold(mChanH,mTempColor,mFiltBoxColorCenterActive[boxID]+mFiltBoxColorHalfWidth[boxID],0,cv::THRESH_TOZERO_INV);
-		threshold(mTempColor,mTempColor,mFiltBoxColorCenterActive[boxID]-mFiltBoxColorHalfWidth[boxID],1,cv::THRESH_BINARY);
-
-		// use the gray image as the selected pixels
-		multiply(mLastImageGray,mTempColor,mTempColor);
-		mTempSum += mTempColor;
-
-		if(mUseIbvs)
+		vector<cv::Point> hull;
+		cv::convexHull(regions[i],hull);
+		// scale the hull back to the original image size
+		for(int j=0; j<hull.size(); j++)
 		{
-			vector<vector<cv::Point> > contours;
-			cv::findContours(mTempColor, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-			cv::drawContours(mLastImage, contours, -1, cv::Scalar(0, 255, 75), 2);
-			double area, maxArea;
-			maxArea = 0;
-			cv::Point2f center;
-			int maxAreaContourIndex = 0;
-			for(int i=0; i<contours.size(); i++)
+			hull[j].x /= scaleX;
+			hull[j].y /= scaleY;
+		}
+		hulls.push_back(hull);
+
+//		mom = moments(regions[i]); // regions[i] isn't scaled and I don't want to pay the cost to scale every point
+		mom = moments(hull);
+		cv::Point2f centroid;
+		centroid.x = mom.m10/mom.m00;
+		centroid.y = mom.m01/mom.m00;
+		centroids.push_back(centroid);
+		vector<double> huMom;
+		cv::HuMoments(mom, huMom);
+		huMoms.push_back(huMom);
+	}
+	
+	// find matches
+	vector<int> matchIndex0, matchIndex1;
+	double matchThreshold = 1;
+	for(int index1=0; index1<huMoms.size(); index1++)
+	{
+		double bestScore = 999999999;
+		int bestIndex = -1;
+		for(int index0=0; index0<mMSERHuMoments.size(); index0++)
+		{
+			double score = 0;
+			for(int k=0; k<7; k++)
+				score += abs(huMoms[index1][k]-mMSERHuMoments[index0][k]);
+//			score = norm(centroids[index1]-mMSERCentroids[index0]);
+			if(score < bestScore || bestIndex == -1)
 			{
-				area = abs(cv::contourArea(contours[i]));
-				if(area > maxArea && area < mFiltAreaMax)
-				{
-					maxArea = area;
-					maxAreaContourIndex = i;
-					center.x = center.y = 0;
-					for(int j=0; j<contours[i].size(); j++)
-					{
-						center.x += contours[i][j].x;
-						center.y += contours[i][j].y;
-					}
-					center.x /= contours[i].size();
-					center.y /= contours[i].size();
-//					cv::Moments m = cv::moments(contours[i]);
-//					center.x = m.m10;
-//					center.y = m.m01;
-				}
+				bestScore = score;
+				bestIndex = index0;
 			}
-			double radius = sqrt(maxArea)/2;
+		}
 
-			if(maxArea > mFiltAreaMin)
-			{
-				numFound++;
-				cv::circle(mLastImage, center, 3, cv::Scalar(20, 125, 125), CV_FILLED);
-//				cv::Point p1, p2, p3, p4;
-//				p1 = p2 = p3 = p4 = center;
-//				p1.x -= radius; p2.x += radius;
-//				p3.y -= radius; p4.y += radius;
-//				line(mLastImage,p1,p2,cv::Scalar(125,0,0),3);
-//				line(mLastImage,p3,p4,cv::Scalar(125,0,0),3);
-
-				cv::Mat mask(mChanH.size(),mChanH.type(),cv::Scalar(0));
-				drawContours(mask, contours, maxAreaContourIndex, cv::Scalar(1,1,1), CV_FILLED);
-				cv::Scalar meanHue1 = mean(mChanH,mask);
-				double meanHue = meanHue1[0];
-				mask.release();
-
-				mFiltBoxColorCenterActive[boxID] = alphaHue*meanHue+(1-alphaHue)*mFiltBoxColorCenterActive[boxID];
-				if(mFirstImageProcessed)
-					mBoxCenters[boxID] = alphaPos*center+(1-alphaPos)*mBoxCenters[boxID];
-				else
-					mBoxCenters[boxID] = center;
-				boxFound[boxID] = true;
-			}
+		if(bestScore < matchThreshold)
+		{
+			matchIndex0.push_back(bestIndex);
+			matchIndex1.push_back(index1);
 		}
 	}
 
-	if(mImgViewType == 1)
-		mTempSum.copyTo(mLastImage);
-//		mLastImage = mTempSum.clone();
+	for(int i=0; i<matchIndex1.size(); i++)
+		cv::drawContours(mCurImage, hulls, matchIndex1[i], cv::Scalar(0,0,255));
 
-	if(numFound == 4)
-		mLastImgFoundTime.setTime();
-	else if(mUseIbvs)
+	Log::alert(String()+"MSER: \t" + regions.size() +" found and " + matchIndex1.size() + " matched.");
+
+	vector<vector<cv::Point2f> > points(2);
+	for(int i=0; i<matchIndex1.size(); i++)
 	{
-		Time now;
-		if(now.getMS() - mLastImgFoundTime.getMS() > 2e3)
-		{
-			mUseIbvs = false;
-			mFirstImageProcessed = false;
-			Log::alert("Lost the image");
-			for(int boxID=0; boxID<mFiltBoxColorCenterActive.size(); boxID++)
-			{
-//				mBlobDetectRegions[boxID].x = 0;
-//				mBlobDetectRegions[boxID].y = 0;
-//				mBlobDetectRegions[boxID].width = mLastImage.cols;
-//				mBlobDetectRegions[boxID].height = mLastImage.rows;
-				mFiltBoxColorCenterActive[boxID] = mFiltBoxColorCenter[boxID];
-			}
-
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onImageLost();
-		}
+		points[0].push_back(mMSERCentroids[matchIndex0[i]]);
+		points[1].push_back(centroids[matchIndex1[i]]);
+		circle(mCurImage,points[0].back(),3,cv::Scalar(0,255,0),-1);
+		circle(mCurImage,points[1].back(),3,cv::Scalar(255,0,0),-1);
+		line(mCurImage,points[0].back(),points[1].back(),cv::Scalar(255,255,255),1);
 	}
 
-	if(mUseIbvs && (mFirstImageProcessed || numFound == 4))
-	{
-		mFirstImageProcessed = true;
-		for(int i=0; i<mListeners.size(); i++)
-			mListeners[i]->onImageProcessed(mBoxCenters, boxFound, imgAtt, rotVel);
+	// copy the moments over for the next image
+	mMSERHuMoments = huMoms;
+	mMSERCentroids = centroids;
 
-		{
-			String str = String()+" "+mStartTime.getElapsedTimeMS()+"\t-601\t";
-			for(int boxID=0; boxID<mBoxCenters.size(); boxID++)
-//			{
-//				if(boxFound[boxID])
-					str = str+mBoxCenters[boxID].x+"\t"+mBoxCenters[boxID].y+"\t";
-//				else
-//					str = str+(-1*mBoxCenters[boxID].x)+"\t"+(-1*mBoxCenters[boxID].y)+"\t";
-//			}
-			mQuadLogger->addLine(str,CAM_RESULTS);
-		}
-	}
+	return points;
 }
 
+void VisionProcessor::calcOpticalFlow(vector<vector<cv::Point2f> > const &points)
+{
+	if(mLastProcessTime.getMS() == 0)
+	{
+		mLastProcessTime.setTime();
+		return;
+	}
+	double dt = mLastProcessTime.getElapsedTimeUS()/1.0e6;
+ 	Array2D<double> curRotMat = createIdentity(3);
+ 	Array2D<double> curAngularVel(3,1,0.0);
+ 	Array2D<double> normDir(3,1,0.0);
+	
+	int numPoints = points[0].size();
+	Array2D<double> avgFlow(3,1,0.0);
+	double maxViewAngle = 0;
+	for(int i=0; i<numPoints; i++)
+	{
+		Array2D<double> p0(3,1), p1(3,1);
+		p0[0][0] = points[0][i].x;
+		p0[1][0] = points[0][i].y;
+		p0[2][0] = mFocalLength;
+		p0 = 1.0/norm2(p0)*p0;
+
+		p1[0][0] = points[1][i].x;
+		p1[1][0] = points[1][i].y;
+		p1[2][0] = mFocalLength;
+		p1 = 1.0/norm2(p1)*p1;
+		
+		avgFlow += 1.0/dt*(p1-p0);
+		avgFlow[0][0] = points[0][i].x-points[1][i].x;
+		avgFlow[1][0] = points[0][i].y-points[1][i].y;
+		avgFlow[2][0] = 0;
+
+		double viewAngle = acos(matmultS(transpose(p1),matmult(transpose(curRotMat),normDir)));
+		maxViewAngle = max(maxViewAngle,viewAngle);
+	}
+	avgFlow = 1.0/numPoints*avgFlow;
+printArray(transpose(avgFlow),"avgFlow: \t\t\t\t\t\t\t\t\t\t");
+ 
+ 	// Flow calc taken from
+ 	// Herisse et al (2012) - Landing a VTOL Unmanned Aerial Vehicle on a Moving Platform Using Optical Flow
+ 	double viewAngle = maxViewAngle;
+ 	double lambda = pow(sin(viewAngle),2)/(4.0-pow(sin(viewAngle),2));
+ 	Array2D<double> LambdaInv(3,3,0.0);
+ 	LambdaInv[0][0] = LambdaInv[1][1] = lambda;
+ 	LambdaInv[2][2] = 0.5;
+ 	LambdaInv = 4.0/PI/pow(sin(lambda),4)*LambdaInv;
+ 
+ 	normDir[2][0] = 1;
+ 	Array2D<double> transFlow = -1.0*matmult(LambdaInv,
+ 										matmult(curRotMat,
+ 											avgFlow + PI*pow(sin(viewAngle),2)*cross(curAngularVel, matmult(transpose(curRotMat),normDir))));
+//	printArray(transpose(transFlow),"transFlow: \t");
+}
 
 // void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double> const &rotVel)
 // {
-// //	cvtColor(mLastImage,mLastImage,CV_BGR2HSV);
+// 	Array2D<double> curRotMat = createIdentity(3);
+// 	Array2D<double> curAngularVel(3,1,0.0);
+// 	Array2D<double> normDir(3,1,0.0);
+// 	double dt = mLastProcessTime.getElapsedTimeUS()/1.0e6;
+// 	mLastProcessTime.setTime();
 // 
-// 	Time start;
-// 	cv::Mat imgGray;
-// 	cvtColor(mLastImage,imgGray,CV_HSV2BGR);
-// 	cvtColor(imgGray,imgGray,CV_BGR2GRAY);
+// 	cv::Mat temp1, temp2;
+// //	cv::pyrDown(mLastImageGray,temp1);
+// //	cv::pyrDown(mCurImageGray,temp2);
+// 	mLastImageGray.copyTo(temp1);
+// 	mCurImageGray.copyTo(temp2);
 // 
-//  	// ensure these are sized correctly
-//  	// create only allocates new space if the size is different
-//  	mChanH.create(mLastImage.size(), CV_8UC1);
-//  	mChanS.create(mLastImage.size(), CV_8UC1);
-//  	mChanV.create(mLastImage.size(), CV_8UC1);
-//  
-//  	int fromToH[] = {0, 0};
-//  	int fromToS[] = {1, 0};
-//  	int fromToV[] = {2, 0};
-//  	mixChannels(&mLastImage,1,&mChanH,1,fromToH,1);
-//  	mixChannels(&mLastImage,1,&mChanS,1,fromToS,1);
-//  	mixChannels(&mLastImage,1,&mChanV,1,fromToV,1);
-// 
-// 	  // get rid of white and black background
-//  	threshold(mChanS,mTempS,mFiltSatMax,0,cv::THRESH_TOZERO_INV);
-//  	threshold(mTempS,mTempS,mFiltSatMin,1,cv::THRESH_BINARY);
-//  	threshold(mChanV,mTempV,mFiltValMax,0,cv::THRESH_TOZERO_INV);
-//  	threshold(mTempV,mTempV,mFiltValMin,1,cv::THRESH_BINARY);
-//  
-//  	multiply(mTempS,mChanH,mChanH);
-//  	multiply(mTempV,mChanH,mChanH);
-// 
-//  	// Filter to have only the colors we believe to exist
-//  	mTempSum.create(mLastImage.size(), CV_8UC1);
-//  	mTempColor.create(mLastImage.size(), CV_8UC1);
-//  	mTempSum = cv::Scalar(0);
-// 
-// 	vector<cv::Point2f> corners;
-//  	Collection<bool> boxFound(mBoxCenters.size());
-//  	for(int boxID=0; boxID<mFiltBoxColorCenterActive.size(); boxID++)
-//  	{
-//  		threshold(mChanH,mTempColor,mFiltBoxColorCenterActive[boxID]+mFiltBoxColorHalfWidth[boxID],0,cv::THRESH_TOZERO_INV);
-//  		threshold(mTempColor,mTempColor,mFiltBoxColorCenterActive[boxID]-mFiltBoxColorHalfWidth[boxID],1,cv::THRESH_BINARY);
-// 
-// 		// mTempColor now contains a mask of pixels that should hold the desired square. 
-// 		// Grow this mask a bit and search over it for the corners
-// 		mTempSum += mTempColor;
-// 	 	cv::Mat kernel = getStructuringElement(cv::MORPH_ELLIPSE,cv::Size(5,5));
-// 		dilate(mTempColor, mTempColor,kernel,cv::Point(-1,-1),1);
-// 
-// 		vector<cv::Point2f> newCorners;
-// 		cv::goodFeaturesToTrack(imgGray, newCorners, 5, 0.001, 20, mTempColor, 3, true);
-// 		for(int c=0; c<newCorners.size(); c++)
-// 			corners.push_back(newCorners[c]);
-// 	}
-// //	mLastImage = imgGray.clone();
-// 
-// 	for(int i=0; i<corners.size(); i++)
+// 	double pyrScale = 0.5;
+// 	int levels = 3;
+// 	int winsize = 5;
+// 	int iterations = 3;
+// 	int polyN = 5;
+// 	double polySigma = 1.1;
+// 	int flags = 0;
+// 	
+// 	cv::Size sz = temp1.size();
+// 	vector<cv::Rect> masks;
+// 	for(int i=0; i<3; i++)
 // 	{
-// 		int size = 8;
-// 		cv::Point2f p1, p2, p3, p4;
-// 		p1 = p2 = p3 = p4 = corners[i];
-// 		p1.x -= size; p2.x += size;
-// 		p3.y -= size; p4.y += size;
-// 		line(mLastImage,p1,p2,cv::Scalar(125,0,255),2);
-// 		line(mLastImage,p3,p4,cv::Scalar(125,0,255),2);
+// 		for(int j=0; j<3; j++)
+// 		{
+// 			cv::Rect mask((int)(i*sz.width/3.0+0.5), (int)(j*sz.height/3.0+0.5), (int)(sz.width/3.0+0.5), (int)(sz.height/3.0+0.5));
+// 			masks.push_back(mask);
+// 		}
 // 	}
+// 	cv::Mat flow(temp1.size(),CV_32FC2);
+// //	cv::Mat flow;
+// //	for(int i=0; i<masks.size(); i++)
+// //		cv::calcOpticalFlowFarneback(temp1(masks[i]), temp2(masks[i]), flow(masks[i]), pyrScale, levels, winsize, iterations, polyN, polySigma, flags);
+// 	tbb::parallel_for(size_t(0), size_t(masks.size()), [=](size_t i) {
+// 			cv::calcOpticalFlowFarneback(temp1(masks[i]), temp2(masks[i]), flow(masks[i]), pyrScale, levels, winsize, iterations, polyN, polySigma, flags);
+// 			});
 // 
-// //	String str = "--------------------------------";
-// //	str = str+"Corners:\n";
-// //	for(int i=0; i<corners.size(); i++)
-// //		str = str+corners[i].x+" \t"+corners[i].y+"\n";
-// //	String str = String()+"Time: "+start.getElapsedTimeMS();
-// //	Log::alert(str);
+// 	cv::Scalar meanFlow = cv::mean(flow);
+// 	Log::alert(String()+"flow: "+meanFlow[0]+" \t"+meanFlow[1]);
+// 
+// 	for(int j=0; j<flow.rows; j+=30)
+// 		for(int i=0; i<flow.cols; i+=30)
+// 		{
+// 			cv::Point2f p1(i,j);
+// 			cv::Vec2b flw= flow.at<float>(j,i);
+// 			cv::Point2f p2(i+flw[0],j+flw[1]);
+// 			p2.x = max(0,min((int)p2.x, sz.width));
+// 			p2.y = max(0,min((int)p2.y, sz.height));
+// 
+// 			circle(mCurImage,p1,2,cv::Scalar(0,125,125),-1);
+// 			line(mCurImage,p1,p2,cv::Scalar(0,180,0));
+// 		}
 // }
 
-void VisionProcessor::setBoxColorCenters(Collection<int> const &data)
-{
-	for(int i=0; i<data.size(); i++)
-	{
-		mFiltBoxColorCenter[i] = data[i];
-		mFiltBoxColorCenterActive[i] = data[i];
-	}
-}
-
-void VisionProcessor::setBoxColorHalfWidth(Collection<int> const &data)
-{
-	for(int i=0; i<data.size(); i++)
-		mFiltBoxColorHalfWidth[i] = data[i];
-}
+// void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double> const &rotVel)
+// {
+// 	Array2D<double> curRotMat = createIdentity(3);
+// 	Array2D<double> curAngularVel(3,1,0.0);
+// 	Array2D<double> normDir(3,1,0.0);
+// 	double dt = mLastProcessTime.getElapsedTimeUS()/1.0e6;
+// 	mLastProcessTime.setTime();
+// 
+// 	cv::Mat temp1, temp2;
+// //	cv::pyrDown(mLastImageGray,temp1);
+// //	cv::pyrDown(mCurImageGray,temp2);
+// 	mLastImageGray.copyTo(temp1);
+// 	mCurImageGray.copyTo(temp2);
+// 	vector<cv::Point2f> frame1_features;
+// 	cv::goodFeaturesToTrack(temp1, frame1_features, 400, .01, .01);
+// 
+// 	if(frame1_features.size() == 0)
+// 	{
+// 		Log::alert("Nothing to see here.");
+// 		return;
+// 	}
+// 
+// 	vector<cv::Point2f> frame2_features;
+// 	vector<bool> featureCorrespondence;
+// 	vector<float> err;
+// 	cv::calcOpticalFlowPyrLK(temp1, temp2, frame1_features, frame2_features, featureCorrespondence, err);
+// 
+// 	// get a copy of only the matched points
+// 	vector<Array2D<double> > p1List, p2List;
+// 	Array2D<double> avgFlow(3,1,0.0);
+// 	double focalLength = 3.7*320.0/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+// 	double maxViewAngle = 0;
+// 	for(int i=0; i<frame1_features.size(); i++)
+// 	{
+// 		if(featureCorrespondence[i])
+// 		{
+// 			// project the points onto the unit sphere;
+// 			Array2D<double> p1(3,1), p2(3,1);
+// 			p1[0][0] = frame1_features[i].x;
+// 			p1[1][0] = frame1_features[i].y;
+// 			p1[2][0] = focalLength;
+// 			p1 = 1.0/norm2(p1)*p1;
+// 
+// 			p2[0][0] = frame2_features[i].x;
+// 			p2[1][0] = frame2_features[i].y;
+// 			p2[2][0] = focalLength;
+// 			p2 = 1.0/norm2(p2)*p2;
+// 
+// 			p1List.push_back(p1.copy());
+// 			p2List.push_back(p2.copy());
+// 			avgFlow += 1.0/dt*(p2-p1);
+// 
+// 			double viewAngle = acos(matmultS(transpose(p1),matmult(transpose(curRotMat),normDir)));
+// 			if(viewAngle > maxViewAngle)
+// 				maxViewAngle = viewAngle;
+// 		}
+// 	}
+// 	avgFlow = 1.0/p1List.size()*avgFlow;
+// 
+// 	// Flow calc taken from
+// 	// Herisse et al (2012) - Landing a VTOL Unmanned Aerial Vehicle on a Moving Platform Using Optical Flow
+// 	double viewAngle = maxViewAngle;
+// 	double lambda = pow(sin(viewAngle),2)/(4.0-pow(sin(viewAngle),2));
+// 	Array2D<double> LambdaInv(3,3,0.0);
+// 	LambdaInv[0][0] = LambdaInv[1][1] = lambda;
+// 	LambdaInv[2][2] = 0.5;
+// 	LambdaInv = 4.0/PI/pow(sin(lambda),4)*LambdaInv;
+// 
+// 	normDir[2][0] = 1;
+// 	Array2D<double> transFlow = -1.0*matmult(LambdaInv,
+// 										matmult(curRotMat,
+// 											avgFlow + PI*pow(sin(viewAngle),2)*cross(curAngularVel, matmult(transpose(curRotMat),normDir))));
+// printArray(transpose(transFlow),"transFlow: \t");
+// 
+// 	int numFound = 0;
+// 	// draw flow field
+// 	for(int i=0; i<frame1_features.size(); i++)
+// 	{
+// 		if(!featureCorrespondence[i])
+// 			continue;
+// 
+// 		numFound++;
+// 
+// 		int lineThickness = 1;
+// 		cv::Scalar lineColor(60,125,125);
+// 		cv::Point2f p,q;
+// 		p.x = frame1_features[i].x;
+// 		p.y = frame1_features[i].y;
+// 		q.x = frame2_features[i].x;
+// 		q.y = frame2_features[i].y;
+// 
+// 		circle(mCurImage,p,5,cv::Scalar(0,125,125),-1);
+// 		line(mCurImage, p, q, lineColor, lineThickness, CV_AA, 0);
+// 	}
+// }
 
 void VisionProcessor::enableIbvs(bool enable)
 {
@@ -534,14 +568,6 @@ void VisionProcessor::enableIbvs(bool enable)
 		Log::alert("Turning IBVS off");
 		String str = String() + mStartTime.getElapsedTimeMS() + "\t-606\t";
 		mQuadLogger->addLine(str,PC_UPDATES);
-		for(int boxID=0; boxID<mFiltBoxColorCenterActive.size(); boxID++)
-		{
-//			mBlobDetectRegions[boxID].x = 0;
-//			mBlobDetectRegions[boxID].y = 0;
-//			mBlobDetectRegions[boxID].width = mLastImage.cols;
-//			mBlobDetectRegions[boxID].height = mLastImage.rows;
-			mFiltBoxColorCenterActive[boxID] = mFiltBoxColorCenter[boxID];
-		}
 		mFirstImageProcessed = false;
 	}
 }
@@ -549,178 +575,12 @@ void VisionProcessor::enableIbvs(bool enable)
 Collection<int> VisionProcessor::getVisionParams()
 {
 	Collection<int> p;
-	p.push_back(mFiltBoxColorCenterActive[0]);
-	p.push_back(mFiltBoxColorHalfWidth[0]);
-	p.push_back(mFiltBoxColorCenterActive[1]);
-	p.push_back(mFiltBoxColorHalfWidth[1]);
-	p.push_back(mFiltBoxColorCenterActive[2]);
-	p.push_back(mFiltBoxColorHalfWidth[2]);
-	p.push_back(mFiltBoxColorCenterActive[3]);
-	p.push_back(mFiltBoxColorHalfWidth[3]);
-	p.push_back(mFiltSatMin);
-	p.push_back(mFiltSatMax);
-	p.push_back(mFiltValMin);
-	p.push_back(mFiltValMax);
-	p.push_back(mFiltCircMin);
-	p.push_back(mFiltCircMax);
-	p.push_back(mFiltConvMin);
-	p.push_back(mFiltConvMax);
 
 	return p;
 }
 
 void VisionProcessor::setVisionParams(Collection<int> const &p)
 {
-	mFiltBoxColorCenter[0] = p[0];
-	mFiltBoxColorHalfWidth[0] = p[1];
-	mFiltBoxColorCenter[1] = p[2];
-	mFiltBoxColorHalfWidth[1] = p[3];
-	mFiltBoxColorCenter[2] = p[4];
-	mFiltBoxColorHalfWidth[2] = p[5];
-	mFiltBoxColorCenter[3] = p[6];
-	mFiltBoxColorHalfWidth[3] = p[7];
-	mFiltSatMin = p[8];
-	mFiltSatMax = p[9];
-	mFiltValMin = p[10];
-	mFiltValMax = p[11];
-	mFiltCircMin = p[12];
-	mFiltCircMax = p[13];
-	mFiltConvMin = p[14];
-	mFiltConvMax = p[15];
-
-	for(int i=0; i<mFiltBoxColorCenter.size(); i++)
-		mFiltBoxColorCenterActive[i] = mFiltBoxColorCenter[i];
-}
-
-void VisionProcessor::setSatMin(int val)
-{
-	mFiltSatMin = val;
-	Log::alert(String()+"Sat min set to "+mFiltSatMin);
-}
-
-void VisionProcessor::setSatMax(int val)
-{
-	mFiltSatMax = val;
-	Log::alert(String()+"Sat max set to "+mFiltSatMax);
-}
-
-void VisionProcessor::setValMin(int val)
-{
-	mFiltValMin = val;
-	Log::alert(String()+"Val Min set to "+mFiltValMin);
-}
-
-void VisionProcessor::setValMax(int val)
-{
-	mFiltValMax = val;
-	Log::alert(String()+"Val Max set to "+mFiltValMax);
-}
-
-void VisionProcessor::setCircMin(int val)
-{
-	mFiltCircMin = val;
-	Log::alert(String()+"Circ Min set to "+mFiltCircMin);
-}
-
-void VisionProcessor::setCircMax(int val)
-{
-	mFiltCircMax = val;
-	Log::alert(String()+"Circ Max set to "+mFiltCircMax);
-}
-
-void VisionProcessor::setConvMin(int val)
-{
-	mFiltConvMin = val;
-	Log::alert(String()+"Conv Min set to "+mFiltConvMin);
-}
-
-void VisionProcessor::setConvMax(int val)
-{
-	mFiltConvMax = val;
-	Log::alert(String()+"Conv Max set to "+mFiltConvMax);
-}
-
-void VisionProcessor::setAreaMin(int val)
-{
-	mFiltAreaMin = val;
-	Log::alert(String()+"Area Min set to "+mFiltAreaMin);
-}
-
-void VisionProcessor::setAreaMax(int val)
-{
-	mFiltAreaMax = val;
-	Log::alert(String()+"Area Max set to "+mFiltAreaMax);
-}
-
-void VisionProcessor::setViewType(int val)
-{
-	mImgViewType = val;
-	Log::alert(String()+"Image view set to "+mImgViewType);
-}
-
-void VisionProcessor::onNewCommImgProcBoxColorCenter(Collection<int> const &data)
-{
-	setBoxColorCenters(data);
-}
-
-void VisionProcessor::onNewCommImgProcBoxColorHalfRange(Collection<int> const &data)
-{
-	setBoxColorHalfWidth(data);
-}
-
-void VisionProcessor::onNewCommImgProcSatMin(int val)
-{
-	setSatMin(val);
-}
-
-void VisionProcessor::onNewCommImgProcSatMax(int val)
-{
-	setSatMax(val);
-}
-
-void VisionProcessor::onNewCommImgProcValMin(int val)
-{
-	setValMin(val);
-}
-
-void VisionProcessor::onNewCommImgProcValMax(int val)
-{
-	setValMax(val);
-}
-
-void VisionProcessor::onNewCommImgProcCircMin(int val)
-{
-	setCircMin(val);
-}
-
-void VisionProcessor::onNewCommImgProcCircMax(int val)
-{
-	setCircMax(val);
-}
-
-void VisionProcessor::onNewCommImgProcConvMin(int val)
-{
-	setConvMin(val);
-}
-
-void VisionProcessor::onNewCommImgProcConvMax(int val)
-{
-	setConvMax(val);
-}
-
-void VisionProcessor::onNewCommImgProcAreaMin(int val)
-{
-	setAreaMin(val);
-}
-
-void VisionProcessor::onNewCommImgProcAreaMax(int val)
-{
-	setAreaMax(val);
-}
-
-void VisionProcessor::onNewCommImgViewType(int val)
-{
-	setViewType(val);
 }
 
 } // namespace Quadrotor

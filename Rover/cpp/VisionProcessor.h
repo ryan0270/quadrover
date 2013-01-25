@@ -1,6 +1,7 @@
 #ifndef VISIONPROCESSOR_H
 #define VISIONPROCESSOR_H
 #include <sched.h>
+#include <math.h>
 
 #include <toadlet/egg.h>
 using toadlet::egg::String;
@@ -9,9 +10,12 @@ using toadlet::egg::String;
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/video/tracking.hpp>
 
 #include "TNT/tnt.h"
+#include "TNT_Utils.h"
 
+#include "ICSL/constants.h"
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Observer_Angular.h"
@@ -27,7 +31,6 @@ class ImageGrabber : public toadlet::egg::Thread
 		virtual ~ImageGrabber(){};
 
 		void copyImage(cv::Mat *dstImage);
-		void copyImageHSV(cv::Mat *dstImage);
 		void copyImageGray(cv::Mat *dstImage);
 
 		void shutdown();
@@ -50,7 +53,7 @@ class ImageGrabber : public toadlet::egg::Thread
 		bool mNewImageReady, mIsBottleneck;
 		bool mRunning, mFinished;
 		bool mImgConversionDone;
-		cv::Mat mLastImage, mLastImageHSV, mLastImageGray;
+		cv::Mat mCurImage, mCurImageGray;
 		toadlet::egg::Mutex mMutex_image, mMutex_data;
 		TNT::Array2D<double> mImgAtt, mImgRotVel;
 
@@ -80,23 +83,10 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 
 		void shutdown();
 
-		void processImage(TNT::Array2D<double> const &imgAtt, TNT::Array2D<double> const &rotVel);
+		vector<vector<cv::Point2f> > getMatchingPoints();
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
-		void setBoxColorCenters(toadlet::egg::Collection<int> const &data);
-		void setBoxColorHalfWidth(Collection<int> const &data);
 		void setVisionParams(toadlet::egg::Collection<int> const &p);
-		void setSatMin(int val);
-		void setSatMax(int val);
-		void setValMin(int val);
-		void setValMax(int val);
-		void setCircMin(int val);
-		void setCircMax(int val);
-		void setConvMin(int val);
-		void setConvMax(int val);
-		void setAreaMin(int val);
-		void setAreaMax(int val);
-		void setViewType(int val);
 		void setStartTime(Time t){mStartTime = t; mImageGrabber.setStartTime(t);}
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log; mImageGrabber.setQuadLogger(log);}
 
@@ -104,7 +94,6 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 
 		void enableIbvs(bool enable);
 
-		int getImgViewType(){return mImgViewType;}
 		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImgProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
 		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImgProcTimeUS; mMutex_data.unlock(); return temp;}
 		void getLastImage(cv::Mat *outImage);
@@ -112,39 +101,23 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 
 		void addListener(VisionProcessorListener *listener){mListeners.push_back(listener);}
 
+		// this will eventually move to some listener
+		void calcOpticalFlow(vector<vector<cv::Point2f> > const &points);
+
 		// CommManagerListener functions
-		void onNewCommImgProcBoxColorCenter(toadlet::egg::Collection<int> const &data);
-		void onNewCommImgProcBoxColorHalfRange(toadlet::egg::Collection<int> const &data);
-		void onNewCommImgProcSatMin(int val);
-		void onNewCommImgProcSatMax(int val);
-		void onNewCommImgProcValMin(int val);
-		void onNewCommImgProcValMax(int val);
-		void onNewCommImgProcCircMin(int val);
-		void onNewCommImgProcCircMax(int val);
-		void onNewCommImgProcConvMin(int val);
-		void onNewCommImgProcConvMax(int val);
-		void onNewCommImgProcAreaMin(int val);
-		void onNewCommImgProcAreaMax(int val);
-		void onNewCommImgViewType(int val);
 
 	protected:
 		bool mUseIbvs;
 		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
-		cv::Mat	mLastImage, mLastImageGray, mTempSum, mTempColor;
-		cv::Mat mChanH, mChanS, mChanV, mTempS, mTempV;
-		toadlet::egg::Collection<cv::Point2f> mBoxCenters;
-		vector<cv::KeyPoint> mTempKeyPoints;
-//		toadlet::egg::Collection<int> mBoxAreas;
-		toadlet::egg::Collection<int> mFiltBoxColorCenter, mFiltBoxColorCenterActive, mFiltBoxColorHalfWidth; // the active variable to for online adaptiation, but I still want to remember the original
-		int mFiltValMin, mFiltValMax;
-		int mFiltSatMin, mFiltSatMax;
-		int mFiltCircMin, mFiltCircMax;
-		int mFiltConvMin, mFiltConvMax;
-		int mFiltAreaMin, mFiltAreaMax;
-		int mImgViewType;
-//		TNT::Array2D<double> mImgMoment, mDesImgMoment, mDesLinearVel;
-		Time mStartTime, mLastImgFoundTime;
+		cv::Mat	mCurImage, mCurImageGray;
+		cv::Mat mLastImageGray;
+		vector<vector<double> > mMSERHuMoments;
+		vector<cv::Point2f> mMSERCentroids;
+
+		double mFocalLength;
+
+		Time mStartTime, mLastImgFoundTime, mLastProcessTime;
 
 		toadlet::uint32 mImgProcTimeUS;
 
