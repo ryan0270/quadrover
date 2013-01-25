@@ -100,6 +100,7 @@ VisionProcessor::VisionProcessor()
 	mUseIbvs = false;
 	mFirstImageProcessed = false;
 	mLastImage.create(240, 320, CV_8UC3); mLastImage = cv::Scalar(0);
+
 	matcher = new Matcher("FAST_GRID","BRIEF");
 }
 
@@ -167,11 +168,19 @@ void VisionProcessor::processImage()
 	System sys;
 	sys.msleep(100);
 
+	int numPtsTracked = 0;
+	int trackStatus = -2;
+
 	// do image processing here
 	if(matcher != NULL)
-		matcher->Track(mLastImage,true);	
+	{
+		trackStatus = matcher->Track(mLastImage,false);
+		numPtsTracked = matcher->vMatches.size();
+	}
 
-	Log::alert("Doing image processing");
+	Log::alert(String()+"Point in track : " + numPtsTracked);
+	Log::alert(String()+"Track status : " + trackStatus);
+	Log::alert("Doing image processing--");
 }
 
 } // namespace Quadrotor

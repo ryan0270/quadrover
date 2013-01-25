@@ -127,7 +127,7 @@ public:
                         match_binsize = 60;
                         match_radius = 60;
                         match_disp_tolerance = 2;
-                        half_resolution = 1;
+                        half_resolution = 0;
                         minMatches = 20;
                         minHammingDist = 60;
                 }
@@ -179,9 +179,13 @@ public:
 					0.02 /* harris threshold */
 					);
 		}
+		else if (!detectorType.compare("FAST"))
+		{
+			detector = new cv::FastFeatureDetector();
+		}
 		else if (!detectorType.compare("FAST_GRID")) {
 			//! 1226 x 370
-			detector = new cv::GridAdaptedFeatureDetector(new cv::FastFeatureDetector(30));//, params.maxFeatureNum, 5, 5);
+			detector = new cv::GridAdaptedFeatureDetector(new cv::FastFeatureDetector(15));//, params.maxFeatureNum, 5, 5);
 		}
 		else if (!detectorType.compare("FAST_PYRAMID")) {
 
@@ -282,6 +286,22 @@ public:
 		std::vector<cv::KeyPoint> kpts;
 		cv::Mat descs;
 		cv::Mat frame;
+		
+		//! perform half resolution tracking
+		if(params.half_resolution)
+		{
+			//std::cout << "### MAKE IMAGE HALF!\n";
+			cv::resize(inputImg,frame,cv::Size(),0.5,0.5,cv::INTER_LANCZOS4);
+		}
+		else
+		{
+			inputImg.copyTo(frame);
+		}
+
+		detector->detect(frame,kpts);
+
+		if(kpts.size() < 10)
+			return -3;
 
 		//! In case of good tracking condition
 		if(!vCurrentFeatures.empty() && !replace)	//! in case of no replace, we track prev-prev-frame.
@@ -295,19 +315,8 @@ public:
 			//std::cout << "\nUse existing " << vCurrentFeatures.empty() << std::endl;
 		}
 
-		//! perform half resolution tracking
-		if(params.half_resolution)
-		{
-			//std::cout << "### MAKE IMAGE HALF!\n";
-			cv::resize(inputImg,frame,cv::Size(),0.5,0.5,cv::INTER_LANCZOS4);
-		}
-		else
-		{
-			inputImg.copyTo(frame);
-		}
 
 		//! detect keypoints and extract descriptors.
-		detector->detect(frame,kpts);
 		extractor->compute(frame,kpts,descs);
 
 		vCurrentFeatures.clear();
