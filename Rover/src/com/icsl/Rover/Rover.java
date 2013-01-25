@@ -1,4 +1,4 @@
-package com.icsl.QuadPhone;
+package com.icsl.Rover;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -10,7 +10,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.content.res.AssetManager;
 
 import java.lang.String;
 import java.lang.Integer;
@@ -18,19 +17,16 @@ import java.io.File;
 import java.io.FileFilter;
 import java.util.regex.Pattern;
 
-//import org.opencv.android.BaseLoaderCallback;
-//import org.opencv.android.LoaderCallbackInterface;
-//import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
-public class QuadPhone extends Activity implements Runnable
+public class Rover extends Activity implements Runnable
 {
-	public final static String EXTRA_MESSAGE = "com.icsl.QuadPhone.MESSAGE";
-	private static final String ME = "QuadPhone";
+	public final static String EXTRA_MESSAGE = "com.icsl.Rover.MESSAGE";
+	private static final String ME = "Rover";
 
 	private Mat mImage;
 	private Bitmap mBitmap;
@@ -47,45 +43,6 @@ public class QuadPhone extends Activity implements Runnable
 	private EditText mEditConvMin, mEditConvMax;
 	private TextView mTvGyro, mTvAccel, mTvMag, mTvImgProcTime;
 	private TextView mTvRoll, mTvPitch, mTvYaw;
-
-	static AssetManager mAssetManager;
-
-//	private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this){
-//		@Override
-//		public void onManagerConnected(int status){
-//			switch(status) {
-//				case LoaderCallbackInterface.SUCCESS:
-//					{
-//						Log.i(ME, "OpenCV loaded successfully");
-//
-//						// Load native library after OpenCV initialization
-//						System.loadLibrary("opencv_core");
-//						System.loadLibrary("opencv_imgproc");
-//						System.loadLibrary("opencv_flann");
-//						System.loadLibrary("opencv_highgui");
-//						System.loadLibrary("opencv_features2d");
-//						System.loadLibrary("opencv_calib3d");
-//						System.loadLibrary("opencv_ml");
-//						System.loadLibrary("opencv_video");
-//						System.loadLibrary("opencv_objdetect");
-//						System.loadLibrary("opencv_contrib");
-//						System.loadLibrary("opencv_legacy");
-//						System.loadLibrary("opencv_nonfree");
-//						System.loadLibrary("opencv_photo");
-//						System.loadLibrary("opencv_stitching");
-//						System.loadLibrary("opencv_ts");
-//						System.loadLibrary("opencv_videostab");
-//						System.loadLibrary("toadlet_egg");
-//						System.loadLibrary("QuadPhone");
-//						mOpenCVManagerConnected = true;
-//					} break;
-//				default:
-//					{
-//						super.onManagerConnected(status);
-//					} break;
-//			}
-//		}
-//	};
 
     /** Called when the activity is first created. */
     @Override
@@ -123,48 +80,32 @@ public class QuadPhone extends Activity implements Runnable
 		mTvPitch= (TextView)findViewById(R.id.tvPitchAngle);
 		mTvYaw= (TextView)findViewById(R.id.tvYawAngle);
 
-		mAssetManager = getAssets();
     }
 
     @Override
 	public void onResume()
 	{
 		super.onResume();
-
-//		if(!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback))
-//		{
-//			Log.e(ME, "Cannot connect to OpenCV Manager");
-//			return;
-//		}
-
 		mBitmap = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
 		mIvImageDisplay.setImageBitmap(mBitmap);
 
-//		int counter = 0;
-//		while(++counter < 10 && !mOpenCVManagerConnected)
-//		{
-//			Log.e(ME, "Waiting on OpenCV manager");
-//			try{
-//				Thread.sleep(1000);
-//			} catch (Exception e)
-//			{ Log.e(ME, "wtc, why can't I sleep?"); }
-//
-//		}
-//		if(!mOpenCVManagerConnected)
-//		{
-//			Log.e(ME, "OpenCV Manager didn't start so I quit");
-//			return;
-//		}
 		onJNIStart();
-		setAssetManager(mAssetManager);
 
 		setNumCpuCores(getNumCores());
 
 		mImage = new Mat(240,320,CvType.CV_8UC3,new Scalar(127));
-		setLogDir(Environment.getExternalStorageDirectory().toString()+"/QuadPhone");
+		File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
+		if(!logDir.exists())
+		{
+			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
+			logDir.mkdir();
+		}
+		else
+			Log.i(ME,"Log dir: "+logDir.toString()+" already exists.");
+		setLogDir(logDir.toString());
 		startLogging();
 
-		populateVisionParams();
+//		populateVisionParams();
 
 		(new Thread(this)).start();
 	}
@@ -296,33 +237,26 @@ public class QuadPhone extends Activity implements Runnable
 					//				mBitmap.recycle();
 					//				mBitmap= null;
 				}
-
 				if(img != null)
-				{
 					img.release();
 
-					final float gyro[] = getGyroValue();
-					final float accel[] = getAccelValue();
-					final float mag[] = getMagValue();
-					final float att[] = getAttitude();
-//					final TextView tvGyro = mTvGyro;
-//					final TextView tvAccel= mTvAccel;
-//					final TextView tvMag= mTvMag;
-//					final TextView tvTime = mTvImgProcTime;
-					runOnUiThread(new Runnable(){
-						public void run(){ 
-							mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
-							mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
-							mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
-							mTvImgProcTime.setText("Proc Time: "+String.valueOf(getImageProcTimeMS())+"ms");
-							mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
-							mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
-							mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
+				final float gyro[] = getGyroValue();
+				final float accel[] = getAccelValue();
+				final float mag[] = getMagValue();
+				final float att[] = getAttitude();
+				runOnUiThread(new Runnable(){
+					public void run(){ 
+						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
+						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
+						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
+						mTvImgProcTime.setText("Proc Time: "+String.valueOf(getImageProcTimeMS())+"ms");
+						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
+						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
+						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
 
-							mIvImageDisplay.setImageBitmap(mBitmap); 
-						}
-					});
-				}
+						mIvImageDisplay.setImageBitmap(mBitmap); 
+					}
+				});
 			}
 
 			try{
@@ -392,7 +326,6 @@ public class QuadPhone extends Activity implements Runnable
 	public native int[] getVisionParams();
 	public native void setVisionParams(int[] p);
 	public native boolean pcIsConnected();
-	public native void setAssetManager(AssetManager am);
 
 	static {
 //		System.loadLibrary("opencv_core");
@@ -413,7 +346,7 @@ public class QuadPhone extends Activity implements Runnable
 //		System.loadLibrary("opencv_videostab");
 		System.loadLibrary("opencv_java");
 		System.loadLibrary("toadlet_egg");
-		System.loadLibrary("QuadPhone");
+		System.loadLibrary("Rover");
 	}
 }
 

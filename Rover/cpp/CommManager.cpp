@@ -8,9 +8,6 @@ namespace ICSL{
 namespace Quadrotor{
 CommManager::CommManager()
 {
-	mMutex_socketUDP.unlock();
-	mMutex_socketTCP.unlock();
-	
 	mLastCmdRcvTime.clear();
 	mLastPacketTime.clear();
 
@@ -19,6 +16,10 @@ CommManager::CommManager()
 	mDone = true; // need this to be true in case the run thread never gets started
 
 	mConnected = false;
+
+	mSocketUDP = NULL;
+	mSocketTCP = NULL;
+	mServerSocketTCP = NULL;
 }
 
 CommManager::~CommManager()
@@ -60,14 +61,15 @@ void CommManager::shutdown()
 	}
 
 Log::alert("CommManager::shutdown() - 1");
-	if(mSocketUDP != NULL)
-		mSocketUDP->close();
+	if(mSocketUDP != NULL) mSocketUDP->close();
 Log::alert("CommManager::shutdown() - 2");
-	if(mSocketTCP != NULL)
-		mSocketTCP->close();
+	if(mSocketTCP != NULL) mSocketTCP->close();
 Log::alert("CommManager::shutdown() - 3");
-	mServerSocketTCP->close();
+	if(mServerSocketTCP != NULL) mServerSocketTCP->close();
 Log::alert("CommManager::shutdown() - 4");
+
+	mSocketUDP = NULL;
+	mSocketTCP = NULL;
 	mServerSocketTCP = NULL;
 	
 	Log::alert("------------------ Comm Manager done --------------------");
@@ -425,185 +427,6 @@ void CommManager::pollTCP()
 						{
 							for(int i=0; i<mListeners.size(); i++)
 								mListeners[i]->onNewCommControlType(cntlType);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_BOX_COLOR_MIN:
-					{
-						int count;
-						bool received = receiveTCP((tbyte*)&count, sizeof(count));
-						if(received)
-						{
-							Collection<int> data(count);
-							bool received = receiveTCP((tbyte*)&(data[0]),count*sizeof(int));
-							if(received)
-							{
-								for(int i=0; i<mListeners.size(); i++)
-									mListeners[i]->onNewCommImgProcBoxColorCenter(data);
-							}
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_BOX_COLOR_MAX:
-					{
-						int count;
-						bool received = receiveTCP((tbyte*)&count, sizeof(count));
-						if(received)
-						{
-							Collection<int> data(count);
-							bool received = receiveTCP((tbyte*)&(data[0]),count*sizeof(int));
-							if(received)
-							{
-								for(int i=0; i<mListeners.size(); i++)
-									mListeners[i]->onNewCommImgProcBoxColorHalfRange(data);
-							}
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_SAT_MIN:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcSatMin(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_SAT_MAX:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcSatMax(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_VAL_MIN:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcValMin(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_VAL_MAX:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcValMax(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_CIRC_MIN:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcCircMin(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_CIRC_MAX:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcCircMax(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_CONV_MIN:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcConvMin(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_CONV_MAX:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcConvMax(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_AREA_MIN:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcAreaMin(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGPROC_AREA_MAX:
-					{
-						int data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgProcAreaMax(data);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_IMGVIEW_TYPE:
-					{
-						uint16 data;
-						bool received = receiveTCP((tbyte*)&data, sizeof(data));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommImgViewType(data);
 						}
 						else
 							resetSocket = true;

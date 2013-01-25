@@ -1,7 +1,7 @@
 #include <jni.h>
 #include <string.h>
 
-#include "../cpp/QuadPhone.h"
+#include "../cpp/Rover.h"
 #include <opencv2/core/core.hpp>
 #include "../cpp/TNT/tnt.h"
 //#include <opencv2/imgproc/imgproc.hpp>
@@ -11,74 +11,66 @@
 //using namespace std;
 //using namespace cv;
 
-static ICSL::Quadrotor::ChadPhone *chadPhone = NULL;
+static ICSL::Quadrotor::Rover *rover = NULL;
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_onJNIStart(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_onJNIStart(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone == NULL)
-		chadPhone = new ICSL::Quadrotor::ChadPhone();
+	if(rover == NULL)
+		rover = new ICSL::Quadrotor::Rover();
 	else
 	{
-		chadPhone->shutdown();
-		delete chadPhone;
-		chadPhone = NULL;
-		chadPhone = new ICSL::Quadrotor::ChadPhone();
+		rover->shutdown();
+		delete rover;
+		rover = NULL;
+		rover = new ICSL::Quadrotor::Rover();
 	}
+
+	rover->initialize();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_setAssetManager(JNIEnv* env, jobject thiz, jobject assetManager)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setNumCpuCores(JNIEnv* env, jobject thiz, jint numCores)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return;
 
-	AAssetManager *mgr = AAssetManager_fromJava(env, assetManager);
-	chadPhone->setAssetManager(mgr);
-	chadPhone->initialize();
+	rover->setNumCpuCores(numCores);
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_setNumCpuCores(JNIEnv* env, jobject thiz, jint numCores)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setLogDir(JNIEnv* env, jobject thiz, jstring jdir)
 {
-	if(chadPhone == NULL)
-		return;
-
-	chadPhone->setNumCpuCores(numCores);
-}
-
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_setLogDir(JNIEnv* env, jobject thiz, jstring jdir)
-{
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return;
 
 	const char *str = env->GetStringUTFChars(jdir, NULL);
 	String dir(str);
-	chadPhone->setLogDir(dir);
+	rover->setLogDir(dir);
 	env->ReleaseStringUTFChars(jdir, str);
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_startLogging(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_startLogging(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return;
 
-	chadPhone->startLogging();
+	rover->startLogging();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_getImage(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_getImage(JNIEnv* env, jobject thiz, jlong addr)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return;
 
-	chadPhone->copyImageData((cv::Mat*)addr);
+	rover->copyImageData((cv::Mat*)addr);
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getGyroValue(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getGyroValue(JNIEnv* env, jobject thiz, jlong addr)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return env->NewFloatArray(0);
 
-	TNT::Array2D<double> gyro = chadPhone->getGyroValue();
+	TNT::Array2D<double> gyro = rover->getGyroValue();
 	jfloatArray jval = env->NewFloatArray(3);
 	jfloat *elem = env->GetFloatArrayElements(jval,0);
 	elem[0] = (jfloat)gyro[0][0];
@@ -89,12 +81,12 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getGyroValue(JNI
 	return jval;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getAccelValue(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getAccelValue(JNIEnv* env, jobject thiz, jlong addr)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return env->NewFloatArray(0);
 
-	TNT::Array2D<double> accel= chadPhone->getAccelValue();
+	TNT::Array2D<double> accel= rover->getAccelValue();
 	jfloatArray jval = env->NewFloatArray(3);
 	jfloat *elem = env->GetFloatArrayElements(jval,0);
 	elem[0] = (jfloat)accel[0][0];
@@ -105,12 +97,12 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getAccelValue(JN
 	return jval;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getMagValue(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getMagValue(JNIEnv* env, jobject thiz, jlong addr)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return env->NewFloatArray(0);
 
-	TNT::Array2D<double> mag = chadPhone->getMagValue();
+	TNT::Array2D<double> mag = rover->getMagValue();
 	jfloatArray jval = env->NewFloatArray(3);
 	jfloat *elem = env->GetFloatArrayElements(jval,0);
 	elem[0] = (jfloat)mag[0][0];
@@ -121,12 +113,12 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getMagValue(JNIE
 	return jval;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getAttitude(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getAttitude(JNIEnv* env, jobject thiz, jlong addr)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return env->NewFloatArray(0);
 
-	TNT::Array2D<double> att= chadPhone->getAttitude();
+	TNT::Array2D<double> att= rover->getAttitude();
 	jfloatArray jval = env->NewFloatArray(3);
 	jfloat *elem = env->GetFloatArrayElements(jval,0);
 	elem[0] = (jfloat)att[0][0];
@@ -137,28 +129,28 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getAttitude(JNIE
 	return jval;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_toggleViewType(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_toggleViewType(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return;
 
-	chadPhone->toggleViewType();
+	rover->toggleViewType();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_toggleUseIbvs(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_toggleUseIbvs(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return;
 
-	chadPhone->toggleUseIbvs();
+	rover->toggleUseIbvs();
 }
 
-JNIEXPORT jintArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getVisionParams(JNIEnv* env, jobject thiz)
+JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_Rover_getVisionParams(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return NULL;
 
-	toadlet::egg::Collection<int> vals = chadPhone->getVisionParams();
+	toadlet::egg::Collection<int> vals = rover->getVisionParams();
 
 	jintArray jval = env->NewIntArray(vals.size());
 	jint *elem = env->GetIntArrayElements(jval,0);
@@ -171,17 +163,17 @@ JNIEXPORT jintArray JNICALL Java_com_icsl_QuadPhone_QuadPhone_getVisionParams(JN
 }
 
 
-JNIEXPORT jint JNICALL Java_com_icsl_QuadPhone_QuadPhone_getImageProcTimeMS(JNIEnv* env, jobject thiz)
+JNIEXPORT jint JNICALL Java_com_icsl_Rover_Rover_getImageProcTimeMS(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return -1;
 
-	return chadPhone->getImageProcTimeMS();
+	return rover->getImageProcTimeMS();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_setVisionParams(JNIEnv* env, jobject thiz, jintArray jval)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setVisionParams(JNIEnv* env, jobject thiz, jintArray jval)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return;
 
 	toadlet::egg::Collection<int> vals(env->GetArrayLength(jval));
@@ -191,34 +183,34 @@ JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_setVisionParams(JNIEnv*
 
 	env->ReleaseIntArrayElements(jval,elem,0);
 
-	chadPhone->setVisionParams(vals);
+	rover->setVisionParams(vals);
 }
 
-JNIEXPORT bool JNICALL Java_com_icsl_QuadPhone_QuadPhone_pcIsConnected(JNIEnv* env, jobject thiz)
+JNIEXPORT bool JNICALL Java_com_icsl_Rover_Rover_pcIsConnected(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone == NULL)
+	if(rover == NULL)
 		return false;
 
-	return chadPhone->pcIsConnected();
+	return rover->pcIsConnected();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_QuadPhone_QuadPhone_onJNIStop(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_onJNIStop(JNIEnv* env, jobject thiz)
 {
-	if(chadPhone != NULL)
+	if(rover != NULL)
 	{
-		chadPhone->shutdown();
-		delete chadPhone;
-		chadPhone = NULL;
+		rover->shutdown();
+		delete rover;
+		rover = NULL;
 	}
 }
 
 JNIEXPORT void JNI_OnUnload(JavaVM* vm, void *reserved)
 {
-	if(chadPhone != NULL)
+	if(rover != NULL)
 	{
-		chadPhone->shutdown();
-		delete chadPhone;
-		chadPhone = NULL;
+		rover->shutdown();
+		delete rover;
+		rover = NULL;
 	}
 }
 
