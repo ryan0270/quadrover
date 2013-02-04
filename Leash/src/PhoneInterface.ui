@@ -1,0 +1,2103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PhoneInterface</class>
+ <widget class="QWidget" name="PhoneInterface">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>958</width>
+    <height>637</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>999</width>
+    <height>999</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_8">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>GroupBox</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <item row="0" column="6">
+           <widget class="QLabel" name="label_21">
+            <property name="text">
+             <string>Img Proc Time</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>Status:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_11">
+            <property name="minimumSize">
+             <size>
+              <width>47</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Time:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QLabel" name="lblPhoneStatus">
+            <property name="text">
+             <string>Disconnected</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="4">
+           <widget class="QLabel" name="lblController">
+            <property name="text">
+             <string>N/A</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLabel" name="lblPhoneUseMotors">
+            <property name="text">
+             <string>N/A</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="5">
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>Cntl Calc Time</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblPhoneArduinoStatus">
+            <property name="minimumSize">
+             <size>
+              <width>52</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>N/A</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Arduino:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLabel" name="label_10">
+            <property name="minimumSize">
+             <size>
+              <width>47</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Motors:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="5">
+           <widget class="QLabel" name="lblCntlCalcTime">
+            <property name="text">
+             <string>N/A</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="lblPhoneTime">
+            <property name="text">
+             <string>N/A</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="6">
+           <widget class="QLabel" name="lblImgProcTime">
+            <property name="text">
+             <string>000ms</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Controller</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="7">
+           <widget class="QLabel" name="label_23">
+            <property name="text">
+             <string>Use IBVS</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="7">
+           <widget class="QLabel" name="lblPhoneUseIbvs">
+            <property name="text">
+             <string>false</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>100</width>
+            <height>17</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="btnConnect">
+            <property name="text">
+             <string>Connect</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="btnSyncTime">
+            <property name="text">
+             <string>Sync Time</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="btnRequestLogFile">
+            <property name="text">
+             <string>Request Log File</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QCheckBox" name="chkUseMuCntl">
+            <property name="text">
+             <string>Use mu cntl</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="btnSendParameters">
+            <property name="text">
+             <string>Send Parameters</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="btnResetObserver">
+            <property name="text">
+             <string>Reset Observer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="btnClearLog">
+            <property name="text">
+             <string>Clear Log</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QPushButton" name="btnSendMuCntl">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>94</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Send mu cntl</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="btnPhoneApply">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>94</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Apply</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="btnPhoneResetConfig">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>94</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Reset</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QPushButton" name="btnPhoneLoadFromFile">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>94</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Load from file</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="btnPhoneSaveToFile">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>94</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Save to file</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="4">
+           <widget class="QPushButton" name="btnSetYawZero">
+            <property name="text">
+             <string>Set Yaw Zero</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>78</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QTabWidget" name="tabWidget">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="tab_2">
+         <attribute name="title">
+          <string>Image</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_7">
+          <item row="0" column="0">
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <layout class="QGridLayout" name="gridLayout_6">
+              <item row="3" column="2">
+               <widget class="QSpinBox" name="spnBox2Max">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>130</number>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>Min</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="label_12">
+                <property name="text">
+                 <string>Max</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_13">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;HSV hue filter for detecting red&lt;/p&gt;&lt;p&gt;0 to 255&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Box 1</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QSpinBox" name="spnBox0Min">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>170</number>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QSpinBox" name="spnBox0Max">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>190</number>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_14">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;HSV hue filter for detecting green&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;0 to 255&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Box 2</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QSpinBox" name="spnBox1Min">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>50</number>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QSpinBox" name="spnBox1Max">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>70</number>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_15">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;HSV hue filter for detecting blue&lt;/p&gt;&lt;p&gt;0 to 255&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Box 3</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QSpinBox" name="spnBox2Min">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>110</number>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="QSpinBox" name="spnCircMin">
+                <property name="maximum">
+                 <number>100</number>
+                </property>
+                <property name="value">
+                 <number>75</number>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="label_19">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Convexity = (real area) / (convex hull area)&lt;/p&gt;&lt;p&gt;0 to 100&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Conv</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QSpinBox" name="spnConvMin">
+                <property name="maximum">
+                 <number>100</number>
+                </property>
+                <property name="value">
+                 <number>75</number>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="2">
+               <widget class="QSpinBox" name="spnAreaMax">
+                <property name="maximum">
+                 <number>9999999</number>
+                </property>
+                <property name="value">
+                 <number>76800</number>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <widget class="QSpinBox" name="spnAreaMin">
+                <property name="maximum">
+                 <number>9999999</number>
+                </property>
+                <property name="value">
+                 <number>10</number>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QLabel" name="label_20">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;0 to 9999999&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Area</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QSpinBox" name="spnSatMin">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="2">
+               <widget class="QSpinBox" name="spnConvMax">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>100</number>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QSpinBox" name="spnValMin">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="label_18">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Circularity = (4*pi*Area)/(2*perimiter)&lt;/p&gt;&lt;p&gt;0 to 100&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Circ</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_17">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;HSV value filter&lt;/p&gt;&lt;p&gt;0 to 100&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Val</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QSpinBox" name="spnBox3Min">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_16">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;HSV saturation filter&lt;/p&gt;&lt;p&gt;0 to 100&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>Sat</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="2">
+               <widget class="QSpinBox" name="spnCircMax">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>100</number>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="2">
+               <widget class="QSpinBox" name="spnValMax">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>50</number>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="2">
+               <widget class="QSpinBox" name="spnSatMax">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>50</number>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QSpinBox" name="spnBox3Max">
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_22">
+                <property name="text">
+                 <string>Box 4</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="chkViewBinarizedImage">
+              <property name="text">
+               <string>View binarized image</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="chkUseIbvsController">
+              <property name="text">
+               <string>Use IBVS controller</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="1">
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <widget class="QLabel" name="lblImageDisplay">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="baseSize">
+               <size>
+                <width>320</width>
+                <height>240</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>No image</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_3">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
+             <spacer name="verticalSpacer_5">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>18</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="0" column="1" rowspan="3">
+             <widget class="QTableWidget" name="tblImgState">
+              <property name="enabled">
+               <bool>true</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+                <horstretch>1</horstretch>
+                <verstretch>1</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>504</width>
+                <height>87</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>504</width>
+                <height>87</height>
+               </size>
+              </property>
+              <property name="verticalScrollBarPolicy">
+               <enum>Qt::ScrollBarAsNeeded</enum>
+              </property>
+              <property name="horizontalScrollBarPolicy">
+               <enum>Qt::ScrollBarAsNeeded</enum>
+              </property>
+              <property name="alternatingRowColors">
+               <bool>true</bool>
+              </property>
+              <property name="showGrid">
+               <bool>false</bool>
+              </property>
+              <attribute name="horizontalHeaderVisible">
+               <bool>true</bool>
+              </attribute>
+              <attribute name="horizontalHeaderCascadingSectionResizes">
+               <bool>false</bool>
+              </attribute>
+              <attribute name="horizontalHeaderDefaultSectionSize">
+               <number>70</number>
+              </attribute>
+              <attribute name="horizontalHeaderMinimumSectionSize">
+               <number>10</number>
+              </attribute>
+              <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+               <bool>false</bool>
+              </attribute>
+              <attribute name="horizontalHeaderStretchLastSection">
+               <bool>false</bool>
+              </attribute>
+              <attribute name="verticalHeaderStretchLastSection">
+               <bool>false</bool>
+              </attribute>
+              <row>
+               <property name="text">
+                <string notr="true">Estimated</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignRight|AlignVCenter</set>
+               </property>
+              </row>
+              <row>
+               <property name="text">
+                <string notr="true">Desired</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignRight|AlignVCenter</set>
+               </property>
+              </row>
+              <column>
+               <property name="text">
+                <string notr="true">x</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>y</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string notr="true">Area</string>
+               </property>
+               <property name="toolTip">
+                <string notr="true"/>
+               </property>
+               <property name="whatsThis">
+                <string notr="true"/>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>x vel</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>y vel</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>z vel</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+              </column>
+              <item row="0" column="0">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsUserCheckable</set>
+               </property>
+              </item>
+              <item row="0" column="1">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+               </property>
+              </item>
+              <item row="0" column="2">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+               </property>
+              </item>
+              <item row="0" column="3">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+               </property>
+              </item>
+              <item row="0" column="4">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled</set>
+               </property>
+              </item>
+              <item row="0" column="5">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled</set>
+               </property>
+              </item>
+              <item row="1" column="0">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsEditable|ItemIsEnabled</set>
+               </property>
+              </item>
+              <item row="1" column="1">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsEditable|ItemIsEnabled</set>
+               </property>
+              </item>
+              <item row="1" column="2">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsEditable|ItemIsEnabled</set>
+               </property>
+              </item>
+              <item row="1" column="3">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+               </property>
+              </item>
+              <item row="1" column="4">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled</set>
+               </property>
+              </item>
+              <item row="1" column="5">
+               <property name="text">
+                <string>000.0</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+               </property>
+               <property name="flags">
+                <set>ItemIsSelectable|ItemIsDragEnabled</set>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QPushButton" name="btnResetDesImgMoment">
+              <property name="text">
+               <string>Reset</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QPushButton" name="btnConfirmDesImgMoment">
+              <property name="text">
+               <string>Confirm</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="2" column="1">
+           <spacer name="verticalSpacer_4">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>30</width>
+              <height>4</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab">
+         <attribute name="title">
+          <string>Config</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="0" column="0">
+           <widget class="QTreeWidget" name="treePhoneConfig">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+              <horstretch>0</horstretch>
+              <verstretch>1</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>300</height>
+             </size>
+            </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <column>
+             <property name="text">
+              <string>1</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>2</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>3</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>4</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>5</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>6</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>7</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>8</string>
+             </property>
+             <property name="textAlignment">
+              <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+             </property>
+            </column>
+            <item>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+             <property name="text">
+              <string>Temp</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>999</width>
+         <height>999</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>Commands</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="1" column="3">
+         <widget class="QLabel" name="lblPhoneCommand3">
+          <property name="minimumSize">
+           <size>
+            <width>34</width>
+            <height>14</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QLabel" name="lblPhoneCommand2">
+          <property name="minimumSize">
+           <size>
+            <width>34</width>
+            <height>14</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="label_6">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>42</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>South</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="lblPhoneCommand1">
+          <property name="minimumSize">
+           <size>
+            <width>34</width>
+            <height>14</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="lblPhoneCommand0">
+          <property name="minimumSize">
+           <size>
+            <width>34</width>
+            <height>14</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="3">
+         <widget class="QLabel" name="label_7">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>42</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>West</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>42</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>East</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="lblPhoneIbvsCommand0">
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLabel" name="lblPhoneIbvsCommand1">
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="2">
+         <widget class="QLabel" name="lblPhoneIbvsCommand2">
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3">
+         <widget class="QLabel" name="lblPhoneIbvsCommand3">
+          <property name="text">
+           <string>0000</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_4">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>42</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>North</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="tblPosition">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>301</width>
+         <height>206</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>99999</width>
+         <height>99999</height>
+        </size>
+       </property>
+       <property name="verticalScrollBarPolicy">
+        <enum>Qt::ScrollBarAsNeeded</enum>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOff</enum>
+       </property>
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+       <property name="showGrid">
+        <bool>false</bool>
+       </property>
+       <attribute name="horizontalHeaderVisible">
+        <bool>true</bool>
+       </attribute>
+       <attribute name="horizontalHeaderCascadingSectionResizes">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderDefaultSectionSize">
+        <number>70</number>
+       </attribute>
+       <attribute name="horizontalHeaderMinimumSectionSize">
+        <number>10</number>
+       </attribute>
+       <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderStretchLastSection">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderStretchLastSection">
+        <bool>false</bool>
+       </attribute>
+       <row>
+        <property name="text">
+         <string notr="true">Roll</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <row>
+        <property name="text">
+         <string notr="true">Pitch</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <row>
+        <property name="text">
+         <string notr="true">Yaw</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <row>
+        <property name="text">
+         <string>Roll Rate</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <row>
+        <property name="text">
+         <string>Pitch Rate</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <row>
+        <property name="text">
+         <string>Yaw Rate</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <column>
+        <property name="text">
+         <string notr="true">Target</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Estimated</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Integral</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+       </column>
+       <item row="0" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="0" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="0" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="1" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="1" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="1" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="2" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="2" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="2" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="3" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="3" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="3" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="4" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="4" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="4" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="5" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="5" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="5" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="tblMeasures">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>1</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>301</width>
+         <height>116</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>99999</width>
+         <height>99999</height>
+        </size>
+       </property>
+       <property name="verticalScrollBarPolicy">
+        <enum>Qt::ScrollBarAsNeeded</enum>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOff</enum>
+       </property>
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+       <property name="showGrid">
+        <bool>false</bool>
+       </property>
+       <attribute name="horizontalHeaderVisible">
+        <bool>true</bool>
+       </attribute>
+       <attribute name="horizontalHeaderCascadingSectionResizes">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderDefaultSectionSize">
+        <number>70</number>
+       </attribute>
+       <attribute name="horizontalHeaderMinimumSectionSize">
+        <number>10</number>
+       </attribute>
+       <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderStretchLastSection">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderStretchLastSection">
+        <bool>false</bool>
+       </attribute>
+       <row>
+        <property name="text">
+         <string notr="true">x</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <row>
+        <property name="text">
+         <string notr="true">y</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <row>
+        <property name="text">
+         <string notr="true">z</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignRight|AlignVCenter</set>
+        </property>
+       </row>
+       <column>
+        <property name="text">
+         <string notr="true">Gyro</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Bias</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string notr="true">Accel</string>
+        </property>
+        <property name="toolTip">
+         <string notr="true"/>
+        </property>
+        <property name="whatsThis">
+         <string notr="true"/>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Compass</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+       </column>
+       <item row="0" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="0" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="0" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="0" column="3">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="1" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="1" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="1" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="1" column="3">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="2" column="0">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="2" column="1">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="2" column="2">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+       <item row="2" column="3">
+        <property name="text">
+         <string>000.0</string>
+        </property>
+        <property name="textAlignment">
+         <set>AlignHCenter|AlignVCenter|AlignCenter</set>
+        </property>
+        <property name="flags">
+         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>156</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
+  <zorder>groupBox_4</zorder>
+  <zorder></zorder>
+ </widget>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>btnConnect</tabstop>
+  <tabstop>btnRequestLogFile</tabstop>
+  <tabstop>btnPhoneResetConfig</tabstop>
+  <tabstop>btnPhoneApply</tabstop>
+  <tabstop>btnSyncTime</tabstop>
+  <tabstop>btnResetObserver</tabstop>
+  <tabstop>treePhoneConfig</tabstop>
+  <tabstop>tblPosition</tabstop>
+  <tabstop>tblMeasures</tabstop>
+  <tabstop>spnBox0Min</tabstop>
+  <tabstop>spnBox0Max</tabstop>
+  <tabstop>spnBox1Min</tabstop>
+  <tabstop>spnBox1Max</tabstop>
+  <tabstop>spnBox2Min</tabstop>
+  <tabstop>spnBox2Max</tabstop>
+  <tabstop>spnBox3Min</tabstop>
+  <tabstop>spnBox3Max</tabstop>
+  <tabstop>spnSatMin</tabstop>
+  <tabstop>spnSatMax</tabstop>
+  <tabstop>spnValMin</tabstop>
+  <tabstop>spnValMax</tabstop>
+  <tabstop>spnCircMin</tabstop>
+  <tabstop>spnCircMax</tabstop>
+  <tabstop>spnConvMin</tabstop>
+  <tabstop>spnConvMax</tabstop>
+  <tabstop>spnAreaMin</tabstop>
+  <tabstop>spnAreaMax</tabstop>
+  <tabstop>btnPhoneSaveToFile</tabstop>
+  <tabstop>chkUseMuCntl</tabstop>
+  <tabstop>btnClearLog</tabstop>
+  <tabstop>btnSendParameters</tabstop>
+  <tabstop>chkViewBinarizedImage</tabstop>
+  <tabstop>tblImgState</tabstop>
+  <tabstop>btnResetDesImgMoment</tabstop>
+  <tabstop>btnConfirmDesImgMoment</tabstop>
+  <tabstop>btnPhoneLoadFromFile</tabstop>
+  <tabstop>btnSendMuCntl</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
