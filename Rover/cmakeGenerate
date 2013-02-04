@@ -6,7 +6,7 @@ cmake .. \
 -DANDROID_SDK_API_LEVEL=14  \
 -DARM_TARGET="armeabi-v7a with NEON"  \
 -DMXML_DIR=/home/ryantr/mxml/android  \
--DANDROID_STL=GNU_STATIC  \
+-DANDROID_STL=GNU_STATIC \
 -DCMAKE_BUILD_TYPE=Release  \
 -DCMAKE_MODULE_PATH=/home/ryantr/toadlet/cmake/Modules/  \
 -DCMAKE_PREFIX_PATH=/home/ryantr/toadlet/android14 \
