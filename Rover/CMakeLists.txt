@@ -2,8 +2,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (Rover CXX C)
 
-# Find toadlet
-find_package (toadlet REQUIRED)
 
 # need to set this varaible that OpenCV is expecting to indicate the processor type
 set(ANDROID_NDK_ABI_NAME ${NDK_NAME_ARCH}) 
@@ -19,6 +17,8 @@ else()
 	endforeach()
 endif()
 
+# Find toadlet
+find_package (toadlet REQUIRED)
 
 # Includes
 set (INC ${INC}
@@ -45,7 +45,9 @@ set (LIBS
 	${TOADLET_EGG_LIB} 
 	${OpenCV_LIBS_OPT} 
 	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
-	-lz -llog -ldl EGL android)
+	-lgnustl_static # this i already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
+	-lz -llog -ldl EGL android
+)
 
 # Source files
 set (SRC ${SRC}
