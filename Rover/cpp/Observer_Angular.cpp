@@ -196,6 +196,7 @@ void Observer_Angular::run()
 					{
 						logType = ACCEL;
 
+						mMutex_all.lock();
 						mLastAccel[0][0] = event.data[0];
 						mLastAccel[1][0] = event.data[1];
 						mLastAccel[2][0] = event.data[2];
