@@ -176,6 +176,17 @@ void VisionProcessor::processImage()
 	{
 		trackStatus = matcher->Track(mLastImage,false);
 		numPtsTracked = matcher->vMatches.size();
+		
+		//! draw
+		for(int i=0;i<numPtsTracked;i++)
+		{
+			Matcher::p_match single_match = matcher->vMatches[i];
+			cv::Point line_start(single_match.u1p,single_match.v1p);
+			cv::Point line_end(single_match.u1c,single_match.v1c);
+			cv::line(mLastImage,line_start,line_end,cv::Scalar(1,1,0));
+			cv::circle(mLastImage,line_start,2.0,cv::Scalar(1,0,0),-1,8);
+			cv::circle(mLastImage,line_end,2.0,cv::Scalar(1,0,0),-1,8);
+		}
 	}
 
 	Log::alert(String()+"Point in track : " + numPtsTracked);

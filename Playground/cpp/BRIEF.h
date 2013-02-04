@@ -232,7 +232,7 @@ void generateTestPoints()
   const int max_v = m_patch_size / 2;
 
   mt19937 generator;  // a core engine class
-  normal_distribution<int> normal(g_mean, g_sigma);
+  normal_distribution<float> normal(g_mean, g_sigma);
 
   for(int i = 0; i < m_bit_length; ++i)
   {
