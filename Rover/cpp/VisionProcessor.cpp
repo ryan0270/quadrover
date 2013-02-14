@@ -224,9 +224,9 @@ void VisionProcessor::run()
 
 //		if(mUseIbvs)
 		{
-			vector<vector<cv::Point2f> > points = getMatchingPoints();
-			if(points.size() > 0)
-				calcOpticalFlow(points);
+//			vector<vector<cv::Point2f> > points = getMatchingPoints();
+//			if(points.size() > 0)
+//				calcOpticalFlow(points);
 		}
 
 		mMutex_image.unlock();
@@ -238,7 +238,7 @@ void VisionProcessor::run()
 
 		mCurImageGray.copyTo(mLastImageGray);
 
-		sys.msleep(1000);
+		sys.msleep(10);
 	}
 
 	mFinished = true;

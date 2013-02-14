@@ -2,8 +2,8 @@
 #define CLASS_PHONEINTERFACE
 
 #include "toadlet/egg.h"
-using toadlet::int64;
-using toadlet::uint64;
+//using toadlet::int64;
+//using toadlet::uint64;
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -28,31 +28,28 @@ using toadlet::uint64;
 
 #include "ICSL/Timer/src/Timer.h"
 #include "ICSL/xml_utils/xml_utils.h"
-#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
+//#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 
-#include "Quadrotor/quadrotor_config.h"
-#include "Quadrotor/quadrotorConstants.h"
-
-#include "ui_PhoneInterface.h"
-#include "../../QuadPhone/cpp/Common.h"
+#include "ui_Leash.h"
+#include "../../Rover/cpp/Common.h"
 
 namespace ICSL{
 namespace Quadrotor {
 using namespace std;
 
-class PhoneInterfaceListener
+class LeashListener
 {
 	public:
 	virtual void onPhoneConnected(){};
 };
 
-class PhoneInterface : public QWidget, protected Ui::PhoneInterface
+class Leash : public QWidget
 {
 	Q_OBJECT
 
 	public:
-		explicit PhoneInterface(QWidget *parent=0);
-		virtual ~PhoneInterface();
+		explicit Leash(QWidget *parent=0);
+		virtual ~Leash();
 
 		void initialize();
 		void pollUDP();
@@ -71,14 +68,14 @@ class PhoneInterface : public QWidget, protected Ui::PhoneInterface
 		void setTorqueScaling(double k){mTorqueScaling = k;}
 		void setMass(double m){mMass = m;}
 
-		bool isUsingIbvs(){return chkUseIbvsController->isChecked();}
+//		bool isUsingIbvs(){return chkUseIbvsController->isChecked();}
 
-		toadlet::egg::Collection<double> getDesiredImageMoment(double z);
-		double getDesiredImageArea(){
-			mMutex_data.lock();
-			double area = mDesiredStateImage[2]; 
-			mMutex_data.unlock(); 
-			return area;}
+//		toadlet::egg::Collection<double> getDesiredImageMoment(double z);
+//		double getDesiredImageArea(){
+//			mMutex_data.lock();
+//			double area = mDesiredStateImage[2]; 
+//			mMutex_data.unlock(); 
+//			return area;}
 
 		void toggleIbvs();
 
@@ -86,7 +83,7 @@ class PhoneInterface : public QWidget, protected Ui::PhoneInterface
 		bool loadConfigFromFile(string filename);
 		void saveConfigToFile(string filename);
 
-		void addListener(PhoneInterfaceListener *l){mListeners.push_back(l);};
+		void addListener(LeashListener *l){mListeners.push_back(l);};
 
 	protected slots:
 		void onBtnApply_clicked();
@@ -98,9 +95,9 @@ class PhoneInterface : public QWidget, protected Ui::PhoneInterface
 		void onBtnResetObserver_clicked();
 		void onBtnSyncTime_clicked();
 		void onBtnRequestLogFile_clicked();
-		void onBtnSendMuCntl_clicked();
+//		void onBtnSendMuCntl_clicked();
 		void onBtnClearLog_clicked();
-		void onChkUseMuCntl_clicked();
+//		void onChkUseMuCntl_clicked();
 		void onChkViewBinarizedImage_clicked();
 		void onChkUseIbvsController_clicked();
 		void onBtnResetDesImgMoment_clicked();
@@ -108,22 +105,24 @@ class PhoneInterface : public QWidget, protected Ui::PhoneInterface
 		void onBtnSetYawZero_clicked();
 
 	protected:
+		Ui::Leash *ui;
 		bool mIsConnected;
 		string mIP;
 		int mPort;
 		Socket::ptr mSocketUDP, mSocketTCP;
-		double mGainP[3], mGainI[3], mGainD[3], mObserverGainP, mObserverGainI;
-		double mGravBandwidth;
+		double mObserverGainP, mObserverGainI;
+//		double mGainP[3], mGainI[3], mGainD[3];
 		double mDeltaT, mForceScaling, mTorqueScaling, mMass;
 		Collection<double> mObserverWeights;
 		int mArduinoStatus;
-		toadlet::egg::Collection<double> mIbvsGainImg, mIbvsGainFlowInt, mIbvsGainFlow, mIbvsGainAngularRate, mAttCmdOffset, mIbvsGainFF;
-		double mIbvsGainAngle, mIbvsGainDynamic;
-		TNT::Array2D<double> mState, mDesiredState, mGyro, mAccel, mBias, mComp;
-		toadlet::egg::Collection<float> mStateImage, mDesiredStateImage;
+		toadlet::egg::Collection<double> mIbvsGainAngularRate;
+		double mIbvsGainAngle;
+//		toadlet::egg::Collection<double> mIbvsGainImg, mIbvsGainFlowInt, mIbvsGainFlow, mAttCmdOffset, mIbvsGainFF;
+//		double mIbvsGainDynamic;
+//		TNT::Array2D<double> mState, mDesiredState, mGyro, mAccel, mBias, mComp;
+//		toadlet::egg::Collection<float> mStateImage, mDesiredStateImage;
 		TNT::Array2D<double> mIntMemory;
 		int mMotorValues[4], mMotorValuesIbvs[4];
-		bool mUseMotors;
 		uint64 mTimeMS;
 		int mMotorTrim[4];
 
@@ -133,14 +132,13 @@ class PhoneInterface : public QWidget, protected Ui::PhoneInterface
 		toadlet::egg::Mutex mMutex_socketUDP, mMutex_socketTCP;
 		toadlet::egg::Mutex mMutex_data, mMutex_image;
 
-		int mCurCntlType, mImgViewType;
-		string mCntlSysFile;
+//		int mCurCntlType, mImgViewType;
+//		string mCntlSysFile;
 		uint32 mCntlCalcTimeUS, mImgProcTimeUS;
 
 		void applyCommConfig(QTreeWidgetItem *root);
 		void applyMotorConfig(QTreeWidgetItem *root);
 		void applyControlConfig(QTreeWidgetItem *root);
-		void applyControllerSysConfig(QTreeWidgetItem *root);
 		void applyObserverConfig(QTreeWidgetItem *root);
 		void applyIbvsConfig(QTreeWidgetItem *root);
 		void applyKalmanFilterConfig(QTreeWidgetItem *root);
@@ -153,31 +151,34 @@ class PhoneInterface : public QWidget, protected Ui::PhoneInterface
 		void receiveLogFile(Socket::ptr socket, string filename);
 
 		bool mUseIbvs;
-		toadlet::egg::Collection<int> mFiltBoxColorMin, mFiltBoxColorMax;
-		int mFiltSatMin, mFiltSatMax;
-		int mFiltValMin, mFiltValMax;
-		int mFiltCircMin, mFiltCircMax;
-		int mFiltConvMin, mFiltConvMax;
-		int mFiltAreaMin, mFiltAreaMax;
-		double mDesiredHeight;
+//		toadlet::egg::Collection<int> mFiltBoxColorMin, mFiltBoxColorMax;
+//		int mFiltSatMin, mFiltSatMax;
+//		int mFiltValMin, mFiltValMax;
+//		int mFiltCircMin, mFiltCircMax;
+//		int mFiltConvMin, mFiltConvMax;
+//		int mFiltAreaMin, mFiltAreaMax;
+//		double mDesiredHeight;
 
 		TNT::Array2D<double> mAttBias;
 		double mAttBiasGain, mForceScalingGain;
 
 		float mKfPosMeasStdDev, mKfVelMeasStdDev;
 
-		Collection<float> mGainCntlSys;
-
 		uint32 mLogMask;
 
 		cv::Mat mLastImage;
-//		cv::Mat processImage(const cv::Mat &img);
 		QImage cvMat2QImage(const cv::Mat &mat);
-		static bool compareCirclesByRadius(cv::Vec3f c1, cv::Vec3f c2){return (c1[2] < c2[2]);}
 
-		void populateImgProcParams();
+		toadlet::egg::Collection<LeashListener*> mListeners;
 
-		toadlet::egg::Collection<PhoneInterfaceListener*> mListeners;
+		QList<QStandardItem*> mAttData, mPosData, mVelData;
+		QList<QStandardItem*> mDesAttData, mDesPosData, mDesVelData;
+		QList<QStandardItem*> mGyroData, mGyroBiasData;
+		QList<QStandardItem*> mAccelData;
+		QList<QStandardItem*> mMagData;
+		QList<QStandardItem*> mPosIntData, mTorqueIntData;
+		QList<QStandardItem*> mMotorData;
+
 };
 }
 }

@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Leash</string>
   </property>
   <property name="autoFillBackground">
    <bool>true</bool>
@@ -122,7 +122,7 @@
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="layQuadA" stretch="">
+     <layout class="QVBoxLayout" name="layQuadA">
       <property name="sizeConstraint">
        <enum>QLayout::SetDefaultConstraint</enum>
       </property>

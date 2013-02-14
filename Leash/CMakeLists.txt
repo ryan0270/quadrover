@@ -1,6 +1,6 @@
 # Standard setup cmake_minimum_required (VERSION 2.6)
 cmake_minimum_required (VERSION 2.6)
-project (phoneInterface CXX C)
+project (leash CXX C)
 IF( ${UNIX})
 	set(ICSL_ICSL_DIR "/home/ryantr/Software/ICSL" CACHE PATH " ")
 	set(ICSL_EXTERNALSOFTWARE_DIR "/home/ryantr/Software/ExternalSoftware" CACHE PATH " ")
@@ -47,7 +47,7 @@ set(LIBS ${LIBS}
 
 # Includes
 set (includeDirs ${includeDirs}
-	${phoneInterface_SOURCE_DIR/src}
+	${leash_SOURCE_DIR/src}
 	${ICSL_ICSL_DIR}
 	${ICSL_QUADROTOR_DIR}
 	${ICSL_EXTERNALSOFTWARE_DIR}
@@ -60,10 +60,10 @@ set (includeDirs ${includeDirs}
 set (SRC ${SRC}
 	src/main.cpp
 	src/FlightInterface.cpp
-	src/SystemControllerHierarchical.cpp
-	src/SystemControllerFeedbackLin.cpp
-	src/QuadrotorInterface.cpp
-	src/PhoneInterface.cpp
+#	src/SystemControllerHierarchical.cpp
+#	src/SystemControllerFeedbackLin.cpp
+#	src/QuadrotorInterface.cpp
+	src/Leash.cpp
 	${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/src/TelemetryVicon.cpp
 	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.cpp
 )
@@ -71,21 +71,19 @@ set (SRC ${SRC}
 # Headers
 set (H ${H}
 	src/FlightInterface.h
-	src/SystemControllerHierarchical.h
-	src/SystemControllerFeedbackLin.h
-	src/QuadrotorInterface.h
-	src/PhoneInterface.h
-	${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/QuadPhone/cpp/Common.h
-	${ICSL_QUADROTOR_DIR}/Quadrotor/quadrotor_config.h
-	${ICSL_QUADROTOR_DIR}/Quadrotor/quadrotorConstants.h
+#	src/SystemControllerHierarchical.h
+#	src/SystemControllerFeedbackLin.h
+#	src/QuadrotorInterface.h
+	src/Leash.h
+	../Rover/cpp/Common.h
 	${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/src/TelemetryVicon.h
 	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.h
 )
 
 set (FORMS ${FORMS}
 	src/FlightInterface.ui
-	src/QuadrotorInterface.ui
-	src/PhoneInterface.ui
+#	src/QuadrotorInterface.ui
+	src/Leash.ui
 	)
 
 set (RES ${RES})
@@ -132,28 +130,31 @@ QT4_WRAP_CPP(H_MOC ${H})
 QT4_WRAP_UI(FORM_HEADERS ${FORMS})
 QT4_ADD_RESOURCES(RES_RCC ${RES})
 
-SOURCE_GROUP(Quadrotor FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/quadrotor_config.h)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/main.cpp)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/FlightInterface.ui)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/FlightInterface.h)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/FlightInterface.cpp)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/QuadrotorInterface.ui)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/QuadrotorInterface.h)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/QuadrotorInterface.cpp)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/PhoneInterface.ui)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/PhoneInterface.h)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/PhoneInterface.cpp)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/SystemControllerHierarchical.h)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/SystemControllerHierarchical.cpp)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/SystemControllerFeedbackLin.h)
-SOURCE_GROUP(Quadrotor\\PhoneInterface FILES ${ICSL_QUADROTOR_DIR}/Quadrotor/Phone/PhoneInterface/src/SystemControllerFeedbackLin.cpp)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/main.cpp)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.ui)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.h)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.cpp)
+# SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.ui)
+# SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.h)
+# SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.cpp)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.ui)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.h)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.cpp)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.h)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.cpp)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.h)
+SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.cpp)
 SOURCE_GROUP(Quadrotor\\SystemModelQuadrotor ${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/.*)
 SOURCE_GROUP(Quadrotor\\Telemetry\\Vicon ${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/.*)
-SOURCE_GROUP(Quadrotor\\Moc ${ICSL_QUADROTOR_DIR}/Quadrotor/.*moc.*)
+SOURCE_GROUP(Quadrotor\\Moc ../.*moc.*)
 
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wreorder -Wunused-but-set-variable -Wunused-variable -Wsign-compare")
+#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+endif()
 
 include_directories (${includeDirs})
 # Executable
-add_executable (phoneInterface ${SRC} ${H} ${H_MOC} ${FORM_HEADERS} ${RES_RCC})
-target_link_libraries (phoneInterface ${LIBS})
-install (TARGETS phoneInterface DESTINATION ${phoneInterface_BINARY_DIR} )
+add_executable (leash ${SRC} ${H} ${H_MOC} ${FORM_HEADERS} ${RES_RCC})
+target_link_libraries (leash ${LIBS})
+install (TARGETS leash DESTINATION ${leash_BINARY_DIR} )
