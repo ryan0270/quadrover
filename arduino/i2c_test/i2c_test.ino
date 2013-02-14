@@ -23,7 +23,7 @@ void loop()
     byte readAddr = MOTOR_BASE_ADDR+(motorID << 1);
     Wire.beginTransmission(writeAddr >> 1);
     Wire.write(power);
-    byte result = Wire.endTransmission(true);  
+    byte result = Wire.endTransmission(true);
     if(result != 0)
     {
       Serial.print('xmit error: ');

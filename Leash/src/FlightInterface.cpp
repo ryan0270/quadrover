@@ -20,6 +20,8 @@ namespace Quadrotor{
 		restoreGeometry(settings.value("geometry").toByteArray());
 		int uiVersion= 1;
 		restoreState(settings.value("state").toByteArray(),uiVersion);
+
+		mLeash = NULL;
 	}
 
 	FlightInterface::~FlightInterface()
@@ -47,7 +49,9 @@ namespace Quadrotor{
 		delete mScMoveBackward;
 		delete mScToggleIbvs;
 
-		delete mQuad;
+//		delete mQuad;
+
+		if(mLeash != NULL) delete mLeash;
 	}
 
 	void FlightInterface::initialize()
@@ -84,25 +88,27 @@ namespace Quadrotor{
 		mScToggleIbvs = new QShortcut(Qt::Key_V, this);
 		connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
 
-		mQuad = new QuadrotorInterface();
+//		mQuad = new QuadrotorInterface();
+		mLeash = new Leash();
+		mLeash->initialize();
 		
-		int quadIndex = 0;
+//		int quadIndex = 0;
 		cout << "Initializing quad " << 0 << " ... ";
-		mQuad->initialize(); // this is hopefully redundant with the load from file, but not sure right now
-		string filename = "../quad" + QString::number(0).toStdString() + ".quadConfig";
-		if(mQuad->loadConfigFromFile(filename))
-		{
-			filename = "../"+mQuad->getName()+".phoneConfig";
-			mQuad->getPhoneInterface()->loadConfigFromFile(filename);
-			cout << " success." << endl;
-		}
-		else
-		{
-			cout << filename << " not found. Continuing with defaults." << endl;
-			mQuad->setName("Unk" + QString::number(quadIndex++).toStdString());
-		}		
+//		mQuad->initialize(); // this is hopefully redundant with the load from file, but not sure right now
+//		string filename = "../quad" + QString::number(0).toStdString() + ".quadConfig";
+//		if(mQuad->loadConfigFromFile(filename))
+//		{
+//			filename = "../"+mQuad->getName()+".phoneConfig";
+//			mQuad->getPhoneInterface()->loadConfigFromFile(filename);
+//			cout << " success." << endl;
+//		}
+//		else
+//		{
+//			cout << filename << " not found. Continuing with defaults." << endl;
+//			mQuad->setName("Unk" + QString::number(quadIndex++).toStdString());
+//		}		
 
-		layQuadA->addWidget(mQuad);
+		layQuadA->addWidget(mLeash);
 
 		cout << "Connecting to Vicon ... ";
 		try
@@ -111,42 +117,42 @@ namespace Quadrotor{
 			mTelemVicon.initializeMonitor();
 			if(mTelemVicon.connect("localhost:801") == false)
 			{
-				mQuad->setSimulated(true);
+//				mQuad->setSimulated(true);
 
-				mQuad->setDeltaT(1000); // need something here
-				// Do this so we start out at hover
-				Array2D<double> stateRef = mQuad->getDesiredState();
-				mQuad->setDesiredState(stateRef);
-
-				mQuad->calcControl();
-				mQuad->sendControl();
+//				mQuad->setDeltaT(1000); // need something here
+//				// Do this so we start out at hover
+//				Array2D<double> stateRef = mQuad->getDesiredState();
+//				mQuad->setDesiredState(stateRef);
+//
+//				mQuad->calcControl();
+//				mQuad->sendControl();
 			}
 		}
 		catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 		cout << "Success" << endl;
-		mTelemVicon.addTrackedQuadrotor(mQuad->getName());
-		mTelemVicon.addListener(mQuad->getDynamicModel());
+//		mTelemVicon.addTrackedQuadrotor(mQuad->getName());
+//		mTelemVicon.addListener(mQuad->getDynamicModel());
 
-		quadDisplayA = mQuad;
+//		quadDisplayA = mLeash;
 	}
 
 	void FlightInterface::run()
 	{
 		mTelemVicon.startMonitor();
 		mStartTimeUniverseMS = mTmr.getCurTimeMS();
-		mQuad->syncStartTime(mStartTimeUniverseMS);
+		mLeash->syncStartTime(mStartTimeUniverseMS);
 		mTmrGui->start(50);
 	}
 
 	void FlightInterface::setDeltaT(double dt)
 	{
 		mDeltaT = dt;
-		mQuad->setDeltaT(dt);
+		mLeash->setDeltaT(dt);
 	}
 
 	void FlightInterface::doEmergencyShutdown()
 	{
-		mQuad->sendStopAndShutdown();
+//		mQuad->sendStopAndShutdown();
 	}
 
 	void FlightInterface::doControl()
@@ -157,20 +163,20 @@ namespace Quadrotor{
 		Array2D<double> out = runPathPlanner();
 		Array2D<double> desState = submat(out,0,11,0,0);
 		Array2D<double> desAccel = submat(out,12,14,0,0);
-		mQuad->setDesiredState(desState);
-		mQuad->setDesiredAccel(desAccel);
+//		mQuad->setDesiredState(desState);
+//		mQuad->setDesiredAccel(desAccel);
 
-		mQuad->calcControl();
-		mQuad->sendControl();
+//		mQuad->calcControl();
+//		mQuad->sendControl();
 	}
 
 	Array2D<double> FlightInterface::runPathPlanner()
 	{
-		Array2D<double> desState, accel(3,1,0.0);
+		Array2D<double> desState(12,1,0.0), accel(3,1,0.0);
 		switch(mFlightMode)
 		{
 			case QUAD_IDLE:
-				desState = mQuad->getDesiredState();
+//				desState = mQuad->getDesiredState();
 				break;
 			case QUAD_PROFILE_TRACKING:
 				{
@@ -192,11 +198,12 @@ namespace Quadrotor{
 
 		int numCycles = 3;
 		double maxVel = 2.0*PI/5; // max angular velocity
-		double cyclePeriod = 1/maxVel; // time for 1 cycle if always at max velocity
+//		double cyclePeriod = 1/maxVel; // time for 1 cycle if always at max velocity
 		double t1 = 1; // time to ramp speed from rest to max speed
 		double t2 = numCycles*2.0*PI/maxVel; // time to start ramp from max speed to rest
-
-		double alpha, omega, angle;
+ 
+		double alpha;
+		double omega, angle;
 		if(t < t1)
 		{
 			omega = t/t1*maxVel;
@@ -234,53 +241,54 @@ namespace Quadrotor{
 //		xDes[5][0] = -0.5*PI*omega*cos(angle);
 
 		// Set the z height to a constant at whatever the current target is
-		Array2D<double> curDes = mQuad->getDesiredState();
-		xDes[8][0] = curDes[8][0];
-
-		double xPos = xDes[6][0];
-		double yPos = xDes[7][0];
-		double xVel = xDes[9][0];
-		double yVel = xDes[10][0];
-		Array2D<double> accelDes(3,1,0.0);
-		accelDes[0][0] = -yVel*omega-yPos*alpha;
-		accelDes[1][0] = xVel*omega+xPos*alpha;
-		accelDes[2][0] = 0;
-
-		return stackVertical(xDes, accelDes);
+//		Array2D<double> curDes = mQuad->getDesiredState();
+//		xDes[8][0] = curDes[8][0];
+//
+//		double xPos = xDes[6][0];
+//		double yPos = xDes[7][0];
+//		double xVel = xDes[9][0];
+//		double yVel = xDes[10][0];
+//		Array2D<double> accelDes(3,1,0.0);
+//		accelDes[0][0] = -yVel*omega-yPos*alpha;
+//		accelDes[1][0] = xVel*omega+xPos*alpha;
+//		accelDes[2][0] = 0;
+//
+//		return stackVertical(xDes, accelDes);
+		return Array2D<double>(15,0,0.0);
 	}
 
 	void FlightInterface::saveData(string dir, string filename)
 	{
-//		string subDir = dir+mQuad->getName();
 		string subDir = dir;
-		mQuad->saveData(subDir, filename);
+//		mQuad->saveData(subDir, filename);
 	}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Slots
 	void FlightInterface::updateDisplay()
 	{
-		unsigned long dispTimeStart = mTmr.getCurTimeMS();
+//		unsigned long dispTimeStart = mTmr.getCurTimeMS();
 		lblRunTime->setText(QString::number((int)((mTmr.getCurTimeMS()-mStartTimeUniverseMS)/1000.0 + 0.5)));
-		quadDisplayA->updateDisplay();
+//		quadDisplayA->updateDisplay();
+		mLeash->updateDisplay();
 	}
 
 	void FlightInterface::onBtnStartMotors_clicked()
 	{		
 		mFlightMode = QUAD_IDLE;
-		mQuad->resetErrorMemory();
-		mQuad->sendMotorStart();
+//		mQuad->resetErrorMemory();
+//		mQuad->sendMotorStart();
 	}
 
 	void FlightInterface::onBtnStopMotors_clicked()
 	{
 		mFlightMode = QUAD_IDLE;
-		mQuad->sendStopAndShutdown();
+//		mQuad->sendStopAndShutdown();
 	}
 
 	void FlightInterface::onBtnBeginTracking_clicked()
 	{
-		mQuad->setFlightMode(QUAD_PROFILE_TRACKING);
+//		mQuad->setFlightMode(QUAD_PROFILE_TRACKING);
 
 		mFlightMode = QUAD_PROFILE_TRACKING;
 		mProfileStartTime = mTmr.getCurTimeMS();
@@ -291,7 +299,7 @@ namespace Quadrotor{
 cout << "1" << endl;
 		mFlightMode = QUAD_IDLE;
 cout << "2" << endl;
-		mQuad->sendStopAndShutdown();
+//		mQuad->sendStopAndShutdown();
 cout << "3" << endl;
 		mTmrGui->stop();
 cout << "4" << endl;
@@ -301,65 +309,65 @@ cout << "5" << endl;
 
 	void FlightInterface::onBtnClearBuffers_clicked()
 	{
-		mQuad->clearAllBuffers();
+//		mQuad->clearAllBuffers();
 	}
 
 	void FlightInterface::onIncreaseHeight()
 	{
-		Array2D<double> state = mQuad->getDesiredState();
-		state[8][0] = min(state[8][0]+0.050,1.0);
-		mQuad->setDesiredState(state);
+//		Array2D<double> state = mQuad->getDesiredState();
+//		state[8][0] = min(state[8][0]+0.050,1.0);
+//		mQuad->setDesiredState(state);
 	}
 
 	void FlightInterface::onDecreaseHeight()
 	{
-		Array2D<double> state = mQuad->getDesiredState();
-		state[8][0] = max(state[8][0]-0.050,0.0);
-		mQuad->setDesiredState(state);
+//		Array2D<double> state = mQuad->getDesiredState();
+//		state[8][0] = max(state[8][0]-0.050,0.0);
+//		mQuad->setDesiredState(state);
 	}
 
 	void FlightInterface::onMoveLeft()
 	{
-		Array2D<double> state = mQuad->getDesiredState();
-		state[6][0] -=0.200;
-		mQuad->setDesiredState(state);
+//		Array2D<double> state = mQuad->getDesiredState();
+//		state[6][0] -=0.200;
+//		mQuad->setDesiredState(state);
 	}
 
 	void FlightInterface::onMoveRight()
 	{
-		Array2D<double> state = mQuad->getDesiredState();
-		state[6][0] += 0.200;
-		mQuad->setDesiredState(state);
+//		Array2D<double> state = mQuad->getDesiredState();
+//		state[6][0] += 0.200;
+//		mQuad->setDesiredState(state);
 	}
 
 	void FlightInterface::onMoveForward()
 	{
-		Array2D<double> state = mQuad->getDesiredState();
-		state[7][0] += 0.200;
-		mQuad->setDesiredState(state);
+//		Array2D<double> state = mQuad->getDesiredState();
+//		state[7][0] += 0.200;
+//		mQuad->setDesiredState(state);
 	}
 
 	void FlightInterface::onMoveBackward()
 	{
-		Array2D<double> state = mQuad->getDesiredState();
-		state[7][0] -=0.2000;
-		mQuad->setDesiredState(state);
+//		Array2D<double> state = mQuad->getDesiredState();
+//		state[7][0] -=0.2000;
+//		mQuad->setDesiredState(state);
 	}
 
 	void FlightInterface::onToggleIbvs()
 	{
-		mQuad->toggleIbvs();
+//		mQuad->toggleIbvs();
 	}
-	void FlightInterface::onQuadModelChangeStarted(QuadrotorInterface *quad)
-	{
+//	void FlightInterface::onQuadModelChangeStarted(QuadrotorInterface *quad)
+//	{
 //		disconnect(&mTelemVicon,SIGNAL(newRecordAvailable(const TelemetryViconDataRecord&)),
 //			quad->getDynamicModel(), SLOT(onNewMeasurementAvailable(const TelemetryViconDataRecord&)));
-	}
+//	}
 
-	void FlightInterface::onQuadModelChangeDone(QuadrotorInterface *quad)
-	{
+//	void FlightInterface::onQuadModelChangeDone(QuadrotorInterface *quad)
+//	{
 //		connect(&mTelemVicon,SIGNAL(newRecordAvailable(const TelemetryViconDataRecord&)),
 //			quad->getDynamicModel(), SLOT(onNewMeasurementAvailable(const TelemetryViconDataRecord&)));
-	}
+//	}
 }
 }

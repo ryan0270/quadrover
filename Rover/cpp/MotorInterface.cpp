@@ -151,6 +151,7 @@ namespace Quadrotor{
 			Log::alert("MotorInterface -- Motors disabled");
 	}
 
+	// TODO: Need to make this function const
 	bool MotorInterface::isConnected()
 	{
 		if(mWaitingForConnection)

@@ -15,7 +15,7 @@ class CommManagerListener
 	explicit CommManagerListener(){};
 	virtual ~CommManagerListener(){};
 
-	virtual void onNewCommRateCmd(toadlet::egg::Collection<float> const &data){};
+//	virtual void onNewCommRateCmd(toadlet::egg::Collection<float> const &data){};
 	virtual void onNewCommMotorOn(){};
 	virtual void onNewCommMotorOff(){};
 	virtual void onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float const yawPID[3]){};
@@ -25,7 +25,7 @@ class CommManagerListener
 	virtual void onNewCommObserverGain(double gainP, double gainI, double gravWeight, double compWeight, double gravBandwidth){};
 	virtual void onNewCommTimeSync(int time){};
 	virtual void onNewCommLogTransfer(){};
-	virtual void onNewCommControlType(uint16 cntlType){};
+//	virtual void onNewCommControlType(uint16 cntlType){};
 	virtual void onNewCommControlSystemGains(Collection<float> const &gains){};
 	virtual void onNewCommSendControlSystem(Collection<tbyte> const &buff){};
 	virtual void onNewCommLogMask(uint32 mask){};
@@ -37,7 +37,7 @@ class CommManagerListener
 	virtual void onNewCommTorqueScaling(float k){};
 	virtual void onNewCommMass(float m){};
 	virtual void onNewCommIbvsGains(toadlet::egg::Collection<float> const &gains){};
-	virtual void onNewCommDesiredImageMoment(toadlet::egg::Collection<float> const &data){};
+//	virtual void onNewCommDesiredImageMoment(toadlet::egg::Collection<float> const &data){};
 	virtual void onNewCommUseIbvs(bool useIbvs){};
 	virtual void onNewCommSetYawZero(){};
 	virtual void onNewCommAttBias(float rollBias, float pitchBias, float yawBias){};

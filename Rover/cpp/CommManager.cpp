@@ -12,6 +12,7 @@ CommManager::CommManager()
 	mLastPacketTime.clear();
 
 	mAddrPC = 0;
+	mPortPC = 0;
 
 	mDone = true; // need this to be true in case the run thread never gets started
 
@@ -32,7 +33,7 @@ void CommManager::initialize()
 {
 
 	mServerSocketTCP = Socket::ptr(Socket::createTCPSocket());
-	mServerSocketTCP->bind(1312);
+	mServerSocketTCP->bind(13120);
 	mServerSocketTCP->listen(1);
 	mServerSocketTCP->setBlocking(false);
 	mSocketTCP = Socket::ptr(mServerSocketTCP->accept());
@@ -44,7 +45,7 @@ void CommManager::initialize()
 	else
 		Log::alert(String("Not connected to PC"));
 	mSocketUDP = Socket::ptr(Socket::createUDPSocket());
-	mSocketUDP->bind(1312);
+	mSocketUDP->bind(13120);
 	mSocketUDP->listen(1);
 	mSocketUDP->setBlocking(false);
 }
@@ -117,7 +118,22 @@ void CommManager::run()
 //			Socket *sock = mServerSocketTCP->accept();
 			mSocketTCP = Socket::ptr(mServerSocketTCP->accept());
 			if(mSocketTCP != NULL && mSocketTCP->connected())
+			{
 				Log::alert(String("Connected to PC"));
+				mAddrPC = mSocketTCP->getHostIPAddress();
+//				mPortPC = mSocketTCP->getHostPort();
+mPortPC = 13120;
+
+				if(mSocketUDP != NULL)
+				{
+					mSocketUDP->close();
+					mSocketUDP = NULL;
+				}
+				mSocketUDP = Socket::ptr(Socket::createUDPSocket());
+				mSocketUDP->bind(mPortPC);
+				mSocketUDP->listen(1);
+				mSocketUDP->setBlocking(false);
+			}
 			mMutex_socketTCP.unlock();
 			mLastCmdRcvTime.setTime();
 		}
@@ -143,6 +159,7 @@ void CommManager::transmitUDP(Packet &pck)
 
 void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 numChannels, uint32 type, vector<unsigned char> const &buff)
 {
+	return;
 	if(!mConnected)
 		return;
 //	mMutex_socketTCP.lock();
@@ -154,13 +171,13 @@ void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 num
 	uint32 code = 2000;
 	uint32 size = buff.size()*sizeof(unsigned char);
 	mMutex_socketTCP.lock();
-	mSocketTCP->send((tbyte*)&code, sizeof(code));
-	mSocketTCP->send((tbyte*)&numRows, sizeof(numRows));
-	mSocketTCP->send((tbyte*)&numCols, sizeof(numCols));
-	mSocketTCP->send((tbyte*)&numChannels, sizeof(numChannels));
-	mSocketTCP->send((tbyte*)&type, sizeof(type));
-	mSocketTCP->send((tbyte*)&size, sizeof(size));
-	mSocketTCP->send((tbyte*)&buff.front(), size);
+//	mSocketTCP->send((tbyte*)&code, sizeof(code));
+//	mSocketTCP->send((tbyte*)&numRows, sizeof(numRows));
+//	mSocketTCP->send((tbyte*)&numCols, sizeof(numCols));
+//	mSocketTCP->send((tbyte*)&numChannels, sizeof(numChannels));
+//	mSocketTCP->send((tbyte*)&type, sizeof(type));
+//	mSocketTCP->send((tbyte*)&size, sizeof(size));
+//	mSocketTCP->send((tbyte*)&buff.front(), size);
 	mMutex_socketTCP.unlock();
 }
 
@@ -193,11 +210,11 @@ void CommManager::pollUDP()
 
 			switch(pck.type)
 			{
-				case COMM_RATE_CMD:
-					for(int i=0; i<mListeners.size(); i++)
-						mListeners[i]->onNewCommRateCmd(pck.dataFloat);
-					mLastCmdRcvTime.setTime();
-					break;
+//				case COMM_RATE_CMD:
+//					for(int i=0; i<mListeners.size(); i++)
+//						mListeners[i]->onNewCommRateCmd(pck.dataFloat);
+//					mLastCmdRcvTime.setTime();
+//					break;
 				case COMM_STATE_VICON:
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommStateVicon(pck.dataFloat);
@@ -207,11 +224,11 @@ void CommManager::pollUDP()
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommDesState(pck.dataFloat);
 					mLastCmdRcvTime.setTime();
-				case COMM_DESIRED_IMAGE_MOMENT:
-					for(int i=0; i<mListeners.size(); i++)
-						mListeners[i]->onNewCommDesiredImageMoment(pck.dataFloat);
-					mLastCmdRcvTime.setTime();
-					break;
+//				case COMM_DESIRED_IMAGE_MOMENT:
+//					for(int i=0; i<mListeners.size(); i++)
+//						mListeners[i]->onNewCommDesiredImageMoment(pck.dataFloat);
+//					mLastCmdRcvTime.setTime();
+//					break;
 				default:
 					Log::alert(String()+"Unknown UDP comm: " + pck.type);
 			}
@@ -419,19 +436,19 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
-				case COMM_CNTL_TYPE:
-					{
-						uint16 cntlType;
-						bool received = receiveTCP((tbyte*)&cntlType, sizeof(uint16));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommControlType(cntlType);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
+//				case COMM_CNTL_TYPE:
+//					{
+//						uint16 cntlType;
+//						bool received = receiveTCP((tbyte*)&cntlType, sizeof(uint16));
+//						if(received)
+//						{
+//							for(int i=0; i<mListeners.size(); i++)
+//								mListeners[i]->onNewCommControlType(cntlType);
+//						}
+//						else
+//							resetSocket = true;
+//					}
+//					break;
 				case COMM_LOG_MASK:
 					{
 						uint32 mask;
@@ -662,7 +679,7 @@ bool CommManager::sendLogFile(const char* filename)
 	char buff[buffSize];
 	int bytesRead = 1;
 	int code = 1000;
-	mSocketTCP->send((tbyte*)&code, sizeof(code));
+//	mSocketTCP->send((tbyte*)&code, sizeof(code));
 	while(bytesRead > 0)
 	{
 		bytesRead = logFile.read((tbyte*)&buff,buffSize);
@@ -671,14 +688,14 @@ bool CommManager::sendLogFile(const char* filename)
 		{
 //			String str = String() + "Sending " + bytesRead + " bytes";
 //			Log::alert(str);
-			mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
-			mSocketTCP->send((tbyte*)buff,bytesRead);
+//			mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
+//			mSocketTCP->send((tbyte*)buff,bytesRead);
 		}
 	}
 	bytesRead= -1;
 //	String str = String() + "Sending " + bytesRead + " bytes";
 //	Log::alert(str);
-	mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
+//	mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
 	logFile.close();
 	mMutex_socketTCP.unlock();
 

@@ -30,8 +30,10 @@
 #include "Quadrotor/quadrotor_config.h"
 #include "Quadrotor/TelemetryVicon/src/TelemetryVicon.h"
 
-#include "QuadrotorInterface.h"
+//#include "QuadrotorInterface.h"
 #include "ui_FlightInterface.h"
+#include "Leash.h"
+#include "ui_Leash.h"
 
 namespace ICSL{
 namespace Quadrotor{
@@ -71,8 +73,8 @@ namespace Quadrotor{
 			void onMoveRight();
 			void onMoveForward();
 			void onMoveBackward();
-			void onQuadModelChangeStarted(QuadrotorInterface* );
-			void onQuadModelChangeDone(QuadrotorInterface* quad);
+//			void onQuadModelChangeStarted(QuadrotorInterface* );
+//			void onQuadModelChangeDone(QuadrotorInterface* quad);
 			void onToggleIbvs();
 
 		protected:
@@ -82,8 +84,9 @@ namespace Quadrotor{
 			TelemetryVicon mTelemVicon;
 
 			FlightMode mFlightMode;
-			QuadrotorInterface *mQuad;
-			QuadrotorInterface *quadDisplayA;
+//			QuadrotorInterface *mRover;
+//			QuadrotorInterface *quadDisplayA;
+			Leash *mLeash;
 
 			ICSL::Timer mTmr;
 

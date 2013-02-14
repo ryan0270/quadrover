@@ -14,12 +14,13 @@ class MotorInterface : public toadlet::egg::Thread
 	void shutdown();
 	void initialize();
 
+	//TODO: Need to make this function constant
 	bool isConnected();
 
 	void sendCommand(toadlet::egg::Collection<uint16> const &cmds);
 
 	void enableMotors(bool on);
-	bool isMotorsEnabled(){return mMotorsEnabled;}
+	bool isMotorsEnabled() const {return mMotorsEnabled;}
 
 	// from toadlet::egg::Thread
 	void run();

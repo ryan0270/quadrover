@@ -54,13 +54,13 @@ void Rover::initialize()
 	mTranslationController.setStartTime(mStartTime);
 	mTranslationController.setQuadLogger(&mQuadLogger);
 	mTranslationController.initialize();
-//	mTranslationController.start();
+	mTranslationController.start();
 	mCommManager.addListener(&mTranslationController);
 
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
 	mAttitudeThrustController.initialize();
-//	mAttitudeThrustController.start();
+	mAttitudeThrustController.start();
 	mCommManager.addListener(&mAttitudeThrustController);
 	mTranslationController.addListener(&mAttitudeThrustController);
 	mMutex_cntl.unlock();
@@ -79,7 +79,7 @@ void Rover::initialize()
 	mObsvTranslational.setStartTime(mStartTime);
 	mObsvTranslational.setRotViconToPhone(mRotViconToPhone);
 	mObsvTranslational.initialize();
-//	mObsvTranslational.start();
+	mObsvTranslational.start();
 	mObsvTranslational.addListener(&mTranslationController);
 	mObsvAngular.addListener(&mObsvTranslational);
 	mCommManager.addListener(&mObsvTranslational);
@@ -90,7 +90,7 @@ void Rover::initialize()
 	mVisionProcessor.setAttitudeObserver(&mObsvAngular);
 	mVisionProcessor.start();
 
-	this->start(); // this should spawn a separate thread running the run() function
+	this->start();
 
 	Log::alert("Initialized");
 }
@@ -231,20 +231,27 @@ void Rover::transmitDataUDP()
 		return;
 	}
 
-	Packet pArduinoStatus, pUseMotors, pState, pDesState, pGyro, pAccel, pComp, pBias, pCntl, pIntMem, pCntlType;
+	Packet pArduinoStatus, pUseMotors, pState, pDesState, pGyro, pAccel, pComp, pBias, pCntl, pIntMemPos, pIntMemTorque;
 	Packet pImgProcTime, pUseIbvs;
 	mMutex_cntl.lock();
 	int arduinoStatus;
 	mMutex_cntl.lock();
-	if(mAttitudeThrustController.isMotorInterfaceConnected())
-		arduinoStatus = 0;
-	else
+	MotorInterface* motorInterface = mAttitudeThrustController.getMotorInterface();
+//	if(mAttitudeThrustController.getMotorInterface()->isConnected())
+	if(motorInterface->isConnected())
 		arduinoStatus = 1;
+	else
+		arduinoStatus = 0;
+
+	pUseMotors.dataBool.push_back(motorInterface->isMotorsEnabled());
+	pUseMotors.type = COMM_USE_MOTORS;
 
 	Array2D<double> desAtt = mAttitudeThrustController.getDesAttitude();
 	mMutex_cntl.unlock();
+
 	pArduinoStatus.dataInt32.push_back(arduinoStatus); 
 	pArduinoStatus.type = COMM_ARDUINO_STATUS;
+
 
 	mMutex_observer.lock();
 	Array2D<double> curAtt = mCurAtt.copy();
@@ -253,18 +260,20 @@ void Rover::transmitDataUDP()
 	mMutex_observer.unlock();
 	Array2D<double> curState = stackVertical(curAtt, curVel);
 
-	pState.dataFloat.resize(6);
-	for(int i=0; i<6; i++)
-		pState.dataFloat[i] = curState[i][0];
+	pState.dataFloat.resize(12);
+	for(int i=0; i<(int)pState.dataFloat.size(); i++)
+//		pState.dataFloat[i] = curState[i][0];
+pState.dataFloat[i] = i;
 	pState.type = COMM_STATE_PHONE;
 
-	Array2D<double> curDesState(6,1,0.0); 
-	for(int i=0; i<3; i++)
-		curDesState[i][0] = desAtt[i][0];
+//	Array2D<double> curDesState(9,1,0.0); 
+//	for(int i=0; i<3; i++)
+//		curDesState[i][0] = desAtt[i][0];
 
-	pDesState.dataFloat.resize(6);
-	for(int i=0; i<6; i++)
-		pDesState.dataFloat[i] = curDesState[i][0];
+	pDesState.dataFloat.resize(12);
+	for(int i=0; i<(int)pDesState.dataFloat.size(); i++)
+		pDesState.dataFloat[i] = i+1;
+//		pDesState.dataFloat[i] = curDesState[i][0];
 	pDesState.type = COMM_DESIRED_STATE;
 
 	pCntl.dataInt32.resize(4);
@@ -275,19 +284,25 @@ void Rover::transmitDataUDP()
 		pCntl.dataInt32[i] = cmds[i];
 	pCntl.type = COMM_MOTOR_VAL;
 
-	pIntMem.dataFloat.resize(3);
-	pIntMem.dataFloat[0] = 0;
-	pIntMem.dataFloat[1] = 0;
-	pIntMem.dataFloat[2] = 0;
-	pIntMem.type = COMM_INT_MEM;
+	pIntMemPos.dataFloat.resize(3);
+	pIntMemPos.dataFloat[0] = 0;
+	pIntMemPos.dataFloat[1] = 0;
+	pIntMemPos.dataFloat[2] = 0;
+	pIntMemPos.type = COMM_INT_MEM_POS;
 
-	pCntlType.type = COMM_CNTL_TYPE;
-	mMutex_cntl.lock();
-	int cntlType = mTranslationController.getControlType();
-	mMutex_cntl.unlock();
-	pCntlType.dataInt32.push_back(cntlType);
+	pIntMemTorque.dataFloat.resize(3);
+	pIntMemTorque.dataFloat[0] = 0;
+	pIntMemTorque.dataFloat[1] = 0;
+	pIntMemTorque.dataFloat[2] = 0;
+	pIntMemTorque.type = COMM_INT_MEM_TORQUE;
 
-	pImgProcTime.type = COMM_IMGPROC_TIME;
+//	pCntlType.type = COMM_CNTL_TYPE;
+//	mMutex_cntl.lock();
+//	int cntlType = mTranslationController.getControlType();
+//	mMutex_cntl.unlock();
+//	pCntlType.dataInt32.push_back(cntlType);
+
+	pImgProcTime.type = COMM_IMGPROC_TIME_US;
 	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
 
 	pUseIbvs.type = COMM_USE_IBVS;
@@ -335,7 +350,7 @@ void Rover::transmitDataUDP()
 
 	uint64 time = mStartTime.getElapsedTimeMS();
 	pArduinoStatus.time = time;
-//	pUseMotors.time = time;
+	pUseMotors.time = time;
 	pState.time = time;
 	pDesState.time = time;
 	pGyro.time = time;
@@ -343,13 +358,14 @@ void Rover::transmitDataUDP()
 	pComp.time = time;
 	pBias.time = time;
 	pCntl.time = time;
-	pIntMem.time = time;
-	pCntlType.time = time;
+	pIntMemPos.time = time;
+	pIntMemTorque.time = time;
+//	pCntlType.time = time;
 	pImgProcTime.time = time;
 	pUseIbvs.time = time;
 
 	mCommManager.transmitUDP(pArduinoStatus);
-//	mCommManager.transmitUDP(pUseMotors);
+	mCommManager.transmitUDP(pUseMotors);
 	mCommManager.transmitUDP(pState);
 	mCommManager.transmitUDP(pDesState);
 	mCommManager.transmitUDP(pGyro);
@@ -357,8 +373,9 @@ void Rover::transmitDataUDP()
 	mCommManager.transmitUDP(pBias);
 	mCommManager.transmitUDP(pComp);
 	mCommManager.transmitUDP(pCntl);
-	mCommManager.transmitUDP(pIntMem);
-	mCommManager.transmitUDP(pCntlType);
+	mCommManager.transmitUDP(pIntMemPos);
+	mCommManager.transmitUDP(pIntMemTorque);
+//	mCommManager.transmitUDP(pCntlType);
 	mCommManager.transmitUDP(pImgProcTime);
 	mCommManager.transmitUDP(pUseIbvs);
 
@@ -594,6 +611,7 @@ Array2D<int> Rover::getCpuUsage()
 			if(strncmp("cpu",tok.c_str(),3) == 0) // this is a cpu line
 				lines.push_back(String(line.c_str()));
 		}
+		file.close();
 	}
 	else
 	{

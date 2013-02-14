@@ -35,6 +35,11 @@ namespace Quadrotor {
 		mMotorDist = 0.160;
 
 		mMotorTrim[0] = mMotorTrim[1] = mMotorTrim[2] = mMotorTrim[3] = 0;
+
+		mLastMotorCmds.push_back(0);
+		mLastMotorCmds.push_back(0);
+		mLastMotorCmds.push_back(0);
+		mLastMotorCmds.push_back(0);
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
@@ -284,14 +289,14 @@ gainAngle[2][0] = mGainRate[2][0];
 		mMutex_motorInterface.unlock();
 	}
 
-	bool AttitudeThrustController::isMotorInterfaceConnected()
-	{
-		bool temp;
-		mMutex_motorInterface.lock();
-		temp = mMotorInterface.isConnected();
-		mMutex_motorInterface.unlock();
-		return temp;
-	}
+//	bool AttitudeThrustController::isMotorInterfaceConnected()
+//	{
+//		bool temp;
+//		mMutex_motorInterface.lock();
+//		temp = mMotorInterface.isConnected();
+//		mMutex_motorInterface.unlock();
+//		return temp;
+//	}
 
 } // namespace Quadrotor
 } // namespace ICSL
