@@ -66,48 +66,53 @@ void Observer_Angular::initialize()
 //	ALooper *looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
 	const int LOOPER_ID_USER =3; // this is defined in /opt/android-ndk/sources/android/native_app_glue/android_native_app_glue.h but that files isn't in the include path
 //	mSensorEventQueue = ASensorManager_createEventQueue(mSensorManager, looper, LOOPER_ID_USER, NULL, NULL);
-	mSensorEventQueue = ASensorManager_createEventQueue(mSensorManager, looper, LOOPER_ID_USER, (ALooper_callbackFunc)&inputDetected, NULL);
+	mSensorEventQueue = ASensorManager_createEventQueue(mSensorManager, looper, 0, (ALooper_callbackFunc)&inputDetected, NULL);
 
 	mAccelSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_ACCELEROMETER);
 	if(mAccelSensor != NULL)
 	{
 		const char* name = ASensor_getName(mAccelSensor);
 		const char* vendor = ASensor_getVendor(mAccelSensor);
-		Log::alert(String()+"Accel sensor:\n\t"+name+"\n\t"+vendor);
+		float res = ASensor_getResolution(mAccelSensor);
+		Log::alert(String()+"Accel sensor:\n\t"+name+"\n\tresolution:"+vendor);
 		ASensorEventQueue_enableSensor(mSensorEventQueue, mAccelSensor);
 		ASensorEventQueue_setEventRate(mSensorEventQueue, mAccelSensor, 10*1000); // this is the best it actually achieves
 	}
-  mGyroSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_GYROSCOPE);
-  if(mGyroSensor != NULL)
-  {
-  	const char* name = ASensor_getName(mGyroSensor);
-  	const char* vendor = ASensor_getVendor(mGyroSensor);
-  	Log::alert(String()+"Gyro sensor:\n\t"+name+"\n\t"+vendor);
-  	ASensorEventQueue_enableSensor(mSensorEventQueue, mGyroSensor);
-  	ASensorEventQueue_setEventRate(mSensorEventQueue, mGyroSensor, 5*1000);
-  }
+	mGyroSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_GYROSCOPE);
+	if(mGyroSensor != NULL)
+	{
+		const char* name = ASensor_getName(mGyroSensor);
+		const char* vendor = ASensor_getVendor(mGyroSensor);
+		float res = ASensor_getResolution(mGyroSensor);
+		Log::alert(String()+"Gyro sensor:\n\t"+name+"\n\t"+vendor+"\n\tresolution: "+res);
+		ASensorEventQueue_enableSensor(mSensorEventQueue, mGyroSensor);
+		ASensorEventQueue_setEventRate(mSensorEventQueue, mGyroSensor, 5*1000);
+	}
 	mMagSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_MAGNETIC_FIELD);
 	if(mMagSensor != NULL)
 	{
 		const char* name = ASensor_getName(mMagSensor);
 		const char* vendor = ASensor_getVendor(mMagSensor);
-		Log::alert(String()+"Mag sensor:\n\t"+name+"\n\t"+vendor);
+		float res = ASensor_getResolution(mMagSensor);
+		Log::alert(String()+"Mag sensor:\n\t"+name+"\n\t"+vendor+"\n\tresolution: "+res);
 		ASensorEventQueue_enableSensor(mSensorEventQueue, mMagSensor);
 		ASensorEventQueue_setEventRate(mSensorEventQueue, mMagSensor, 10*1000); // this is the best it actually achieves
 	}
 
-//	// list out all available sensors
+	// list out all available sensors
 //	const ASensor* const* sensorList;
 //	int numSensors = ASensorManager_getSensorList(mSensorManager, &sensorList);
 //	for(int i=1; i<numSensors; i++)
 //	{
 //		const char* name = ASensor_getName(sensorList[i]);
 //		const char* vendor=  ASensor_getVendor(sensorList[i]);
+//		float res = ASensor_getResolution(sensorList[i]);
 //		int type = ASensor_getType(sensorList[i]);
 //		String str = "Sensor \n";
 //		str = str+"\t"+name+"\n";
 //		str = str+"\t"+vendor+"\n";
-//		str = str+"\t"+type;
+//		str = str+"\t"+type+"\n";
+//		str = str+"\tresolution: "+res;
 //		Log::alert(str);
 //	}
 
@@ -119,21 +124,16 @@ void Observer_Angular::shutdown()
 	Log::alert("------------------------- Observer_Angular shutdown started  --------------------------------------------------");
 	mRunning = false;
 	toadlet::egg::System sys;
-Log::alert("------------------------- Observer_Angular shutdown 1 --------------------------------------------------");
 	while(!mDone) // since join doesn't seem to work correctly in NDK
 		sys.msleep(10);
 
-Log::alert("------------------------- Observer_Angular shutdown 2 --------------------------------------------------");
 	if(mMagSensor != NULL)
 		ASensorEventQueue_disableSensor(mSensorEventQueue, mMagSensor);
-Log::alert("------------------------- Observer_Angular shutdown 3 --------------------------------------------------");
 	if(mAccelSensor != NULL)
 		ASensorEventQueue_disableSensor(mSensorEventQueue, mAccelSensor);
-Log::alert("------------------------- Observer_Angular shutdown 4 --------------------------------------------------");
 	if(mGyroSensor != NULL)
 		ASensorEventQueue_disableSensor(mSensorEventQueue, mGyroSensor);
 
-Log::alert("------------------------- Observer_Angular shutdown 5 --------------------------------------------------");
 	if(mSensorManager != NULL && mSensorEventQueue != NULL)
 		ASensorManager_destroyEventQueue(mSensorManager, mSensorEventQueue);
 

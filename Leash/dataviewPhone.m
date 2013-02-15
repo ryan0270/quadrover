@@ -52,6 +52,10 @@ accelTime = phoneData(accelIndices,1)'/1000;
 accel = phoneData(accelIndices,3:end)';
 accel_dt = mean(diff(accelTime));
 
+pressureIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 6);
+pressureTime = phoneData(pressureIndices,1)'/1000;
+pressure = phoneData(pressureIndices,3:6)';
+
 motorIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1000);
 motorTime = phoneData(motorIndices,1)'/1000;
 motorCmd = phoneData(motorIndices,3:6)';
@@ -151,21 +155,35 @@ cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
 cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
 cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
+phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 500);
+phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
+phoneTemp = phoneData(phoneTempIndices,3:6)';
+
 %%
 if ~isempty(cpuUsage)
-	figure(2000); set(gcf,'Name','sensors')
+	figure(2000); set(gcf,'Name','CPU Usage')
 	plot(cpuUsageTime,cpuUsage(1,:)');
 	xlabel('Time [s]');
 	ylabel('Usage ratio');
-	legend('total','cpu0','cpu1','cpu2','cpu2')
+% 	legend('total','cpu0','cpu1','cpu2','cpu2')
 	axis([0 20 0 0.5])
 end
 
-return
-
+%%
+if ~isempty(phoneTemp)
+	figure(500); set(gcf,'Name','Batt Temp');
+	plot(phoneTempTime, phoneTemp(1,:)); hold all
+	plot(phoneTempTime, phoneTemp(2,:)); hold all
+	plot(phoneTempTime, phoneTemp(3,:)); hold all
+	plot(phoneTempTime, phoneTemp(4,:)); hold all
+	hold off
+	xlabel('Time [s]');
+	ylabel('Temp [degC]');
+	legend('Batt','SEC','Fuelgauge','TMU');
+end
 
 %%
-if ~isempty(state_dt)
+if ~isempty(state)
     baseFigState = 10;
     labels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
               'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
@@ -273,7 +291,35 @@ if isfinite(accel_dt)
         axis([accelTime(1) accelTime(end) -20 20]);
         title(labelsAccel(i));
     end
+end
 
+%%
+if ~isempty(pressure)
+	baseFig = 60;
+	figure(baseFig);
+	plot(pressureTime, pressure(1,:));
+	xlabel('Time [s]');
+	ylabel('Pressure [mBar]');
+	
+	Rstar = 8.31432; % N·m /(mol·K)
+	Tb = 288.15; % K
+	g0 = 9.80665; % m/s^2
+	M = 0.0289644; % kg/mol
+	Pb = 1013.25; % milliBar
+	h0 = -Rstar*Tb/g0/M*log(pressure(1,1)/Pb)*0;
+	h = -Rstar*Tb/g0/M*log(pressure(1,:)/Pb) - h0;
+	
+	tempInterp = interp1(phoneTempTime, phoneTemp(2,:), pressureTime,[],'extrap');
+	k = (993.9-994.4)/(37-31);
+	pressComp = pressure(1,:)-k*(tempInterp-30.8);
+	hComp = -Rstar*Tb/g0/M*log(pressComp/Pb) - h0;
+	figure(baseFig+1);
+	plot(pressureTime, h); hold all
+	plot(pressureTime, hComp);
+	hold off
+	xlabel('Time [s]');
+	ylabel('Height [m]');
+	legend('Raw','Temp Comp')
 end
 
 %%
@@ -294,170 +340,170 @@ end
 
 %% Image processing
 if ~isempty(imgBoxPosTime)
-baseFig = 600;
-figure(baseFig); 
-% set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
-% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% hold all
-plot(imgBoxPosTime, [0 diff(imgBoxPosTime)*1000], imgProcTimeTime,imgProcTime/1000);
-hold off
-xlabel('Time [s]');
-ylabel('Img Proc Time [ms]');
-
-figure(baseFig+1); clf
-% set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
-% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-plot3(imgCentroid(1,:), imgCentroid(2,:), imgCentroid(3,:),'LineWidth',2); hold on
-plot3(imgCentroid(1,1), imgCentroid(2,1), imgCentroid(3,1),'ro');
-myFun = @(x,y,r) sqrt(r.^2-x.^2-y.^2);
-h = ezsurf(@(x,y) myFun(x,y,norm(imgCentroid(:,1))),[-4 4 -4 4]);
-% h = ezsurf(@(x,y) myFun(x,y,3.87),[-4 4 -4 4]);
-set(h,'FaceColor',[0.5 0.5 0.5],'LineStyle','none','FaceAlpha',0.3);
-hold off
-axis(4*[-1 1 -1 1 0 1])
-ax = axis;
-set(gca,'zdir','reverse')
-xlabel('centroid x');
-ylabel('centroid y');
-zlabel('centroid z');
-
-% figure(baseFig+2); clf
-% % set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
-% % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% hold all
-% for i=1:4
-% 	plot(imgBoxPos(2*(i-1)+1,:), imgBoxPos(2*i,:));
-% end
-% hold off
-% axis([0 320 0 240]);
-% set(gca,'YDir','reverse');
-% axis square
-% xlabel('Box x pos [px]');
-% ylabel('Box y pos [px]');
-% 
-% figure(baseFig+3); clf
-% % set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
-% % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% imgCentroidLabels = {'x', 'y', 'z'};
-% for i=1:3
-%     subplot(3,1, i)
-%     plot(imgDesFeatTime, imgDesFeat(i,:), imgCentroidTime, imgCentroid(i,:));
-%     xlabel('Time [s]');
-%     ylabel(imgCentroidLabels{i});
-%     if i==1 
-%         title('Img Feature Tracking');
-%     end
-% end
-
-figure(baseFig+4); clf
-% set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
-% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-imgVelLabels = {'x', 'y', 'z'};
-for i=1:3
-    subplot(3,1,i)
-    plot(imgDesFlowTime, imgDesFlow(i,:)); hold all
-    plot(imgPhoneStateTime, imgPhoneState(i+3,:));
-    line(imgDesFlowTime([1 end]),[0 0],'Color','k','LineStyle','--')
-%     plot(imgFlowCamTime, imgFlowCam(i,:));
-    hold off
-    ax = axis;
-    axis([imgPhoneStateTime(1) imgPhoneStateTime(end) -1 1]);
-    xlabel('Time [s]');
-    ylabel(imgVelLabels{i});
-    if i==1
-        title('Img Flow Tracking');
-    end
-end
-%%
-
-% figure(baseFig+5); clf
-% % set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
-% % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% rotErrLabels = {'x', 'y', 'z'};
-% for i=1:3
-%     subplot(3,1,i)
-%     plot(rotErrTime, rotErr(i,:));
-%     xlabel('Time [s]');
-%     ylabel(rotErrLabels{i});
-%     if i==1
-%         title('rotErr');
-%     end
-% end
-
-figure(baseFig+6); clf
-stateLabels = {'roll [rad]' 'pitch [rad]' 'yaw [rad]'};
-for i=1:3
-    subplot(3,1,i)
-    plot(stateRefTime, stateRef(i,:), 'LineWidth',3); hold all
-    plot(stateTime,state(i,:), ':','MarkerSize',3); hold off
-    ax = axis;
-    axis([imgPhoneStateTime(1) imgPhoneStateTime(end) -0.11 0.11]);
-    xlabel('Time [s]');
-    ylabel(stateLabels(i));
-end
-
-% figure(baseFig+7); clf
-% mask = v(1,:)>v(2,:);
-% plot(vTime, v(2,:)-v(1,:)); hold on;
-% plot(vTime(mask), v(2,mask)-v(1,mask), 'rs','MarkerSize',5); 
-% hold off;
-% xlabel('Time [s]');
-% ylabel('v2-v1 []')
-% title('Lyapunov component comparison')
-% % legend('diff', 'v2');
-
-% figure(baseFig+8); clf
-% plot(flowIntTime, flowInt(1:2,:));
-% xlabel('Time [s]');
-% ylabel('Bias []');
-% legend('x', 'y');
-
-% figure(baseFig+9); clf
-% plot(imgBoxPos([1 3 5 7],:)'-160,imgBoxPos([2 4 6 8],:)'-120); hold all
-% plot(imgBoxPos([1 3 5 7],1)'-160,imgBoxPos([2 4 6 8])-120,'k.','MarkerSize',20,'LineWidth',3);
-% axis([-160 160 -120 120])
-% hold off
-
-% figure(baseFig+10); clf
-% nuTildeLabels = {'\nu_x', '\nu_y', '\nu_z'};
-% for i=1:3
-%     subplot(3,1,i)
-%     plot(nuTildeTime, nuTilde(i,:)); hold all
-% %     plot(uCamTime, uCam(i,:));
-%     hold off
-%     xlabel('Time [s]');
-%     ylabel(nuTildeLabels(i));
-% end
-
-% figure(baseFig+11); clf
-% subplot(2,3,1)
-% plot(mainRunTimeTime, mainRunTime,'.');
-% legend('t1','t2','t3','t4')
-% title('main run()');
-% 
-% subplot(2,3,2)
-% plot(visionRunTimeTime, visionRunTime,'.');
-% legend('t1','t2','t3','t4','t5','t6','t7','t8')
-% title('vision run()');
-% 
-% subplot(2,3,5)
-% plot(imageGrabberRunTimeTime, imageGrabberRunTime,'.')
-% legend('t1','t2','t3','t4','t5','t6','t7','t8')
-% title('image grabber run()');
-% 
-% subplot(2,3,3)
-% plot(mainOuterTimeTime, mainOuterTime,'.');
-% legend('t1','t2','t3','t4','t5','t6','t7','t8','t9','t10')
-% title('main outer')
-% 
-% subplot(2,3,6)
-% plot(mainInnerTimeTime, mainInnerTime,'.');
-% legend('t1','t2','t3','t4','t5','t6','t7','t8','t9','t10')
-% title('main inner');
-
-% figure(baseFig+12); clf
-% plot(throttleTime, throttle);
-% title('Throttle');
-
+	baseFig = 600;
+	figure(baseFig);
+	% set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
+	% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	% hold all
+	plot(imgBoxPosTime, [0 diff(imgBoxPosTime)*1000], imgProcTimeTime,imgProcTime/1000);
+	hold off
+	xlabel('Time [s]');
+	ylabel('Img Proc Time [ms]');
+	
+	figure(baseFig+1); clf
+	% set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
+	% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	plot3(imgCentroid(1,:), imgCentroid(2,:), imgCentroid(3,:),'LineWidth',2); hold on
+	plot3(imgCentroid(1,1), imgCentroid(2,1), imgCentroid(3,1),'ro');
+	myFun = @(x,y,r) sqrt(r.^2-x.^2-y.^2);
+	h = ezsurf(@(x,y) myFun(x,y,norm(imgCentroid(:,1))),[-4 4 -4 4]);
+	% h = ezsurf(@(x,y) myFun(x,y,3.87),[-4 4 -4 4]);
+	set(h,'FaceColor',[0.5 0.5 0.5],'LineStyle','none','FaceAlpha',0.3);
+	hold off
+	axis(4*[-1 1 -1 1 0 1])
+	ax = axis;
+	set(gca,'zdir','reverse')
+	xlabel('centroid x');
+	ylabel('centroid y');
+	zlabel('centroid z');
+	
+	% figure(baseFig+2); clf
+	% % set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
+	% % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	% hold all
+	% for i=1:4
+	% 	plot(imgBoxPos(2*(i-1)+1,:), imgBoxPos(2*i,:));
+	% end
+	% hold off
+	% axis([0 320 0 240]);
+	% set(gca,'YDir','reverse');
+	% axis square
+	% xlabel('Box x pos [px]');
+	% ylabel('Box y pos [px]');
+	%
+	% figure(baseFig+3); clf
+	% % set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
+	% % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	% imgCentroidLabels = {'x', 'y', 'z'};
+	% for i=1:3
+	%     subplot(3,1, i)
+	%     plot(imgDesFeatTime, imgDesFeat(i,:), imgCentroidTime, imgCentroid(i,:));
+	%     xlabel('Time [s]');
+	%     ylabel(imgCentroidLabels{i});
+	%     if i==1
+	%         title('Img Feature Tracking');
+	%     end
+	% end
+	
+	figure(baseFig+4); clf
+	% set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
+	% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	imgVelLabels = {'x', 'y', 'z'};
+	for i=1:3
+		subplot(3,1,i)
+		plot(imgDesFlowTime, imgDesFlow(i,:)); hold all
+		plot(imgPhoneStateTime, imgPhoneState(i+3,:));
+		line(imgDesFlowTime([1 end]),[0 0],'Color','k','LineStyle','--')
+		%     plot(imgFlowCamTime, imgFlowCam(i,:));
+		hold off
+		ax = axis;
+		axis([imgPhoneStateTime(1) imgPhoneStateTime(end) -1 1]);
+		xlabel('Time [s]');
+		ylabel(imgVelLabels{i});
+		if i==1
+			title('Img Flow Tracking');
+		end
+	end
+	%%
+	
+	% figure(baseFig+5); clf
+	% % set(gcf,'Units','Inches'); curPos = get(gcf,'Position'); figSize = [4 4];
+	% % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	% rotErrLabels = {'x', 'y', 'z'};
+	% for i=1:3
+	%     subplot(3,1,i)
+	%     plot(rotErrTime, rotErr(i,:));
+	%     xlabel('Time [s]');
+	%     ylabel(rotErrLabels{i});
+	%     if i==1
+	%         title('rotErr');
+	%     end
+	% end
+	
+	figure(baseFig+6); clf
+	stateLabels = {'roll [rad]' 'pitch [rad]' 'yaw [rad]'};
+	for i=1:3
+		subplot(3,1,i)
+		plot(stateRefTime, stateRef(i,:), 'LineWidth',3); hold all
+		plot(stateTime,state(i,:), ':','MarkerSize',3); hold off
+		ax = axis;
+		axis([imgPhoneStateTime(1) imgPhoneStateTime(end) -0.11 0.11]);
+		xlabel('Time [s]');
+		ylabel(stateLabels(i));
+	end
+	
+	% figure(baseFig+7); clf
+	% mask = v(1,:)>v(2,:);
+	% plot(vTime, v(2,:)-v(1,:)); hold on;
+	% plot(vTime(mask), v(2,mask)-v(1,mask), 'rs','MarkerSize',5);
+	% hold off;
+	% xlabel('Time [s]');
+	% ylabel('v2-v1 []')
+	% title('Lyapunov component comparison')
+	% % legend('diff', 'v2');
+	
+	% figure(baseFig+8); clf
+	% plot(flowIntTime, flowInt(1:2,:));
+	% xlabel('Time [s]');
+	% ylabel('Bias []');
+	% legend('x', 'y');
+	
+	% figure(baseFig+9); clf
+	% plot(imgBoxPos([1 3 5 7],:)'-160,imgBoxPos([2 4 6 8],:)'-120); hold all
+	% plot(imgBoxPos([1 3 5 7],1)'-160,imgBoxPos([2 4 6 8])-120,'k.','MarkerSize',20,'LineWidth',3);
+	% axis([-160 160 -120 120])
+	% hold off
+	
+	% figure(baseFig+10); clf
+	% nuTildeLabels = {'\nu_x', '\nu_y', '\nu_z'};
+	% for i=1:3
+	%     subplot(3,1,i)
+	%     plot(nuTildeTime, nuTilde(i,:)); hold all
+	% %     plot(uCamTime, uCam(i,:));
+	%     hold off
+	%     xlabel('Time [s]');
+	%     ylabel(nuTildeLabels(i));
+	% end
+	
+	% figure(baseFig+11); clf
+	% subplot(2,3,1)
+	% plot(mainRunTimeTime, mainRunTime,'.');
+	% legend('t1','t2','t3','t4')
+	% title('main run()');
+	%
+	% subplot(2,3,2)
+	% plot(visionRunTimeTime, visionRunTime,'.');
+	% legend('t1','t2','t3','t4','t5','t6','t7','t8')
+	% title('vision run()');
+	%
+	% subplot(2,3,5)
+	% plot(imageGrabberRunTimeTime, imageGrabberRunTime,'.')
+	% legend('t1','t2','t3','t4','t5','t6','t7','t8')
+	% title('image grabber run()');
+	%
+	% subplot(2,3,3)
+	% plot(mainOuterTimeTime, mainOuterTime,'.');
+	% legend('t1','t2','t3','t4','t5','t6','t7','t8','t9','t10')
+	% title('main outer')
+	%
+	% subplot(2,3,6)
+	% plot(mainInnerTimeTime, mainInnerTime,'.');
+	% legend('t1','t2','t3','t4','t5','t6','t7','t8','t9','t10')
+	% title('main inner');
+	
+	% figure(baseFig+12); clf
+	% plot(throttleTime, throttle);
+	% title('Throttle');
+	
 end
 
