@@ -15,12 +15,31 @@ Leash::Leash(QWidget *parent) :
 	ui->setupUi(this);
 
 	mIP = string("0.0.0.0");
-	mPort = 1312;
+	mPort = 13120;
 
-//	mGainP[0] = 1;
-//	mGainP[1] = mGainP[2] = 0;
-//	mGainI[0] = mGainI[1] = mGainI[2] = 0;
-//	mGainD[0] = mGainD[1] = mGainD[2] = 0;
+	mGainTransP[0] = mGainTransP[1] = mGainTransP[2] = 0;
+	mGainTransD[0] = mGainTransP[1] = mGainTransP[2] = 0;
+	mGainTransI[0] = mGainTransP[1] = mGainTransP[2] = 0;
+	mGainAttP[0] = mGainAttP[1] = mGainAttP[2] = 0;
+	mGainAttD[0] = mGainAttP[1] = mGainAttP[2] = 0;
+mGainTransP[0] = 1;
+mGainTransP[1] = 2;
+mGainTransP[2] = 3;
+mGainTransD[0] = 1;
+mGainTransD[1] = 2;
+mGainTransD[2] = 3;
+mGainTransI[0] = 1;
+mGainTransI[1] = 2;
+mGainTransI[2] = 3;
+mGainTransILimit[0] = 1;
+mGainTransILimit[1] = 2;
+mGainTransILimit[2] = 3;
+mGainAttP[0] = 1;
+mGainAttP[1] = 2;
+mGainAttP[2] = 3;
+mGainAttD[0] = 1;
+mGainAttD[1] = 2;
+mGainAttD[2] = 3;
 	mObserverGainP = 1;
 	mObserverGainI = 1;
 
@@ -94,7 +113,10 @@ Leash::~Leash()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void Leash::initialize()
 {
-//	connect(btnPhoneApply,SIGNAL(clicked()),this,SLOT(onBtnApply_clicked()));
+	connect(ui->btnLoadConfig,SIGNAL(clicked()),this,SLOT(onBtnLoadConfig_clicked()));
+	connect(ui->btnSaveConfig,SIGNAL(clicked()),this,SLOT(onBtnSaveConfig_clicked()));
+	connect(ui->btnResetConfig,SIGNAL(clicked()),this,SLOT(onBtnResetConfig_clicked()));
+	connect(ui->btnApply,SIGNAL(clicked()),this,SLOT(onBtnApply_clicked()));
 //	connect(btnPhoneResetConfig,SIGNAL(clicked()),this,SLOT(onBtnResetConfig_clicked()));
 //	connect(btnPhoneLoadFromFile,SIGNAL(clicked()),this,SLOT(onBtnLoadFromFile_clicked()));
 //	connect(btnPhoneSaveToFile,SIGNAL(clicked()),this,SLOT(onBtnSaveToFile_clicked()));
@@ -218,6 +240,8 @@ void Leash::initialize()
 	ui->vwMotors->setMinimumSize(totWidth, totHeight);
 	ui->vwMotors->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	ui->vwMotors->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+	populateUI();
 }
 
 void Leash::pollUDP()
@@ -829,7 +853,7 @@ bool Leash::loadConfigFromFile(string filename)
 	FILE *fp = fopen((filename).c_str(),"r");
 	if(fp == NULL)
 	{
-		populateConfigTree(); // with whatever is in there right now
+		populateUI(); // with whatever is in there right now
 		return false;
 	}
 
@@ -839,9 +863,18 @@ bool Leash::loadConfigFromFile(string filename)
 
 	if(xmlRoot == NULL)
 	{
-		populateConfigTree(); // with whatever is in there right now
+		populateUI(); // with whatever is in there right now
 		return false;
 	}
+
+	mxml_node_t *cntlRoot = mxmlFindElement(xmlRoot, xmlRoot, "Controller", NULL, NULL, MXML_DESCEND);
+	if(cntlRoot != NULL)
+		loadControllerConfig(cntlRoot);
+	else
+		cout << "Controller section not found in config file" << endl;
+
+	populateUI();
+	return true;
 
 	mMutex_data.lock();
 		mxml_node_t *commRoot = mxmlFindElement(xmlRoot,xmlRoot,"Communication",NULL,NULL,MXML_DESCEND);
@@ -1033,18 +1066,107 @@ bool Leash::loadConfigFromFile(string filename)
 		}
 	mMutex_data.unlock();
 
-	populateConfigTree();
+	populateUI();
 	return true;
+}
+
+void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
+{
+	mMutex_data.lock();
+	mxml_node_t *transCntl = mxmlFindElement(cntlRoot, cntlRoot, "Translation", NULL, NULL, MXML_DESCEND);
+	if(transCntl != NULL)
+	{
+		mxml_node_t *p = mxmlFindElement(transCntl, transCntl, "P", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *d = mxmlFindElement(transCntl, transCntl, "D", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *i = mxmlFindElement(transCntl, transCntl, "I", NULL, NULL, MXML_DESCEND);
+
+		if(p != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(p, p, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(p, p, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(p, p, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mGainTransP[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mGainTransP[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mGainTransP[2];
+		}
+
+		if(d != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(d, d, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(d, d, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(d, d, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mGainTransD[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mGainTransD[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mGainTransD[2];
+		}
+
+		if(i != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(i, i, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(i, i, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(i, i, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mGainTransI[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mGainTransI[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mGainTransI[2];
+		}
+	}
+	else
+		cout << "Translation controller section not found in config file" << endl;
+
+	mxml_node_t *attCntl = mxmlFindElement(cntlRoot, cntlRoot, "Attitude", NULL, NULL, MXML_DESCEND);
+	if(attCntl != NULL)
+	{
+		mxml_node_t *p = mxmlFindElement(attCntl, attCntl, "P", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *d = mxmlFindElement(attCntl, attCntl, "D", NULL, NULL, MXML_DESCEND);
+
+		if(p != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(p, p, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(p, p, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(p, p, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mGainAttP[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mGainAttP[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mGainAttP[2];
+		}
+
+		if(d != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(d, d, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(d, d, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(d, d, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mGainAttD[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mGainAttD[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mGainAttD[2];
+		}
+	}
+	else
+		cout << "Attitdue controller section not found in config file" << endl;
+
+	mMutex_data.unlock();
 }
 
 void Leash::saveConfigToFile(string filename)
 {
-	mMutex_data.lock();
-		mxml_node_t *xmlRoot = mxmlNewXML("1.0");
+	mxml_node_t *xmlRoot = mxmlNewXML("1.0");
+	mxml_node_t *cntlRoot = mxmlNewElement(xmlRoot,"Controller");
+	saveControllerConfig(cntlRoot);
 
-		mxml_node_t *commNode = mxmlNewElement(xmlRoot,"Communication");
-			mxmlNewText(mxmlNewElement(commNode,"IP"),0,mIP.c_str());
-			mxmlNewInteger(mxmlNewElement(commNode,"Port"),mPort);
+	FILE *fp = fopen((filename).c_str(),"w");
+	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
+	fclose(fp);
+	return;
+
+//	mMutex_data.lock();
+//		mxml_node_t *xmlRoot = mxmlNewXML("1.0");
+//
+//		mxml_node_t *commNode = mxmlNewElement(xmlRoot,"Communication");
+//			mxmlNewText(mxmlNewElement(commNode,"IP"),0,mIP.c_str());
+//			mxmlNewInteger(mxmlNewElement(commNode,"Port"),mPort);
 //		mxml_node_t *phoneCntlNode = mxmlNewElement(xmlRoot,"Controller");
 //			mxml_node_t *rollNode = mxmlNewElement(phoneCntlNode,"Roll");
 //				mxmlNewReal(mxmlNewElement(rollNode,"P"),mGainP[0]);
@@ -1058,17 +1180,17 @@ void Leash::saveConfigToFile(string filename)
 //				mxmlNewReal(mxmlNewElement(yawNode,"P"),mGainP[2]);
 //				mxmlNewReal(mxmlNewElement(yawNode,"I"),mGainI[2]);
 //				mxmlNewReal(mxmlNewElement(yawNode,"D"),mGainD[2]);
-		mxml_node_t *motorNode = mxmlNewElement(xmlRoot,"Motors");
-			mxml_node_t *motorTrimNode = mxmlNewElement(motorNode,"Trim");
-				mxmlNewInteger(mxmlNewElement(motorTrimNode,"N"),mMotorTrim[0]);
-				mxmlNewInteger(mxmlNewElement(motorTrimNode,"E"),mMotorTrim[1]);
-				mxmlNewInteger(mxmlNewElement(motorTrimNode,"S"),mMotorTrim[2]);
-				mxmlNewInteger(mxmlNewElement(motorTrimNode,"W"),mMotorTrim[3]);
-		mxml_node_t *observerNode = mxmlNewElement(xmlRoot,"Observer");
-			mxmlNewReal(mxmlNewElement(observerNode,"Kp"),mObserverGainP);
-			mxmlNewReal(mxmlNewElement(observerNode,"Ki"),mObserverGainI);
-			mxmlNewReal(mxmlNewElement(observerNode,"accelWeight"),mObserverWeights[0]);
-			mxmlNewReal(mxmlNewElement(observerNode,"magWeight"),mObserverWeights[1]);
+//		mxml_node_t *motorNode = mxmlNewElement(xmlRoot,"Motors");
+//			mxml_node_t *motorTrimNode = mxmlNewElement(motorNode,"Trim");
+//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"N"),mMotorTrim[0]);
+//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"E"),mMotorTrim[1]);
+//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"S"),mMotorTrim[2]);
+//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"W"),mMotorTrim[3]);
+//		mxml_node_t *observerNode = mxmlNewElement(xmlRoot,"Observer");
+//			mxmlNewReal(mxmlNewElement(observerNode,"Kp"),mObserverGainP);
+//			mxmlNewReal(mxmlNewElement(observerNode,"Ki"),mObserverGainI);
+//			mxmlNewReal(mxmlNewElement(observerNode,"accelWeight"),mObserverWeights[0]);
+//			mxmlNewReal(mxmlNewElement(observerNode,"magWeight"),mObserverWeights[1]);
 
 //		mxml_node_t *imageNode = mxmlNewElement(xmlRoot,"ImgProc");
 //			mxmlNewInteger(mxmlNewElement(imageNode,"Box0Min"),mFiltBoxColorMin[0]);
@@ -1113,23 +1235,55 @@ void Leash::saveConfigToFile(string filename)
 //			mxmlNewReal(mxmlNewElement(ibvsNode,"dynamic"),mIbvsGainDynamic);
 
 		// Kalman Filter
-		mxml_node_t *kfNode = mxmlNewElement(xmlRoot,"KalmanFilter");
-			mxml_node_t *attBiasNode = mxmlNewElement(kfNode,"attBias");
-				mxmlNewReal(mxmlNewElement(attBiasNode,"roll"),mAttBias[0][0]);
-				mxmlNewReal(mxmlNewElement(attBiasNode,"pitch"),mAttBias[1][0]);
-				mxmlNewReal(mxmlNewElement(attBiasNode,"yaw"),mAttBias[2][0]);
-			mxmlNewReal(mxmlNewElement(kfNode,"attBiasGain"),mAttBiasGain);
-			mxmlNewReal(mxmlNewElement(kfNode,"forceScalingGain"),mForceScalingGain);
-			mxmlNewReal(mxmlNewElement(kfNode,"posMeasStdDev"),mKfPosMeasStdDev);
-			mxmlNewReal(mxmlNewElement(kfNode,"velMeasStdDev"),mKfVelMeasStdDev);
+//		mxml_node_t *kfNode = mxmlNewElement(xmlRoot,"KalmanFilter");
+//			mxml_node_t *attBiasNode = mxmlNewElement(kfNode,"attBias");
+//				mxmlNewReal(mxmlNewElement(attBiasNode,"roll"),mAttBias[0][0]);
+//				mxmlNewReal(mxmlNewElement(attBiasNode,"pitch"),mAttBias[1][0]);
+//				mxmlNewReal(mxmlNewElement(attBiasNode,"yaw"),mAttBias[2][0]);
+//			mxmlNewReal(mxmlNewElement(kfNode,"attBiasGain"),mAttBiasGain);
+//			mxmlNewReal(mxmlNewElement(kfNode,"forceScalingGain"),mForceScalingGain);
+//			mxmlNewReal(mxmlNewElement(kfNode,"posMeasStdDev"),mKfPosMeasStdDev);
+//			mxmlNewReal(mxmlNewElement(kfNode,"velMeasStdDev"),mKfVelMeasStdDev);
+//
+//		mxml_node_t *logNode = mxmlNewElement(xmlRoot,"Log");
+//			mxmlNewInteger(mxmlNewElement(logNode,"Mask"),mLogMask);
+//	mMutex_data.unlock();
+//
+//	FILE *fp = fopen((filename).c_str(),"w");
+//	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
+//	fclose(fp);
+}
 
-		mxml_node_t *logNode = mxmlNewElement(xmlRoot,"Log");
-			mxmlNewInteger(mxmlNewElement(logNode,"Mask"),mLogMask);
+void Leash::saveControllerConfig(mxml_node_t *cntlRoot)
+{
+	mMutex_data.lock();
+	mxml_node_t *transNode = mxmlNewElement(cntlRoot,"Translation");
+	{
+		mxml_node_t *pNode = mxmlNewElement(transNode,"P");
+			mxmlNewReal(mxmlNewElement(pNode,"x"), mGainTransP[0]);
+			mxmlNewReal(mxmlNewElement(pNode,"y"), mGainTransP[1]);
+			mxmlNewReal(mxmlNewElement(pNode,"z"), mGainTransP[2]);
+		mxml_node_t *dNode = mxmlNewElement(transNode,"D");
+			mxmlNewReal(mxmlNewElement(dNode,"x"), mGainTransD[0]);
+			mxmlNewReal(mxmlNewElement(dNode,"y"), mGainTransD[1]);
+			mxmlNewReal(mxmlNewElement(dNode,"z"), mGainTransD[2]);
+		mxml_node_t *iNode = mxmlNewElement(transNode,"I");
+			mxmlNewReal(mxmlNewElement(iNode,"x"), mGainTransI[0]);
+			mxmlNewReal(mxmlNewElement(iNode,"y"), mGainTransI[1]);
+			mxmlNewReal(mxmlNewElement(iNode,"z"), mGainTransI[2]);
+	}
+	mxml_node_t *attNode = mxmlNewElement(cntlRoot,"Attitude");
+	{
+		mxml_node_t *pNode = mxmlNewElement(attNode,"P");
+			mxmlNewReal(mxmlNewElement(pNode,"x"), mGainAttP[0]);
+			mxmlNewReal(mxmlNewElement(pNode,"y"), mGainAttP[1]);
+			mxmlNewReal(mxmlNewElement(pNode,"z"), mGainAttP[2]);
+		mxml_node_t *dNode = mxmlNewElement(attNode,"D");
+			mxmlNewReal(mxmlNewElement(dNode,"x"), mGainAttD[0]);
+			mxmlNewReal(mxmlNewElement(dNode,"y"), mGainAttD[1]);
+			mxmlNewReal(mxmlNewElement(dNode,"z"), mGainAttD[2]);
+	}
 	mMutex_data.unlock();
-
-	FILE *fp = fopen((filename).c_str(),"w");
-	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
-	fclose(fp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1137,6 +1291,7 @@ void Leash::saveConfigToFile(string filename)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void Leash::onBtnApply_clicked()
 {
+	applyControllerConfig();
 	mMutex_data.lock();
 	try
 	{
@@ -1194,18 +1349,31 @@ void Leash::onBtnApply_clicked()
 	}
 	mMutex_data.unlock();
 
-	populateConfigTree();
+	populateUI();
+}
+
+void Leash::applyControllerConfig()
+{
+	for(int i=0; i<3; i++)
+	{
+		mGainTransP[i] = ui->tblTransCntl->item(i,0)->text().toDouble();
+		mGainTransD[i] = ui->tblTransCntl->item(i,1)->text().toDouble();
+		mGainTransI[i] = ui->tblTransCntl->item(i,2)->text().toDouble();
+		mGainTransILimit[i] = ui->tblTransCntl->item(i,3)->text().toDouble();
+		mGainAttP[i] = ui->tblAttCntl->item(i,0)->text().toDouble();
+		mGainAttD[i] = ui->tblAttCntl->item(i,1)->text().toDouble();
+	}
 }
 
 void Leash::onBtnResetConfig_clicked()
 {
-	populateConfigTree();
+	populateUI();
 }
 
-void Leash::onBtnLoadFromFile_clicked()
+void Leash::onBtnLoadConfig_clicked()
 {
-	QFileDialog fileDialog(this,"Open config","../","Phone config files (*.phoneConfig)");
-	fileDialog.setDefaultSuffix("phoneConfig");
+	QFileDialog fileDialog(this,"Open config","../","Rover leash config files (*.leashConfig)");
+	fileDialog.setDefaultSuffix("leashConfig");
 	fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
 	string filename;
 	if(fileDialog.exec())
@@ -1216,10 +1384,10 @@ void Leash::onBtnLoadFromFile_clicked()
 	loadConfigFromFile(filename);
 }
 
-void Leash::onBtnSaveToFile_clicked()
+void Leash::onBtnSaveConfig_clicked()
 {
-	QFileDialog fileDialog(this,"Save config","../","Phone config files (*.phoneConfig)");
-	fileDialog.setDefaultSuffix("phoneConfig");
+	QFileDialog fileDialog(this,"Save config","../","Rover leash config files (*.leashConfig)");
+	fileDialog.setDefaultSuffix("leashConfig");
 	fileDialog.setAcceptMode(QFileDialog::AcceptSave);
 	string filename;
 	if(fileDialog.exec())
@@ -1646,8 +1814,11 @@ void Leash::applyLogConfig(QTreeWidgetItem *root)
 		mLogMask |= root->child(i)->checkState(1) == Qt::Checked ? 1 << i : 0;
 }
 
-void Leash::populateConfigTree()
+void Leash::populateUI()
 {
+	populateControlUI();
+	return;
+
 	mMutex_data.lock();
 //	while(treePhoneConfig->topLevelItemCount() > 0)
 //		treePhoneConfig->takeTopLevelItem(0);
@@ -1817,6 +1988,47 @@ void Leash::populateConfigTree()
 //	treePhoneConfig->setMinimumSize(width,treePhoneConfig->height());
 }
 
+void Leash::populateControlUI()
+{
+	for(int i=0; i<3; i++)
+	{
+		ui->tblTransCntl->item(i,0)->setText(QString::number(mGainTransP[i]));
+		ui->tblTransCntl->item(i,1)->setText(QString::number(mGainTransD[i]));
+		ui->tblTransCntl->item(i,2)->setText(QString::number(mGainTransI[i]));
+		ui->tblTransCntl->item(i,3)->setText(QString::number(mGainTransILimit[i]));
+		ui->tblAttCntl->item(i,0)->setText(QString::number(mGainAttP[i]));
+		ui->tblAttCntl->item(i,1)->setText(QString::number(mGainAttD[i]));
+	}
+
+	int totWidth = 0;
+	int totHeight = 0;
+	totWidth = ui->tblTransCntl->horizontalHeader()->length();
+	if(ui->tblTransCntl->verticalHeader()->width() == 0)
+		totWidth += 20; // HACK:::::::: verticalHeader()->width() is reporting zero for some reasion
+	else
+		totWidth += ui->tblTransCntl->verticalHeader()->width();
+
+	totHeight = ui->tblTransCntl->verticalHeader()->length();
+	totHeight += +ui->tblTransCntl->horizontalHeader()->height();
+	ui->tblTransCntl->setMaximumSize(totWidth, totHeight);
+	ui->tblTransCntl->setMinimumSize(totWidth, totHeight);
+	ui->tblTransCntl->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	ui->tblTransCntl->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+	totWidth = ui->tblAttCntl->horizontalHeader()->length();
+	if(ui->tblTransCntl->verticalHeader()->width() == 0)
+		totWidth += 20; // HACK:::::::: verticalHeader()->width() is reporting zero for some reasion
+	else
+		totWidth += ui->tblAttCntl->verticalHeader()->width();
+
+	totHeight = ui->tblAttCntl->verticalHeader()->length();
+	totHeight += +ui->tblAttCntl->horizontalHeader()->height();
+	ui->tblAttCntl->setMaximumSize(totWidth, totHeight);
+	ui->tblAttCntl->setMinimumSize(totWidth, totHeight);
+	ui->tblAttCntl->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	ui->tblAttCntl->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+}
+
 void Leash::formatTree(QTreeWidgetItem *root)
 {
 	root->setFlags(root->flags() | Qt::ItemIsEditable);
@@ -1827,18 +2039,6 @@ void Leash::formatTree(QTreeWidgetItem *root)
 		for(int i=0; i<root->childCount(); i++)
 			formatTree(root->child(i));
 }
-
-// Collection<double> Leash::getDesiredImageMoment(double z)
-// {
-// 	mMutex_data.lock();
-// 		Collection<double> mom(3);
-// 		mom[0] = z*(mDesiredStateImage[0]-160);
-// 		mom[1] = z*(mDesiredStateImage[1]-120);
-// 		mom[2] = z;
-// 	mMutex_data.unlock();
-// 	
-// 	return mom;
-// }
 
 void Leash::toggleIbvs()
 {

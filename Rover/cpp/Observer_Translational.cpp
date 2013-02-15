@@ -62,16 +62,36 @@ namespace Quadrotor{
 		System sys;
 		while(!mDone)
 			sys.msleep(10);
+
+		if(mPressureSensor != NULL)
+			ASensorEventQueue_disableSensor(mSensorEventQueue, mPressureSensor);
+
+		if(mSensorManager != NULL && mSensorEventQueue != NULL)
+			ASensorManager_destroyEventQueue(mSensorManager, mSensorEventQueue);
+
 		Log::alert("------------------------- Observer_Translational shutdown done");
 	}
 
 	void Observer_Translational::initialize()
 	{
+		mSensorManager = ASensorManager_getInstance();
+		ALooper *looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
+		mSensorEventQueue = ASensorManager_createEventQueue(mSensorManager, looper, 0, NULL, NULL);
+
+		mPressureSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_PRESSURE);
+		if(mPressureSensor != NULL)
+		{
+			const char* name = ASensor_getName(mPressureSensor);
+			const char* vendor = ASensor_getVendor(mPressureSensor);
+			float res = ASensor_getResolution(mPressureSensor);
+			Log::alert(String()+"Pressure sensor:\n\t"+name+"\n\t"+vendor+"\n\tresolution: "+res);
+			ASensorEventQueue_enableSensor(mSensorEventQueue, mPressureSensor);
+			ASensorEventQueue_setEventRate(mSensorEventQueue, mPressureSensor, 10*1000); // this is the best it actually achieves
+		}
 	}
 
 	void Observer_Translational::run()
 	{
-
 		mDone = false;
 		mRunning = true;
 		System sys;
@@ -82,8 +102,40 @@ namespace Quadrotor{
 		Array2D<double> pos(3,1),vel(3,1);
 		double s1, s2, s3, c1, c2, c3;
 		double dt;
+		Time lastBattTempTime;
 		while(mRunning)
 		{
+			ASensorEvent event;
+			while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
+			{
+				uint64 curTimeMS;
+				switch(event.type)
+				{
+					case ASENSOR_TYPE_PRESSURE:
+						{
+							{
+								String s = "Pressure: ";
+								s = s+event.data[0]+"\t";
+								s = s+event.data[1]+"\t";
+								s = s+event.data[2]+"\t";
+								s = s+event.data[3]+"\t";
+								s = s+event.pressure+"\t";
+//								Log::alert(s);
+							}
+
+							if(mQuadLogger != NULL)
+							{
+								String s=String() + mStartTime.getElapsedTimeMS() + "\t" + event.type + "\t";
+								s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
+								mQuadLogger->addLine(s,PRESSURE);
+							}
+						}
+						break;
+					default:
+						Log::alert(String()+"Unknown sensor event: "+event.type);
+				}
+			}
+
 			double thrust = 0;
 			mMutex_cmds.lock();
 			for(int i=0; i<4; i++)
@@ -135,6 +187,21 @@ namespace Quadrotor{
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
+
+			if(lastBattTempTime.getElapsedTimeMS() > 1e3)
+			{
+				lastBattTempTime.setTime();
+				float battTemp = getBatteryTemp()/10.0;
+				float secTemp = getSecTemp()/10.0;
+				float fuelgaugeTemp = getFuelgaugeTemp()/10.0;
+				float tmuTemp = getTmuTemp()/10.0;
+				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_BATTERY_TEMP + "\t";
+				s = s+battTemp+"\t";
+				s = s+secTemp+"\t";
+				s = s+fuelgaugeTemp+"\t";
+				s = s+tmuTemp+"\t";
+				mQuadLogger->addLine(s, BATTERY_TEMP);
+			}
 
 			sys.msleep(5); // maintain a (roughly) 200Hz update rate
 		}
@@ -338,6 +405,88 @@ mForceScaling = 0.0035;
 		for(int i=0; i<4; i++)
 			mMotorCmds[i] = cmds[i];
 		mMutex_cmds.unlock();
+	}
+
+	int Observer_Translational::getBatteryTemp()
+	{
+		int temp = 0;
+		string filename = "/sys/class/power_supply/battery/temp";
+		ifstream file(filename.c_str());
+		if(file.is_open())
+		{
+			string line;
+			getline(file,line);
+			file.close();
+
+			stringstream ss(line);
+			ss >> temp;
+		}
+		else
+			Log::alert("Failed to open "+String(filename.c_str()));
+
+		return temp;
+	}
+
+	int Observer_Translational::getSecTemp()
+	{
+		int temp = 0;
+		// this path is for the SIII
+		string filename = "/sys/devices/platform/sec-thermistor/temperature";
+		ifstream file(filename.c_str());
+		if(file.is_open())
+		{
+			string line;
+			getline(file,line);
+			file.close();
+
+			stringstream ss(line);
+			ss >> temp;
+		}
+		else
+			Log::alert("Failed to open "+String(filename.c_str()));
+
+		return temp;
+	}
+
+	int Observer_Translational::getFuelgaugeTemp()
+	{
+		int temp = 0;
+		string filename = "/sys/class/power_supply/max17047-fuelgauge/temp";
+		ifstream file(filename.c_str());
+		if(file.is_open())
+		{
+			string line;
+			getline(file,line);
+			file.close();
+
+			stringstream ss(line);
+			ss >> temp;
+		}
+		else
+			(("Failed to open "+filename).c_str());
+
+		return temp;
+	}
+
+	int Observer_Translational::getTmuTemp()
+	{
+		int temp = 0;
+		// this path is for the SIII
+		string filename = "/sys/devices/platform/s5p-tmu/curr_temp";
+		ifstream file(filename.c_str());
+		if(file.is_open())
+		{
+			string line;
+			getline(file,line);
+			file.close();
+
+			stringstream ss(line);
+			ss >> temp;
+		}
+		else
+			Log::alert("Failed to open "+String(filename.c_str()));
+
+		return temp;
 	}
 
 } // namespace Quadrotor

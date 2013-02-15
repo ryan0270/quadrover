@@ -1,5 +1,8 @@
 #ifndef OBSERVER_TRANSLATIONAL
 #define OBSERVER_TRANSLATIONAL
+#include <fstream>
+
+#include <android/sensor.h>
 
 #include "toadlet/egg.h"
 
@@ -17,6 +20,8 @@
 
 namespace ICSL{
 namespace Quadrotor{
+
+static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
 class Observer_TranslationalListener
 {
@@ -91,6 +96,16 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	void doTimeUpdateKF(TNT::Array2D<double> const &actuator, double dt);
 	void doMeasUpdateKF(TNT::Array2D<double> const &meas);
+
+	ASensorManager* mSensorManager;
+	ASensorEventQueue* mSensorEventQueue;
+	const ASensor* mPressureSensor;
+
+	int getBatteryTemp();
+	int getSecTemp();
+	int getFuelgaugeTemp();
+	int getTmuTemp();
+
 };
 
 } // namespace Quadrotor

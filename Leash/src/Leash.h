@@ -88,8 +88,8 @@ class Leash : public QWidget
 	protected slots:
 		void onBtnApply_clicked();
 		void onBtnResetConfig_clicked();
-		void onBtnLoadFromFile_clicked();
-		void onBtnSaveToFile_clicked();
+		void onBtnLoadConfig_clicked();
+		void onBtnSaveConfig_clicked();
 		void onBtnConnect_clicked();
 		void onBtnSendParams_clicked();
 		void onBtnResetObserver_clicked();
@@ -112,6 +112,8 @@ class Leash : public QWidget
 		Socket::ptr mSocketUDP, mSocketTCP;
 		double mObserverGainP, mObserverGainI;
 //		double mGainP[3], mGainI[3], mGainD[3];
+		double mGainTransP[3], mGainTransD[3], mGainTransI[3], mGainTransILimit[3];
+		double mGainAttP[3], mGainAttD[3];
 		double mDeltaT, mForceScaling, mTorqueScaling, mMass;
 		Collection<double> mObserverWeights;
 		int mArduinoStatus;
@@ -143,7 +145,7 @@ class Leash : public QWidget
 		void applyIbvsConfig(QTreeWidgetItem *root);
 		void applyKalmanFilterConfig(QTreeWidgetItem *root);
 		void applyLogConfig(QTreeWidgetItem *root);
-		void populateConfigTree();
+		void populateUI();
 		void formatTree(QTreeWidgetItem *root);
 		int receiveUDP(Socket::ptr socket, tbyte* data, int size);
 		int receiveTCP(Socket::ptr socket, tbyte* data, int size);
@@ -179,6 +181,10 @@ class Leash : public QWidget
 		QList<QStandardItem*> mPosIntData, mTorqueIntData;
 		QList<QStandardItem*> mMotorData;
 
+		void populateControlUI();
+		void loadControllerConfig(mxml_node_t *cntlRoot);
+		void saveControllerConfig(mxml_node_t *cntlRoot);
+		void applyControllerConfig();
 };
 }
 }
