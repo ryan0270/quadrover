@@ -91,6 +91,7 @@ namespace Quadrotor{
 //		mQuad = new QuadrotorInterface();
 		mLeash = new Leash();
 		mLeash->initialize();
+		mLeash->loadConfigFromFile("../quad0.leashConfig");
 		
 //		int quadIndex = 0;
 		cout << "Initializing quad " << 0 << " ... ";
@@ -147,7 +148,7 @@ namespace Quadrotor{
 	void FlightInterface::setDeltaT(double dt)
 	{
 		mDeltaT = dt;
-		mLeash->setDeltaT(dt);
+//		mLeash->setDeltaT(dt);
 	}
 
 	void FlightInterface::doEmergencyShutdown()

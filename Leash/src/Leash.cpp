@@ -10,94 +10,49 @@ Leash::Leash(QWidget *parent) :
 	QWidget(parent),
 	ui(new Ui::Leash),
 	mAttBias(3,1,0.0),
-	mIntMemory(3,1,0.0)
+	mIntMemory(3,1,0.0),
+	mAttObsvDirWeights(2,0.5),
+	mAttObsvNominalMag(3,0),
+	mKalmanMeasVar(6,1),
+	mKalmanDynVar(6,0),
+	mKalmanAttBias(3,0),
+	mKalmanAttBiasAdaptGain(3,0)
 {
 	ui->setupUi(this);
 
 	mIP = string("0.0.0.0");
 	mPort = 13120;
 
-	mGainTransP[0] = mGainTransP[1] = mGainTransP[2] = 0;
-	mGainTransD[0] = mGainTransP[1] = mGainTransP[2] = 0;
-	mGainTransI[0] = mGainTransP[1] = mGainTransP[2] = 0;
-	mGainAttP[0] = mGainAttP[1] = mGainAttP[2] = 0;
-	mGainAttD[0] = mGainAttP[1] = mGainAttP[2] = 0;
-mGainTransP[0] = 1;
-mGainTransP[1] = 2;
-mGainTransP[2] = 3;
-mGainTransD[0] = 1;
-mGainTransD[1] = 2;
-mGainTransD[2] = 3;
-mGainTransI[0] = 1;
-mGainTransI[1] = 2;
-mGainTransI[2] = 3;
-mGainTransILimit[0] = 1;
-mGainTransILimit[1] = 2;
-mGainTransILimit[2] = 3;
-mGainAttP[0] = 1;
-mGainAttP[1] = 2;
-mGainAttP[2] = 3;
-mGainAttD[0] = 1;
-mGainAttD[1] = 2;
-mGainAttD[2] = 3;
-	mObserverGainP = 1;
-	mObserverGainI = 1;
+	mCntlGainTransP[0] = mCntlGainTransP[1] = mCntlGainTransP[2] = 0;
+	mCntlGainTransD[0] = mCntlGainTransD[1] = mCntlGainTransD[2] = 0;
+	mCntlGainTransI[0] = mCntlGainTransI[1] = mCntlGainTransI[2] = 0;
+	mCntlGainTransILimit[0] = mCntlGainTransILimit[1] = mCntlGainTransILimit[2] = 0;
+	mCntlGainAttP[0] = mCntlGainAttP[1] = mCntlGainAttP[2] = 0;
+	mCntlGainAttD[0] = mCntlGainAttD[1] = mCntlGainAttD[2] = 0;
+	mAttObsvGainP = 1;
+	mAttObsvGainI = 1;
 
-//	mArduinoStatus = 0;
-//	mState = Array2D<double>(6,1,0.0);
-//	mDesiredState = Array2D<double>(6,1,0.0);
-//	mStateImage.resize(6);
-//	mDesiredStateImage.resize(6);
-//	for(int i=0; i<mStateImage.size(); i++)
-//	{
-//		mStateImage[i] = 0;
-//		mDesiredStateImage[i] = 0;
-//	}
-//	mDesiredStateImage[0] = 160; mDesiredStateImage[1] = 120; mDesiredStateImage[2] = 0;
-//	mGyro = Array2D<double>(3,1,0.0);
-//	mAccel = Array2D<double>(3,1,0.0);
-//	mBias= Array2D<double>(3,1,0.0);
-//	mComp = Array2D<double>(3,1,0.0);
 	mMotorValues[0] = mMotorValues[1] = mMotorValues[2] = mMotorValues[3] = 0;
-//	mMotorValuesIbvs[0] = mMotorValuesIbvs[1] = mMotorValuesIbvs[2] = mMotorValuesIbvs[3] = 0;
 	mTimeMS = 0;
 
-	mObserverWeights.push_back(.9);
-	mObserverWeights.push_back(.1);
-
-//	mIntMemory = Array2D<double>(3,1,0.0);
-
 	mMotorTrim[0] = mMotorTrim[1] = mMotorTrim[2] = mMotorTrim[3] = 0;
-
-//	mCntlSysFile = "";
 
 	mCntlCalcTimeUS = 0;
 	mImgProcTimeUS = 0;
 
-//	mFiltBoxColorMin.resize(4);
-//	mFiltBoxColorMax.resize(4);
-//	mFiltBoxColorMin[0] = 0; mFiltBoxColorMax[0] = 10;
-//	mFiltBoxColorMin[1] = 80; mFiltBoxColorMax[1] = 100;
-//	mFiltBoxColorMin[2] = 170; mFiltBoxColorMax[2] = 190;
-//	mFiltBoxColorMin[3] = 260; mFiltBoxColorMax[3] = 280;
-//	mFiltSatMin = 0; mFiltSatMax = 50;
-//	mFiltValMin = 0; mFiltValMax = 50;
-//	mFiltCircMin = 75; mFiltCircMax = 100;
-//	mFiltConvMin = 75; mFiltConvMax = 100;
-//	mFiltAreaMin = 10; mFiltAreaMax = 9999999;
-
 	mLogMask = PC_UPDATES;
-	
-	mDeltaT = 0;
 
 //	mUseMotors = false;
 	mUseIbvs = false;
 
-	mAttBiasGain = 0;
-	mForceScalingGain = 0;
+	mKalmanForceGainAdaptGain = 0;
 
-	mKfPosMeasStdDev = 1e-3;
-	mKfVelMeasStdDev = 1e-3;
+	mKalmanForceGainAdaptGain = 0;
+
+	mMotorForceGain = 0;
+	mMotorTorqueGain = 0;
+	mMotorArmLength = 1;
+	mTotalMass = 1;
 }
 
 Leash::~Leash()
@@ -139,11 +94,6 @@ void Leash::initialize()
 //	mSocketUDP = Socket::ptr(Socket::createUDPSocket());
 	mSocketUDP = NULL;
 
-	mLastImage.create(240,320,CV_8UC1);
-	mLastImage = cv::Scalar(0);
-
-//	mImgViewType = 0;
-
 //	mIbvsGainImg.resize(3); mIbvsGainImg[0] = mIbvsGainImg[1] = mIbvsGainImg[2] = 0;
 //	mIbvsGainFlow.resize(3); mIbvsGainFlow[0] = mIbvsGainFlow[1] = mIbvsGainFlow[2] = 0;
 //	mIbvsGainFlowInt.resize(3); mIbvsGainFlowInt[0] = mIbvsGainFlowInt[1] = mIbvsGainFlowInt[2] = 0;
@@ -155,6 +105,7 @@ void Leash::initialize()
 
 	onBtnResetDesImgMoment_clicked();
 
+	// Views for onboard data
 	vector<QList<QStandardItem*>* > data;
 	data.push_back(&mAttData);
 	data.push_back(&mPosData);
@@ -240,6 +191,46 @@ void Leash::initialize()
 	ui->vwMotors->setMinimumSize(totWidth, totHeight);
 	ui->vwMotors->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	ui->vwMotors->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+	vector<QTableWidget*> tables;
+	for(int i=0; i<6; i++)
+	{
+		ui->tblKalmanVar->item(0,i)->setText("-00.0000");
+		ui->tblKalmanVar->item(1,i)->setText("-00.0000");
+	}
+	tables.push_back(ui->tblKalmanVar);
+
+	for(int i=0; i<3; i++)
+	{
+		ui->tblKalmanAttBias->item(0,i)->setText("-00.0000");
+		ui->tblKalmanAttBias->item(1,i)->setText("-00.0000");
+	}
+	tables.push_back(ui->tblKalmanAttBias);
+
+	for(int i=0; i<2; i++)
+		ui->tblAttObsvGains->item(0,i)->setText("-00.0000");
+	tables.push_back(ui->tblAttObsvGains);
+	
+	for(int i=0; i<2; i++)
+		ui->tblAttObsvDirWeights->item(0,i)->setText("-00.00");
+	tables.push_back(ui->tblAttObsvDirWeights);
+
+	for(int i=0; i<3; i++)
+		ui->tblAttObsvNomMag->item(0,i)->setText("-000.00");
+	tables.push_back(ui->tblAttObsvNomMag);
+
+	for(int tbl=0; tbl<tables.size(); tbl++)
+	{
+		tables[tbl]->resizeColumnsToContents();
+		tables[tbl]->resizeRowsToContents();
+		resizeTableWidget(tables[tbl]);
+		setVerticalTabOrder(tables[tbl]);
+	}
+
+	cv::Mat img(240,320,CV_8UC3,cv::Scalar(0));
+	ui->lblImageDisplay->setPixmap(QPixmap::fromImage(cvMat2QImage(img)));
+	ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
+	ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
 
 	populateUI();
 }
@@ -416,11 +407,10 @@ void Leash::pollTCP()
 							vector<uchar> imgData;
 							imgData.resize(size);
 							receiveTCP(mSocketTCP,(tbyte*)&(imgData.front()),size);
-							mMutex_image.lock();
-								mLastImage = cv::imdecode(imgData,CV_LOAD_IMAGE_COLOR);
-//								if(chkViewBinarizedImage->isChecked() == false && chkUseIbvsController->isChecked() == false)
-//									cv::cvtColor(mLastImage,mLastImage,CV_HSV2BGR);
-							mMutex_image.unlock();
+							cv::Mat img = cv::imdecode(imgData,CV_LOAD_IMAGE_COLOR);
+							ui->lblImageDisplay->setPixmap(QPixmap::fromImage(cvMat2QImage(img)));
+							ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
+							ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
 						}
 						break;
 					default:
@@ -447,12 +437,6 @@ void Leash::pollTCP()
 void Leash::updateDisplay()
 {
 	double time = (mSys.mtime() - mStartTimeUniverseMS)/1.0e3;
-//	cout << "Leash::updateDisplay start" << endl;
-//	if(mSocketTCP != NULL)
-//		lblPhoneStatus->setText("Connected");
-//	else
-//		lblPhoneStatus->setText("Disconnected");
-//
 
 	////////////////// Temp just to keep the link alive /////////////////////
 	Packet pState;
@@ -468,101 +452,8 @@ void Leash::updateDisplay()
 	if(mSocketTCP != NULL)
 	{
 		pollUDP();
-//		pollTCP();
-//		mMutex_data.lock();
-//		if(mArduinoStatus == 0) lblPhoneArduinoStatus->setText("NULL");
-//		else if(mArduinoStatus == 1) lblPhoneArduinoStatus->setText("Connected");
-//		else lblPhoneArduinoStatus->setText("Unknown");
-//
-//		if(mUseMotors)
-//			lblPhoneUseMotors->setText("On");
-//		else
-//			lblPhoneUseMotors->setText("Off");
-//
-//		if(mUseIbvs)
-//			lblPhoneUseIbvs->setText("True");
-//		else
-//			lblPhoneUseIbvs->setText("False");
-//
-//		lblPhoneTime->setText(QString::number(mTimeMS/1000.0+0.5,'f',0));
-//
-//		lblPhoneCommand0->setText(QString::number(mMotorValues[0]));
-//		lblPhoneCommand1->setText(QString::number(mMotorValues[1]));
-//		lblPhoneCommand2->setText(QString::number(mMotorValues[2]));
-//		lblPhoneCommand3->setText(QString::number(mMotorValues[3]));
-//
-//		lblPhoneIbvsCommand0->setText(QString::number(mMotorValuesIbvs[0]));
-//		lblPhoneIbvsCommand1->setText(QString::number(mMotorValuesIbvs[1]));
-//		lblPhoneIbvsCommand2->setText(QString::number(mMotorValuesIbvs[2]));
-//		lblPhoneIbvsCommand3->setText(QString::number(mMotorValuesIbvs[3]));
-//
-//		switch(mCurCntlType)
-//		{
-//			case CNTL_TRANSLATION_PID:
-//				lblController->setText("PID");
-//				chkUseMuCntl->setChecked(false);
-//				break;
-//			case CNTL_TRANSLATION_SYS:
-//				lblController->setText("sys");
-//				chkUseMuCntl->setChecked(true);
-//				break;
-//			default:
-//				lblController->setText("Unknown");
-//		}
-//		lblCntlCalcTime->setText(QString::number(mCntlCalcTimeUS/1.0e3,'f',2)+"ms");
-//
-//		lblImgProcTime->setText(QString::number(mImgProcTimeUS/1.0e3,'f',0)+"ms");
-//		
-//		for(int i=0; i<3; i++)
-//		{
-//			tblPosition->item(i,1)->setText(QString::number(mState[i][0]*RAD2DEG,'f',1)+QChar(0x00B0));
-//			tblPosition->item(i,0)->setText(QString::number(mDesiredState[i][0]*RAD2DEG,'f',1)+QChar(0x00B0));
-//		}
-//		for(int i=3; i<6; i++)
-//		{
-//			tblPosition->item(i,1)->setText(QString::number(mState[i][0]*RAD2DEG,'f',1)+QChar(0x00B0)+"/s");
-//			tblPosition->item(i,0)->setText(QString::number(mDesiredState[i][0]*RAD2DEG,'f',1)+QChar(0x00B0)+"/s");
-//			tblPosition->item(i,2)->setText(QString::number(mIntMemory[i-3][0]*RAD2DEG,'f',1)+QChar(0x00B0));
-//		}
-//
-//		for(int i=0; i<6; i++)
-//			tblImgState->item(0,i)->setText(QString::number(mStateImage[i],'f',3));
-//		for(int i=3; i<6; i++)
-//			tblImgState->item(1,i)->setText(QString::number(mDesiredStateImage[i],'f',3));
-//		tblImgState->item(1,2)->setText(QString::number(mDesiredStateImage[2],'f',0));
-//
-//		for(int i=0; i<3; i++)
-//			tblMeasures->item(i,0)->setText(QString::number(mGyro[i][0]*RAD2DEG,'f',1)+QChar(0x00B0)+"/s");
-//		for(int i=0; i<3; i++)
-//			tblMeasures->item(i,1)->setText(QString::number(mBias[i][0]*RAD2DEG,'f',2)+QChar(0x00B0)+"/s");
-//		for(int i=0; i<3; i++)
-//			tblMeasures->item(i,2)->setText(QString::number(mAccel[i][0],'f',1)+"m/s/s");
-//		for(int i=0; i<3; i++)
-//			tblMeasures->item(i,3)->setText(QString::number(mComp[i][0],'f',1)+"uT");
+		pollTCP();
 	}
-//	else
-//	{
-//		lblPhoneArduinoStatus->setText("N/A");
-//		lblPhoneUseMotors->setText("N/A");
-//		lblPhoneUseIbvs->setText("N/A");
-//		lblPhoneTime->setText("N/A");
-//		lblPhoneCommand0->setText("N/A");
-//		lblPhoneCommand1->setText("N/A");
-//		lblPhoneCommand2->setText("N/A");
-//		lblPhoneCommand3->setText("N/A");
-//		lblPhoneIbvsCommand0->setText("N/A");
-//		lblPhoneIbvsCommand1->setText("N/A");
-//		lblPhoneIbvsCommand2->setText("N/A");
-//		lblPhoneIbvsCommand3->setText("N/A");
-//		lblController->setText("N/A");
-//
-//		tblImgState->item(1,2)->setText(QString::number(mDesiredStateImage[2],'f',0));
-//	}
-//	mMutex_data.unlock();
-//
-//	mMutex_image.lock();
-//		lblImageDisplay->setPixmap(QPixmap::fromImage(cvMat2QImage(mLastImage)));
-//	mMutex_image.unlock();
 }
 
 QImage Leash::cvMat2QImage(const cv::Mat &mat)
@@ -684,165 +575,78 @@ bool Leash::sendParams()
 	mMutex_data.lock();
 	int code;
 	bool result = true;
-//		int code = COMM_CNTL_GAIN_PID;
-//		float rollPID[3], pitchPID[3], yawPID[3];
-//		rollPID[0] = mGainP[0];
-//		rollPID[1] = mGainI[0];
-//		rollPID[2] = mGainD[0];
-//		pitchPID[0] = mGainP[1];
-//		pitchPID[1] = mGainI[1];
-//		pitchPID[2] = mGainD[1];
-//		yawPID[0] = mGainP[2];
-//		yawPID[1] = mGainI[2];
-//		yawPID[2] = mGainD[2];
+
+	code = COMM_MOTOR_TRIM;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)mMotorTrim, 4*sizeof(int));
+
+	code = COMM_OBSV_GAIN;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result =result && sendTCP((tbyte*)&mAttObsvGainP,sizeof(mAttObsvGainP));
+	if(result) result =result && sendTCP((tbyte*)&mAttObsvGainI,sizeof(mAttObsvGainI));
+	if(result) result =result && sendTCP((tbyte*)&(mAttObsvDirWeights[0]), sizeof(mAttObsvDirWeights[0]));
+	if(result) result =result && sendTCP((tbyte*)&(mAttObsvDirWeights[1]), sizeof(mAttObsvDirWeights[1]));
+
+	code = COMM_LOG_MASK; 
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&mLogMask, sizeof(mLogMask));
+
+	float scale = mMotorForceGain;
+	code = COMM_MOTOR_FORCE_SCALING; 
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&scale,sizeof(scale));
+
+	float torqueScale = mMotorTorqueGain;
+	code = COMM_MOTOR_TORQUE_SCALING;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&torqueScale,sizeof(torqueScale));
+
+//	code = COMM_KALMANFILTER_POS_MEAS_STD;
+//	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+//	if(result) result = result && sendTCP((tbyte*)&mKfPosMeasStdDev,sizeof(mKfPosMeasStdDev));
 //
-//		bool result = true;
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)rollPID,3*sizeof(float));
-//		if(result) result = result && sendTCP((tbyte*)pitchPID,3*sizeof(float));
-//		if(result) result = result && sendTCP((tbyte*)yawPID,3*sizeof(float));
+//	code = COMM_KALMANFILTER_VEL_MEAS_STD;
+//	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+//	if(result) result = result && sendTCP((tbyte*)&mKfVelMeasStdDev,sizeof(mKfVelMeasStdDev));
 
-		code = COMM_MOTOR_TRIM;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)mMotorTrim, 4*sizeof(int));
+	float m = mTotalMass;
+	code = COMM_MASS; 
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&m,sizeof(m));
 
-		code = COMM_OBSV_GAIN;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result =result && sendTCP((tbyte*)&mObserverGainP,sizeof(mObserverGainP));
-		if(result) result =result && sendTCP((tbyte*)&mObserverGainI,sizeof(mObserverGainI));
-		if(result) result =result && sendTCP((tbyte*)&(mObserverWeights[0]), sizeof(mObserverWeights[0]));
-		if(result) result =result && sendTCP((tbyte*)&(mObserverWeights[1]), sizeof(mObserverWeights[1]));
+	Collection<float> attGains(4);
+	int attGainSize = attGains.size();
+	for(int i=0; i<3; i++)
+		attGains[i] = mIbvsGainAngularRate[i];
+	attGains[3] = mIbvsGainAngle;
+	code = COMM_ATT_GAINS;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&attGainSize,sizeof(attGainSize));
+	if(result) result = result && sendTCP((tbyte*)&(attGains[0]),attGainSize*sizeof(float));
 
-//		int cnt =  mFiltBoxColorMin.size();
-//		Collection<int> mins(cnt), maxs(cnt);
-//		for(int i=0; i<cnt; i++)
-//		{
-//			mins[i] = mFiltBoxColorMin[i];
-//			maxs[i] = mFiltBoxColorMax[i];
-//		}
-//		code = COMM_IMGPROC_BOX_COLOR_MIN; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&cnt,sizeof(cnt));
-//		if(result) result = result && sendTCP((tbyte*)&(mins[0]),cnt*sizeof(int));
-//		code = COMM_IMGPROC_BOX_COLOR_MAX; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&cnt,sizeof(cnt));
-//		if(result) result = result && sendTCP((tbyte*)&(maxs[0]),cnt*sizeof(int));
-//		code = COMM_IMGPROC_VAL_MIN; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltValMin,sizeof(mFiltValMin));
-//		code = COMM_IMGPROC_VAL_MAX; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltValMax,sizeof(mFiltValMax));
-//		code = COMM_IMGPROC_SAT_MIN; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltSatMin,sizeof(mFiltSatMin));
-//		code = COMM_IMGPROC_SAT_MAX; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltSatMax,sizeof(mFiltSatMax));
-//		code = COMM_IMGPROC_CIRC_MIN; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltCircMin,sizeof(mFiltCircMin));
-//		code = COMM_IMGPROC_CIRC_MAX; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltCircMax,sizeof(mFiltCircMax));
-//		code = COMM_IMGPROC_CONV_MIN; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltConvMin,sizeof(mFiltConvMin));
-//		code = COMM_IMGPROC_CONV_MAX; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltConvMax,sizeof(mFiltConvMax));
-//		code = COMM_IMGPROC_AREA_MIN; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltAreaMin,sizeof(mFiltAreaMin));
-//		code = COMM_IMGPROC_AREA_MAX; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&mFiltAreaMax,sizeof(mFiltAreaMax));
+	float rollBias = mAttBias[0][0];
+	float pitchBias = mAttBias[1][0];
+	float yawBias = mAttBias[2][0];
+	code = COMM_ATT_BIAS; 
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&rollBias,sizeof(rollBias));
+	if(result) result = result && sendTCP((tbyte*)&pitchBias,sizeof(pitchBias));
+	if(result) result = result && sendTCP((tbyte*)&yawBias,sizeof(yawBias));
 
-		code = COMM_LOG_MASK; 
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&mLogMask, sizeof(mLogMask));
+//	float attBiasGain = mAttBiasGain;
+//	code = COMM_ATT_BIAS_GAIN;
+//	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+//	if(result) result = result && sendTCP((tbyte*)&attBiasGain,sizeof(attBiasGain));
 
-//		float dt = mDeltaT;
-//		code = COMM_DELTA_T; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&dt, sizeof(dt));
+	float forceScalingGain = mKalmanForceGainAdaptGain;
+	code = COMM_FORCE_SCALING_GAIN;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&forceScalingGain, sizeof(forceScalingGain));
 
-		float scale = mForceScaling;
-		code = COMM_MOTOR_FORCE_SCALING; 
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&scale,sizeof(scale));
-
-		float torqueScale = mTorqueScaling;
-		code = COMM_MOTOR_TORQUE_SCALING;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&torqueScale,sizeof(torqueScale));
-
-		code = COMM_KALMANFILTER_POS_MEAS_STD;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&mKfPosMeasStdDev,sizeof(mKfPosMeasStdDev));
-
-		code = COMM_KALMANFILTER_VEL_MEAS_STD;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&mKfVelMeasStdDev,sizeof(mKfVelMeasStdDev));
-
-		float m = mMass;
-		code = COMM_MASS; 
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&m,sizeof(m));
-
-//		int gainSize = mIbvsGainImg.size()+mIbvsGainFlowInt.size()+mIbvsGainFlow.size()+mIbvsGainFF.size()+mAttCmdOffset.size()+mIbvsGainAngularRate.size()+1+1;
-//		Collection<float> gains(gainSize);
-//		for(int i=0; i<3; i++)
-//		{
-//			gains[i] = mIbvsGainImg[i];
-//			gains[i+3] = mIbvsGainFlow[i];
-//			gains[i+6] = mIbvsGainFlowInt[i];
-//			gains[i+9] = mIbvsGainFF[i];
-//			gains[i+12] = mAttCmdOffset[i];
-//			gains[i+15] = mIbvsGainAngularRate[i];
-//			
-//		}
-//		gains[18] = mIbvsGainAngle;
-//		gains[19] = mIbvsGainDynamic;
-//		code = COMM_IBVS_GAINS; 
-//		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//		if(result) result = result && sendTCP((tbyte*)&gainSize,sizeof(gainSize));
-//		if(result) result = result && sendTCP((tbyte*)&(gains[0]),gainSize*sizeof(float));
-
-		Collection<float> attGains(4);
-		int attGainSize = attGains.size();
-		for(int i=0; i<3; i++)
-			attGains[i] = mIbvsGainAngularRate[i];
-		attGains[3] = mIbvsGainAngle;
-		code = COMM_ATT_GAINS;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&attGainSize,sizeof(attGainSize));
-		if(result) result = result && sendTCP((tbyte*)&(attGains[0]),attGainSize*sizeof(float));
-
-		float rollBias = mAttBias[0][0];
-		float pitchBias = mAttBias[1][0];
-		float yawBias = mAttBias[2][0];
-		code = COMM_ATT_BIAS; 
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&rollBias,sizeof(rollBias));
-		if(result) result = result && sendTCP((tbyte*)&pitchBias,sizeof(pitchBias));
-		if(result) result = result && sendTCP((tbyte*)&yawBias,sizeof(yawBias));
-
-		float attBiasGain = mAttBiasGain;
-		code = COMM_ATT_BIAS_GAIN;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&attBiasGain,sizeof(attBiasGain));
-
-		float forceScalingGain = mForceScalingGain;
-		code = COMM_FORCE_SCALING_GAIN;
-		if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-		if(result) result = result && sendTCP((tbyte*)&forceScalingGain, sizeof(forceScalingGain));
-
-		if(result)
-			cout << "Phone params sent." << endl;
-		else
-			cout << "Error sending phone params." << endl;
+	if(result)
+		cout << "Phone params sent." << endl;
+	else
+		cout << "Error sending phone params." << endl;
 	mMutex_data.unlock();
 	return result;
 }
@@ -873,198 +677,17 @@ bool Leash::loadConfigFromFile(string filename)
 	else
 		cout << "Controller section not found in config file" << endl;
 
-	populateUI();
-	return true;
+	mxml_node_t *hdwRoot = mxmlFindElement(xmlRoot, xmlRoot, "Hardware", NULL, NULL, MXML_DESCEND);
+	if(hdwRoot != NULL)
+		loadHardwareConfig(hdwRoot);
+	else
+		cout << "Hardware section not found in config file" << endl;
 
-	mMutex_data.lock();
-		mxml_node_t *commRoot = mxmlFindElement(xmlRoot,xmlRoot,"Communication",NULL,NULL,MXML_DESCEND);
-		if(commRoot != NULL)
-		{
-			mxml_node_t *ipNode = mxmlFindElement(commRoot,commRoot,"IP",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *portNode = mxmlFindElement(commRoot,commRoot,"Port",NULL,NULL,MXML_DESCEND);
-			if(ipNode != NULL)	mIP = ipNode->child->value.text.string;
-			if(portNode != NULL)	mPort = QString(portNode->child->value.text.string).toInt();
-		}
-//		mxml_node_t *cntlRoot = mxmlFindElement(xmlRoot,xmlRoot,"Controller",NULL,NULL,MXML_DESCEND);
-//		if(cntlRoot != NULL)
-//		{
-//			mxml_node_t *rollNode = mxmlFindElement(cntlRoot,cntlRoot,"Roll",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *pNode = mxmlFindElement(rollNode,rollNode,"P",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *iNode = mxmlFindElement(rollNode,rollNode,"I",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *dNode = mxmlFindElement(rollNode,rollNode,"D",NULL,NULL,MXML_DESCEND);
-//			if(pNode != NULL) mGainP[0] = QString(pNode->child->value.text.string).toDouble();
-//			if(iNode != NULL) mGainI[0] = QString(iNode->child->value.text.string).toDouble();
-//			if(dNode != NULL) mGainD[0] = QString(dNode->child->value.text.string).toDouble();
-//			mxml_node_t *pitchNode = mxmlFindElement(cntlRoot,cntlRoot,"Pitch",NULL,NULL,MXML_DESCEND);
-//			pNode = mxmlFindElement(pitchNode,pitchNode,"P",NULL,NULL,MXML_DESCEND);
-//			iNode = mxmlFindElement(pitchNode,pitchNode,"I",NULL,NULL,MXML_DESCEND);
-//			dNode = mxmlFindElement(pitchNode,pitchNode,"D",NULL,NULL,MXML_DESCEND);
-//			if(pNode != NULL) mGainP[1] = QString(pNode->child->value.text.string).toDouble();
-//			if(iNode != NULL) mGainI[1] = QString(iNode->child->value.text.string).toDouble();
-//			if(dNode != NULL) mGainD[1] = QString(dNode->child->value.text.string).toDouble();
-//			mxml_node_t *yawNode = mxmlFindElement(cntlRoot,cntlRoot,"Yaw",NULL,NULL,MXML_DESCEND);
-//			pNode = mxmlFindElement(yawNode,yawNode,"P",NULL,NULL,MXML_DESCEND);
-//			iNode = mxmlFindElement(yawNode,yawNode,"I",NULL,NULL,MXML_DESCEND);
-//			dNode = mxmlFindElement(yawNode,yawNode,"D",NULL,NULL,MXML_DESCEND);
-//			if(pNode != NULL) mGainP[2] = QString(pNode->child->value.text.string).toDouble();
-//			if(iNode != NULL) mGainI[2] = QString(iNode->child->value.text.string).toDouble();
-//			if(dNode != NULL) mGainD[2] = QString(dNode->child->value.text.string).toDouble();
-//		}
-		mxml_node_t *motorRoot = mxmlFindElement(xmlRoot,xmlRoot,"Motors",NULL,NULL,MXML_DESCEND);
-		if(motorRoot != NULL)
-		{
-			mxml_node_t *motorTrimRoot = mxmlFindElement(motorRoot,motorRoot,"Trim",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *nNode = mxmlFindElement(motorTrimRoot,motorTrimRoot,"N",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *eNode = mxmlFindElement(motorTrimRoot,motorTrimRoot,"E",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *sNode = mxmlFindElement(motorTrimRoot,motorTrimRoot,"S",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *wNode = mxmlFindElement(motorTrimRoot,motorTrimRoot,"W",NULL,NULL,MXML_DESCEND);
-			mMotorTrim[0] = QString(nNode->child->value.text.string).toInt();
-			mMotorTrim[1] = QString(eNode->child->value.text.string).toInt();
-			mMotorTrim[2] = QString(sNode->child->value.text.string).toInt();
-			mMotorTrim[3] = QString(wNode->child->value.text.string).toInt();
-		}
-		mxml_node_t *observerRoot = mxmlFindElement(xmlRoot,xmlRoot,"Observer",NULL,NULL,MXML_DESCEND);
-		if(observerRoot != NULL)
-		{
-			mxml_node_t *kpNode = mxmlFindElement(observerRoot,observerRoot,"Kp",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *kiNode = mxmlFindElement(observerRoot,observerRoot,"Ki",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *accelWeightNode = mxmlFindElement(observerRoot,observerRoot,"accelWeight",NULL,NULL,MXML_DESCEND);
-			mxml_node_t *magWeightNode = mxmlFindElement(observerRoot,observerRoot,"magWeight",NULL,NULL,MXML_DESCEND);
-	//		mxml_node_t *gravBWNode = mxmlFindElement(observerRoot,observerRoot,"gravBandwidth",NULL,NULL,MXML_DESCEND);
-
-			if(kpNode != NULL)	mObserverGainP = QString(kpNode->child->value.text.string).toDouble();
-			if(kiNode != NULL)	mObserverGainI = QString(kiNode->child->value.text.string).toDouble();
-			if(accelWeightNode != NULL)	mObserverWeights[0] = QString(accelWeightNode->child->value.text.string).toDouble();
-			if(magWeightNode != NULL)	mObserverWeights[1] = QString(magWeightNode->child->value.text.string).toDouble();
-		}
-
-//		mxml_node_t *imageRoot = mxmlFindElement(xmlRoot,xmlRoot,"ImgProc",NULL,NULL,MXML_DESCEND);
-//		if(imageRoot != NULL)
-//		{
-//			mxml_node_t *box0MinNode = mxmlFindElement(imageRoot,imageRoot,"Box0Min",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *box0MaxNode = mxmlFindElement(imageRoot,imageRoot,"Box0Max",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *box1MinNode = mxmlFindElement(imageRoot,imageRoot,"Box1Min",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *box1MaxNode = mxmlFindElement(imageRoot,imageRoot,"Box1Max",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *box2MinNode = mxmlFindElement(imageRoot,imageRoot,"Box2Min",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *box2MaxNode = mxmlFindElement(imageRoot,imageRoot,"Box2Max",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *box3MinNode = mxmlFindElement(imageRoot,imageRoot,"Box3Min",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *box3MaxNode = mxmlFindElement(imageRoot,imageRoot,"Box3Max",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *satMinNode = mxmlFindElement(imageRoot,imageRoot,"SatMin",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *satMaxNode = mxmlFindElement(imageRoot,imageRoot,"SatMax",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *valMinNode = mxmlFindElement(imageRoot,imageRoot,"ValMin",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *valMaxNode = mxmlFindElement(imageRoot,imageRoot,"ValMax",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *circMinNode = mxmlFindElement(imageRoot,imageRoot,"CircMin",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *circMaxNode = mxmlFindElement(imageRoot,imageRoot,"CircMax",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *convMinNode = mxmlFindElement(imageRoot,imageRoot,"ConvMin",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *convMaxNode = mxmlFindElement(imageRoot,imageRoot,"ConvMax",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *areaMinNode = mxmlFindElement(imageRoot,imageRoot,"AreaMin",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *areaMaxNode = mxmlFindElement(imageRoot,imageRoot,"AreaMax",NULL,NULL,MXML_DESCEND);
-//
-//			if(box0MinNode != NULL) mFiltBoxColorMin[0] = QString(box0MinNode->child->value.text.string).toInt();
-//			if(box0MaxNode != NULL) mFiltBoxColorMax[0] = QString(box0MaxNode->child->value.text.string).toInt();
-//			if(box1MinNode != NULL) mFiltBoxColorMin[1] = QString(box1MinNode->child->value.text.string).toInt();
-//			if(box1MaxNode != NULL) mFiltBoxColorMax[1] = QString(box1MaxNode->child->value.text.string).toInt();
-//			if(box2MinNode != NULL) mFiltBoxColorMin[2] = QString(box2MinNode->child->value.text.string).toInt();
-//			if(box2MaxNode != NULL) mFiltBoxColorMax[2] = QString(box2MaxNode->child->value.text.string).toInt();
-//			if(box3MinNode != NULL) mFiltBoxColorMin[3] = QString(box3MinNode->child->value.text.string).toInt();
-//			if(box3MaxNode != NULL) mFiltBoxColorMax[3] = QString(box3MaxNode->child->value.text.string).toInt();
-//			if(satMinNode != NULL) mFiltSatMin = QString(satMinNode->child->value.text.string).toInt();
-//			if(satMaxNode != NULL) mFiltSatMax = QString(satMaxNode->child->value.text.string).toInt();
-//			if(valMinNode != NULL) mFiltValMin = QString(valMinNode->child->value.text.string).toInt();
-//			if(valMaxNode != NULL) mFiltValMax = QString(valMaxNode->child->value.text.string).toInt();
-//			if(circMinNode != NULL) mFiltCircMin = QString(circMinNode->child->value.text.string).toInt();
-//			if(circMaxNode != NULL) mFiltCircMax = QString(circMaxNode->child->value.text.string).toInt();
-//			if(convMinNode != NULL) mFiltConvMin = QString(convMinNode->child->value.text.string).toInt();
-//			if(convMaxNode != NULL) mFiltConvMax = QString(convMaxNode->child->value.text.string).toInt();
-//			if(areaMinNode != NULL) mFiltAreaMin = QString(areaMinNode->child->value.text.string).toInt();
-//			if(areaMaxNode != NULL) mFiltAreaMax = QString(areaMaxNode->child->value.text.string).toInt();
-//		}
-
-//		mxml_node_t *ibvsRoot = mxmlFindElement(xmlRoot,xmlRoot,"IBVS",NULL,NULL,MXML_DESCEND);
-//		if(ibvsRoot != NULL)
-//		{
-//			mxml_node_t *xNode = 	mxmlFindElement(ibvsRoot,ibvsRoot,"imgX",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *yNode = 	mxmlFindElement(ibvsRoot,ibvsRoot,"imgY",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *areaNode = mxmlFindElement(ibvsRoot,ibvsRoot,"imgArea",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *xFlowNode = mxmlFindElement(ibvsRoot,ibvsRoot,"xFlow",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *yFlowNode = mxmlFindElement(ibvsRoot,ibvsRoot,"yFlow",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *zFlowNode = mxmlFindElement(ibvsRoot,ibvsRoot,"zFlow",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *xFlowIntNode = mxmlFindElement(ibvsRoot,ibvsRoot,"xFlowInt",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *yFlowIntNode = mxmlFindElement(ibvsRoot,ibvsRoot,"yFlowInt",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *zFlowIntNode = mxmlFindElement(ibvsRoot,ibvsRoot,"zFlowInt",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *xFFNode = mxmlFindElement(ibvsRoot,ibvsRoot,"xFF",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *yFFNode = mxmlFindElement(ibvsRoot,ibvsRoot,"yFF",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *zFFNode = mxmlFindElement(ibvsRoot,ibvsRoot,"zFF",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *rollAttOffsetNode = mxmlFindElement(ibvsRoot,ibvsRoot,"rollAttCmdOffset",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *pitchAttOffsetNode = mxmlFindElement(ibvsRoot,ibvsRoot,"pitchAttCmdOffset",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *yawAttOffsetNode = mxmlFindElement(ibvsRoot,ibvsRoot,"yawAttCmdOffset",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *xOmegaNode = mxmlFindElement(ibvsRoot,ibvsRoot,"xOmega",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *yOmegaNode = mxmlFindElement(ibvsRoot,ibvsRoot,"yOmega",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *zOmegaNode = mxmlFindElement(ibvsRoot,ibvsRoot,"zOmega",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *angleNode = mxmlFindElement(ibvsRoot,ibvsRoot,"angle",NULL,NULL,MXML_DESCEND);
-//			mxml_node_t *dynamicNode = mxmlFindElement(ibvsRoot,ibvsRoot,"dynamic",NULL,NULL,MXML_DESCEND);
-//
-//			if(xNode != NULL) 		mIbvsGainImg[0] = QString(xNode->child->value.text.string).toDouble();
-//			if(yNode != NULL) 		mIbvsGainImg[1] = QString(yNode->child->value.text.string).toDouble();
-//			if(areaNode != NULL) 	mIbvsGainImg[2] = QString(areaNode->child->value.text.string).toDouble();
-//			if(xFlowNode != NULL) 	mIbvsGainFlow[0] = QString(xFlowNode->child->value.text.string).toDouble();
-//			if(yFlowNode != NULL) 	mIbvsGainFlow[1] = QString(yFlowNode->child->value.text.string).toDouble();
-//			if(zFlowNode != NULL) 	mIbvsGainFlow[2] = QString(zFlowNode->child->value.text.string).toDouble();
-//			if(xFlowIntNode != NULL) 	mIbvsGainFlowInt[0] = QString(xFlowIntNode->child->value.text.string).toDouble();
-//			if(yFlowIntNode != NULL) 	mIbvsGainFlowInt[1] = QString(yFlowIntNode->child->value.text.string).toDouble();
-//			if(zFlowIntNode!= NULL) 	mIbvsGainFlowInt[2] = QString(zFlowIntNode->child->value.text.string).toDouble();
-//			if(xFFNode != NULL) 	mIbvsGainFF[0] = QString(xFFNode->child->value.text.string).toDouble();
-//			if(yFFNode != NULL) 	mIbvsGainFF[1] = QString(yFFNode->child->value.text.string).toDouble();
-//			if(zFFNode != NULL) 	mIbvsGainFF[2] = QString(zFFNode->child->value.text.string).toDouble();
-//			if(rollAttOffsetNode != NULL) 	mAttCmdOffset[0] = QString(rollAttOffsetNode->child->value.text.string).toDouble();
-//			if(pitchAttOffsetNode != NULL) 	mAttCmdOffset[1] = QString(pitchAttOffsetNode->child->value.text.string).toDouble();
-//			if(yawAttOffsetNode!= NULL) 	mAttCmdOffset[2] = QString(yawAttOffsetNode->child->value.text.string).toDouble();
-//			if(xOmegaNode != NULL) 	mIbvsGainAngularRate[0] = QString(xOmegaNode->child->value.text.string).toDouble();
-//			if(yOmegaNode != NULL) 	mIbvsGainAngularRate[1] = QString(yOmegaNode->child->value.text.string).toDouble();
-//			if(zOmegaNode != NULL) 	mIbvsGainAngularRate[2] = QString(zOmegaNode->child->value.text.string).toDouble();
-//			if(angleNode != NULL) 	mIbvsGainAngle = QString(angleNode->child->value.text.string).toDouble();
-//			if(dynamicNode != NULL) 	mIbvsGainDynamic = QString(dynamicNode->child->value.text.string).toDouble();
-//		}
-
-		mxml_node_t *kfRoot = mxmlFindElement(xmlRoot,xmlRoot,"KalmanFilter",NULL,NULL,MXML_DESCEND);
-			if(kfRoot != NULL)
-			{
-				mxml_node_t *attBiasRoot = mxmlFindElement(kfRoot, kfRoot, "attBias", NULL, NULL, MXML_DESCEND);
-				if(attBiasRoot != NULL)
-				{
-					mxml_node_t *rollBiasRoot = mxmlFindElement(attBiasRoot, attBiasRoot, "roll", NULL, NULL, MXML_DESCEND);
-					mxml_node_t *pitchBiasRoot = mxmlFindElement(attBiasRoot, attBiasRoot, "pitch", NULL, NULL, MXML_DESCEND);
-					mxml_node_t *yawBiasRoot = mxmlFindElement(attBiasRoot, attBiasRoot, "yaw", NULL, NULL, MXML_DESCEND);
-
-					if(rollBiasRoot!=NULL) mAttBias[0][0] = QString(rollBiasRoot->child->value.text.string).toDouble(); else cout << "KF roll bias node not found" << endl;
-					if(pitchBiasRoot!=NULL) mAttBias[1][0] = QString(pitchBiasRoot->child->value.text.string).toDouble(); else cout << "KF pitch bias node not found" << endl;
-					if(yawBiasRoot!=NULL) mAttBias[2][0] = QString(yawBiasRoot->child->value.text.string).toDouble(); else cout << "KF yaw bias node not found" << endl;
-				}
-				else
-					cout << "KF att bias node not found" << endl;
-			
-				mxml_node_t *attBiasGainRoot= mxmlFindElement(kfRoot, kfRoot, "attBiasGain", NULL, NULL, MXML_DESCEND);
-					if(attBiasGainRoot!=NULL) mAttBiasGain = QString(attBiasGainRoot->child->value.text.string).toDouble(); else cout << "KF att bias gain node not found" << endl;
-
-				mxml_node_t *forceScalingGainRoot= mxmlFindElement(kfRoot, kfRoot, "forceScalingGain", NULL, NULL, MXML_DESCEND);
-					if(forceScalingGainRoot!=NULL) mForceScalingGain = QString(forceScalingGainRoot->child->value.text.string).toDouble(); else cout << "KF force scaling gain node not found" << endl;
-
-				mxml_node_t *posMeasStdDevRoot= mxmlFindElement(kfRoot, kfRoot, "posMeasStdDev", NULL, NULL, MXML_DESCEND);
-					if(posMeasStdDevRoot!=NULL) mKfPosMeasStdDev = QString(posMeasStdDevRoot->child->value.text.string).toDouble(); else cout << "Pos meas StdDev node not found" << endl;
-
-				mxml_node_t *velMeasStdDevRoot= mxmlFindElement(kfRoot, kfRoot, "velMeasStdDev", NULL, NULL, MXML_DESCEND);
-					if(velMeasStdDevRoot!=NULL) mKfVelMeasStdDev = QString(velMeasStdDevRoot->child->value.text.string).toDouble(); else cout << "Vel meas StdDev node not found" << endl;
-			}
-			else
-				cout << "Kalman filter node not found" << endl;
-
-		mxml_node_t *logRoot = mxmlFindElement(xmlRoot,xmlRoot,"Log",NULL,NULL,MXML_DESCEND);
-		if(logRoot != NULL)
-		{
-			mxml_node_t *maskNode = mxmlFindElement(logRoot,logRoot,"Mask",NULL,NULL,mLogMask);
-			if(maskNode != NULL) mLogMask = QString(maskNode->child->value.text.string).toInt();
-		}
-	mMutex_data.unlock();
+	mxml_node_t *obsvRoot = mxmlFindElement(xmlRoot, xmlRoot, "Observer", NULL, NULL, MXML_DESCEND);
+	if(obsvRoot != NULL)
+		loadObserverConfig(obsvRoot);
+	else
+		cout << "Observer section not found in config file" << endl;
 
 	populateUI();
 	return true;
@@ -1079,6 +702,7 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 		mxml_node_t *p = mxmlFindElement(transCntl, transCntl, "P", NULL, NULL, MXML_DESCEND);
 		mxml_node_t *d = mxmlFindElement(transCntl, transCntl, "D", NULL, NULL, MXML_DESCEND);
 		mxml_node_t *i = mxmlFindElement(transCntl, transCntl, "I", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *iLimit = mxmlFindElement(transCntl, transCntl, "ILimit", NULL, NULL, MXML_DESCEND);
 
 		if(p != NULL)
 		{
@@ -1086,9 +710,9 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 			mxml_node_t *y = mxmlFindElement(p, p, "y", NULL, NULL, MXML_DESCEND);
 			mxml_node_t *z = mxmlFindElement(p, p, "z", NULL, NULL, MXML_DESCEND);
 
-			if(x != NULL) stringstream(x->child->value.text.string) >> mGainTransP[0];
-			if(y != NULL) stringstream(y->child->value.text.string) >> mGainTransP[1];
-			if(z != NULL) stringstream(z->child->value.text.string) >> mGainTransP[2];
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainTransP[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainTransP[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainTransP[2];
 		}
 
 		if(d != NULL)
@@ -1097,9 +721,9 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 			mxml_node_t *y = mxmlFindElement(d, d, "y", NULL, NULL, MXML_DESCEND);
 			mxml_node_t *z = mxmlFindElement(d, d, "z", NULL, NULL, MXML_DESCEND);
 
-			if(x != NULL) stringstream(x->child->value.text.string) >> mGainTransD[0];
-			if(y != NULL) stringstream(y->child->value.text.string) >> mGainTransD[1];
-			if(z != NULL) stringstream(z->child->value.text.string) >> mGainTransD[2];
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainTransD[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainTransD[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainTransD[2];
 		}
 
 		if(i != NULL)
@@ -1108,9 +732,20 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 			mxml_node_t *y = mxmlFindElement(i, i, "y", NULL, NULL, MXML_DESCEND);
 			mxml_node_t *z = mxmlFindElement(i, i, "z", NULL, NULL, MXML_DESCEND);
 
-			if(x != NULL) stringstream(x->child->value.text.string) >> mGainTransI[0];
-			if(y != NULL) stringstream(y->child->value.text.string) >> mGainTransI[1];
-			if(z != NULL) stringstream(z->child->value.text.string) >> mGainTransI[2];
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainTransI[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainTransI[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainTransI[2];
+		}
+
+		if(iLimit != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(iLimit, iLimit, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(iLimit, iLimit, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(iLimit, iLimit, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainTransILimit[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainTransILimit[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainTransILimit[2];
 		}
 	}
 	else
@@ -1128,9 +763,9 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 			mxml_node_t *y = mxmlFindElement(p, p, "y", NULL, NULL, MXML_DESCEND);
 			mxml_node_t *z = mxmlFindElement(p, p, "z", NULL, NULL, MXML_DESCEND);
 
-			if(x != NULL) stringstream(x->child->value.text.string) >> mGainAttP[0];
-			if(y != NULL) stringstream(y->child->value.text.string) >> mGainAttP[1];
-			if(z != NULL) stringstream(z->child->value.text.string) >> mGainAttP[2];
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainAttP[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainAttP[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainAttP[2];
 		}
 
 		if(d != NULL)
@@ -1139,9 +774,9 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 			mxml_node_t *y = mxmlFindElement(d, d, "y", NULL, NULL, MXML_DESCEND);
 			mxml_node_t *z = mxmlFindElement(d, d, "z", NULL, NULL, MXML_DESCEND);
 
-			if(x != NULL) stringstream(x->child->value.text.string) >> mGainAttD[0];
-			if(y != NULL) stringstream(y->child->value.text.string) >> mGainAttD[1];
-			if(z != NULL) stringstream(z->child->value.text.string) >> mGainAttD[2];
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainAttD[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainAttD[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainAttD[2];
 		}
 	}
 	else
@@ -1150,108 +785,150 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 	mMutex_data.unlock();
 }
 
+void Leash::loadObserverConfig(mxml_node_t *obsvRoot)
+{
+	mMutex_data.lock();
+	mxml_node_t *transNode = mxmlFindElement(obsvRoot, obsvRoot, "Translation", NULL, NULL, MXML_DESCEND);
+	if(transNode != NULL)
+	{
+		mxml_node_t *measVarNode = mxmlFindElement(transNode, transNode, "MeasVar", NULL, NULL, MXML_DESCEND);
+		if(measVarNode != NULL)
+		{
+			mxml_node_t *xNode = mxmlFindElement(measVarNode, measVarNode, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yNode = mxmlFindElement(measVarNode, measVarNode, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *zNode = mxmlFindElement(measVarNode, measVarNode, "z", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *xVelNode = mxmlFindElement(measVarNode, measVarNode, "xVel", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yVelNode = mxmlFindElement(measVarNode, measVarNode, "yVel", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *zVelNode = mxmlFindElement(measVarNode, measVarNode, "zVel", NULL, NULL, MXML_DESCEND);
+
+			if(xNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanMeasVar[0];
+			if(yNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanMeasVar[1];
+			if(zNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanMeasVar[2];
+			if(xVelNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanMeasVar[3];
+			if(yVelNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanMeasVar[4];
+			if(zVelNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanMeasVar[5];
+		}
+
+		mxml_node_t *dynVarNode = mxmlFindElement(transNode, transNode, "DynVar", NULL, NULL, MXML_DESCEND);
+		if(dynVarNode != NULL)
+		{
+			mxml_node_t *xNode = mxmlFindElement(dynVarNode, dynVarNode, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yNode = mxmlFindElement(dynVarNode, dynVarNode, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *zNode = mxmlFindElement(dynVarNode, dynVarNode, "z", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *xVelNode = mxmlFindElement(dynVarNode, dynVarNode, "xVel", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yVelNode = mxmlFindElement(dynVarNode, dynVarNode, "yVel", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *zVelNode = mxmlFindElement(dynVarNode, dynVarNode, "zVel", NULL, NULL, MXML_DESCEND);
+
+			if(xNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanDynVar[0];
+			if(yNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanDynVar[1];
+			if(zNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanDynVar[2];
+			if(xVelNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanDynVar[3];
+			if(yVelNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanDynVar[4];
+			if(zVelNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanDynVar[5];
+		}
+
+		mxml_node_t *attBiasNode = mxmlFindElement(transNode, transNode, "AttBias", NULL, NULL, MXML_DESCEND);
+		if(attBiasNode != NULL)
+		{
+			mxml_node_t *rollNode = mxmlFindElement(attBiasNode, attBiasNode, "roll", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *pitchNode = mxmlFindElement(attBiasNode, attBiasNode, "pitch", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yawNode = mxmlFindElement(attBiasNode, attBiasNode, "yaw", NULL, NULL, MXML_DESCEND);
+
+			if(rollNode != NULL) stringstream(rollNode->child->value.text.string) >> mKalmanAttBias[0];
+			if(pitchNode != NULL) stringstream(pitchNode->child->value.text.string) >> mKalmanAttBias[1];
+			if(yawNode != NULL) stringstream(yawNode->child->value.text.string) >> mKalmanAttBias[2];
+		}
+		else
+			cout << "Kalman att bias node not found in config file" << endl;
+
+		mxml_node_t *attBiasAdaptGainNode = mxmlFindElement(transNode, transNode, "AttBiasAdaptGain", NULL, NULL, MXML_DESCEND);
+		if(attBiasAdaptGainNode != NULL)
+		{
+			mxml_node_t *rollNode = mxmlFindElement(attBiasAdaptGainNode, attBiasAdaptGainNode, "roll", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *pitchNode = mxmlFindElement(attBiasAdaptGainNode, attBiasAdaptGainNode, "pitch", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yawNode = mxmlFindElement(attBiasAdaptGainNode, attBiasAdaptGainNode, "yaw", NULL, NULL, MXML_DESCEND);
+
+			if(rollNode != NULL) stringstream(rollNode->child->value.text.string) >> mKalmanAttBiasAdaptGain[0];
+			if(pitchNode != NULL) stringstream(pitchNode->child->value.text.string) >> mKalmanAttBiasAdaptGain[1];
+			if(yawNode != NULL) stringstream(yawNode->child->value.text.string) >> mKalmanAttBiasAdaptGain[2];
+		}
+
+		mxml_node_t *forceScalingAdaptGainNode = mxmlFindElement(transNode, transNode, "ForceGainAdaptGain", NULL, NULL, MXML_DESCEND);
+		if(forceScalingAdaptGainNode!= NULL) stringstream(forceScalingAdaptGainNode->child->value.text.string) >> mKalmanForceGainAdaptGain;
+	}
+	else
+		cout << "Translation observer section not found in config file" << endl;
+
+	mxml_node_t *attNode = mxmlFindElement(obsvRoot, obsvRoot, "Attitude", NULL, NULL, MXML_DESCEND);
+	if(attNode != NULL)
+	{
+		mxml_node_t *gainsNode = mxmlFindElement(attNode, attNode, "Gain", NULL, NULL, MXML_DESCEND);
+		if(gainsNode!= NULL)
+		{
+			mxml_node_t *pNode = mxmlFindElement(gainsNode, gainsNode, "P", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *iNode = mxmlFindElement(gainsNode, gainsNode, "I", NULL, NULL, MXML_DESCEND);
+
+			if(pNode != NULL) stringstream(pNode->child->value.text.string) >> mAttObsvGainP;
+			if(iNode != NULL) stringstream(iNode->child->value.text.string) >> mAttObsvGainI;
+		}
+
+		mxml_node_t *dirWeightsNode = mxmlFindElement(attNode, attNode, "DirWeight", NULL, NULL, MXML_DESCEND);
+		if(dirWeightsNode!= NULL)
+		{
+			mxml_node_t *accelNode = mxmlFindElement(dirWeightsNode, dirWeightsNode, "Accel", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *magNode = mxmlFindElement(dirWeightsNode, dirWeightsNode, "Mag", NULL, NULL, MXML_DESCEND);
+
+			if(accelNode != NULL) stringstream(accelNode->child->value.text.string) >> mAttObsvDirWeights[0];
+			if(magNode != NULL) stringstream(magNode->child->value.text.string) >> mAttObsvDirWeights[1];
+		}
+
+		mxml_node_t *nomMagNode = mxmlFindElement(attNode, attNode, "NomMag", NULL, NULL, MXML_DESCEND);
+		if(nomMagNode != NULL)
+		{
+			mxml_node_t *xNode = mxmlFindElement(nomMagNode, nomMagNode, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yNode = mxmlFindElement(nomMagNode, nomMagNode, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *zNode = mxmlFindElement(nomMagNode, nomMagNode, "z", NULL, NULL, MXML_DESCEND);
+
+			if(xNode != NULL) stringstream(xNode->child->value.text.string) >> mAttObsvNominalMag[0];
+			if(yNode != NULL) stringstream(yNode->child->value.text.string) >> mAttObsvNominalMag[1];
+			if(zNode != NULL) stringstream(zNode->child->value.text.string) >> mAttObsvNominalMag[2];
+		}
+	}
+	else
+		cout << "Attitude observer section not found in config file" << endl;
+	mMutex_data.unlock();
+}
+
+void Leash::loadHardwareConfig(mxml_node_t *hdwRoot)
+{
+	mMutex_data.lock();
+	mxml_node_t *forceGainNode = mxmlFindElement(hdwRoot, hdwRoot, "MotorForceGain", NULL, NULL, MXML_DESCEND);
+	if(forceGainNode != NULL) stringstream(forceGainNode->child->value.text.string) >> mMotorForceGain;
+
+	mxml_node_t *torqueGainNode = mxmlFindElement(hdwRoot, hdwRoot, "MotorTorqueGain", NULL, NULL, MXML_DESCEND);
+	if(torqueGainNode != NULL) stringstream(torqueGainNode->child->value.text.string) >> mMotorTorqueGain;
+
+	mxml_node_t *armLengthNode = mxmlFindElement(hdwRoot, hdwRoot, "MotorArmLength", NULL, NULL, MXML_DESCEND);
+	if(armLengthNode != NULL) stringstream(armLengthNode->child->value.text.string) >> mMotorArmLength;
+
+	mxml_node_t *massNode = mxmlFindElement(hdwRoot, hdwRoot, "TotalMass", NULL, NULL, MXML_DESCEND);
+	if(massNode != NULL) stringstream(massNode->child->value.text.string) >> mTotalMass;
+	mMutex_data.unlock();
+}
+
 void Leash::saveConfigToFile(string filename)
 {
 	mxml_node_t *xmlRoot = mxmlNewXML("1.0");
 	mxml_node_t *cntlRoot = mxmlNewElement(xmlRoot,"Controller");
+	mxml_node_t *obsvRoot = mxmlNewElement(xmlRoot,"Observer");
+	mxml_node_t *hdwRoot = mxmlNewElement(xmlRoot,"Hardware");
 	saveControllerConfig(cntlRoot);
+	saveObserverConfig(obsvRoot);
+	saveHardwareConfig(hdwRoot);
 
 	FILE *fp = fopen((filename).c_str(),"w");
 	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
 	fclose(fp);
-	return;
-
-//	mMutex_data.lock();
-//		mxml_node_t *xmlRoot = mxmlNewXML("1.0");
-//
-//		mxml_node_t *commNode = mxmlNewElement(xmlRoot,"Communication");
-//			mxmlNewText(mxmlNewElement(commNode,"IP"),0,mIP.c_str());
-//			mxmlNewInteger(mxmlNewElement(commNode,"Port"),mPort);
-//		mxml_node_t *phoneCntlNode = mxmlNewElement(xmlRoot,"Controller");
-//			mxml_node_t *rollNode = mxmlNewElement(phoneCntlNode,"Roll");
-//				mxmlNewReal(mxmlNewElement(rollNode,"P"),mGainP[0]);
-//				mxmlNewReal(mxmlNewElement(rollNode,"I"),mGainI[0]);
-//				mxmlNewReal(mxmlNewElement(rollNode,"D"),mGainD[0]);
-//			mxml_node_t *pitchNode = mxmlNewElement(phoneCntlNode,"Pitch");
-//				mxmlNewReal(mxmlNewElement(pitchNode,"P"),mGainP[1]);
-//				mxmlNewReal(mxmlNewElement(pitchNode,"I"),mGainI[1]);
-//				mxmlNewReal(mxmlNewElement(pitchNode,"D"),mGainD[1]);
-//			mxml_node_t *yawNode = mxmlNewElement(phoneCntlNode,"Yaw");
-//				mxmlNewReal(mxmlNewElement(yawNode,"P"),mGainP[2]);
-//				mxmlNewReal(mxmlNewElement(yawNode,"I"),mGainI[2]);
-//				mxmlNewReal(mxmlNewElement(yawNode,"D"),mGainD[2]);
-//		mxml_node_t *motorNode = mxmlNewElement(xmlRoot,"Motors");
-//			mxml_node_t *motorTrimNode = mxmlNewElement(motorNode,"Trim");
-//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"N"),mMotorTrim[0]);
-//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"E"),mMotorTrim[1]);
-//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"S"),mMotorTrim[2]);
-//				mxmlNewInteger(mxmlNewElement(motorTrimNode,"W"),mMotorTrim[3]);
-//		mxml_node_t *observerNode = mxmlNewElement(xmlRoot,"Observer");
-//			mxmlNewReal(mxmlNewElement(observerNode,"Kp"),mObserverGainP);
-//			mxmlNewReal(mxmlNewElement(observerNode,"Ki"),mObserverGainI);
-//			mxmlNewReal(mxmlNewElement(observerNode,"accelWeight"),mObserverWeights[0]);
-//			mxmlNewReal(mxmlNewElement(observerNode,"magWeight"),mObserverWeights[1]);
-
-//		mxml_node_t *imageNode = mxmlNewElement(xmlRoot,"ImgProc");
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box0Min"),mFiltBoxColorMin[0]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box0Max"),mFiltBoxColorMax[0]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box1Min"),mFiltBoxColorMin[1]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box1Max"),mFiltBoxColorMax[1]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box2Min"),mFiltBoxColorMin[2]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box2Max"),mFiltBoxColorMax[2]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box3Min"),mFiltBoxColorMin[3]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"Box3Max"),mFiltBoxColorMax[3]);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"SatMin"),mFiltSatMin);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"SatMax"),mFiltSatMax);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"ValMin"),mFiltValMin);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"ValMax"),mFiltValMax);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"ConvMin"),mFiltConvMin);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"ConvMax"),mFiltConvMax);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"CircMin"),mFiltCircMin);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"CircMax"),mFiltCircMax);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"AreaMin"),mFiltAreaMin);
-//			mxmlNewInteger(mxmlNewElement(imageNode,"AreaMax"),mFiltAreaMax);
-
-//		mxml_node_t *ibvsNode = mxmlNewElement(xmlRoot,"IBVS");
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"imgX"),mIbvsGainImg[0]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"imgY"),mIbvsGainImg[1]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"imgArea"),mIbvsGainImg[2]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"xFlow"),mIbvsGainFlow[0]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"yFlow"),mIbvsGainFlow[1]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"zFlow"),mIbvsGainFlow[2]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"xFlowInt"),mIbvsGainFlowInt[0]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"yFlowInt"),mIbvsGainFlowInt[1]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"zFlowInt"),mIbvsGainFlowInt[2]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"xFF"),mIbvsGainFF[0]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"yFF"),mIbvsGainFF[1]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"zFF"),mIbvsGainFF[2]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"rollAttCmdOffset" ),mAttCmdOffset[0]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"pitchAttCmdOffset"),mAttCmdOffset[1]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"yawAttCmdOffset"  ),mAttCmdOffset[2]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"xOmega"),mIbvsGainAngularRate[0]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"yOmega"),mIbvsGainAngularRate[1]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"zOmega"),mIbvsGainAngularRate[2]);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"angle"),mIbvsGainAngle);
-//			mxmlNewReal(mxmlNewElement(ibvsNode,"dynamic"),mIbvsGainDynamic);
-
-		// Kalman Filter
-//		mxml_node_t *kfNode = mxmlNewElement(xmlRoot,"KalmanFilter");
-//			mxml_node_t *attBiasNode = mxmlNewElement(kfNode,"attBias");
-//				mxmlNewReal(mxmlNewElement(attBiasNode,"roll"),mAttBias[0][0]);
-//				mxmlNewReal(mxmlNewElement(attBiasNode,"pitch"),mAttBias[1][0]);
-//				mxmlNewReal(mxmlNewElement(attBiasNode,"yaw"),mAttBias[2][0]);
-//			mxmlNewReal(mxmlNewElement(kfNode,"attBiasGain"),mAttBiasGain);
-//			mxmlNewReal(mxmlNewElement(kfNode,"forceScalingGain"),mForceScalingGain);
-//			mxmlNewReal(mxmlNewElement(kfNode,"posMeasStdDev"),mKfPosMeasStdDev);
-//			mxmlNewReal(mxmlNewElement(kfNode,"velMeasStdDev"),mKfVelMeasStdDev);
-//
-//		mxml_node_t *logNode = mxmlNewElement(xmlRoot,"Log");
-//			mxmlNewInteger(mxmlNewElement(logNode,"Mask"),mLogMask);
-//	mMutex_data.unlock();
-//
-//	FILE *fp = fopen((filename).c_str(),"w");
-//	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
-//	fclose(fp);
 }
 
 void Leash::saveControllerConfig(mxml_node_t *cntlRoot)
@@ -1260,29 +937,84 @@ void Leash::saveControllerConfig(mxml_node_t *cntlRoot)
 	mxml_node_t *transNode = mxmlNewElement(cntlRoot,"Translation");
 	{
 		mxml_node_t *pNode = mxmlNewElement(transNode,"P");
-			mxmlNewReal(mxmlNewElement(pNode,"x"), mGainTransP[0]);
-			mxmlNewReal(mxmlNewElement(pNode,"y"), mGainTransP[1]);
-			mxmlNewReal(mxmlNewElement(pNode,"z"), mGainTransP[2]);
+			mxmlNewReal(mxmlNewElement(pNode,"x"), mCntlGainTransP[0]);
+			mxmlNewReal(mxmlNewElement(pNode,"y"), mCntlGainTransP[1]);
+			mxmlNewReal(mxmlNewElement(pNode,"z"), mCntlGainTransP[2]);
 		mxml_node_t *dNode = mxmlNewElement(transNode,"D");
-			mxmlNewReal(mxmlNewElement(dNode,"x"), mGainTransD[0]);
-			mxmlNewReal(mxmlNewElement(dNode,"y"), mGainTransD[1]);
-			mxmlNewReal(mxmlNewElement(dNode,"z"), mGainTransD[2]);
+			mxmlNewReal(mxmlNewElement(dNode,"x"), mCntlGainTransD[0]);
+			mxmlNewReal(mxmlNewElement(dNode,"y"), mCntlGainTransD[1]);
+			mxmlNewReal(mxmlNewElement(dNode,"z"), mCntlGainTransD[2]);
 		mxml_node_t *iNode = mxmlNewElement(transNode,"I");
-			mxmlNewReal(mxmlNewElement(iNode,"x"), mGainTransI[0]);
-			mxmlNewReal(mxmlNewElement(iNode,"y"), mGainTransI[1]);
-			mxmlNewReal(mxmlNewElement(iNode,"z"), mGainTransI[2]);
+			mxmlNewReal(mxmlNewElement(iNode,"x"), mCntlGainTransI[0]);
+			mxmlNewReal(mxmlNewElement(iNode,"y"), mCntlGainTransI[1]);
+			mxmlNewReal(mxmlNewElement(iNode,"z"), mCntlGainTransI[2]);
+		mxml_node_t *iLimitNode = mxmlNewElement(transNode,"ILimit");
+			mxmlNewReal(mxmlNewElement(iLimitNode,"x"), mCntlGainTransILimit[0]);
+			mxmlNewReal(mxmlNewElement(iLimitNode,"y"), mCntlGainTransILimit[1]);
+			mxmlNewReal(mxmlNewElement(iLimitNode,"z"), mCntlGainTransILimit[2]);
 	}
 	mxml_node_t *attNode = mxmlNewElement(cntlRoot,"Attitude");
 	{
 		mxml_node_t *pNode = mxmlNewElement(attNode,"P");
-			mxmlNewReal(mxmlNewElement(pNode,"x"), mGainAttP[0]);
-			mxmlNewReal(mxmlNewElement(pNode,"y"), mGainAttP[1]);
-			mxmlNewReal(mxmlNewElement(pNode,"z"), mGainAttP[2]);
+			mxmlNewReal(mxmlNewElement(pNode,"x"), mCntlGainAttP[0]);
+			mxmlNewReal(mxmlNewElement(pNode,"y"), mCntlGainAttP[1]);
+			mxmlNewReal(mxmlNewElement(pNode,"z"), mCntlGainAttP[2]);
 		mxml_node_t *dNode = mxmlNewElement(attNode,"D");
-			mxmlNewReal(mxmlNewElement(dNode,"x"), mGainAttD[0]);
-			mxmlNewReal(mxmlNewElement(dNode,"y"), mGainAttD[1]);
-			mxmlNewReal(mxmlNewElement(dNode,"z"), mGainAttD[2]);
+			mxmlNewReal(mxmlNewElement(dNode,"x"), mCntlGainAttD[0]);
+			mxmlNewReal(mxmlNewElement(dNode,"y"), mCntlGainAttD[1]);
+			mxmlNewReal(mxmlNewElement(dNode,"z"), mCntlGainAttD[2]);
 	}
+	mMutex_data.unlock();
+}
+
+void Leash::saveObserverConfig(mxml_node_t *obsvRoot)
+{
+	string xyzLabels[] = {"x", "y", "z", "xVel", "yVel", "zVel"};
+	string attLabels[] = {"roll", "pitch", "yaw"};
+	mMutex_data.lock();
+	mxml_node_t *transNode = mxmlNewElement(obsvRoot,"Translation");
+	{
+		mxml_node_t *measVarNode = mxmlNewElement(transNode, "MeasVar");
+		mxml_node_t *dynVarNode = mxmlNewElement(transNode, "DynVar");
+		for(int i=0; i<6; i++)
+		{
+			mxmlNewReal(mxmlNewElement(measVarNode,xyzLabels[i].c_str()), mKalmanMeasVar[i]);
+			mxmlNewReal(mxmlNewElement(dynVarNode,xyzLabels[i].c_str()), mKalmanDynVar[i]);
+		}
+
+		mxml_node_t *attBiasNode = mxmlNewElement(transNode, "AttBias");
+		mxml_node_t *attBiasAdaptGainNode = mxmlNewElement(transNode, "AttBiasAdaptGain");
+		for(int i=0; i<3; i++)
+		{
+			mxmlNewReal(mxmlNewElement(attBiasNode,attLabels[i].c_str()), mKalmanAttBias[i]);
+			mxmlNewReal(mxmlNewElement(attBiasAdaptGainNode,attLabels[i].c_str()), mKalmanAttBiasAdaptGain[i]);
+		}
+
+		mxmlNewReal(mxmlNewElement(transNode,"ForceGainAdaptGain"), mKalmanForceGainAdaptGain);
+	}
+
+	mxml_node_t *attNode = mxmlNewElement(obsvRoot, "Attitude");
+	{
+		mxml_node_t *gainNode = mxmlNewElement(attNode, "Gain");
+			mxmlNewReal(mxmlNewElement(gainNode, "P"), mAttObsvGainP);
+			mxmlNewReal(mxmlNewElement(gainNode, "I"), mAttObsvGainI);
+		mxml_node_t *dirWeightNode = mxmlNewElement(attNode, "DirWeight");
+			mxmlNewReal(mxmlNewElement(dirWeightNode, "Accel"), mAttObsvDirWeights[0]);
+			mxmlNewReal(mxmlNewElement(dirWeightNode, "Mag"), mAttObsvDirWeights[1]);
+		mxml_node_t *nomMagNode = mxmlNewElement(attNode, "NomMag");
+		for(int i=0; i<3; i++)
+			mxmlNewReal(mxmlNewElement(nomMagNode, xyzLabels[i].c_str()), mAttObsvNominalMag[i]);
+	}
+	mMutex_data.unlock();
+}
+
+void Leash::saveHardwareConfig(mxml_node_t *hdwRoot)
+{
+	mMutex_data.lock();
+	mxmlNewReal(mxmlNewElement(hdwRoot, "MotorForceGain"), mMotorForceGain);
+	mxmlNewReal(mxmlNewElement(hdwRoot, "MotorTorqueGain"), mMotorTorqueGain);
+	mxmlNewReal(mxmlNewElement(hdwRoot, "MotorArmLength"), mMotorArmLength);
+	mxmlNewReal(mxmlNewElement(hdwRoot, "TotalMass"), mTotalMass);
 	mMutex_data.unlock();
 }
 
@@ -1292,6 +1024,8 @@ void Leash::saveControllerConfig(mxml_node_t *cntlRoot)
 void Leash::onBtnApply_clicked()
 {
 	applyControllerConfig();
+	applyObserverConfig();
+	applyHardwareConfig();
 	mMutex_data.lock();
 	try
 	{
@@ -1306,8 +1040,8 @@ void Leash::onBtnApply_clicked()
 				applyControlConfig(item);
 			else if(item->text(0) == "Motors")
 				applyMotorConfig(item);
-			else if(item->text(0) == "Observer")
-				applyObserverConfig(item);
+//			else if(item->text(0) == "Observer")
+//				applyObserverConfig(item);
 			else if(item->text(0) == "IBVS Gains")
 				applyIbvsConfig(item);
 			else if(item->text(0) == "Kalman Filter")
@@ -1356,13 +1090,46 @@ void Leash::applyControllerConfig()
 {
 	for(int i=0; i<3; i++)
 	{
-		mGainTransP[i] = ui->tblTransCntl->item(i,0)->text().toDouble();
-		mGainTransD[i] = ui->tblTransCntl->item(i,1)->text().toDouble();
-		mGainTransI[i] = ui->tblTransCntl->item(i,2)->text().toDouble();
-		mGainTransILimit[i] = ui->tblTransCntl->item(i,3)->text().toDouble();
-		mGainAttP[i] = ui->tblAttCntl->item(i,0)->text().toDouble();
-		mGainAttD[i] = ui->tblAttCntl->item(i,1)->text().toDouble();
+		mCntlGainTransP[i] = ui->tblTransCntl->item(i,0)->text().toDouble();
+		mCntlGainTransD[i] = ui->tblTransCntl->item(i,1)->text().toDouble();
+		mCntlGainTransI[i] = ui->tblTransCntl->item(i,2)->text().toDouble();
+		mCntlGainTransILimit[i] = ui->tblTransCntl->item(i,3)->text().toDouble();
+		mCntlGainAttP[i] = ui->tblAttCntl->item(i,0)->text().toDouble();
+		mCntlGainAttD[i] = ui->tblAttCntl->item(i,1)->text().toDouble();
 	}
+}
+
+void Leash::applyObserverConfig()
+{
+	for(int i=0; i<6; i++)
+	{
+		mKalmanMeasVar[i] = ui->tblKalmanVar->item(0,i)->text().toDouble();
+		mKalmanDynVar[i] = ui->tblKalmanVar->item(1,i)->text().toDouble();
+	}
+	for(int i=0; i<3; i++)
+	{
+		mKalmanAttBias[i] = ui->tblKalmanAttBias->item(0,i)->text().toDouble();
+		mKalmanAttBiasAdaptGain[i] = ui->tblKalmanAttBias->item(1,i)->text().toDouble();
+	}
+
+	mKalmanForceGainAdaptGain = ui->txtKalmanForceGainAdaptGain->text().toDouble();
+
+	mAttObsvGainP = ui->tblAttObsvGains->item(0,0)->text().toDouble();
+	mAttObsvGainI = ui->tblAttObsvGains->item(0,1)->text().toDouble();
+
+	for(int i=0; i<3; i++)
+		mAttObsvNominalMag[i] = ui->tblAttObsvNomMag->item(0,i)->text().toDouble();
+
+	for(int i=0; i<2; i++)
+		mAttObsvDirWeights[i] = ui->tblAttObsvDirWeights->item(0,i)->text().toDouble();
+}
+
+void Leash::applyHardwareConfig()
+{
+	mMotorForceGain = ui->txtMotorForceGain->text().toDouble();
+	mMotorTorqueGain = ui->txtMotorTorqueGain->text().toDouble();
+	mMotorArmLength = ui->txtMotorArmLength->text().toDouble();
+	mTotalMass = ui->txtTotalMass->text().toDouble();
 }
 
 void Leash::onBtnResetConfig_clicked()
@@ -1705,27 +1472,27 @@ void Leash::applyMotorConfig(QTreeWidgetItem *root)
 	}
 }
 
-void Leash::applyObserverConfig(QTreeWidgetItem *root)
-{
-	while(root->childCount() > 0)
-	{
-		QTreeWidgetItem *item = root->takeChild(0);
-		if(item->text(0) == "Kp")
-			mObserverGainP = item->text(1).toDouble();
-		else if(item->text(0) == "Ki")
-			mObserverGainI = item->text(1).toDouble();
-		else if(item->text(0) == "Accel Weight")
-			mObserverWeights[0] = item->text(1).toDouble();
-		else if(item->text(0) == "Mag Weight")
-			mObserverWeights[1] = item->text(1).toDouble();
-		else
-		{
-			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone motor config item: " + item->text(0));
-			box.exec();
-			throw("Unknown communication config item: " + item->text(0));
-		}
-	}
-}
+// void Leash::applyObserverConfig(QTreeWidgetItem *root)
+// {
+// 	while(root->childCount() > 0)
+// 	{
+// 		QTreeWidgetItem *item = root->takeChild(0);
+// 		if(item->text(0) == "Kp")
+// 			mAttObsvGainP = item->text(1).toDouble();
+// 		else if(item->text(0) == "Ki")
+// 			mAttObsvGainI = item->text(1).toDouble();
+// 		else if(item->text(0) == "Accel Weight")
+// 			mAttObsvDirWeights[0] = item->text(1).toDouble();
+// 		else if(item->text(0) == "Mag Weight")
+// 			mAttObsvDirWeights[1] = item->text(1).toDouble();
+// 		else
+// 		{
+// 			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone motor config item: " + item->text(0));
+// 			box.exec();
+// 			throw("Unknown communication config item: " + item->text(0));
+// 		}
+// 	}
+// }
 
 void Leash::applyIbvsConfig(QTreeWidgetItem *root)
 {
@@ -1790,14 +1557,10 @@ void Leash::applyKalmanFilterConfig(QTreeWidgetItem *root)
 			mAttBias[1][0] = item->text(2).toDouble();
 			mAttBias[2][0] = item->text(3).toDouble();
 		}
-		else if(item->text(0) == "Att Bias Gain")
-			mAttBiasGain = item->text(1).toDouble();
+//		else if(item->text(0) == "Att Bias Gain")
+//			mAttBiasGain = item->text(1).toDouble();
 		else if(item->text(0) == "Force Scaling Gain")
-			mForceScalingGain = item->text(1).toDouble();
-		else if(item->text(0) == "Pos Meas StdDev")
-			mKfPosMeasStdDev   = item->text(1).toDouble();
-		else if(item->text(0) == "Vel Meas StdDev")
-			mKfVelMeasStdDev   = item->text(1).toDouble();
+			mKalmanForceGainAdaptGain= item->text(1).toDouble();
 		else
 		{
 			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone Kalman Filter config item: " + item->text(0));
@@ -1817,6 +1580,8 @@ void Leash::applyLogConfig(QTreeWidgetItem *root)
 void Leash::populateUI()
 {
 	populateControlUI();
+	populateObserverUI();
+	populateHardwareUI();
 	return;
 
 	mMutex_data.lock();
@@ -1864,13 +1629,13 @@ void Leash::populateUI()
 	observerHeadings << "Observer";
 	QTreeWidgetItem *observerRoot = new QTreeWidgetItem((QTreeWidget*)0,observerHeadings);
 		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Kp"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mObserverGainP));
+			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvGainP));
 		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Ki"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mObserverGainI));
+			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvGainI));
 		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Accel Weight"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mObserverWeights[0]));
+			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvDirWeights[0]));
 		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Mag Weight"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mObserverWeights[1]));
+			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvDirWeights[1]));
 
 	QStringList ibvsHeadings; ibvsHeadings << "IBVS Gains" << "x" << "y" << "z";
 	QTreeWidgetItem *ibvsRoot = new QTreeWidgetItem((QTreeWidget*)0,ibvsHeadings);
@@ -1911,14 +1676,10 @@ void Leash::populateUI()
 			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mAttBias[0][0]));
 			kfRoot->child(kfRoot->childCount()-1)->setText(2,QString::number(mAttBias[1][0]));
 			kfRoot->child(kfRoot->childCount()-1)->setText(3,QString::number(mAttBias[2][0]));
-		kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Att Bias Gain"))));
-			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mAttBiasGain));
+//		kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Att Bias Gain"))));
+//			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mAttBiasGain));
 		kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Force Scaling Gain"))));
-			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mForceScalingGain));
-		kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Pos Meas StdDev"))));
-			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mKfPosMeasStdDev));
-			kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Vel Meas StdDev"))));
-			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mKfVelMeasStdDev));
+			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mKalmanForceGainAdaptGain));
 
 	QStringList logHeadings;
 	logHeadings << "Logging";
@@ -1948,85 +1709,61 @@ void Leash::populateUI()
 
 	
 	mMutex_data.unlock();
-
-//	treePhoneConfig->addTopLevelItem(commRoot);
-//	treePhoneConfig->addTopLevelItem(cntlRoot);
-//	treePhoneConfig->addTopLevelItem(muCntlRoot);
-//	treePhoneConfig->addTopLevelItem(motorRoot);
-//	treePhoneConfig->addTopLevelItem(observerRoot);
-//	treePhoneConfig->addTopLevelItem(ibvsRoot);
-//	treePhoneConfig->addTopLevelItem(kfRoot);
-//	treePhoneConfig->addTopLevelItem(logRoot);
-//	treePhoneConfig->expandAll();
-
-	formatTree(commRoot);
-//	formatTree(cntlRoot);
-	formatTree(motorRoot);
-	formatTree(observerRoot);
-	formatTree(ibvsRoot);
-	formatTree(kfRoot);
-	formatTree(logRoot);
-
-
-//	int width = 0;
-//	for(int i=0; i<treePhoneConfig->columnCount(); i++)
-//	{
-//		commRoot->setBackground(i,QColor(50,0,0,50));
-//		cntlRoot->setBackground(i,QColor(50,0,0,50));
-//		muCntlRoot->setBackground(i,QColor(50,0,0,50));
-//		motorRoot->setBackground(i,QColor(50,0,0,50));
-//		observerRoot->setBackground(i,QColor(50,0,0,50));
-//		ibvsRoot->setBackground(i,QColor(50,0,0,50));
-//		kfRoot->setBackground(i,QColor(50,0,0,50));
-//		logRoot->setBackground(i,QColor(50,0,0,50));
-//		treePhoneConfig->resizeColumnToContents(i);
-////		treePhoneConfig->setColumnWidth(i,treePhoneConfig->columnWidth(i)+4);
-//		width += treePhoneConfig->columnWidth(i);
-//	}
-
-//	treePhoneConfig->setHeaderHidden(true);
-//	treePhoneConfig->setMinimumSize(width,treePhoneConfig->height());
 }
 
 void Leash::populateControlUI()
 {
 	for(int i=0; i<3; i++)
 	{
-		ui->tblTransCntl->item(i,0)->setText(QString::number(mGainTransP[i]));
-		ui->tblTransCntl->item(i,1)->setText(QString::number(mGainTransD[i]));
-		ui->tblTransCntl->item(i,2)->setText(QString::number(mGainTransI[i]));
-		ui->tblTransCntl->item(i,3)->setText(QString::number(mGainTransILimit[i]));
-		ui->tblAttCntl->item(i,0)->setText(QString::number(mGainAttP[i]));
-		ui->tblAttCntl->item(i,1)->setText(QString::number(mGainAttD[i]));
+		ui->tblTransCntl->item(i,0)->setText(QString::number(mCntlGainTransP[i]));
+		ui->tblTransCntl->item(i,1)->setText(QString::number(mCntlGainTransD[i]));
+		ui->tblTransCntl->item(i,2)->setText(QString::number(mCntlGainTransI[i]));
+		ui->tblTransCntl->item(i,3)->setText(QString::number(mCntlGainTransILimit[i]));
+		ui->tblAttCntl->item(i,0)->setText(QString::number(mCntlGainAttP[i]));
+		ui->tblAttCntl->item(i,1)->setText(QString::number(mCntlGainAttD[i]));
 	}
 
-	int totWidth = 0;
-	int totHeight = 0;
-	totWidth = ui->tblTransCntl->horizontalHeader()->length();
-	if(ui->tblTransCntl->verticalHeader()->width() == 0)
-		totWidth += 20; // HACK:::::::: verticalHeader()->width() is reporting zero for some reasion
-	else
-		totWidth += ui->tblTransCntl->verticalHeader()->width();
+	resizeTableWidget(ui->tblTransCntl);
+	resizeTableWidget(ui->tblAttCntl);
+}
 
-	totHeight = ui->tblTransCntl->verticalHeader()->length();
-	totHeight += +ui->tblTransCntl->horizontalHeader()->height();
-	ui->tblTransCntl->setMaximumSize(totWidth, totHeight);
-	ui->tblTransCntl->setMinimumSize(totWidth, totHeight);
-	ui->tblTransCntl->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	ui->tblTransCntl->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+void Leash::populateObserverUI()
+{
+	for(int i=0; i<6; i++)
+	{
+		ui->tblKalmanVar->item(0,i)->setText(QString::number(mKalmanMeasVar[i]));
+		ui->tblKalmanVar->item(1,i)->setText(QString::number(mKalmanDynVar[i]));
+	}
 
-	totWidth = ui->tblAttCntl->horizontalHeader()->length();
-	if(ui->tblTransCntl->verticalHeader()->width() == 0)
-		totWidth += 20; // HACK:::::::: verticalHeader()->width() is reporting zero for some reasion
-	else
-		totWidth += ui->tblAttCntl->verticalHeader()->width();
+	for(int i=0; i<3; i++)
+	{
+		ui->tblKalmanAttBias->item(0,i)->setText(QString::number(mKalmanAttBias[i]));
+		ui->tblKalmanAttBias->item(1,i)->setText(QString::number(mKalmanAttBiasAdaptGain[i]));
+	}
 
-	totHeight = ui->tblAttCntl->verticalHeader()->length();
-	totHeight += +ui->tblAttCntl->horizontalHeader()->height();
-	ui->tblAttCntl->setMaximumSize(totWidth, totHeight);
-	ui->tblAttCntl->setMinimumSize(totWidth, totHeight);
-	ui->tblAttCntl->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	ui->tblAttCntl->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	ui->txtKalmanForceGainAdaptGain->setText(QString::number(mKalmanForceGainAdaptGain));
+	
+	ui->tblAttObsvGains->item(0,0)->setText(QString::number(mAttObsvGainP));
+	ui->tblAttObsvGains->item(0,1)->setText(QString::number(mAttObsvGainI));
+
+	for(int i=0; i<3; i++)
+		ui->tblAttObsvNomMag->item(0,i)->setText(QString::number(mAttObsvNominalMag[i]));
+	for(int i=0; i<2; i++)
+		ui->tblAttObsvDirWeights->item(0,i)->setText(QString::number(mAttObsvDirWeights[i]));
+
+	resizeTableWidget(ui->tblKalmanVar);
+	resizeTableWidget(ui->tblKalmanAttBias);
+	resizeTableWidget(ui->tblAttObsvGains);
+	resizeTableWidget(ui->tblAttObsvNomMag);
+	resizeTableWidget(ui->tblAttObsvDirWeights);
+}
+
+void Leash::populateHardwareUI()
+{
+	ui->txtMotorForceGain->setText(QString::number(mMotorForceGain));
+	ui->txtMotorTorqueGain->setText(QString::number(mMotorTorqueGain));
+	ui->txtMotorArmLength->setText(QString::number(mMotorArmLength));
+	ui->txtTotalMass->setText(QString::number(mTotalMass));
 }
 
 void Leash::formatTree(QTreeWidgetItem *root)
@@ -2113,6 +1850,34 @@ void Leash::receiveLogFile(Socket::ptr socket, string filename)
 	cout << "Terminate length is " << length << endl;
 
 	file.close();
+}
+
+void Leash::resizeTableWidget(QTableWidget *tbl)
+{
+	int totWidth = 0;
+	int totHeight = 0;
+	totWidth = tbl->horizontalHeader()->length();
+	totWidth += tbl->verticalHeader()->width();
+
+	totHeight = tbl->verticalHeader()->length();
+	totHeight += tbl->horizontalHeader()->height();
+	tbl->setMaximumSize(totWidth, totHeight);
+	tbl->setMinimumSize(totWidth, totHeight);
+	tbl->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	tbl->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+}
+
+void Leash::setVerticalTabOrder(QTableWidget *tbl)
+{
+	for(int j=0; j<tbl->columnCount(); j++)
+	{
+		for(int i=0; i<tbl->rowCount()-1; i++)
+			QWidget::setTabOrder(tbl->cellWidget(i,j), tbl->cellWidget(i+1,j));
+		if(j != tbl->columnCount()-1)
+			QWidget::setTabOrder(tbl->cellWidget(tbl->rowCount()-1,j), tbl->cellWidget(0,j+1));
+		else
+			QWidget::setTabOrder(tbl->cellWidget(tbl->rowCount()-1,j), tbl->cellWidget(0,0));
+	}
 }
 
 }

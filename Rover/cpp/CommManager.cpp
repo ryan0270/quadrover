@@ -159,7 +159,6 @@ void CommManager::transmitUDP(Packet &pck)
 
 void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 numChannels, uint32 type, vector<unsigned char> const &buff)
 {
-	return;
 	if(!mConnected)
 		return;
 //	mMutex_socketTCP.lock();
@@ -171,13 +170,13 @@ void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 num
 	uint32 code = 2000;
 	uint32 size = buff.size()*sizeof(unsigned char);
 	mMutex_socketTCP.lock();
-//	mSocketTCP->send((tbyte*)&code, sizeof(code));
-//	mSocketTCP->send((tbyte*)&numRows, sizeof(numRows));
-//	mSocketTCP->send((tbyte*)&numCols, sizeof(numCols));
-//	mSocketTCP->send((tbyte*)&numChannels, sizeof(numChannels));
-//	mSocketTCP->send((tbyte*)&type, sizeof(type));
-//	mSocketTCP->send((tbyte*)&size, sizeof(size));
-//	mSocketTCP->send((tbyte*)&buff.front(), size);
+	mSocketTCP->send((tbyte*)&code, sizeof(code));
+	mSocketTCP->send((tbyte*)&numRows, sizeof(numRows));
+	mSocketTCP->send((tbyte*)&numCols, sizeof(numCols));
+	mSocketTCP->send((tbyte*)&numChannels, sizeof(numChannels));
+	mSocketTCP->send((tbyte*)&type, sizeof(type));
+	mSocketTCP->send((tbyte*)&size, sizeof(size));
+	mSocketTCP->send((tbyte*)&buff.front(), size);
 	mMutex_socketTCP.unlock();
 }
 
