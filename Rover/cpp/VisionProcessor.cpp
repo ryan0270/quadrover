@@ -381,7 +381,7 @@ void VisionProcessor::calcOpticalFlow(vector<vector<cv::Point2f> > const &points
 		maxViewAngle = max(maxViewAngle,viewAngle);
 	}
 	avgFlow = 1.0/numPoints*avgFlow;
-printArray(transpose(avgFlow),"avgFlow: \t\t\t\t\t\t\t\t\t\t");
+printArray("avgFlow: \t\t\t\t\t\t\t\t\t\t",transpose(avgFlow));
  
  	// Flow calc taken from
  	// Herisse et al (2012) - Landing a VTOL Unmanned Aerial Vehicle on a Moving Platform Using Optical Flow
@@ -396,7 +396,7 @@ printArray(transpose(avgFlow),"avgFlow: \t\t\t\t\t\t\t\t\t\t");
  	Array2D<double> transFlow = -1.0*matmult(LambdaInv,
  										matmult(curRotMat,
  											avgFlow + PI*pow(sin(viewAngle),2)*cross(curAngularVel, matmult(transpose(curRotMat),normDir))));
-//	printArray(transpose(transFlow),"transFlow: \t");
+//	printArray("transFlow: \t",transpose(transFlow));
 }
 
 // void VisionProcessor::processImage(Array2D<double> const &imgAtt, Array2D<double> const &rotVel)
@@ -528,7 +528,7 @@ printArray(transpose(avgFlow),"avgFlow: \t\t\t\t\t\t\t\t\t\t");
 // 	Array2D<double> transFlow = -1.0*matmult(LambdaInv,
 // 										matmult(curRotMat,
 // 											avgFlow + PI*pow(sin(viewAngle),2)*cross(curAngularVel, matmult(transpose(curRotMat),normDir))));
-// printArray(transpose(transFlow),"transFlow: \t");
+// printArray("transFlow: \t",transpose(transFlow));
 // 
 // 	int numFound = 0;
 // 	// draw flow field

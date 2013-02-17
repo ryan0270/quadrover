@@ -287,7 +287,7 @@ namespace TNT{
 	}
 
 	template <class T>
-	inline void printArray(TNT::Array2D<T> m, String str)
+	inline void printArray(String str, TNT::Array2D<T> m)
 	{
 		for(int i=0; i<m.dim1(); i++)
 		{

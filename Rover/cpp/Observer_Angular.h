@@ -1,8 +1,5 @@
 #ifndef ICSL_OBSERVER_ANGULAR 
 #define ICSL_OBSERVER_ANGULAR 
-#include <algorithm>
-#include <android/sensor.h>
-
 #include <toadlet/egg.h>
 
 #include "ICSL/constants.h"
@@ -11,6 +8,7 @@
 #include "Common.h"
 #include "Time.h"
 #include "CommManager.h"
+#include "SensorManager.h"
 
 using toadlet::uint64;
 
@@ -26,7 +24,9 @@ class Observer_AngularListener
 };
 
 //class Observer_Angular : public InputDeviceListener
-class Observer_Angular : public toadlet::egg::Thread, public CommManagerListener
+class Observer_Angular : public toadlet::egg::Thread, 
+							public CommManagerListener,
+							public SensorManagerListener
 {
 	public:
 		Observer_Angular();
@@ -47,23 +47,20 @@ class Observer_Angular : public toadlet::egg::Thread, public CommManagerListener
 		double getGainP(){return mGainP;};
 		double getGainI(){return mGainI;};
 
-		void setGainP(double p){mMutex_all.lock(); mGainP = p; mMutex_all.unlock();};
-		void setGainI(double i){mMutex_all.lock(); mGainI = i; mMutex_all.unlock();};
+		void setGainP(double p){mMutex_data.lock(); mGainP = p; mMutex_data.unlock();};
+		void setGainI(double i){mMutex_data.lock(); mGainI = i; mMutex_data.unlock();};
 		void setWeights(double accelWeight, double magWeight);
 		void setStartTime(Time time){mStartTime = time;}
 		void setYawZero();
 
 		void reset();
-		void doBurnIn(uint64 periodMS){mBurnInPeriodMS = periodMS; mBurnInStartTime.setTime();}
-		bool doingBurnIn(){return mBurnInStartTime.getMS()+mBurnInPeriodMS > Time::nowMS();}
+		bool doingBurnIn(){return mDoingBurnIn;}
 		
 		void addListener(Observer_AngularListener* chad){mListeners.push_back(chad);};
 
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
 		void addDirectionMeasurement(TNT::Array2D<double> const &dirMeas, TNT::Array2D<double> const &dirInertial, double weight);
-
-		void enableViconAttitude(bool val){mUseViconAttitude = val;}
 
 		void initialize();
 		void run();
@@ -73,31 +70,32 @@ class Observer_Angular : public toadlet::egg::Thread, public CommManagerListener
 		void onNewCommObserverReset();
 		void onNewCommObserverGain(double gainP, double gainI, double gravWeight, double compWeight, double gravBandwidth);
 		void onNewCommSetYawZero();
-		void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
+		
+		// for SensorManagerListener
+		void onNewSensorUpdate(SensorData const &data);
 
 	protected:
 		bool mRunning, mDone;
-		bool mUseViconAttitude;
+		bool mNewAccelReady, mNewGyroReady, mNewMagReady;
+		bool mDoingBurnIn;
 		double mGainP, mGainI, mGainB, mIntSat;
 		double mAccelWeight, mMagWeight;
-		TNT::Array2D<double> mGyroBias, mGyroBiasFirst, mInnovation;
+		TNT::Array2D<double> mGyroBias, mInnovation;
 		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
-		TNT::Array2D<double> mLastAccel, mLastGyro, mLastMagnometer;
+		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
+		SensorDataVector  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
 		TNT::Array2D<double> mAccelDirNom, mMagDirNom;
-//		Collection<TNT::Array2D<double> > mDirsInertial;
 		Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
 		Collection<double> mExtraDirsWeight;
 
-		TNT::Array2D<double> convert_so3toSO3(TNT::Array2D<double> const &so3);
-		TNT::Array2D<double> convert_SO3toso3(TNT::Array2D<double> const &SO3);
+		TNT::Array2D<double> convert_so3toCoord(TNT::Array2D<double> const &so3);
+		TNT::Array2D<double> convert_coordToso3(TNT::Array2D<double> const &SO3);
 
 		TNT::Array2D<double> extractEulerAngles(TNT::Array2D<double> const &rotMat);
 
-		Time mLastUpdateTime, mStartTime, mBurnInStartTime;
-		Time mLastBiasUpdateTime; // bias update happen with the accel/mag which have different update rates than the gyro
-		uint64 mBurnInPeriodMS;
+		Time mStartTime;
 		int mBurnCount;
-		toadlet::egg::Mutex mMutex_all;
+		toadlet::egg::Mutex mMutex_data, mMutex_cache;
 
 //		void inputDetected(const InputData &data);
 		static int inputDetected(int fd, int events, void *data);
@@ -105,12 +103,6 @@ class Observer_Angular : public toadlet::egg::Thread, public CommManagerListener
 		Collection<Observer_AngularListener*> mListeners;
 
 		QuadLogger *mQuadLogger;
-
-		ASensorManager* mSensorManager;
-		ASensorEventQueue* mSensorEventQueue;
-		const ASensor *mAccelSensor, *mGyroSensor, *mMagSensor, *mRotationSensor;
-
-		TNT::Array2D<double> mAttitudeVicon;
 };
 
 }

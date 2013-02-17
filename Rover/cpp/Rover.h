@@ -22,6 +22,7 @@ using toadlet::egg::String;
 #include "Time.h"
 #include "TranslationController.h"
 #include "AttitudeThrustController.h"
+#include "SensorManager.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -89,6 +90,8 @@ protected:
 	QuadLogger mQuadLogger;
 
 	VisionProcessor mVisionProcessor;
+
+	SensorManager mSensorManager;
 
 	bool mUseIbvs;
 

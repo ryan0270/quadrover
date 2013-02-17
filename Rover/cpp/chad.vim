@@ -51,9 +51,23 @@ endif
 set shortmess=aoO
 badd +1 Rover.h
 badd +0 Rover.cpp
+badd +0 Observer_Angular.h
+badd +0 Observer_Angular.cpp
+badd +0 Observer_Translational.h
+badd +0 Observer_Translational.cpp
+badd +0 AttitudeThrustController.h
+badd +0 AttitudeThrustController.cpp
+badd +0 TranslationController.h
+badd +0 TranslationController.cpp
+badd +0 MotorInterface.h
+badd +0 MotorInterface.cpp
+badd +0 CommManager.h
+badd +0 CommManager.cpp
+badd +0 SensorManager.h
+badd +0 SensorManager.cpp
 badd +0 VisionProcessor.h
 badd +0 VisionProcessor.cpp
-args Rover.h Rover.cpp VisionProcessor.h VisionProcessor.cpp
+args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp VisionProcessor.h VisionProcessor.cpp
 edit Rover.cpp
 set splitbelow splitright
 wincmd _ | wincmd |

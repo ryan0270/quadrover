@@ -17,11 +17,10 @@
 #include "QuadLogger.h"
 #include "Observer_Angular.h"
 #include "AttitudeThrustControllerListener.h"
+#include "SensorManager.h"
 
 namespace ICSL{
 namespace Quadrotor{
-
-static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
 class Observer_TranslationalListener
 {
@@ -35,7 +34,8 @@ class Observer_TranslationalListener
 class Observer_Translational : public toadlet::egg::Thread,
 								public Observer_AngularListener,
 								public CommManagerListener,
-								public AttitudeThrustControllerListener
+								public AttitudeThrustControllerListener,
+								public SensorManagerListener
 {
 	public:
 	Observer_Translational();
@@ -68,6 +68,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	// from MotorInterfaceListener
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
+
+	// for SensorManagerListener
+	void onNewSensorUpdate(SensorData const &data);
 
 	private:
 	bool mRunning, mDone;

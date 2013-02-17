@@ -323,7 +323,7 @@ namespace Quadrotor{
 			mLastMeas[i][0] = pos[i][0];
 		for(int i=3; i<6; i++)
 			mLastMeas[i][0] = vel[i-3][0];
-// printArray(transpose(mLastMeas),"mLastMeas: \t");
+// printArray("mLastMeas: \t",transpose(mLastMeas));
 		mMutex_meas.unlock();
 		mLastPosReceiveTime.setTime();
 
@@ -355,7 +355,7 @@ mForceScaling = 0.0035;
 		mAttBiasReset[1][0] = pitch;
 		mAttBiasReset[2][0] = yaw;
 		mAttBias.inject(mAttBiasReset);
-		printArray(transpose(mAttBias),"att bias: \t");
+		printArray("att bias: \t",transpose(mAttBias));
 		mMutex_data.unlock();
 	}
 
@@ -405,6 +405,14 @@ mForceScaling = 0.0035;
 		for(int i=0; i<4; i++)
 			mMotorCmds[i] = cmds[i];
 		mMutex_cmds.unlock();
+	}
+
+	void Observer_Translational::onNewSensorUpdate(SensorData const &data)
+	{
+		if(data.type == SENSOR_DATA_TYPE_PRESSURE)
+		{
+//			Log::alert("Recieved pressure data");
+		}
 	}
 
 	int Observer_Translational::getBatteryTemp()
