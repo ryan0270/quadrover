@@ -63,20 +63,6 @@ class Leash : public QWidget
 		bool sendParams();
 		bool isConnected(){return mIsConnected;};
 
-		void setDeltaT(double dt){mDeltaT = dt;}
-		void setForceScaling(double k){mForceScaling = k;}
-		void setTorqueScaling(double k){mTorqueScaling = k;}
-		void setMass(double m){mMass = m;}
-
-//		bool isUsingIbvs(){return chkUseIbvsController->isChecked();}
-
-//		toadlet::egg::Collection<double> getDesiredImageMoment(double z);
-//		double getDesiredImageArea(){
-//			mMutex_data.lock();
-//			double area = mDesiredStateImage[2]; 
-//			mMutex_data.unlock(); 
-//			return area;}
-
 		void toggleIbvs();
 
 		void syncStartTime(unsigned long start){mStartTimeUniverseMS = start; if(mSocketTCP!=NULL && mSocketTCP->connected()) onBtnSyncTime_clicked();};
@@ -110,19 +96,14 @@ class Leash : public QWidget
 		string mIP;
 		int mPort;
 		Socket::ptr mSocketUDP, mSocketTCP;
-		double mObserverGainP, mObserverGainI;
-//		double mGainP[3], mGainI[3], mGainD[3];
-		double mGainTransP[3], mGainTransD[3], mGainTransI[3], mGainTransILimit[3];
-		double mGainAttP[3], mGainAttD[3];
-		double mDeltaT, mForceScaling, mTorqueScaling, mMass;
-		Collection<double> mObserverWeights;
-		int mArduinoStatus;
+		double mAttObsvGainP, mAttObsvGainI;
+		double mCntlGainTransP[3], mCntlGainTransD[3], mCntlGainTransI[3], mCntlGainTransILimit[3];
+		double mCntlGainAttP[3], mCntlGainAttD[3];
+		double mMotorForceGain, mMotorTorqueGain, mMotorArmLength, mTotalMass;
+		Collection<double> mAttObsvDirWeights;
+		Collection<double> mAttObsvNominalMag;
 		toadlet::egg::Collection<double> mIbvsGainAngularRate;
 		double mIbvsGainAngle;
-//		toadlet::egg::Collection<double> mIbvsGainImg, mIbvsGainFlowInt, mIbvsGainFlow, mAttCmdOffset, mIbvsGainFF;
-//		double mIbvsGainDynamic;
-//		TNT::Array2D<double> mState, mDesiredState, mGyro, mAccel, mBias, mComp;
-//		toadlet::egg::Collection<float> mStateImage, mDesiredStateImage;
 		TNT::Array2D<double> mIntMemory;
 		int mMotorValues[4], mMotorValuesIbvs[4];
 		uint64 mTimeMS;
@@ -134,14 +115,12 @@ class Leash : public QWidget
 		toadlet::egg::Mutex mMutex_socketUDP, mMutex_socketTCP;
 		toadlet::egg::Mutex mMutex_data, mMutex_image;
 
-//		int mCurCntlType, mImgViewType;
-//		string mCntlSysFile;
 		uint32 mCntlCalcTimeUS, mImgProcTimeUS;
 
 		void applyCommConfig(QTreeWidgetItem *root);
 		void applyMotorConfig(QTreeWidgetItem *root);
 		void applyControlConfig(QTreeWidgetItem *root);
-		void applyObserverConfig(QTreeWidgetItem *root);
+//		void applyObserverConfig(QTreeWidgetItem *root);
 		void applyIbvsConfig(QTreeWidgetItem *root);
 		void applyKalmanFilterConfig(QTreeWidgetItem *root);
 		void applyLogConfig(QTreeWidgetItem *root);
@@ -153,22 +132,16 @@ class Leash : public QWidget
 		void receiveLogFile(Socket::ptr socket, string filename);
 
 		bool mUseIbvs;
-//		toadlet::egg::Collection<int> mFiltBoxColorMin, mFiltBoxColorMax;
-//		int mFiltSatMin, mFiltSatMax;
-//		int mFiltValMin, mFiltValMax;
-//		int mFiltCircMin, mFiltCircMax;
-//		int mFiltConvMin, mFiltConvMax;
-//		int mFiltAreaMin, mFiltAreaMax;
-//		double mDesiredHeight;
 
 		TNT::Array2D<double> mAttBias;
-		double mAttBiasGain, mForceScalingGain;
+		double mAttBiasGain;
 
-		float mKfPosMeasStdDev, mKfVelMeasStdDev;
+		float mKalmanForceGainAdaptGain;
+		Collection<float> mKalmanAttBias, mKalmanAttBiasAdaptGain;
+		Collection<float> mKalmanMeasVar, mKalmanDynVar;
 
 		uint32 mLogMask;
 
-		cv::Mat mLastImage;
 		QImage cvMat2QImage(const cv::Mat &mat);
 
 		toadlet::egg::Collection<LeashListener*> mListeners;
@@ -185,6 +158,19 @@ class Leash : public QWidget
 		void loadControllerConfig(mxml_node_t *cntlRoot);
 		void saveControllerConfig(mxml_node_t *cntlRoot);
 		void applyControllerConfig();
+
+		void populateObserverUI();
+		void loadObserverConfig(mxml_node_t *obsvRoot);
+		void saveObserverConfig(mxml_node_t *obsvRoot);
+		void applyObserverConfig();
+
+		void populateHardwareUI();
+		void loadHardwareConfig(mxml_node_t *hdwRoot);
+		void saveHardwareConfig(mxml_node_t *hdwRoot);
+		void applyHardwareConfig();
+
+		static void resizeTableWidget(QTableWidget *tbl); // make the table widget match the cell size (not the same as having cells match their contents)
+		void setVerticalTabOrder(QTableWidget *tbl);
 };
 }
 }
