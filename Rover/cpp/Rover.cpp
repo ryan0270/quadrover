@@ -69,8 +69,6 @@ void Rover::initialize()
 	mObsvAngular.setStartTime(mStartTime);
 	mObsvAngular.setQuadLogger(&mQuadLogger);
 	mObsvAngular.start();
-	mObsvAngular.doBurnIn(10e3);
-	mObsvAngular.enableViconAttitude(false);
 	mObsvAngular.addListener(this);
 	mObsvAngular.addListener(&mAttitudeThrustController);
 	mCommManager.addListener(&mObsvAngular);
@@ -90,6 +88,13 @@ void Rover::initialize()
 	mVisionProcessor.setAttitudeObserver(&mObsvAngular);
 	mVisionProcessor.start();
 
+	mSensorManager.initialize();
+	mSensorManager.setStartTime(mStartTime);
+	mSensorManager.setQuadLogger(&mQuadLogger);
+	mSensorManager.start();
+	mSensorManager.addListener(&mObsvAngular);
+	mSensorManager.addListener(&mObsvTranslational);
+
 	this->start();
 
 	Log::alert("Initialized");
@@ -101,7 +106,7 @@ void Rover::shutdown()
 	mMutex_cntl.lock();
 	mAttitudeThrustController.enableMotors(false);
 	mMutex_cntl.unlock();
-//	this->join(); // join doesn't work correctly in NDK
+//	this->join(); 
 	toadlet::egg::System sys;
 	while(!mRunnerIsDone)
 	{

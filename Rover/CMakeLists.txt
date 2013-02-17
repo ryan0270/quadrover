@@ -61,6 +61,7 @@ set (SRC ${SRC}
 	./cpp/TranslationController.cpp
 	./cpp/AttitudeThrustController.cpp
 	./cpp/MotorInterface.cpp
+	./cpp/SensorManager.cpp
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 )
 
@@ -78,6 +79,7 @@ set (H ${H}
 	./cpp/AttitudeThrustController.h
 	./cpp/AttitudeThrustControllerListener.h
 	./cpp/MotorInterface.h
+	./cpp/SensorManager.h
 	./cpp/ICSL/SystemModel/ISystemModel.h
 	./cpp/ICSL/SystemModel/ISystemModelAffine.h
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h

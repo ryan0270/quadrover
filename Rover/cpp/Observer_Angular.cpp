@@ -11,20 +11,19 @@ namespace Quadrotor{
 
 Observer_Angular::Observer_Angular() :
 	mGyroBias(3,1,0.0),
-	mGyroBiasFirst(3,1,0.0),
 	mInnovation(3,1,0.0),
-	mLastGyro(3,1,0.0),
-	mLastAccel(3,1,0.0),
-	mLastMagnometer(3,1,0.0),
+	mGyro(3,1,0.0),
+	mAccel(3,1,0.0),
+	mMagnometer(3,1,0.0),
 	mAccelDirNom(3,1,0.0),
 	mMagDirNom(3,1,0.0),
-	mAttitudeVicon(3,1,0.0),
 	mCurAttitude(3,1,0.0),
 	mCurRotMat(3,3,0.0),
 	mCurVel(3,1,0.0)
 {
-	mMutex_all.unlock();
-	mRunning = true;
+	mNewAccelReady = mNewGyroReady = mNewMagReady = false;
+	mRunning = false;;
+	mDone = true;
 
 	mGainP = 1;
 	mGainI = 0.0; 
@@ -37,85 +36,25 @@ Observer_Angular::Observer_Angular() :
 
 	mQuadLogger = NULL;
 
-	mBurnInStartTime.clear();
-	mBurnInPeriodMS = 0;
 	mBurnCount = 0;
 
-	mAccelSensor = NULL;
-	mGyroSensor = NULL;
-	mMagSensor = NULL;
-
-	
 	mAccelDirNom[2][0] = 1; // accel is the opposite direction as gravity
-	mMagDirNom[2][0] = 0;
+//	mMagDirNom[2][0] = 0;
+	mMagDirNom[0][0] = -20.5;
+	mMagDirNom[1][0] = 7.0;
+	mMagDirNom[2][0] = -39.0;
+	mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
 
-	mDone = true; // need this to be true in case the run thread never gets started
-
-	mUseViconAttitude = false;
+	mDoingBurnIn = true;
 }
 
 Observer_Angular::~Observer_Angular()
 {
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 }
 
 void Observer_Angular::initialize()
 {
-	mSensorManager = ASensorManager_getInstance();
-	ALooper *looper = ALooper_forThread();
-//	ALooper *looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-	const int LOOPER_ID_USER =3; // this is defined in /opt/android-ndk/sources/android/native_app_glue/android_native_app_glue.h but that files isn't in the include path
-//	mSensorEventQueue = ASensorManager_createEventQueue(mSensorManager, looper, LOOPER_ID_USER, NULL, NULL);
-	mSensorEventQueue = ASensorManager_createEventQueue(mSensorManager, looper, 0, (ALooper_callbackFunc)&inputDetected, NULL);
-
-	mAccelSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_ACCELEROMETER);
-	if(mAccelSensor != NULL)
-	{
-		const char* name = ASensor_getName(mAccelSensor);
-		const char* vendor = ASensor_getVendor(mAccelSensor);
-		float res = ASensor_getResolution(mAccelSensor);
-		Log::alert(String()+"Accel sensor:\n\t"+name+"\n\tresolution:"+vendor);
-		ASensorEventQueue_enableSensor(mSensorEventQueue, mAccelSensor);
-		ASensorEventQueue_setEventRate(mSensorEventQueue, mAccelSensor, 10*1000); // this is the best it actually achieves
-	}
-	mGyroSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_GYROSCOPE);
-	if(mGyroSensor != NULL)
-	{
-		const char* name = ASensor_getName(mGyroSensor);
-		const char* vendor = ASensor_getVendor(mGyroSensor);
-		float res = ASensor_getResolution(mGyroSensor);
-		Log::alert(String()+"Gyro sensor:\n\t"+name+"\n\t"+vendor+"\n\tresolution: "+res);
-		ASensorEventQueue_enableSensor(mSensorEventQueue, mGyroSensor);
-		ASensorEventQueue_setEventRate(mSensorEventQueue, mGyroSensor, 5*1000);
-	}
-	mMagSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_MAGNETIC_FIELD);
-	if(mMagSensor != NULL)
-	{
-		const char* name = ASensor_getName(mMagSensor);
-		const char* vendor = ASensor_getVendor(mMagSensor);
-		float res = ASensor_getResolution(mMagSensor);
-		Log::alert(String()+"Mag sensor:\n\t"+name+"\n\t"+vendor+"\n\tresolution: "+res);
-		ASensorEventQueue_enableSensor(mSensorEventQueue, mMagSensor);
-		ASensorEventQueue_setEventRate(mSensorEventQueue, mMagSensor, 10*1000); // this is the best it actually achieves
-	}
-
-	// list out all available sensors
-//	const ASensor* const* sensorList;
-//	int numSensors = ASensorManager_getSensorList(mSensorManager, &sensorList);
-//	for(int i=1; i<numSensors; i++)
-//	{
-//		const char* name = ASensor_getName(sensorList[i]);
-//		const char* vendor=  ASensor_getVendor(sensorList[i]);
-//		float res = ASensor_getResolution(sensorList[i]);
-//		int type = ASensor_getType(sensorList[i]);
-//		String str = "Sensor \n";
-//		str = str+"\t"+name+"\n";
-//		str = str+"\t"+vendor+"\n";
-//		str = str+"\t"+type+"\n";
-//		str = str+"\tresolution: "+res;
-//		Log::alert(str);
-//	}
-
 	reset();
 }
 
@@ -127,188 +66,222 @@ void Observer_Angular::shutdown()
 	while(!mDone) // since join doesn't seem to work correctly in NDK
 		sys.msleep(10);
 
-	if(mMagSensor != NULL)
-		ASensorEventQueue_disableSensor(mSensorEventQueue, mMagSensor);
-	if(mAccelSensor != NULL)
-		ASensorEventQueue_disableSensor(mSensorEventQueue, mAccelSensor);
-	if(mGyroSensor != NULL)
-		ASensorEventQueue_disableSensor(mSensorEventQueue, mGyroSensor);
-
-	if(mSensorManager != NULL && mSensorEventQueue != NULL)
-		ASensorManager_destroyEventQueue(mSensorManager, mSensorEventQueue);
-
 	Log::alert("------------------------- Observer_Angular is donified --------------------------------------------------");
 }
 
 void Observer_Angular::reset()
 {
-	mMutex_all.lock();
+	mMutex_data.lock();
 	mCurRotMat.inject(createIdentity(3));
 	mCurAttitude = extractEulerAngles(mCurRotMat);
 	mCurVel.inject(Array2D<double>(3,1,0.0));
 
 //	mGyroBias = Array2D<double>(3,1,0.0);
 
-	mLastGyro.inject(Array2D<double>(3,1,0.0));
-	mLastAccel.inject(Array2D<double>(3,1,0.0));
-	mLastAccel[2][0] = GRAVITY;
-//	mLastMagnometer = Array2D<double>(3,1,0.0);
-	mLastMagnometer.inject(mMagDirNom);
-	mLastUpdateTime.clear();
-	mMutex_all.unlock();
+	mGyro.inject(Array2D<double>(3,1,0.0));
+	mAccel.inject(Array2D<double>(3,1,0.0));
+	mAccel[2][0] = GRAVITY;
+//	mMagnometer = Array2D<double>(3,1,0.0);
+	mMagnometer.inject(mMagDirNom);
+	mMutex_data.unlock();
 }
 
 void Observer_Angular::run()
 {
+	mRunning = true;
 	mDone = false;
 	System sys;
 	Time lastInnovationUpdateTime;
-	uint64 lastGyroUpdateTimeUS = 0;
+	Time lastGyroUpdateTime;
 	Array2D<double> gyroSum(3,1,0.0);
 	Array2D<double> magSum(3,1,0.0);
 	Array2D<double> accelSum(3,1,0.0);
-	bool haveNewAccel = false;
-	bool haveNewMagnometer = false;
-	double calMinX = -9.7;
-	double calMaxX = 9.65;
-	double calMinY = -10.2;
-	double calMaxY = 10.05;
-	double calMinZ = -10.05;
-	double calMaxZ = 9.5;
-
-	double offsetX = 0.5*(calMaxX+calMinX);
-	double offsetY = 0.5*(calMaxY+calMinY);
-	double offsetZ = 0.5*(calMaxZ+calMinZ);
-	double scaleX = 0.5*(calMaxX-calMinX)/GRAVITY;
-	double scaleY = 0.5*(calMaxY-calMinY)/GRAVITY;
-	double scaleZ = 0.5*(calMaxZ-calMinZ)/GRAVITY;
-
+	bool accelProcessed = true; // "processed" means used to calculate the innovation term
+	bool magProcessed = true;
+	bool gyroProcessed = true;
 	while(mRunning)
 	{
-		ASensorEvent event;
-		while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
+		if(mNewGyroReady)
 		{
-			uint64 curTimeMS;
-			uint64 logType = -1;
-			switch(event.type)
+			mMutex_data.lock();
+			mMutex_cache.lock();
+			mGyro.inject(mGyroData.data);
+			mMutex_cache.unlock();
+			if(mDoingBurnIn && mBurnCount < 2000)
 			{
-				case ASENSOR_TYPE_ACCELEROMETER:
-					{
-						logType = ACCEL;
+				gyroSum += mGyro;
+				magSum += mMagnometer;
+				accelSum += mAccel;
+				mBurnCount++;
+				if(mBurnCount == 2000)
+				{
+					mDoingBurnIn = false;
+					mGyroBias.inject(1.0/mBurnCount*gyroSum);
+					Log::alert(+"Angular observer burn in done");
+					printArray("\tGyro bias: \t",transpose(mGyroBias));
 
-						mMutex_all.lock();
-						mLastAccel[0][0] = event.data[0];
-						mLastAccel[1][0] = event.data[1];
-						mLastAccel[2][0] = event.data[2];
-						haveNewAccel = true;
-						
-						// for data logging at the bottom
-//						event.data[0] = mLastAccel[0][0];
-//						event.data[1] = mLastAccel[1][0];
-//						event.data[2] = mLastAccel[2][0];
-						mMutex_all.unlock();
-					}
-					break;
-				case ASENSOR_TYPE_GYROSCOPE:
-					{
-						logType = GYRO;
-
-						mMutex_all.lock();
-						mLastGyro[0][0] = event.data[0];
-						mLastGyro[1][0] = event.data[1];
-						mLastGyro[2][0] = event.data[2];
-
-						if(doingBurnIn())
-						{
-							if(mStartTime.getElapsedTimeMS() > 1000) // ignore early data since it might be junk
-							{
-								if(mBurnCount == 0)
-									Log::alert(String("Beginning burn in."));
-								gyroSum += mLastGyro;
-								magSum += mLastMagnometer;
-								accelSum += mLastAccel;
-								mBurnCount++;
-							}
-							lastInnovationUpdateTime.setTime();
-						}
-						else if(mBurnCount > 0) // we've finished burn in so calculate bias
-						{
-							mGyroBias.inject(1.0/mBurnCount*gyroSum);
-							mGyroBiasFirst.inject(mGyroBias);
-							mMagDirNom.inject(1.0/norm2(magSum)*magSum);
-
-							/////////////////////////// HACK //////////////////////
-//							mMagDirNom[0][0] = -21.7;
-//							mMagDirNom[1][0] = 5.3;
-//							mMagDirNom[2][0] = -40.4;
-							mMagDirNom[0][0] = -20.5;
-							mMagDirNom[1][0] = 7.0;
-							mMagDirNom[2][0] = -39.0;
-							mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
-							/////////////////////////// HACK //////////////////////
-
-
-							String str = String()+"Burn in done ("+mBurnCount+"): \t";
-							for(int i=0; i<3; i++)
-								str = str+mGyroBias[i][0]+"\t";
-							Log::alert(str);
-
-							str = String()+"mag dir: \t";
-							for(int i=0; i<mMagDirNom.dim1(); i++)
-								str = str+mMagDirNom[i][0]+"\t";
-							Log::alert(str);
-
-							mBurnCount = 0;
-						}
-						mMutex_all.unlock();
-						if(lastGyroUpdateTimeUS > 0)
-						{
-							double dtUS = event.timestamp/1.0e3-lastGyroUpdateTimeUS;
-							doGyroUpdate(dtUS/1.0e6);
-						}
-						lastGyroUpdateTimeUS = event.timestamp/1.0e3; // timestamp appears to be in nanoseconds
-					}
-					break;
-				case ASENSOR_TYPE_MAGNETIC_FIELD:
-					{
-						logType = MAGNOMETER;
-						mMutex_all.lock();
-						mLastMagnometer[0][0] = event.data[0];
-						mLastMagnometer[1][0] = event.data[1];
-						mLastMagnometer[2][0] = event.data[2];
-//						mLastMagnometer = 1.0/norm2(mLastMagnometer)*mLastMagnometer;
-
-//						if(!mHaveFirstMagnometer)
-//						{
-//							mMagDirNom.inject(matmult(mCurRotMat,mLastMagnometer));
-//							mMagDirNom[0][0] = 0;
-//							mMagDirNom[1][0] = 1;
-//							mMagDirNom[2][0] = 0;
-//						}
-						haveNewMagnometer = true;
-						mMutex_all.unlock();
-					}
-					break;
-				default:
-					Log::alert(String()+"Unknown sensor event: "+event.type);
+					mMutex_cache.lock();
+					lastGyroUpdateTime.setTime(mGyroData.timestamp);
+					mMutex_cache.unlock();
+				}
 			}
+			mNewGyroReady = false;
+			mMutex_data.unlock();
+			gyroProcessed = false;
+		}
+		if(mNewAccelReady)
+		{
+			mMutex_data.lock();
+			mMutex_cache.lock();
+			mAccel.inject(mAccelData.data);
+			mMutex_cache.unlock();
+			mNewAccelReady = false;
+			mMutex_data.unlock();
+			accelProcessed = false;
+		}
+		if(mNewMagReady)
+		{
+			mMutex_data.lock();
+			mMutex_cache.lock();
+			mMagnometer.inject(mMagData.data);
+			mMutex_cache.unlock();
+			mNewMagReady = false;
+			mMutex_data.unlock();
+			magProcessed = false;
+		}
 
-			if(!doingBurnIn() && haveNewAccel && haveNewMagnometer && event.type != 11)
+// 		ASensorEvent event;
+// 		while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
+// 		{
+// 			uint64 curTimeMS;
+// 			uint64 logType = -1;
+// 			switch(event.type)
+// 			{
+// 				case ASENSOR_TYPE_ACCELEROMETER:
+// 					{
+// 						logType = ACCEL;
+// 
+// 						mMutex_data.lock();
+// 						mAccel[0][0] = event.data[0];
+// 						mAccel[1][0] = event.data[1];
+// 						mAccel[2][0] = event.data[2];
+// 						haveNewAccel = true;
+// 						
+// 						// for data logging at the bottom
+// //						event.data[0] = mAccel[0][0];
+// //						event.data[1] = mAccel[1][0];
+// //						event.data[2] = mAccel[2][0];
+// 						mMutex_data.unlock();
+// 					}
+// 					break;
+// 				case ASENSOR_TYPE_GYROSCOPE:
+// 					{
+// 						logType = GYRO;
+// 
+// 						mMutex_data.lock();
+// 						mGyro[0][0] = event.data[0];
+// 						mGyro[1][0] = event.data[1];
+// 						mGyro[2][0] = event.data[2];
+// 
+// 						if(doingBurnIn())
+// 						{
+// 							if(mStartTime.getElapsedTimeMS() > 1000) // ignore early data since it might be junk
+// 							{
+// 								if(mBurnCount == 0)
+// 									Log::alert(String("Beginning burn in."));
+// 								gyroSum += mGyro;
+// 								magSum += mMagnometer;
+// 								accelSum += mAccel;
+// 								mBurnCount++;
+// 							}
+// 							lastInnovationUpdateTime.setTime();
+// 						}
+// 						else if(mBurnCount > 0) // we've finished burn in so calculate bias
+// 						{
+// 							mGyroBias.inject(1.0/mBurnCount*gyroSum);
+// 							mMagDirNom.inject(1.0/norm2(magSum)*magSum);
+// 
+// 							/////////////////////////// HACK //////////////////////
+// //							mMagDirNom[0][0] = -21.7;
+// //							mMagDirNom[1][0] = 5.3;
+// //							mMagDirNom[2][0] = -40.4;
+// 							mMagDirNom[0][0] = -20.5;
+// 							mMagDirNom[1][0] = 7.0;
+// 							mMagDirNom[2][0] = -39.0;
+// 							mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
+// 							/////////////////////////// HACK //////////////////////
+// 
+// 
+// 							String str = String()+"Burn in done ("+mBurnCount+"): \t";
+// 							for(int i=0; i<3; i++)
+// 								str = str+mGyroBias[i][0]+"\t";
+// 							Log::alert(str);
+// 
+// 							str = String()+"mag dir: \t";
+// 							for(int i=0; i<mMagDirNom.dim1(); i++)
+// 								str = str+mMagDirNom[i][0]+"\t";
+// 							Log::alert(str);
+// 
+// 							mBurnCount = 0;
+// 						}
+// 						mMutex_data.unlock();
+// 						if(lastGyroUpdateTimeUS > 0)
+// 						{
+// 							double dtUS = event.timestamp/1.0e3-lastGyroUpdateTimeUS;
+// 							doGyroUpdate(dtUS/1.0e6);
+// 						}
+// 						lastGyroUpdateTimeUS = event.timestamp/1.0e3; // timestamp appears to be in nanoseconds // 					}
+// 					break;
+// 				case ASENSOR_TYPE_MAGNETIC_FIELD:
+// 					{
+// 						logType = MAGNOMETER;
+// 						mMutex_data.lock();
+// 						mMagnometer[0][0] = event.data[0];
+// 						mMagnometer[1][0] = event.data[1];
+// 						mMagnometer[2][0] = event.data[2];
+// //						mMagnometer = 1.0/norm2(mMagnometer)*mMagnometer;
+// 
+// //						if(!mHaveFirstMagnometer)
+// //						{
+// //							mMagDirNom.inject(matmult(mCurRotMat,mMagnometer));
+// //							mMagDirNom[0][0] = 0;
+// //							mMagDirNom[1][0] = 1;
+// //							mMagDirNom[2][0] = 0;
+// //						}
+// 						haveNewMagnometer = true;
+// 						mMutex_data.unlock();
+// 					}
+// 					break;
+// 				default:
+// 					Log::alert(String()+"Unknown sensor event: "+event.type);
+// 			}
+
+			if(!mDoingBurnIn && !accelProcessed && !magProcessed)
 			{
 				doInnovationUpdate(lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6);
 				lastInnovationUpdateTime.setTime();
-				haveNewAccel = false;
-				haveNewMagnometer = false;
+				accelProcessed = true;
+				magProcessed = true;
 			}
 
-			if(mQuadLogger != NULL && logType != -1)
+			if(!mDoingBurnIn && !gyroProcessed)
 			{
-				String s=String()+" " + mStartTime.getElapsedTimeMS() + "\t" + event.type+"\t"+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
-				mQuadLogger->addLine(s,logType);
+				mMutex_cache.lock();
+				double dt = Time::calcDiffUS(lastGyroUpdateTime, mGyroData.timestamp)/1.0e6;
+				lastGyroUpdateTime.setTime(mGyroData.timestamp);
+				mMutex_cache.unlock();
+				doGyroUpdate(dt);
+				gyroProcessed = true;
 			}
-		}
 
-		sys.msleep(2);
+//			if(mQuadLogger != NULL && logType != -1)
+//			{
+//				String s=String()+" " + mStartTime.getElapsedTimeMS() + "\t" + event.type+"\t"+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
+//				mQuadLogger->addLine(s,logType);
+//			}
+//		}
+
+		sys.msleep(1);
 	}
 
 	mDone = true;
@@ -317,32 +290,17 @@ void Observer_Angular::run()
 
 void Observer_Angular::doInnovationUpdate(double dt)
 {
-	mMutex_all.lock();
+	mMutex_data.lock();
 	// orthogonalize the directions (see Hua et al (2011) - Nonlinear attitude estimation with measurement decoupling and anti-windpu gyro-bias compensation)
-	Array2D<double> uB = 1.0/norm2(mLastAccel)*mLastAccel;
+	Array2D<double> uB = 1.0/norm2(mAccel)*mAccel;
 	Array2D<double> uI = mAccelDirNom;
-	/////////////////////////////////////////////////////////////////////
-//	Array2D<double> vB = 1.0/norm2(mLastMagnometer)*mLastMagnometer;
-//	Array2D<double> vI = mMagDirNom;
-	/////////////////////////////////////////////////////////////////////
-//	Array2D<double> gravDir = matmult(transpose(mCurRotMat), uI);
-//	Array2D<double> vB = cross(gravDir, mLastMagnometer);
-//	Array2D<double> vI = cross(uI, mMagDirNom);
-//	vI = 1.0/norm2(vI)*vI;
-	/////////////////////////////////////////////////////////////////////
-//	Array2D<double> vB = cross(uB, mLastMagnometer);
-//	vB = 1.0/norm2(vB)*vB;
-//	Array2D<double> vI = cross(uI, mMagDirNom);
-//	vI = 1.0/norm2(vI)*vI;
-	/////////////////////////////////////////////////////////////////////
-	Array2D<double> vB = cross(-1.0*mAccelDirNom, mLastMagnometer);
+	Array2D<double> vB = cross(-1.0*mAccelDirNom, mMagnometer);
 	vB = 1.0/norm2(vB)*vB;
 	Array2D<double> vI = cross(-1.0*uI, mMagDirNom);
 	vI = 1.0/norm2(vI)*vI;
-	/////////////////////////////////////////////////////////////////////
 
 	Array2D<double> transR = transpose(mCurRotMat);
-	if(norm2(mLastAccel-mAccelDirNom*GRAVITY) < 3)
+	if(norm2(mAccel-mAccelDirNom*GRAVITY) < 3)
 	{
 		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));
 		mInnovation += mMagWeight*cross(vB, matmult(transR, vI));
@@ -366,12 +324,11 @@ void Observer_Angular::doInnovationUpdate(double dt)
 	Time now;
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
-	mLastBiasUpdateTime.setTime();
 
 	String s1=String() + mStartTime.getElapsedTimeMS() + "\t" + "-1003" +"\t";
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		s1 = s1+mGyroBias[i][0] + "\t";
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 
 	mQuadLogger->addLine(s1,OBSV_BIAS);
 }
@@ -379,27 +336,12 @@ void Observer_Angular::doInnovationUpdate(double dt)
 // Based on Hamel and Mahoney's nonlinear SO3 observer
 void Observer_Angular::doGyroUpdate(double dt)
 {
-	if(doingBurnIn())
-	{
-		mLastUpdateTime.clear();
-		mLastBiasUpdateTime.clear();
-		return;
-	}
-	if(mLastUpdateTime.getMS() == 0)
-	{
-		mLastUpdateTime.setTime();
-		return;
-	}
-	Time curTime;
-//	double dt = Time::calcDiffUS(mLastUpdateTime,curTime)/1.0e6;
-	mLastUpdateTime.setTime(curTime);
-
-	mMutex_all.lock();
+	mMutex_data.lock();
 	Array2D<double> gyro;
-	mCurVel = mLastGyro - mGyroBias;
+	mCurVel = mGyro - mGyroBias;
 	gyro = mCurVel+mGainP*mInnovation;
 
-	Array2D<double> gyro_x = convert_SO3toso3(gyro);
+	Array2D<double> gyro_x = convert_coordToso3(gyro);
 
 	Array2D<double> A = createIdentity(3); // A is the amount of rotation that has occured
 	double velMag = norm2(gyro);
@@ -412,23 +354,16 @@ void Observer_Angular::doGyroUpdate(double dt)
 	mCurRotMat = matmult(mCurRotMat,A);
 	mCurAttitude = extractEulerAngles(mCurRotMat);
 
-	Array2D<double> att;
-	if(mUseViconAttitude)
-		att = mAttitudeVicon.copy();
-	else
-		att = mCurAttitude.copy();
-///////////////////// temp hack ///////////////////////
-att[2][0] = mAttitudeVicon[2][0];
-///////////////////// temp hack ///////////////////////
+	Array2D<double> att = mCurAttitude.copy();
 
 	Array2D<double> vel = mCurVel.copy();
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 
 	for(int i=0; i<mListeners.size(); i++)
 		mListeners[i]->onObserver_AngularUpdated(att, vel);
 }
 
-Array2D<double> Observer_Angular::convert_so3toSO3(Array2D<double> const &so3)
+Array2D<double> Observer_Angular::convert_so3toCoord(Array2D<double> const &so3)
 {
 	Array2D<double> SO3(3,1);
 	SO3[0][0] = so3[2][1];
@@ -438,7 +373,7 @@ Array2D<double> Observer_Angular::convert_so3toSO3(Array2D<double> const &so3)
 	return SO3;
 }
 
-Array2D<double> Observer_Angular::convert_SO3toso3(Array2D<double> const &SO3)
+Array2D<double> Observer_Angular::convert_coordToso3(Array2D<double> const &SO3)
 {
 	Array2D<double> so3(3,3,0.0);
 	so3[1][2] = -(so3[2][1] = SO3[0][0]);
@@ -464,12 +399,9 @@ Array2D<double> Observer_Angular::extractEulerAngles(Array2D<double> const &rotM
 Array2D<double> Observer_Angular::getCurAttitude()
 {
 	Array2D<double> att;
-	mMutex_all.lock();
-	if(mUseViconAttitude)
-		att = mAttitudeVicon.copy();
-	else
-		att = mCurAttitude.copy();
-	mMutex_all.unlock();
+	mMutex_data.lock();
+	att = mCurAttitude.copy();
+	mMutex_data.unlock();
 
 	return att;
 }
@@ -477,78 +409,74 @@ Array2D<double> Observer_Angular::getCurAttitude()
 Array2D<double> Observer_Angular::getCurVel()
 {
 	Array2D<double> vel;
-	mMutex_all.lock();
+	mMutex_data.lock();
 	vel = mCurVel.copy();
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 	return vel;
 }
 
 Array2D<double> Observer_Angular::getBias()
 {
 	Array2D<double> bias;
-	mMutex_all.lock();
+	mMutex_data.lock();
 	bias = mGyroBias.copy();
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 	return bias;
 }
 
 Array2D<double> Observer_Angular::getLastGyro()
 {
 	Array2D<double> lastGyro;
-	mMutex_all.lock();
-	lastGyro = mLastGyro.copy();
-	mMutex_all.unlock();
+	mMutex_data.lock();
+	lastGyro = mGyro.copy();
+	mMutex_data.unlock();
 	return lastGyro;
 }
 
 Array2D<double> Observer_Angular::getLastAccel()
 {
 	Array2D<double> lastAccel;
-	mMutex_all.lock();
-	lastAccel = mLastAccel.copy();
-	mMutex_all.unlock();
+	mMutex_data.lock();
+	lastAccel = mAccel.copy();
+	mMutex_data.unlock();
 	return lastAccel;
 }
 
 Array2D<double> Observer_Angular::getLastMagnometer()
 {
 	Array2D<double> lastMag;
-	mMutex_all.lock();
-	lastMag = mLastMagnometer.copy();
-	mMutex_all.unlock();
+	mMutex_data.lock();
+	lastMag = mMagnometer.copy();
+	mMutex_data.unlock();
 	return lastMag;
 }
 
 void Observer_Angular::setWeights(double accelWeight, double magWeight)
 {
-	mMutex_all.lock();
+	mMutex_data.lock();
 	mAccelWeight = accelWeight;
 	mMagWeight = magWeight;
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 }
 
 void Observer_Angular::addDirectionMeasurement(Array2D<double> const &dirMeas, Array2D<double> const &dirInertial, double weight)
 {
-	mMutex_all.lock();
+	mMutex_data.lock();
 	mExtraDirsMeasured.push_back(dirMeas.copy());
 	mExtraDirsInertial.push_back(dirInertial.copy());
 	mExtraDirsWeight.push_back(weight);
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 }
 
 void Observer_Angular::setYawZero()
 {
 	Array2D<double> temp;
-	mMutex_all.lock();
+	mMutex_data.lock();
 	Array2D<double> rot = createRotMat(2, -mCurAttitude[2][0]);
 	mCurRotMat = matmult(rot, mCurRotMat);
-	mMagDirNom.inject(1.0/norm2(mLastMagnometer)*mLastMagnometer);
-	/////////////////////////// HACK //////////////////////
-//	mMagDirNom[2][0] = 0;
-//	mMagDirNom = 1.0/norm2(mMagDirNom);
-	/////////////////////////// HACK //////////////////////
+	mMagDirNom.inject(1.0/norm2(mMagnometer)*mMagnometer);
 	temp = mMagDirNom.copy();
-	mMutex_all.unlock();
+	mMutex_data.unlock();
 
 	String str1 = String()+" "+mStartTime.getElapsedTimeMS()+"\t-805\t";
 	for(int i=0; i<temp.dim1(); i++)
@@ -582,14 +510,29 @@ void Observer_Angular::onNewCommSetYawZero()
 	setYawZero();
 }
 
-void Observer_Angular::onNewCommStateVicon(toadlet::egg::Collection<float> const &data)
+void Observer_Angular::onNewSensorUpdate(SensorData const &data)
 {
-	Array2D<double> R = matmult(createRotMat(2,-0.25*PI), createRotMat(0,(double)PI));
-	mMutex_all.lock();
-	for(int i=0; i<3; i++)
-		mAttitudeVicon[i][0] = data[i];
-	mAttitudeVicon = matmult(R, mAttitudeVicon);
-	mMutex_all.unlock();
+	switch(data.type)
+	{
+		case SENSOR_DATA_TYPE_ACCEL:
+			mMutex_cache.lock();
+			((SensorDataVector*)&data)->copyTo(mAccelData);
+			mNewAccelReady = true;
+			mMutex_cache.unlock();
+			break;
+		case SENSOR_DATA_TYPE_GYRO:
+			mMutex_cache.lock();
+			((SensorDataVector*)&data)->copyTo(mGyroData);
+			mNewGyroReady = true;
+			mMutex_cache.unlock();
+			break;
+		case SENSOR_DATA_TYPE_MAG:
+			mMutex_cache.lock();
+			((SensorDataVector*)&data)->copyTo(mMagData);
+			mNewMagReady = true;
+			mMutex_cache.unlock();
+			break;
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

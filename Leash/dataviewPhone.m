@@ -309,9 +309,9 @@ if ~isempty(pressure)
 	h0 = -Rstar*Tb/g0/M*log(pressure(1,1)/Pb)*0;
 	h = -Rstar*Tb/g0/M*log(pressure(1,:)/Pb) - h0;
 	
-	tempInterp = interp1(phoneTempTime, phoneTemp(2,:), pressureTime,[],'extrap');
-	k = (993.9-994.4)/(37-31);
-	pressComp = pressure(1,:)-k*(tempInterp-30.8);
+	tempInterp = interp1(phoneTempTime, phoneTemp(4,:), pressureTime,[],'extrap');
+	k = (999.5-1000)/(45-37);
+	pressComp = pressure(1,:)-k*(tempInterp-37);
 	hComp = -Rstar*Tb/g0/M*log(pressComp/Pb) - h0;
 	figure(baseFig+1);
 	plot(pressureTime, h); hold all
