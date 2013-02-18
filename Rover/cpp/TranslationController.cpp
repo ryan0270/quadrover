@@ -10,9 +10,9 @@ namespace Quadrotor {
 		mCurState(6,1,0.0),
 		mDesState(6,1,0.0),
 		mDesPosAccel(6,1,0.0),
-		mGainPID(6,1,0.0),
-		mGainPIDInt(3,1,0.0),
-		mGainCntlSys(6,1,5.0),
+		mGainP(3,1,0.0),
+		mGainD(3,1,0.0),
+		mGainI(3,1,0.0),
 		mErrInt(3,1,0.0),
 		mErrIntLimit(3,1,0.0),
 		mRotViconToPhone(3,3,0.0),
@@ -29,8 +29,6 @@ namespace Quadrotor {
 		mQuadLogger = NULL;
 		
 		mMass = 0.850;
-
-		mCntlType = CNTL_TRANSLATION_PID;
 	}
 
 	TranslationController::~TranslationController()
@@ -84,20 +82,7 @@ namespace Quadrotor {
 		mMutex_state.unlock();
 
 		Array2D<double> accelCmd;
-		switch(mCntlType)
-		{
-			case CNTL_TRANSLATION_PID:
-				accelCmd = calcControlPID(error,dt);
-				break;
-			case CNTL_TRANSLATION_SYS:
-				accelCmd = calcControlSystem(error,dt);
-				break;
-			default:
-				Log::alert(String()+"TranslationController::calcControl -- Unknown controller: \t"+mCntlType);
-				accelCmd = Array2D<double>(3,0,0.0);
-				accelCmd[2][0] += GRAVITY;
-				break;
-		}
+		accelCmd = calcControlPID(error,dt);
 
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onTranslationControllerAccelCmdUpdated(accelCmd);
@@ -127,29 +112,12 @@ namespace Quadrotor {
 			mErrInt[i][0] = constrain(mErrInt[i][0]+dt*error[i][0],-mErrIntLimit[i][0],mErrIntLimit[i][0]);
 
 		for(int i=0; i<3; i++)
-			mAccelCmd[i][0] =	-mGainPID[i][0]*error[i][0]
-								-mGainPID[i+3][0]*error[i+3][0]
-								-mGainPIDInt[i][0]*mErrInt[i][0]
+			mAccelCmd[i][0] =	-mGainP[i][0]*error[i][0]
+								-mGainD[i][0]*error[i+3][0]
+								-mGainI[i][0]*mErrInt[i][0]
 								+mDesAccel[i][0];
 		mAccelCmd[2][0] += GRAVITY;
 		Array2D<double> accelCmd= mAccelCmd.copy();
-		mMutex_data.unlock();
-
-		return accelCmd;
-	}
-
-	Array2D<double> TranslationController::calcControlSystem(Array2D<double> const &error, double dt)
-	{
-		mMutex_data.lock();
-		Array2D<double> u = mGainCntlSys*error;
-		Array2D<double> x = mCntlSys.simulateEuler(u,dt);
-		mAccelCmd = matmult(mCntlSys.getC(),x) + matmult(mCntlSys.getD(),u);
-		mAccelCmd += 1.0/mMass*mDesAccel;
-		mAccelCmd[2][0] += GRAVITY;
-		Array2D<double> accelCmd= mAccelCmd.copy();
-// printArray(transpose(u),"u: \t");
-// printArray(transpose(x),"x: \t");
-// printArray(transpoes(m
 		mMutex_data.unlock();
 
 		return accelCmd;
@@ -161,20 +129,27 @@ namespace Quadrotor {
 		for(int i=0; i<mErrInt.dim1(); i++)
 			mErrInt[i][0] = 0;
 
-		mCntlSys.reset();
 		mMutex_data.unlock();
 	}
 
-	void TranslationController::onNewCommPosControllerGains(float const gainP[12], float const gainI[12], float const gainILimit[12], float mass, float forceScaling)
+	void TranslationController::onNewCommTransGains(Collection<float> const &gains)
 	{
 		mMutex_data.lock();
-		for(int i=0; i<6; i++)
-			mGainPID[i][0] = gainP[i+6];
 		for(int i=0; i<3; i++)
-			mGainPIDInt[i][0] = gainI[i+6];
-		for(int i=0; i<3; i++)
-			mErrIntLimit[i][0] = gainILimit[i+6];
+		{
+			mGainP[i][0] = gains[i];
+			mGainD[i][0] = gains[i+3];
+			mGainI[i][0] = gains[i+6];
+			mErrIntLimit[i][0] = gains[i+9];
+		}
 		mMutex_data.unlock();
+
+		{
+			String s = "New translation gains: ";
+			for(int i=0; i<gains.size(); i++)
+				s = s+gains[i]+"\t";
+			Log::alert(s);
+		}
 
 		reset();
 	}
@@ -205,51 +180,6 @@ namespace Quadrotor {
 	void TranslationController::onNewCommMotorOn()
 	{
 		reset();
-	}
-
-	void TranslationController::onNewCommSendControlSystem(Collection<tbyte> const &buff)
-	{
-		mMutex_data.lock();
-		mCntlSys.deserialize(buff);
-
-		int numIn = mCntlSys.getNumInputs();
-		int numState = mCntlSys.getNumStates();
-		int numOut = mCntlSys.getNumOutputs();
-
-		mCntlSys.setCurState(Array2D<double>(numState,1,0.0));
-		mMutex_data.unlock();
-
-		String str = String()+"TranslationController -- Received controller system: ";
-		str = str +numIn+" inputs x "+numOut+" outputs x "+numState+" states";
-		Log::alert(str);
-	}
-
-	void TranslationController::onNewCommControlSystemGains(Collection<float> const &gains)
-	{
-		mMutex_data.lock();
-		for(int i=0; i<6; i++)
-			mGainCntlSys[i][0] = gains[i];
-		mMutex_data.unlock();
-
-		String s = "Received cntl sys gains: \t";
-		for(int i=0; i<6; i++)
-			s = s+gains[i]+"\t";
-		Log::alert(s);
-	}
-
-	void TranslationController::onNewCommControlType(uint16 cntlType)
-	{
-		mMutex_data.lock();
-		mCntlType = cntlType;
-		if(cntlType == CNTL_TRANSLATION_SYS && mCntlSys.isInitialized() == false)
-		{
-			Log::alert("TranslationController -- Control system is not initialized.");
-			mCntlType = CNTL_TRANSLATION_PID;
-		}
-		Log::alert(String()+"Control type set to "+mCntlType);
-		reset();
-		mMutex_data.unlock();
-
 	}
 
 	void TranslationController::onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel)

@@ -32,7 +32,7 @@ namespace Quadrotor{
 			const char* name = ASensor_getName(mAccelSensor);
 			const char* vendor = ASensor_getVendor(mAccelSensor);
 			float res = ASensor_getResolution(mAccelSensor);
-			Log::alert(String()+"Accel sensor:\n\t"+name+"\n\tresolution:"+vendor);
+			Log::alert(String()+"Accel sensor:\n\t"+name+"\n\t"+vendor+"\n\tresolution:"+res);
 			ASensorEventQueue_enableSensor(mSensorEventQueue, mAccelSensor);
 			ASensorEventQueue_setEventRate(mSensorEventQueue, mAccelSensor, 10*1000); // this is the best it actually achieves
 		}

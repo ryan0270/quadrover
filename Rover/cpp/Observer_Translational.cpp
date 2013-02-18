@@ -20,6 +20,7 @@ namespace Quadrotor{
 		mGainKF(6,6,0.0),
 		mAttBias(3,1,0.0),
 		mAttBiasReset(3,1,0.0),
+		mAttBiasAdaptRate(3,0.0),
 		mAttitude(3,1,0.0),
 		mLastMeas(6,1,0.0)
 	{
@@ -27,8 +28,8 @@ namespace Quadrotor{
 		mDone = true;
 
 		mMass = 0.850;
-		mForceScalingReset = 0.0040;
-		mForceScaling = mForceScalingReset;
+		mForceGainReset = 0.0040;
+		mForceGain = mForceGainReset;
 		
 		mLastMeasUpdateTime.setTimeMS(0);
 		mLastPosReceiveTime.setTimeMS(0);
@@ -43,9 +44,7 @@ namespace Quadrotor{
 
 		mAkf_T.inject(transpose(mAkf));
 		mCkf_T.inject(transpose(mCkf));
-
-		mGainAttBias = 0;
-		mGainForceScaling = 0;
+		mForceGainAdaptRate = 0;
 
 		for(int i=0; i<4; i++)
 			mMotorCmds[i] = 0;
@@ -139,7 +138,7 @@ namespace Quadrotor{
 			double thrust = 0;
 			mMutex_cmds.lock();
 			for(int i=0; i<4; i++)
-				thrust += mForceScaling*mMotorCmds[i];
+				thrust += mForceGain*mMotorCmds[i];
 			mMutex_cmds.unlock();
 
 			if(abs(thrust) >= 1e-6) 
@@ -163,7 +162,7 @@ namespace Quadrotor{
 					accel[i][0] = 0;
 				mMutex_data.lock();
 				mAttBias.inject(mAttBiasReset);
-				mForceScaling = mForceScalingReset;
+				mForceGain = mForceGainReset;
 				mMutex_data.unlock();
 			}
 
@@ -271,9 +270,9 @@ namespace Quadrotor{
 		double c = cos(mAttitude[2][0]);
 		double s = sin(mAttitude[2][0]);
 		mMutex_att.unlock();
-		mAttBias[0][0] += mGainAttBias*dt*(c*err[1][0]-s*err[0][0]);
-		mAttBias[1][0] += mGainAttBias*dt*(-s*err[1][0]-c*err[0][0]);
-		mForceScaling += mGainForceScaling*err[2][0];
+		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*(c*err[1][0]-s*err[0][0]);
+		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-s*err[1][0]-c*err[0][0]);
+		mForceGain += mForceGainAdaptRate*err[2][0];
 		mLastMeasUpdateTime.setTime();
 
 		{
@@ -283,7 +282,7 @@ namespace Quadrotor{
 			mQuadLogger->addLine(str1,STATE);
 
 			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t-711\t";
-			str2 = str2+mForceScaling+"\t";
+			str2 = str2+mForceGain+"\t";
 			mQuadLogger->addLine(str2,STATE);
 		}
 		mMutex_data.unlock();
@@ -337,15 +336,13 @@ namespace Quadrotor{
 		mMass = m;
 	}
 
-	void Observer_Translational::onNewCommForceScaling(float k)
+	void Observer_Translational::onNewCommForceGain(float k)
 	{
-		mForceScalingReset = k;
-		mForceScaling = k;
-/////////////////////////////// HACK /////////////////////////////////
-mForceScalingReset = 0.0035;
-mForceScaling = 0.0035;
-/////////////////////////////// HACK /////////////////////////////////
-
+		mMutex_data.lock();
+		mForceGainReset = k;
+		mForceGain = k;
+		Log::alert(String()+"Force gain updated: \t"+mForceGain);
+		mMutex_data.unlock();
 	}
 
 	void Observer_Translational::onNewCommAttBias(float roll, float pitch, float yaw)
@@ -359,42 +356,48 @@ mForceScaling = 0.0035;
 		mMutex_data.unlock();
 	}
 
-	void Observer_Translational::onNewCommAttBiasGain(float gain)
-	{
-		mMutex_data.lock();
-		mGainAttBias = gain;
-		Log::alert(String()+"att bias gain: \t"+mGainAttBias);
-		mMutex_data.unlock();
-	}
-
-	void Observer_Translational::onNewCommForceScalingGain(float gain)
-	{
-		mMutex_data.lock();
-		mGainForceScaling = gain;
-		Log::alert(String()+"force scaling gain: \t"+mGainForceScaling);
-		mMutex_data.unlock();
-	}
-
-	void Observer_Translational::onNewCommKalmanPosMeasStd(float std)
+	void Observer_Translational::onNewCommAttBiasAdaptRate(Collection<float> const &rate)
 	{
 		mMutex_data.lock();
 		for(int i=0; i<3; i++)
-			mMeasCov[i][i] = std*std;
-		String s = "Pos meas update -- diag(mMeasCov): \t";
+			mAttBiasAdaptRate[i] = rate[i];
+		mMutex_data.unlock();
+		{
+			String s = "Att bias adapt rate updated: ";
+			for(int i=0; i<rate.size(); i++)
+				s = s+rate[i]+"\t";
+			Log::alert(s);
+		}
+	}
+
+	void Observer_Translational::onNewCommForceGainAdaptRate(float rate)
+	{
+		mMutex_data.lock();
+		mForceGainAdaptRate = rate;
+		Log::alert(String()+"force gain adapt rate: \t"+mForceGainAdaptRate);
+		mMutex_data.unlock();
+	}
+
+	void Observer_Translational::onNewCommKalmanMeasVar(Collection<float> const &var)
+	{
+		mMutex_data.lock();
+		for(int i=0; i<6; i++)
+			mMeasCov[i][i] = var[i];
+		String s = "Meas var update -- diag(mMeasCov): \t";
 		for(int i=0; i<mMeasCov.dim1(); i++)
 			s = s+mMeasCov[i][i]+"\t";
 		mMutex_data.unlock();
 		Log::alert(s);
 	}
 
-	void Observer_Translational::onNewCommKalmanVelMeasStd(float std)
+	void Observer_Translational::onNewCommKalmanDynVar(Collection<float> const &var)
 	{
 		mMutex_data.lock();
-		for(int i=3; i<6; i++)
-			mMeasCov[i][i] = std*std;
-		String s = "Vel meas update -- diag(mMeasCov): \t";
-		for(int i=0; i<mMeasCov.dim1(); i++)
-			s = s+mMeasCov[i][i]+"\t";
+		for(int i=0; i<6; i++)
+			mDynCov[i][i] = var[i];
+		String s = "Dyn var update -- diag(mDynCov): \t";
+		for(int i=0; i<mDynCov.dim1(); i++)
+			s = s+mDynCov[i][i]+"\t";
 		mMutex_data.unlock();
 		Log::alert(s);
 	}

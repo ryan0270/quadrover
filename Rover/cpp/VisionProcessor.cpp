@@ -118,8 +118,10 @@ void ImageGrabber::run()
 
 	if(cap.isOpened())
 	{
-		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF); // for now just leave this on the whole time
+		mMutex_image.lock();
+		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF);
 		cap.release();
+		mMutex_image.unlock();
 	}
 
 	mFinished = true;

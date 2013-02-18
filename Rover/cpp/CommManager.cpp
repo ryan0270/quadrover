@@ -61,13 +61,15 @@ void CommManager::shutdown()
 		sys.msleep(10);
 	}
 
-Log::alert("CommManager::shutdown() - 1");
+	if(mSocketTCP != NULL)
+	{
+		int code = COMM_HOST_EXIT;
+		mSocketTCP->send((tbyte*)&code, sizeof(code));
+	}
+
 	if(mSocketUDP != NULL) mSocketUDP->close();
-Log::alert("CommManager::shutdown() - 2");
 	if(mSocketTCP != NULL) mSocketTCP->close();
-Log::alert("CommManager::shutdown() - 3");
 	if(mServerSocketTCP != NULL) mServerSocketTCP->close();
-Log::alert("CommManager::shutdown() - 4");
 
 	mSocketUDP = NULL;
 	mSocketTCP = NULL;
@@ -167,7 +169,7 @@ void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 num
 //	if(connected)
 //		return;
 
-	uint32 code = 2000;
+	uint32 code = COMM_IMG_DATA;
 	uint32 size = buff.size()*sizeof(unsigned char);
 	mMutex_socketTCP.lock();
 	mSocketTCP->send((tbyte*)&code, sizeof(code));
@@ -209,11 +211,6 @@ void CommManager::pollUDP()
 
 			switch(pck.type)
 			{
-//				case COMM_RATE_CMD:
-//					for(int i=0; i<mListeners.size(); i++)
-//						mListeners[i]->onNewCommRateCmd(pck.dataFloat);
-//					mLastCmdRcvTime.setTime();
-//					break;
 				case COMM_STATE_VICON:
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommStateVicon(pck.dataFloat);
@@ -223,11 +220,6 @@ void CommManager::pollUDP()
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommDesState(pck.dataFloat);
 					mLastCmdRcvTime.setTime();
-//				case COMM_DESIRED_IMAGE_MOMENT:
-//					for(int i=0; i<mListeners.size(); i++)
-//						mListeners[i]->onNewCommDesiredImageMoment(pck.dataFloat);
-//					mLastCmdRcvTime.setTime();
-//					break;
 				default:
 					Log::alert(String()+"Unknown UDP comm: " + pck.type);
 			}
@@ -264,40 +256,7 @@ void CommManager::pollTCP()
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommMotorOff();
 					break;
-				case COMM_CNTL_GAIN_PID:
-					{
-						float rollPID[3], pitchPID[3], yawPID[3];
-						bool received 			= receiveTCP((tbyte*)rollPID, 3*sizeof(float));
-						if(received) received 	= receiveTCP((tbyte*)pitchPID, 3*sizeof(float));
-						if(received) received 	= receiveTCP((tbyte*)yawPID, 3*sizeof(float));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommGainPID(rollPID, pitchPID, yawPID);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_POS_CNTL_GAINS:
-					{
-						float gainP[12], gainI[12], gainILimit[12];
-						float mass, forceScaling;
-						bool received 			= receiveTCP((tbyte*)gainP, 12*sizeof(float));
-						if(received) received 	= receiveTCP((tbyte*)gainI, 12*sizeof(float));
-						if(received) received 	= receiveTCP((tbyte*)gainILimit, 12*sizeof(float));
-						if(received) received 	= receiveTCP((tbyte*)&mass, sizeof(mass));
-						if(received) received 	= receiveTCP((tbyte*)&forceScaling, sizeof(forceScaling));
-						if(received)
-						{
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommPosControllerGains(gainP, gainI, gainILimit, mass, forceScaling);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_ATT_GAINS:
+				case COMM_CNTL_ATT_GAINS:
 					{
 						Collection<float> gains;
 						int size;
@@ -316,27 +275,50 @@ void CommManager::pollTCP()
 						}
 					}
 					break;
-				case COMM_KALMANFILTER_POS_MEAS_STD:
+				case COMM_CNTL_TRANS_GAINS:
 					{
-						float std;
-						bool received = receiveTCP((tbyte*)&std,sizeof(std));
+						Collection<float> gains;
+						int size;
+						bool received = receiveTCP((tbyte*)&size,sizeof(size));
 						if(received)
 						{
+							gains.resize(size);
+							bool received = receiveTCP((tbyte*)&(gains[0]),size*sizeof(float));
+							if(received)
+							{
+								for(int i=0; i<mListeners.size(); i++)
+									mListeners[i]->onNewCommTransGains(gains);
+							}
+							else
+								resetSocket = true;
+						}
+					}
+					break;
+				case COMM_KALMANFILTER_MEAS_VAR:
+					{
+						int size;
+						bool received = receiveTCP((tbyte*)&size,sizeof(size));
+						if(received)
+						{
+							Collection<float> var(size);
+							received = receiveTCP((tbyte*)&(var[0]), size*sizeof(float));
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommKalmanPosMeasStd(std);
+								mListeners[i]->onNewCommKalmanMeasVar(var);
 						}
 						else
 							resetSocket = true;
 					}
 					break;
-				case COMM_KALMANFILTER_VEL_MEAS_STD:
+				case COMM_KALMANFILTER_DYN_VAR:
 					{
-						float std;
-						bool received = receiveTCP((tbyte*)&std,sizeof(std));
+						int size;
+						bool received = receiveTCP((tbyte*)&size,sizeof(size));
 						if(received)
 						{
+							Collection<float> var(size);
+							received = receiveTCP((tbyte*)&(var[0]), size*sizeof(float));
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommKalmanVelMeasStd(std);
+								mListeners[i]->onNewCommKalmanDynVar(var);
 						}
 						else
 							resetSocket = true;
@@ -361,17 +343,17 @@ void CommManager::pollTCP()
 							mListeners[i]->onNewCommObserverReset();
 					}
 					break;
-				case COMM_OBSV_GAIN:
+				case COMM_ATT_OBSV_GAIN:
 					{
-						double gainP, gainI, gravWeight, compWeight, gravBandwidth;
+						float gainP, gainI, accelWeight, magWeight;
 						bool received 			= receiveTCP((tbyte*)&gainP, sizeof(gainP));
 						if(received) received 	= receiveTCP((tbyte*)&gainI, sizeof(gainI));
-						if(received) received 	= receiveTCP((tbyte*)&gravWeight, sizeof(gravWeight));
-						if(received) received 	= receiveTCP((tbyte*)&compWeight, sizeof(compWeight));
+						if(received) received 	= receiveTCP((tbyte*)&accelWeight, sizeof(accelWeight));
+						if(received) received 	= receiveTCP((tbyte*)&magWeight, sizeof(magWeight));
 						if(received )
 						{
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommObserverGain(gainP, gainI, gravWeight, compWeight, gravBandwidth);
+								mListeners[i]->onNewCommAttObserverGain(gainP, gainI, accelWeight, magWeight);
 						}
 						else
 							resetSocket = true;
@@ -390,64 +372,12 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
-				case COMM_LOG_TRANSFER:
-					for(int i=0; i<mListeners.size(); i++)
-						mListeners[i]->onNewCommLogTransfer();
-					break;
-				case COMM_SEND_CNTL_SYSTEM:
+				case COMM_LOG_FILE_REQUEST:
 					{
-						uint32 size;
-						Collection<tbyte> buff;
-						bool received = receiveTCP((tbyte*)&size, sizeof(size));
-						if(received)
-						{
-							buff.resize(size);
-							bool receieved = receiveTCP(buff.begin(), size);
-							if(received)
-							{
-								for(int i=0; i<mListeners.size(); i++)
-									mListeners[i]->onNewCommSendControlSystem(buff);
-							}
-							else
-								resetSocket = true;
-						}
-						else
-							resetSocket = true;
+						for(int i=0; i<mListeners.size(); i++)
+							mListeners[i]->onNewCommLogTransfer();
 					}
 					break;
-				case COMM_CNTL_SYS_GAINS:
-					{
-						int size;
-						bool received = receiveTCP((tbyte*)&size,sizeof(size));
-						if(received)
-						{
-							Collection<float> gains(size);
-							received = receiveTCP((tbyte*)gains.begin(), size*sizeof(float));
-							if(received)
-							{
-								for(int i=0; i<mListeners.size(); i++)
-									mListeners[i]->onNewCommControlSystemGains(gains);
-							}
-							else
-								resetSocket = true;
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-//				case COMM_CNTL_TYPE:
-//					{
-//						uint16 cntlType;
-//						bool received = receiveTCP((tbyte*)&cntlType, sizeof(uint16));
-//						if(received)
-//						{
-//							for(int i=0; i<mListeners.size(); i++)
-//								mListeners[i]->onNewCommControlType(cntlType);
-//						}
-//						else
-//							resetSocket = true;
-//					}
-//					break;
 				case COMM_LOG_MASK:
 					{
 						uint32 mask;
@@ -462,30 +392,32 @@ void CommManager::pollTCP()
 					}
 					break;
 				case COMM_CLEAR_LOG:
-					for(int i=0; i<mListeners.size(); i++)
-						mListeners[i]->onNewCommLogClear();
+					{
+						for(int i=0; i<mListeners.size(); i++)
+							mListeners[i]->onNewCommLogClear();
+					}
 					break;
-				case COMM_MOTOR_FORCE_SCALING:
+				case COMM_MOTOR_FORCE_GAIN:
 					{
 						float k;
 						bool received = receiveTCP((tbyte*)&k,sizeof(k));
 						if(received)
 						{
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommForceScaling(k);
+								mListeners[i]->onNewCommForceGain(k);
 						}
 						else
 							resetSocket = true;
 					}
 					break;
-				case COMM_MOTOR_TORQUE_SCALING:
+				case COMM_MOTOR_TORQUE_GAIN:
 					{
 						float k;
 						bool received = receiveTCP((tbyte*)&k,sizeof(k));
 						if(received)
 						{
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommTorqueScaling(k);
+								mListeners[i]->onNewCommTorqueGain(k);
 						}
 						else
 							resetSocket = true;
@@ -504,27 +436,6 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
-				case COMM_IBVS_GAINS:
-					{
-						Collection<float> gains;
-						int size;
-						bool received = receiveTCP((tbyte*)&size,sizeof(size));
-						if(received)
-						{
-							gains.resize(size);
-							bool received = receiveTCP((tbyte*)&(gains[0]),size*sizeof(float));
-							if(received)
-							{
-								for(int i=0; i<mListeners.size(); i++)
-									mListeners[i]->onNewCommIbvsGains(gains);
-							}
-							else
-								resetSocket = true;
-						}
-						else
-							resetSocket = true;
-					}
-					break;
 				case COMM_USE_IBVS:
 					{
 						uint16 useIbvs;
@@ -538,49 +449,84 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
-				case COMM_SET_YAW_ZERO:
-					for(int i=0; i<mListeners.size(); i++)
-						mListeners[i]->onNewCommSetYawZero();
-					break;
-				case COMM_ATT_BIAS:
+				case COMM_KALMAN_ATT_BIAS:
 					{
-						float roll, pitch, yaw;
-						bool received 			= receiveTCP((tbyte*)&roll, sizeof(roll));
-						if(received) received 	= receiveTCP((tbyte*)&pitch, sizeof(pitch));
-						if(received) received 	= receiveTCP((tbyte*)&yaw, sizeof(yaw));
-						if(received )
+						int size;
+						bool received = receiveTCP((tbyte*)&size,sizeof(size));
+						if(received)
 						{
+							Collection<float> bias(size);
+							received = receiveTCP((tbyte*)&(bias[0]), size*sizeof(float));
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommAttBias(roll, pitch, yaw);
+								mListeners[i]->onNewCommAttBias(bias[0], bias[1], bias[2]);
 						}
 						else
 							resetSocket = true;
 					}
 					break;
-				case COMM_ATT_BIAS_GAIN:
+				case COMM_KALMAN_ATT_BIAS_ADAPT_RATE:
 					{
-						float gain;
-						bool received = receiveTCP((tbyte*)&gain, sizeof(gain));
+						int size;
+						bool received = receiveTCP((tbyte*)&size,sizeof(size));
 						if(received)
 						{
+							Collection<float> rate(size);
+							received = receiveTCP((tbyte*)&(rate[0]), size*sizeof(float));
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommAttBiasGain(gain);
+								mListeners[i]->onNewCommAttBiasAdaptRate(rate);
 						}
 						else
 							resetSocket = true;
 					}
 					break;
-				case COMM_FORCE_SCALING_GAIN:
+				case COMM_KALMAN_FORCE_SCALING_ADAPT_RATE:
 					{
-						float gain;
-						bool received = receiveTCP((tbyte*)&gain, sizeof(gain));
+						float rate;
+						bool received = receiveTCP((tbyte*)&rate, sizeof(rate));
 						if(received)
 						{
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommForceScalingGain(gain);
+								mListeners[i]->onNewCommForceGainAdaptRate(rate);
 						}
 						else
 							resetSocket = true;
+					}
+					break;
+				case COMM_NOMINAL_MAG:
+					{
+						int size;
+						bool received = receiveTCP((tbyte*)&size,sizeof(size));
+						if(received)
+						{
+							Collection<float> nomMag(size);;
+							bool received = receiveTCP((tbyte*)&(nomMag[0]),size*sizeof(float));
+							if(received)
+							{
+								for(int i=0; i<mListeners.size(); i++)
+									mListeners[i]->onNewCommNominalMag(nomMag);
+							}
+							else
+								resetSocket = true;
+						}
+					}
+					break;
+				case COMM_MOTOR_ARM_LENGTH:
+					{
+						float l;
+						bool received = receiveTCP((tbyte*)&l, sizeof(l));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommMotorArmLength(l);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
+				case COMM_CLIENT_EXIT:
+					{
+						Log::alert("Client exiting");
+						resetSocket = true;
 					}
 					break;
 				default:
@@ -602,9 +548,6 @@ void CommManager::pollTCP()
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onCommConnectionLost();
-
-			String s = String() + "Something else: ";
-			Log::alert(s);
 		}
 
 		mMutex_socketTCP.lock();
@@ -677,7 +620,7 @@ bool CommManager::sendLogFile(const char* filename)
 	int buffSize = 1<<10;
 	char buff[buffSize];
 	int bytesRead = 1;
-	int code = 1000;
+	int code = COMM_LOG_FILE_DATA;
 //	mSocketTCP->send((tbyte*)&code, sizeof(code));
 	while(bytesRead > 0)
 	{

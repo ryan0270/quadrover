@@ -153,7 +153,7 @@ namespace Quadrotor{
 
 	void FlightInterface::doEmergencyShutdown()
 	{
-//		mQuad->sendStopAndShutdown();
+		mLeash->sendMotorStop(false);
 	}
 
 	void FlightInterface::doControl()
@@ -284,7 +284,7 @@ namespace Quadrotor{
 	void FlightInterface::onBtnStopMotors_clicked()
 	{
 		mFlightMode = QUAD_IDLE;
-//		mQuad->sendStopAndShutdown();
+		mLeash->sendMotorStop(true);
 	}
 
 	void FlightInterface::onBtnBeginTracking_clicked()
@@ -297,15 +297,10 @@ namespace Quadrotor{
 
 	void FlightInterface::onBtnQuit_clicked()
 	{
-cout << "1" << endl;
+		mLeash->shutdown();
 		mFlightMode = QUAD_IDLE;
-cout << "2" << endl;
-//		mQuad->sendStopAndShutdown();
-cout << "3" << endl;
 		mTmrGui->stop();
-cout << "4" << endl;
 		qApp->quit();
-cout << "5" << endl;
 	}
 
 	void FlightInterface::onBtnClearBuffers_clicked()

@@ -54,14 +54,15 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 	void addListener(AttitudeThrustControllerListener* l){mListeners.push_back(l);}
 
 	// for CommManagerListener
-	void onNewCommForceScaling(float k);
-	void onNewCommTorqueScaling(float k);
+	void onNewCommForceGain(float k);
+	void onNewCommTorqueGain(float k);
 	void onCommConnectionLost();
 	void onNewCommMotorOn();
 	void onNewCommMotorOff();
 	void onNewCommMotorTrim(int const trim[4]);
 	void onNewCommMass(float m);
-	void onNewCommAttitudeGains(Collection<float> const &gains);
+	void onNewCommAttitudeGains(toadlet::egg::Collection<float> const &gains);
+	void onNewCommMotorArmLength(float l);
 
 	// for TranslationControllerListener
 	void onTranslationControllerAccelCmdUpdated(TNT::Array2D<double> const &accelCmd);
@@ -81,11 +82,10 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 
 	MotorInterface mMotorInterface;
 
-	double mThrust, mMass, mMotorDist;;
+	double mThrust, mMass, mMotorArmLength;;
 	TNT::Array2D<double> mCurAngularVel;
 	TNT::Array2D<double> mCurAtt, mDesAtt, mDesRotMat, mDesRotMat_T;
-	double mGainAngle;
-	TNT::Array2D<double> mGainRate;
+	TNT::Array2D<double> mGainAngle, mGainRate;
 
 	Collection<AttitudeThrustControllerListener*> mListeners;
 

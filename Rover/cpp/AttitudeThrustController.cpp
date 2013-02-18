@@ -11,6 +11,7 @@ namespace Quadrotor {
 		mDesAtt(3,1,0.0),
 		mDesRotMat(3,3,0.0),
 		mDesRotMat_T(3,3,0.0),
+		mGainAngle(3,1,0.0),
 		mGainRate(3,1,0.0)
 	{
 		mRunning = false;
@@ -24,15 +25,13 @@ namespace Quadrotor {
 	
 		mLastControlTime.setTimeMS(0);
 
-		mGainAngle = 0;
-
 		mForceScaling = 3e-3;
 		mTorqueScaling = 1e-3;
 
 		mThrust = 0;
 		mMass = 0;
 		
-		mMotorDist = 0.160;
+		mMotorArmLength = 0.160;
 
 		mMotorTrim[0] = mMotorTrim[1] = mMotorTrim[2] = mMotorTrim[3] = 0;
 
@@ -100,15 +99,12 @@ namespace Quadrotor {
 		rotErr[2][0] = rotMatErr_AS[1][0];
 	
 		mMutex_data.lock();
-// a bit of a hack ... I need to check the proof again
-Array2D<double> gainAngle(3,1,mGainAngle);
-gainAngle[2][0] = mGainRate[2][0];
 		// do I have an error in my controller derivation and previous implementation?
 		// The orignal form isn't giving the right torque
 //		Array2D<double> torque = -mGainAngle*rotErr-mGainRate*mCurAngularVel;
-		Array2D<double> torque = gainAngle*rotErr-mGainRate*mCurAngularVel;
-		double cmdRoll = torque[0][0]/mForceScaling/mMotorDist/4.0;
-		double cmdPitch = torque[1][0]/mForceScaling/mMotorDist/4.0;
+		Array2D<double> torque = mGainAngle*rotErr-mGainRate*mCurAngularVel;
+		double cmdRoll = torque[0][0]/mForceScaling/mMotorArmLength/4.0;
+		double cmdPitch = torque[1][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdYaw = torque[2][0]/mTorqueScaling/4.0;
 		double cmdThrust = mThrust/mForceScaling/4.0;
 		mMutex_data.unlock();
@@ -237,7 +233,7 @@ gainAngle[2][0] = mGainRate[2][0];
 		mMutex_motorInterface.unlock();
 	}
 	
-	void AttitudeThrustController::onNewCommForceScaling(float k)
+	void AttitudeThrustController::onNewCommForceGain(float k)
 	{
 		mPcIsConnected = true;
 		mMutex_data.lock();
@@ -246,7 +242,7 @@ gainAngle[2][0] = mGainRate[2][0];
 		Log::alert(String()+"Force scaling set to "+k);
 	}
 
-	void AttitudeThrustController::onNewCommTorqueScaling(float k)
+	void AttitudeThrustController::onNewCommTorqueGain(float k)
 	{
 		mPcIsConnected = true;
 		mMutex_data.lock();
@@ -261,6 +257,12 @@ gainAngle[2][0] = mGainRate[2][0];
 		mMutex_data.lock();
 		for(int i=0; i<4; i++)
 			mMotorTrim[i] = trim[i];;
+		{
+			String s = "Motor trim updated: ";
+			for(int i=0; i<4; i++)
+				s = s+mMotorTrim[i]+"\t";
+			Log::alert(s);
+		}
 		mMutex_data.unlock();
 	}
 
@@ -269,6 +271,7 @@ gainAngle[2][0] = mGainRate[2][0];
 		mPcIsConnected = true;
 		mMutex_data.lock();
 		mMass = m;
+		Log::alert(String()+"Mass updated to: "+mMass);
 		mMutex_data.unlock();
 	}
 
@@ -277,8 +280,24 @@ gainAngle[2][0] = mGainRate[2][0];
 		mPcIsConnected = true;
 		mMutex_data.lock();
 		for(int i=0; i<3; i++)
-			mGainRate[i][0] = gains[i];
-		mGainAngle = gains[3];
+		{
+			mGainAngle[i][0] = gains[i];
+			mGainRate[i][0] = gains[i+3];
+		}
+		mMutex_data.unlock();
+		{
+			String s = "Attitude control gains updated: ";
+			for(int i=0; i<gains.size(); i++)
+				s = s+gains[i]+"\t";
+			Log::alert(s);
+		}
+	}
+
+	void AttitudeThrustController::onNewCommMotorArmLength(float k)
+	{
+		mMutex_data.lock();
+		mMotorArmLength = k;
+		Log::alert(String()+"Motor arm length updated: "+mMotorArmLength);
 		mMutex_data.unlock();
 	}
 

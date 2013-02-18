@@ -19,10 +19,9 @@ class CommManagerListener
 	virtual void onNewCommMotorOn(){};
 	virtual void onNewCommMotorOff(){};
 	virtual void onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float const yawPID[3]){};
-	virtual void onNewCommPosControllerGains(float const gainP[12], float const gainI[12], float const gainILimit[12], float mass, float forceScaling){};
 	virtual void onNewCommMotorTrim(int const trim[4]){};
 	virtual void onNewCommObserverReset(){};
-	virtual void onNewCommObserverGain(double gainP, double gainI, double gravWeight, double compWeight, double gravBandwidth){};
+	virtual void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight){};
 	virtual void onNewCommTimeSync(int time){};
 	virtual void onNewCommLogTransfer(){};
 //	virtual void onNewCommControlType(uint16 cntlType){};
@@ -33,19 +32,20 @@ class CommManagerListener
 	virtual void onNewCommStateVicon(toadlet::egg::Collection<float> const &data){};
 	virtual void onNewCommDesState(toadlet::egg::Collection<float> const &data){};
 	virtual void onCommConnectionLost(){};
-	virtual void onNewCommForceScaling(float k){};
-	virtual void onNewCommTorqueScaling(float k){};
+	virtual void onNewCommForceGain(float k){};
+	virtual void onNewCommTorqueGain(float k){};
 	virtual void onNewCommMass(float m){};
 	virtual void onNewCommIbvsGains(toadlet::egg::Collection<float> const &gains){};
-//	virtual void onNewCommDesiredImageMoment(toadlet::egg::Collection<float> const &data){};
 	virtual void onNewCommUseIbvs(bool useIbvs){};
-	virtual void onNewCommSetYawZero(){};
 	virtual void onNewCommAttBias(float rollBias, float pitchBias, float yawBias){};
-	virtual void onNewCommAttBiasGain(float gain){};
-	virtual void onNewCommForceScalingGain(float gain){};
+	virtual void onNewCommAttBiasAdaptRate(toadlet::egg::Collection<float> const &rate){};
+	virtual void onNewCommForceGainAdaptRate(float rate){};
 	virtual void onNewCommAttitudeGains(toadlet::egg::Collection<float> const &gains){};
-	virtual void onNewCommKalmanPosMeasStd(float std){};
-	virtual void onNewCommKalmanVelMeasStd(float std){};
+	virtual void onNewCommTransGains(toadlet::egg::Collection<float> const &gains){};
+	virtual void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &std){};
+	virtual void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &std){};
+	virtual void onNewCommNominalMag(toadlet::egg::Collection<float> const &nomMag){};
+	virtual void onNewCommMotorArmLength(float l){};
 
 }; // class CommManagerListener
 

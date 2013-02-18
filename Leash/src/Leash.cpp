@@ -16,7 +16,7 @@ Leash::Leash(QWidget *parent) :
 	mKalmanMeasVar(6,1),
 	mKalmanDynVar(6,0),
 	mKalmanAttBias(3,0),
-	mKalmanAttBiasAdaptGain(3,0)
+	mKalmanAttBiasAdaptRate(3,0)
 {
 	ui->setupUi(this);
 
@@ -37,17 +37,14 @@ Leash::Leash(QWidget *parent) :
 
 	mMotorTrim[0] = mMotorTrim[1] = mMotorTrim[2] = mMotorTrim[3] = 0;
 
-	mCntlCalcTimeUS = 0;
-	mImgProcTimeUS = 0;
-
 	mLogMask = PC_UPDATES;
 
 //	mUseMotors = false;
 	mUseIbvs = false;
 
-	mKalmanForceGainAdaptGain = 0;
+	mKalmanForceGainAdaptRate = 0;
 
-	mKalmanForceGainAdaptGain = 0;
+	mKalmanForceGainAdaptRate = 0;
 
 	mMotorForceGain = 0;
 	mMotorTorqueGain = 0;
@@ -63,47 +60,28 @@ Leash::~Leash()
 		mSocketUDP->close();
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//	Public functions
-////////////////////////////////////////////////////////////////////////////////////////////////////
 void Leash::initialize()
 {
 	connect(ui->btnLoadConfig,SIGNAL(clicked()),this,SLOT(onBtnLoadConfig_clicked()));
 	connect(ui->btnSaveConfig,SIGNAL(clicked()),this,SLOT(onBtnSaveConfig_clicked()));
 	connect(ui->btnResetConfig,SIGNAL(clicked()),this,SLOT(onBtnResetConfig_clicked()));
 	connect(ui->btnApply,SIGNAL(clicked()),this,SLOT(onBtnApply_clicked()));
-//	connect(btnPhoneResetConfig,SIGNAL(clicked()),this,SLOT(onBtnResetConfig_clicked()));
-//	connect(btnPhoneLoadFromFile,SIGNAL(clicked()),this,SLOT(onBtnLoadFromFile_clicked()));
-//	connect(btnPhoneSaveToFile,SIGNAL(clicked()),this,SLOT(onBtnSaveToFile_clicked()));
 	connect(ui->btnConnect,SIGNAL(clicked()),this,SLOT(onBtnConnect_clicked()));
 //	connect(btnSendParameters,SIGNAL(clicked()),this,SLOT(onBtnSendParams_clicked()));
 //	connect(btnResetObserver,SIGNAL(clicked()),this,SLOT(onBtnResetObserver_clicked()));
 //	connect(btnSyncTime,SIGNAL(clicked()),this,SLOT(onBtnSyncTime_clicked()));
 //	connect(btnRequestLogFile,SIGNAL(clicked()),this,SLOT(onBtnRequestLogFile_clicked()));
-//	connect(btnSendMuCntl,SIGNAL(clicked()),this,SLOT(onBtnSendMuCntl_clicked()));
 //	connect(btnClearLog,SIGNAL(clicked()),this,SLOT(onBtnClearLog_clicked()));
-//	connect(chkUseMuCntl,SIGNAL(clicked()),this,SLOT(onChkUseMuCntl_clicked()));
 //	connect(chkViewBinarizedImage,SIGNAL(clicked()),this,SLOT(onChkViewBinarizedImage_clicked()));
-//	connect(chkUseIbvsController,SIGNAL(clicked()),this,SLOT(onChkUseIbvsController_clicked()));
-//	connect(btnResetDesImgMoment,SIGNAL(clicked()),this,SLOT(onBtnResetDesImgMoment_clicked()));
-//	connect(btnConfirmDesImgMoment,SIGNAL(clicked()),this,SLOT(onBtnConfirmDesImgMoment_clicked()));
-//	connect(btnSetYawZero,SIGNAL(clicked()),this,SLOT(onBtnSetYawZero_clicked()));
 
 	mSocketTCP = Socket::ptr(Socket::createTCPSocket());
 	mSocketTCP = NULL;
 //	mSocketUDP = Socket::ptr(Socket::createUDPSocket());
 	mSocketUDP = NULL;
 
-//	mIbvsGainImg.resize(3); mIbvsGainImg[0] = mIbvsGainImg[1] = mIbvsGainImg[2] = 0;
-//	mIbvsGainFlow.resize(3); mIbvsGainFlow[0] = mIbvsGainFlow[1] = mIbvsGainFlow[2] = 0;
-//	mIbvsGainFlowInt.resize(3); mIbvsGainFlowInt[0] = mIbvsGainFlowInt[1] = mIbvsGainFlowInt[2] = 0;
-//	mIbvsGainFF.resize(3); mIbvsGainFF[0] = mIbvsGainFF[1] = mIbvsGainFF[2] = 0;
-//	mAttCmdOffset.resize(3); mAttCmdOffset[0] = mAttCmdOffset[1] = mAttCmdOffset[2] = 0;	
 	mIbvsGainAngularRate.resize(3); mIbvsGainAngularRate[0] = mIbvsGainAngularRate[1] = mIbvsGainAngularRate[2] = 1;
 	mIbvsGainAngle = 1;
 //	mIbvsGainDynamic = 0.1;
-
-	onBtnResetDesImgMoment_clicked();
 
 	// Views for onboard data
 	vector<QList<QStandardItem*>* > data;
@@ -219,12 +197,16 @@ void Leash::initialize()
 		ui->tblAttObsvNomMag->item(0,i)->setText("-000.00");
 	tables.push_back(ui->tblAttObsvNomMag);
 
+	for(int i=0; i<4; i++)
+		ui->tblMotorTrim->item(0,i)->setText("00000");
+	tables.push_back(ui->tblMotorTrim);
+
 	for(int tbl=0; tbl<tables.size(); tbl++)
 	{
 		tables[tbl]->resizeColumnsToContents();
 		tables[tbl]->resizeRowsToContents();
 		resizeTableWidget(tables[tbl]);
-		setVerticalTabOrder(tables[tbl]);
+//		setVerticalTabOrder(tables[tbl]);
 	}
 
 	cv::Mat img(240,320,CV_8UC3,cv::Scalar(0));
@@ -233,6 +215,17 @@ void Leash::initialize()
 	ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
 
 	populateUI();
+}
+
+void Leash::shutdown()
+{
+	sendMotorStop(false);
+
+	if(mSocketTCP != NULL)
+	{
+		int code = COMM_CLIENT_EXIT;
+		sendTCP((tbyte*)&code, sizeof(code));
+	}
 }
 
 void Leash::pollUDP()
@@ -300,20 +293,6 @@ void Leash::pollUDP()
 							mDesVelData[i]->setData(QString::number(pck.dataFloat[i+9],'f',3), Qt::DisplayRole);
 						}
 						break;
-//					case COMM_IMAGE_STATE:
-//						{
-//							double an = pck.dataFloat[2];
-//							mStateImage[0] = pck.dataFloat[0]/an;
-//							mStateImage[1] = pck.dataFloat[1]/an;
-//							mStateImage[2] = mDesiredStateImage[2]/pow(an/mDesiredHeight,2);
-//							for(int i=3; i<6; i++)
-//								mStateImage[i] = pck.dataFloat[i];
-//						}
-//						break;
-//					case COMM_DESIRED_IMAGE_STATE:
-//						for(int i=3; i<6; i++)
-//							mDesiredStateImage[i] = pck.dataFloat[i];
-//						break;
 					case COMM_GYRO:
 						for(int i=0; i<3; i++)
 							mGyroData[i]->setData(QString::number(pck.dataFloat[i],'f',2), Qt::DisplayRole);
@@ -334,10 +313,6 @@ void Leash::pollUDP()
 						for(int i=0; i<4; i++)
 							mMotorData[i]->setData(QString::number(pck.dataInt32[i]), Qt::DisplayRole);
 						break;
-//					case COMM_MOTOR_VAL_IBVS:
-//						for(int i=0; i<4; i++)
-//							mMotorValuesIbvs[i] = pck.dataInt32[i];
-//						break;
 					case COMM_INT_MEM_POS:
 						for(int i=0; i<3; i++)
 							mPosIntData[i]->setData(QString::number(pck.dataFloat[i],'f',3), Qt::DisplayRole);
@@ -346,12 +321,6 @@ void Leash::pollUDP()
 						for(int i=0; i<3; i++)
 							mTorqueIntData[i]->setData(QString::number(pck.dataFloat[i],'f',3), Qt::DisplayRole);
 						break;
-//					case COMM_CNTL_TYPE:
-//						mCurCntlType = pck.dataInt32[0];
-//						break;
-//					case COMM_CNTL_CALC_TIME:
-//						mCntlCalcTimeUS = pck.dataInt32[0];
-//						break;
 					case COMM_IMGPROC_TIME_US:
 						ui->lblImgProcTime->setText(QString::number(pck.dataInt32[0]/1.0e3,'f',0));
 						break;
@@ -392,10 +361,10 @@ void Leash::pollTCP()
 			{
 				switch(code)
 				{
-					case 1000:
+					case COMM_LOG_FILE_DATA:
 						receiveLogFile(mSocketTCP,"../phoneLog.txt");
 						break;
-					case 2000:
+					case COMM_IMG_DATA:
 						{
 							uint32 numRows, numCols, numChannels, type, size;
 							receiveTCP(mSocketTCP,(tbyte*)&numRows, sizeof(numRows));
@@ -412,6 +381,16 @@ void Leash::pollTCP()
 							ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
 							ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
 						}
+						break;
+					case COMM_HOST_EXIT:
+						cout << "Host exiting, closing connection" << endl;
+						mSocketTCP->close();
+						mSocketTCP = NULL;
+						mMutex_socketUDP.lock();
+						mSocketUDP->close();
+						mSocketUDP = NULL;
+						mMutex_socketUDP.unlock();
+						ui->btnConnect->setText("Connect");
 						break;
 					default:
 						cout << "Unknown phone code: " << code << endl;
@@ -531,12 +510,15 @@ bool Leash::sendTCP(tbyte* data, int size)
 	return true;
 }
 
-bool Leash::sendMotorStop()
+bool Leash::sendMotorStop(bool warnIfDisconnected)
 {
 	if(mSocketTCP == NULL)
 	{
-		QMessageBox box(QMessageBox::Warning, "Connection Error", "Can't send motor start because I'm currently not connected to the phone.");
-		box.exec();
+		if(warnIfDisconnected)
+		{
+			QMessageBox box(QMessageBox::Warning, "Connection Error", "Can't send motor start because I'm currently not connected to the phone.");
+			box.exec();
+		}
 		return false;
 	}
 
@@ -580,7 +562,7 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)mMotorTrim, 4*sizeof(int));
 
-	code = COMM_OBSV_GAIN;
+	code = COMM_ATT_OBSV_GAIN;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result =result && sendTCP((tbyte*)&mAttObsvGainP,sizeof(mAttObsvGainP));
 	if(result) result =result && sendTCP((tbyte*)&mAttObsvGainI,sizeof(mAttObsvGainI));
@@ -591,57 +573,90 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&mLogMask, sizeof(mLogMask));
 
-	float scale = mMotorForceGain;
-	code = COMM_MOTOR_FORCE_SCALING; 
+	float forceGain= mMotorForceGain;
+	code = COMM_MOTOR_FORCE_GAIN; 
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&scale,sizeof(scale));
+	if(result) result = result && sendTCP((tbyte*)&forceGain,sizeof(forceGain));
 
 	float torqueScale = mMotorTorqueGain;
-	code = COMM_MOTOR_TORQUE_SCALING;
+	code = COMM_MOTOR_TORQUE_GAIN;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&torqueScale,sizeof(torqueScale));
-
-//	code = COMM_KALMANFILTER_POS_MEAS_STD;
-//	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//	if(result) result = result && sendTCP((tbyte*)&mKfPosMeasStdDev,sizeof(mKfPosMeasStdDev));
-//
-//	code = COMM_KALMANFILTER_VEL_MEAS_STD;
-//	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//	if(result) result = result && sendTCP((tbyte*)&mKfVelMeasStdDev,sizeof(mKfVelMeasStdDev));
 
 	float m = mTotalMass;
 	code = COMM_MASS; 
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&m,sizeof(m));
 
-	Collection<float> attGains(4);
-	int attGainSize = attGains.size();
+	code = COMM_KALMANFILTER_MEAS_VAR;
+	int measVarSize = mKalmanMeasVar.size();
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&measVarSize,sizeof(measVarSize));
+	if(result) result = result && sendTCP((tbyte*)&(mKalmanMeasVar[0]),measVarSize*sizeof(float));
+
+	code = COMM_KALMANFILTER_DYN_VAR;
+	int dynVarSize = mKalmanDynVar.size();
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&dynVarSize,sizeof(dynVarSize));
+	if(result) result = result && sendTCP((tbyte*)&(mKalmanDynVar[0]),dynVarSize*sizeof(float));
+
+	Collection<float> attGains;
 	for(int i=0; i<3; i++)
-		attGains[i] = mIbvsGainAngularRate[i];
-	attGains[3] = mIbvsGainAngle;
-	code = COMM_ATT_GAINS;
+		attGains.push_back(mCntlGainAttP[i]);
+	for(int i=0; i<3; i++)
+		attGains.push_back(mCntlGainAttD[i]);
+	int attGainSize = attGains.size();
+	code = COMM_CNTL_ATT_GAINS;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&attGainSize,sizeof(attGainSize));
 	if(result) result = result && sendTCP((tbyte*)&(attGains[0]),attGainSize*sizeof(float));
 
-	float rollBias = mAttBias[0][0];
-	float pitchBias = mAttBias[1][0];
-	float yawBias = mAttBias[2][0];
-	code = COMM_ATT_BIAS; 
+	Collection<float> transGains;
+	for(int i=0; i<3; i++)
+		transGains.push_back(mCntlGainTransP[i]);
+	for(int i=0; i<3; i++)
+		transGains.push_back(mCntlGainTransD[i]);
+	for(int i=0; i<3; i++)
+		transGains.push_back(mCntlGainTransI[i]);
+	for(int i=0; i<3; i++)
+		transGains.push_back(mCntlGainTransILimit[i]);
+	int transGainSize = transGains.size();
+	code = COMM_CNTL_TRANS_GAINS;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&rollBias,sizeof(rollBias));
-	if(result) result = result && sendTCP((tbyte*)&pitchBias,sizeof(pitchBias));
-	if(result) result = result && sendTCP((tbyte*)&yawBias,sizeof(yawBias));
+	if(result) result = result && sendTCP((tbyte*)&transGainSize,sizeof(transGainSize));
+	if(result) result = result && sendTCP((tbyte*)&(transGains[0]),transGainSize*sizeof(float));
 
-//	float attBiasGain = mAttBiasGain;
-//	code = COMM_ATT_BIAS_GAIN;
-//	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-//	if(result) result = result && sendTCP((tbyte*)&attBiasGain,sizeof(attBiasGain));
-
-	float forceScalingGain = mKalmanForceGainAdaptGain;
-	code = COMM_FORCE_SCALING_GAIN;
+	Collection<float> attBias(mKalmanAttBias);
+	int attBiasSize = attBias.size();
+	code = COMM_KALMAN_ATT_BIAS; 
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&forceScalingGain, sizeof(forceScalingGain));
+	if(result) result = result && sendTCP((tbyte*)&attBiasSize,sizeof(attBiasSize));
+	if(result) result = result && sendTCP((tbyte*)&(attBias[0]),attBiasSize*sizeof(float));
+
+	Collection<float> attBiasAdaptRate(mKalmanAttBiasAdaptRate);
+	int attBiasAdaptRateSize = attBiasAdaptRate.size();
+	code = COMM_KALMAN_ATT_BIAS_ADAPT_RATE; 
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&attBiasAdaptRateSize,sizeof(attBiasAdaptRateSize));
+	if(result) result = result && sendTCP((tbyte*)&(attBiasAdaptRate[0]),attBiasAdaptRateSize*sizeof(float));
+
+	float forceGainAdaptRate = mKalmanForceGainAdaptRate;
+	code = COMM_KALMAN_FORCE_SCALING_ADAPT_RATE;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&forceGainAdaptRate, sizeof(float));
+
+	Collection<float> nomMag(mAttObsvNominalMag);
+	int nomMagSize = nomMag.size();
+	code = COMM_NOMINAL_MAG;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&nomMagSize,sizeof(nomMagSize));
+	if(result) result = result && sendTCP((tbyte*)&(nomMag[0]),nomMagSize*sizeof(float));
+
+	float armLength= mMotorArmLength;
+	code = COMM_MOTOR_ARM_LENGTH;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&armLength,sizeof(armLength));
+
 
 	if(result)
 		cout << "Phone params sent." << endl;
@@ -804,9 +819,9 @@ void Leash::loadObserverConfig(mxml_node_t *obsvRoot)
 			if(xNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanMeasVar[0];
 			if(yNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanMeasVar[1];
 			if(zNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanMeasVar[2];
-			if(xVelNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanMeasVar[3];
-			if(yVelNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanMeasVar[4];
-			if(zVelNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanMeasVar[5];
+			if(xVelNode != NULL) stringstream(xVelNode->child->value.text.string) >> mKalmanMeasVar[3];
+			if(yVelNode != NULL) stringstream(yVelNode->child->value.text.string) >> mKalmanMeasVar[4];
+			if(zVelNode != NULL) stringstream(zVelNode->child->value.text.string) >> mKalmanMeasVar[5];
 		}
 
 		mxml_node_t *dynVarNode = mxmlFindElement(transNode, transNode, "DynVar", NULL, NULL, MXML_DESCEND);
@@ -822,9 +837,9 @@ void Leash::loadObserverConfig(mxml_node_t *obsvRoot)
 			if(xNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanDynVar[0];
 			if(yNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanDynVar[1];
 			if(zNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanDynVar[2];
-			if(xVelNode != NULL) stringstream(xNode->child->value.text.string) >> mKalmanDynVar[3];
-			if(yVelNode != NULL) stringstream(yNode->child->value.text.string) >> mKalmanDynVar[4];
-			if(zVelNode != NULL) stringstream(zNode->child->value.text.string) >> mKalmanDynVar[5];
+			if(xVelNode != NULL) stringstream(xVelNode->child->value.text.string) >> mKalmanDynVar[3];
+			if(yVelNode != NULL) stringstream(yVelNode->child->value.text.string) >> mKalmanDynVar[4];
+			if(zVelNode != NULL) stringstream(zVelNode->child->value.text.string) >> mKalmanDynVar[5];
 		}
 
 		mxml_node_t *attBiasNode = mxmlFindElement(transNode, transNode, "AttBias", NULL, NULL, MXML_DESCEND);
@@ -841,20 +856,20 @@ void Leash::loadObserverConfig(mxml_node_t *obsvRoot)
 		else
 			cout << "Kalman att bias node not found in config file" << endl;
 
-		mxml_node_t *attBiasAdaptGainNode = mxmlFindElement(transNode, transNode, "AttBiasAdaptGain", NULL, NULL, MXML_DESCEND);
-		if(attBiasAdaptGainNode != NULL)
+		mxml_node_t *attBiasAdaptRateNode = mxmlFindElement(transNode, transNode, "AttBiasAdaptRate", NULL, NULL, MXML_DESCEND);
+		if(attBiasAdaptRateNode != NULL)
 		{
-			mxml_node_t *rollNode = mxmlFindElement(attBiasAdaptGainNode, attBiasAdaptGainNode, "roll", NULL, NULL, MXML_DESCEND);
-			mxml_node_t *pitchNode = mxmlFindElement(attBiasAdaptGainNode, attBiasAdaptGainNode, "pitch", NULL, NULL, MXML_DESCEND);
-			mxml_node_t *yawNode = mxmlFindElement(attBiasAdaptGainNode, attBiasAdaptGainNode, "yaw", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *rollNode = mxmlFindElement(attBiasAdaptRateNode, attBiasAdaptRateNode, "roll", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *pitchNode = mxmlFindElement(attBiasAdaptRateNode, attBiasAdaptRateNode, "pitch", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yawNode = mxmlFindElement(attBiasAdaptRateNode, attBiasAdaptRateNode, "yaw", NULL, NULL, MXML_DESCEND);
 
-			if(rollNode != NULL) stringstream(rollNode->child->value.text.string) >> mKalmanAttBiasAdaptGain[0];
-			if(pitchNode != NULL) stringstream(pitchNode->child->value.text.string) >> mKalmanAttBiasAdaptGain[1];
-			if(yawNode != NULL) stringstream(yawNode->child->value.text.string) >> mKalmanAttBiasAdaptGain[2];
+			if(rollNode != NULL) stringstream(rollNode->child->value.text.string) >> mKalmanAttBiasAdaptRate[0];
+			if(pitchNode != NULL) stringstream(pitchNode->child->value.text.string) >> mKalmanAttBiasAdaptRate[1];
+			if(yawNode != NULL) stringstream(yawNode->child->value.text.string) >> mKalmanAttBiasAdaptRate[2];
 		}
 
-		mxml_node_t *forceScalingAdaptGainNode = mxmlFindElement(transNode, transNode, "ForceGainAdaptGain", NULL, NULL, MXML_DESCEND);
-		if(forceScalingAdaptGainNode!= NULL) stringstream(forceScalingAdaptGainNode->child->value.text.string) >> mKalmanForceGainAdaptGain;
+		mxml_node_t *forceScalingAdaptRateNode = mxmlFindElement(transNode, transNode, "ForceGainAdaptRate", NULL, NULL, MXML_DESCEND);
+		if(forceScalingAdaptRateNode!= NULL) stringstream(forceScalingAdaptRateNode->child->value.text.string) >> mKalmanForceGainAdaptRate;
 	}
 	else
 		cout << "Translation observer section not found in config file" << endl;
@@ -913,6 +928,20 @@ void Leash::loadHardwareConfig(mxml_node_t *hdwRoot)
 
 	mxml_node_t *massNode = mxmlFindElement(hdwRoot, hdwRoot, "TotalMass", NULL, NULL, MXML_DESCEND);
 	if(massNode != NULL) stringstream(massNode->child->value.text.string) >> mTotalMass;
+
+	mxml_node_t *motorTrimNode = mxmlFindElement(hdwRoot, hdwRoot, "MotorTrim", NULL, NULL, MXML_DESCEND);
+	if(motorTrimNode != NULL)
+	{
+		mxml_node_t *nNode = mxmlFindElement(motorTrimNode, motorTrimNode, "North", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *eNode = mxmlFindElement(motorTrimNode, motorTrimNode, "East", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *sNode = mxmlFindElement(motorTrimNode, motorTrimNode, "South", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *wNode = mxmlFindElement(motorTrimNode, motorTrimNode, "West", NULL, NULL, MXML_DESCEND);
+
+		if(nNode != NULL) stringstream(nNode->child->value.text.string) >> mMotorTrim[0];
+		if(eNode != NULL) stringstream(eNode->child->value.text.string) >> mMotorTrim[1];
+		if(sNode != NULL) stringstream(sNode->child->value.text.string) >> mMotorTrim[2];
+		if(wNode != NULL) stringstream(wNode->child->value.text.string) >> mMotorTrim[3];
+	}
 	mMutex_data.unlock();
 }
 
@@ -983,14 +1012,14 @@ void Leash::saveObserverConfig(mxml_node_t *obsvRoot)
 		}
 
 		mxml_node_t *attBiasNode = mxmlNewElement(transNode, "AttBias");
-		mxml_node_t *attBiasAdaptGainNode = mxmlNewElement(transNode, "AttBiasAdaptGain");
+		mxml_node_t *attBiasAdaptRateNode = mxmlNewElement(transNode, "AttBiasAdaptRate");
 		for(int i=0; i<3; i++)
 		{
 			mxmlNewReal(mxmlNewElement(attBiasNode,attLabels[i].c_str()), mKalmanAttBias[i]);
-			mxmlNewReal(mxmlNewElement(attBiasAdaptGainNode,attLabels[i].c_str()), mKalmanAttBiasAdaptGain[i]);
+			mxmlNewReal(mxmlNewElement(attBiasAdaptRateNode,attLabels[i].c_str()), mKalmanAttBiasAdaptRate[i]);
 		}
 
-		mxmlNewReal(mxmlNewElement(transNode,"ForceGainAdaptGain"), mKalmanForceGainAdaptGain);
+		mxmlNewReal(mxmlNewElement(transNode,"ForceGainAdaptRate"), mKalmanForceGainAdaptRate);
 	}
 
 	mxml_node_t *attNode = mxmlNewElement(obsvRoot, "Attitude");
@@ -1015,73 +1044,19 @@ void Leash::saveHardwareConfig(mxml_node_t *hdwRoot)
 	mxmlNewReal(mxmlNewElement(hdwRoot, "MotorTorqueGain"), mMotorTorqueGain);
 	mxmlNewReal(mxmlNewElement(hdwRoot, "MotorArmLength"), mMotorArmLength);
 	mxmlNewReal(mxmlNewElement(hdwRoot, "TotalMass"), mTotalMass);
+	mxml_node_t *motorTrimNode = mxmlNewElement(hdwRoot, "MotorTrim");
+			mxmlNewReal(mxmlNewElement(motorTrimNode, "North"), mMotorTrim[0]);
+			mxmlNewReal(mxmlNewElement(motorTrimNode, "East"),  mMotorTrim[1]);
+			mxmlNewReal(mxmlNewElement(motorTrimNode, "South"), mMotorTrim[2]);
+			mxmlNewReal(mxmlNewElement(motorTrimNode, "West"),  mMotorTrim[3]);
 	mMutex_data.unlock();
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//	Event Handlers
-////////////////////////////////////////////////////////////////////////////////////////////////////
 void Leash::onBtnApply_clicked()
 {
 	applyControllerConfig();
 	applyObserverConfig();
 	applyHardwareConfig();
-	mMutex_data.lock();
-	try
-	{
-//		while(treePhoneConfig->topLevelItemCount() > 0)
-		while(false)
-		{
-//			QTreeWidgetItem *item = treePhoneConfig->takeTopLevelItem(0);
-			QTreeWidgetItem *item = NULL;
-			if(item->text(0) == "Communication")
-				applyCommConfig(item);
-			else if(item->text(0) == "Controller")
-				applyControlConfig(item);
-			else if(item->text(0) == "Motors")
-				applyMotorConfig(item);
-//			else if(item->text(0) == "Observer")
-//				applyObserverConfig(item);
-			else if(item->text(0) == "IBVS Gains")
-				applyIbvsConfig(item);
-			else if(item->text(0) == "Kalman Filter")
-				applyKalmanFilterConfig(item);
-			else if(item->text(0) == "Logging")
-				applyLogConfig(item);
-			else
-			{
-				QMessageBox box(QMessageBox::Warning, "Config Error", "Unknown phone config tree item " + item->text(0));
-				box.exec();
-				throw("Unknown config tree item: " + item->text(0));
-			}
-		}
-
-//		mFiltBoxColorMin[0] = spnBox0Min->value();
-//		mFiltBoxColorMax[0] = spnBox0Max->value();
-//		mFiltBoxColorMin[1] = spnBox1Min->value();
-//		mFiltBoxColorMax[1] = spnBox1Max->value();
-//		mFiltBoxColorMin[2] = spnBox2Min->value();
-//		mFiltBoxColorMax[2] = spnBox2Max->value();
-//		mFiltBoxColorMin[3] = spnBox3Min->value();
-//		mFiltBoxColorMax[3] = spnBox3Max->value();
-//		mFiltSatMin = spnSatMin->value();
-//		mFiltSatMax = spnSatMax->value();
-//		mFiltValMin = spnValMin->value();
-//		mFiltValMax = spnValMax->value();
-//		mFiltCircMin = spnCircMin->value();
-//		mFiltCircMax = spnCircMax->value();
-//		mFiltConvMin = spnConvMin->value();
-//		mFiltConvMax = spnConvMax->value();
-//		mFiltAreaMin = spnAreaMin->value();
-//		mFiltAreaMax = spnAreaMax->value();
-
-	}
-	catch(const char* exStr)
-	{ 
-		QMessageBox box(QMessageBox::Warning, "Config Error", exStr);
-		box.exec();
-	}
-	mMutex_data.unlock();
 
 	populateUI();
 }
@@ -1109,10 +1084,10 @@ void Leash::applyObserverConfig()
 	for(int i=0; i<3; i++)
 	{
 		mKalmanAttBias[i] = ui->tblKalmanAttBias->item(0,i)->text().toDouble();
-		mKalmanAttBiasAdaptGain[i] = ui->tblKalmanAttBias->item(1,i)->text().toDouble();
+		mKalmanAttBiasAdaptRate[i] = ui->tblKalmanAttBias->item(1,i)->text().toDouble();
 	}
 
-	mKalmanForceGainAdaptGain = ui->txtKalmanForceGainAdaptGain->text().toDouble();
+	mKalmanForceGainAdaptRate = ui->txtKalmanForceGainAdaptRate->text().toDouble();
 
 	mAttObsvGainP = ui->tblAttObsvGains->item(0,0)->text().toDouble();
 	mAttObsvGainI = ui->tblAttObsvGains->item(0,1)->text().toDouble();
@@ -1130,6 +1105,9 @@ void Leash::applyHardwareConfig()
 	mMotorTorqueGain = ui->txtMotorTorqueGain->text().toDouble();
 	mMotorArmLength = ui->txtMotorArmLength->text().toDouble();
 	mTotalMass = ui->txtTotalMass->text().toDouble();
+
+	for(int i=0; i<4; i++)
+		mMotorTrim[i] = ui->tblMotorTrim->item(0,i)->text().toInt();
 }
 
 void Leash::onBtnResetConfig_clicked()
@@ -1207,6 +1185,8 @@ void Leash::onBtnConnect_clicked()
 	{
 		if(mSocketTCP != NULL)
 		{
+			int code = COMM_CLIENT_EXIT;
+			sendTCP((tbyte*)&code, sizeof(code));
 			mSocketTCP->close();
 			mSocketTCP = NULL;
 		}
@@ -1266,41 +1246,10 @@ void Leash::onBtnRequestLogFile_clicked()
 		box.exec();
 		return;
 	}
-	int code = COMM_LOG_TRANSFER;
+	int code = COMM_LOG_FILE_REQUEST;
 
 	sendTCP((tbyte*)&code, sizeof(code));
 }
-
-// void Leash::onBtnSendMuCntl_clicked()
-// {
-// 	if(mSocketTCP == NULL)
-// 	{
-// 		QMessageBox box(QMessageBox::Warning, "Connection Error", "Can't send controller because I'm currently not connected to the phone.");
-// 		box.exec();
-// 		return;
-// 	}
-// 	int code = COMM_SEND_CNTL_SYSTEM;
-// 
-// 	cout << "Sending mu controller" << endl;
-// 	try
-// 	{
-// 		SystemModelLinear sys;
-// 		sys.loadFromFile(mCntlSysFile.c_str());
-// 		cout << "System loaded from " << mCntlSysFile << endl;
-// 		vector<tbyte> buff;
-// 		sys.serialize(buff);
-// 		cout << buff.size() << " bytes serialized" << endl;
-// 		uint32 size = (uint32)buff.size();
-// 		sendTCP((tbyte*)&code, sizeof(code));
-// 		sendTCP((tbyte*)&size, sizeof(size));
-// 		sendTCP(&(buff[0]), size);
-// 	}
-// 	catch(exception e)
-// 	{
-// 		QMessageBox box(QMessageBox::Warning, "Send Error", QString("Failed to send mu controller. ")+e.what());
-// 		box.exec();
-// 	}
-// }
 
 void Leash::onBtnClearLog_clicked()
 {
@@ -1370,345 +1319,11 @@ void Leash::onChkUseIbvsController_clicked()
 	sendTCP((tbyte*)&useIbvs, sizeof(useIbvs));
 }
 
-void Leash::onBtnResetDesImgMoment_clicked()
-{
-//	for(int i=0; i<2; i++)
-//		tblImgState->item(1,i)->setText(QString::number(mDesiredStateImage[i],'f',3));
-}
-
-void Leash::onBtnConfirmDesImgMoment_clicked()
-{
-//	mDesiredStateImage[0] = tblImgState->item(1,0)->text().toDouble();
-//	mDesiredStateImage[1] = tblImgState->item(1,1)->text().toDouble();
-//	mDesiredStateImage[2] = tblImgState->item(1,2)->text().toDouble();
-}
-
-void Leash::onBtnSetYawZero_clicked()
-{
-	if(mSocketTCP == NULL)
-	{
-		QMessageBox box(QMessageBox::Warning, "Connection Error", "Not connected to the phone.");
-		box.exec();
-		return;
-	}
-
-	int code = COMM_SET_YAW_ZERO;
-
-	cout << "Setting yaw zero " << endl;
-	sendTCP((tbyte*)&code, sizeof(code));
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//	Helper functions
-////////////////////////////////////////////////////////////////////////////////////////////////////
-void Leash::applyCommConfig(QTreeWidgetItem *root)
-{
-	while(root->childCount() > 0)
-	{
-		QTreeWidgetItem *item = root->takeChild(0);
-		if(item->text(0) == "IP")
-			mIP = item->text(1).toStdString();
-		else if(item->text(0) == "Port")
-			mPort = item->text(1).toInt();
-		else
-		{
-			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown comm config item: " + item->text(0));
-			box.exec();
-			throw("Unknown communication config item: " + item->text(0));
-		}
-	}
-}
-
-void Leash::applyControlConfig(QTreeWidgetItem *root)
-{
-//	while(root->childCount() > 0)
-//	{
-//		QTreeWidgetItem *item = root->takeChild(0);
-//		if(item->text(0) == "P")
-//		{
-//			mGainP[0] = item->text(1).toDouble();
-//			mGainP[1] = item->text(2).toDouble();
-//			mGainP[2] = item->text(3).toDouble();
-//		}
-//		else if(item->text(0) == "I")
-//		{
-//			mGainI[0] = item->text(1).toDouble();
-//			mGainI[1] = item->text(2).toDouble();
-//			mGainI[2] = item->text(3).toDouble();
-//		}
-//		else if(item->text(0) == "D")
-//		{
-//			mGainD[0] = item->text(1).toDouble();
-//			mGainD[1] = item->text(2).toDouble();
-//			mGainD[2] = item->text(3).toDouble();
-//		}
-//		else
-//		{
-//			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone control config item: " + item->text(0));
-//			box.exec();
-//			throw("Unknown communication config item: " + item->text(0));
-//		}
-//	}
-}
-
-void Leash::applyMotorConfig(QTreeWidgetItem *root)
-{
-	while(root->childCount() > 0)
-	{
-		QTreeWidgetItem *item = root->takeChild(0);
-		if(item->text(0) == "Trim")
-		{
-			mMotorTrim[0] = item->text(1).toInt();
-			mMotorTrim[1] = item->text(2).toInt();
-			mMotorTrim[2] = item->text(3).toInt();
-			mMotorTrim[3] = item->text(4).toInt();
-		}
-		else
-		{
-			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone motor config item: " + item->text(0));
-			box.exec();
-			throw("Unknown communication config item: " + item->text(0));
-		}
-	}
-}
-
-// void Leash::applyObserverConfig(QTreeWidgetItem *root)
-// {
-// 	while(root->childCount() > 0)
-// 	{
-// 		QTreeWidgetItem *item = root->takeChild(0);
-// 		if(item->text(0) == "Kp")
-// 			mAttObsvGainP = item->text(1).toDouble();
-// 		else if(item->text(0) == "Ki")
-// 			mAttObsvGainI = item->text(1).toDouble();
-// 		else if(item->text(0) == "Accel Weight")
-// 			mAttObsvDirWeights[0] = item->text(1).toDouble();
-// 		else if(item->text(0) == "Mag Weight")
-// 			mAttObsvDirWeights[1] = item->text(1).toDouble();
-// 		else
-// 		{
-// 			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone motor config item: " + item->text(0));
-// 			box.exec();
-// 			throw("Unknown communication config item: " + item->text(0));
-// 		}
-// 	}
-// }
-
-void Leash::applyIbvsConfig(QTreeWidgetItem *root)
-{
-	while(root->childCount() > 0)
-	{
-		QTreeWidgetItem *item = root->takeChild(0);
-//		if(item->text(0) == "Img")
-//		{
-//			mIbvsGainImg[0] = item->text(1).toDouble();
-//		 	mIbvsGainImg[1] = item->text(2).toDouble();
-//			mIbvsGainImg[2] = item->text(3).toDouble();
-//		}
-//		else if(item->text(0) == "Flow") 	
-//		{
-//			mIbvsGainFlow[0] = item->text(1).toDouble();
-//			mIbvsGainFlow[1] = item->text(2).toDouble();
-//			mIbvsGainFlow[2] = item->text(3).toDouble();
-//		}
-//		else if(item->text(0) == "Flow Int") 	
-//		{
-//			mIbvsGainFlowInt[0] = item->text(1).toDouble();
-//			mIbvsGainFlowInt[1] = item->text(2).toDouble();
-//			mIbvsGainFlowInt[2] = item->text(3).toDouble();
-//		}
-//		else if(item->text(0) == "Feedforward")
-//		{
-//			mIbvsGainFF[0] = item->text(1).toDouble();
-//			mIbvsGainFF[1] = item->text(2).toDouble();
-//			mIbvsGainFF[2] = item->text(3).toDouble();
-//		}
-//		else if(item->text(0) == "Att Cmd Offset")
-//		{
-//			mAttCmdOffset[0] = item->text(1).toDouble();
-//			mAttCmdOffset[1] = item->text(2).toDouble();
-//			mAttCmdOffset[2] = item->text(3).toDouble();
-//		}
-		if(item->text(0) == "omega") 	
-		{
-			mIbvsGainAngularRate[0] = item->text(1).toDouble();
-			mIbvsGainAngularRate[1] = item->text(2).toDouble();
-			mIbvsGainAngularRate[2] = item->text(3).toDouble();
-		}
-		else if(item->text(0) == "angle") 	mIbvsGainAngle = item->text(1).toDouble();
-//		else if(item->text(0) == "dynamic") mIbvsGainDynamic = item->text(1).toDouble();
-		else
-		{
-			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone IBVS config item: " + item->text(0));
-			box.exec();
-			throw("Unknown communication config item: " + item->text(0));
-		}
-	}
-}
-
-void Leash::applyKalmanFilterConfig(QTreeWidgetItem *root)
- {
-	while(root->childCount() > 0)
-	{
-		QTreeWidgetItem *item = root->takeChild(0);
-		if(item->text(0) == "Att Bias")
-		{
-			mAttBias[0][0] = item->text(1).toDouble();
-			mAttBias[1][0] = item->text(2).toDouble();
-			mAttBias[2][0] = item->text(3).toDouble();
-		}
-//		else if(item->text(0) == "Att Bias Gain")
-//			mAttBiasGain = item->text(1).toDouble();
-		else if(item->text(0) == "Force Scaling Gain")
-			mKalmanForceGainAdaptGain= item->text(1).toDouble();
-		else
-		{
-			QMessageBox box(QMessageBox::Warning,"Config Error", "Unknown phone Kalman Filter config item: " + item->text(0));
-			box.exec();
-			throw("Unknown communication config item: " + item->text(0));
-		}
-	}
-}
-
-void Leash::applyLogConfig(QTreeWidgetItem *root)
-{
-	mLogMask = 0;
-	for(int i=0; i<root->childCount(); i++)
-		mLogMask |= root->child(i)->checkState(1) == Qt::Checked ? 1 << i : 0;
-}
-
 void Leash::populateUI()
 {
 	populateControlUI();
 	populateObserverUI();
 	populateHardwareUI();
-	return;
-
-	mMutex_data.lock();
-//	while(treePhoneConfig->topLevelItemCount() > 0)
-//		treePhoneConfig->takeTopLevelItem(0);
-
-//	QStringList headers;
-//	headers << "1" << "2" << "3" << "4" << "5" << "6";
-//	treePhoneConfig->setHeaderItem(new QTreeWidgetItem((QTreeWidget*)0,headers));
-
-	QStringList commHeadings;
-	commHeadings << "Communication" << "";
-	QTreeWidgetItem *commRoot = new QTreeWidgetItem((QTreeWidget*)0,commHeadings);
-		commRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("IP")))); 
-		commRoot->child(commRoot->childCount()-1)->setText(1,QString(mIP.c_str()));
-		commRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Port")))); 
-		commRoot->child(commRoot->childCount()-1)->setText(1,QString::number(mPort));
-
-//	QStringList phoneCntlHeadings;
-//	phoneCntlHeadings << "Controller" << "Roll" << "Pitch" << "Yaw";		
-//	QTreeWidgetItem *cntlRoot = new QTreeWidgetItem((QTreeWidget*)0,phoneCntlHeadings);
-//		cntlRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("P"))));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(1,QString::number(mGainP[0]));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(2,QString::number(mGainP[1]));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(3,QString::number(mGainP[2]));
-//		cntlRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("I"))));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(1,QString::number(mGainI[0]));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(2,QString::number(mGainI[1]));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(3,QString::number(mGainI[2]));
-//		cntlRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("D"))));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(1,QString::number(mGainD[0]));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(2,QString::number(mGainD[1]));
-//			cntlRoot->child(cntlRoot->childCount()-1)->setText(3,QString::number(mGainD[2]));
-
-	QStringList motorsHeadings;
-	motorsHeadings << "Motors" << "N" << "E" << "S" << "W";
-	QTreeWidgetItem *motorRoot = new QTreeWidgetItem((QTreeWidget*)0,motorsHeadings);
-	motorRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Trim"))));
-		motorRoot->child(motorRoot->childCount()-1)->setText(1,QString::number((int)mMotorTrim[0]));
-		motorRoot->child(motorRoot->childCount()-1)->setText(2,QString::number((int)mMotorTrim[1]));
-		motorRoot->child(motorRoot->childCount()-1)->setText(3,QString::number((int)mMotorTrim[2]));
-		motorRoot->child(motorRoot->childCount()-1)->setText(4,QString::number((int)mMotorTrim[3]));
-
-	QStringList observerHeadings;
-	observerHeadings << "Observer";
-	QTreeWidgetItem *observerRoot = new QTreeWidgetItem((QTreeWidget*)0,observerHeadings);
-		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Kp"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvGainP));
-		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Ki"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvGainI));
-		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Accel Weight"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvDirWeights[0]));
-		observerRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Mag Weight"))));
-			observerRoot->child(observerRoot->childCount()-1)->setText(1,QString::number(mAttObsvDirWeights[1]));
-
-	QStringList ibvsHeadings; ibvsHeadings << "IBVS Gains" << "x" << "y" << "z";
-	QTreeWidgetItem *ibvsRoot = new QTreeWidgetItem((QTreeWidget*)0,ibvsHeadings);
-//		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Img"))));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mIbvsGainImg[0]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(2,QString::number(mIbvsGainImg[1]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(3,QString::number(mIbvsGainImg[2]));
-//		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Flow"))));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mIbvsGainFlow[0]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(2,QString::number(mIbvsGainFlow[1]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(3,QString::number(mIbvsGainFlow[2]));
-//		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Flow Int"))));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mIbvsGainFlowInt[0]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(2,QString::number(mIbvsGainFlowInt[1]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(3,QString::number(mIbvsGainFlowInt[2]));
-//		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Feedforward"))));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mIbvsGainFF[0]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(2,QString::number(mIbvsGainFF[1]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(3,QString::number(mIbvsGainFF[2]));
-//		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Att Cmd Offset"))));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mAttCmdOffset[0]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(2,QString::number(mAttCmdOffset[1]));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(3,QString::number(mAttCmdOffset[2]));
-		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("omega"))));
-			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mIbvsGainAngularRate[0]));
-			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(2,QString::number(mIbvsGainAngularRate[1]));
-			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(3,QString::number(mIbvsGainAngularRate[2]));
-		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("angle"))));
-			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mIbvsGainAngle));
-//		ibvsRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("dynamic"))));
-//			ibvsRoot->child(ibvsRoot->childCount()-1)->setText(1,QString::number(mIbvsGainDynamic));
-
-	// Kalman Filter
-	QStringList kfHeadings;
-	kfHeadings << "Kalman Filter";
-	QTreeWidgetItem *kfRoot = new QTreeWidgetItem((QTreeWidget*)0,kfHeadings);
-		kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Att Bias"))));
-			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mAttBias[0][0]));
-			kfRoot->child(kfRoot->childCount()-1)->setText(2,QString::number(mAttBias[1][0]));
-			kfRoot->child(kfRoot->childCount()-1)->setText(3,QString::number(mAttBias[2][0]));
-//		kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Att Bias Gain"))));
-//			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mAttBiasGain));
-		kfRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Force Scaling Gain"))));
-			kfRoot->child(kfRoot->childCount()-1)->setText(1,QString::number(mKalmanForceGainAdaptGain));
-
-	QStringList logHeadings;
-	logHeadings << "Logging";
-	QTreeWidgetItem *logRoot = new QTreeWidgetItem((QTreeWidget*)0,logHeadings);
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("State"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Des State"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Motors"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("PC Comm"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Obsv Update"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Obsv Bias"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Magnometer"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Accelerometer"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Gyroscope"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Camera Results"))));
-		logRoot->addChild(new QTreeWidgetItem((QTreeWidget*)0,QStringList(QString("Camera Images"))));
-		uint32 logFlags[] = {STATE, STATE_DES, MOTORS, PC_UPDATES, OBSV_UPDATE, OBSV_BIAS,
-							 MAGNOMETER, ACCEL, GYRO, CAM_RESULTS, CAM_IMAGES};
-		for(int i=0; i<logRoot->childCount(); i++)
-		{
-			QTreeWidgetItem *itm = logRoot->child(i);
-			itm->setFlags(itm->flags() | Qt::ItemIsUserCheckable);
-			if(mLogMask & logFlags[i])
-				itm->setCheckState(1,Qt::Checked);
-			else
-				itm->setCheckState(1,Qt::Unchecked);
-		}
-
-	
-	mMutex_data.unlock();
 }
 
 void Leash::populateControlUI()
@@ -1725,6 +1340,8 @@ void Leash::populateControlUI()
 
 	resizeTableWidget(ui->tblTransCntl);
 	resizeTableWidget(ui->tblAttCntl);
+	setVerticalTabOrder(ui->tblTransCntl);
+	setVerticalTabOrder(ui->tblAttCntl);
 }
 
 void Leash::populateObserverUI()
@@ -1738,10 +1355,10 @@ void Leash::populateObserverUI()
 	for(int i=0; i<3; i++)
 	{
 		ui->tblKalmanAttBias->item(0,i)->setText(QString::number(mKalmanAttBias[i]));
-		ui->tblKalmanAttBias->item(1,i)->setText(QString::number(mKalmanAttBiasAdaptGain[i]));
+		ui->tblKalmanAttBias->item(1,i)->setText(QString::number(mKalmanAttBiasAdaptRate[i]));
 	}
 
-	ui->txtKalmanForceGainAdaptGain->setText(QString::number(mKalmanForceGainAdaptGain));
+	ui->txtKalmanForceGainAdaptRate->setText(QString::number(mKalmanForceGainAdaptRate));
 	
 	ui->tblAttObsvGains->item(0,0)->setText(QString::number(mAttObsvGainP));
 	ui->tblAttObsvGains->item(0,1)->setText(QString::number(mAttObsvGainI));
@@ -1756,6 +1373,11 @@ void Leash::populateObserverUI()
 	resizeTableWidget(ui->tblAttObsvGains);
 	resizeTableWidget(ui->tblAttObsvNomMag);
 	resizeTableWidget(ui->tblAttObsvDirWeights);
+	setVerticalTabOrder(ui->tblKalmanVar);
+	setVerticalTabOrder(ui->tblKalmanAttBias);
+	setVerticalTabOrder(ui->tblAttObsvGains);
+	setVerticalTabOrder(ui->tblAttObsvNomMag);
+	setVerticalTabOrder(ui->tblAttObsvDirWeights);
 }
 
 void Leash::populateHardwareUI()
@@ -1764,17 +1386,12 @@ void Leash::populateHardwareUI()
 	ui->txtMotorTorqueGain->setText(QString::number(mMotorTorqueGain));
 	ui->txtMotorArmLength->setText(QString::number(mMotorArmLength));
 	ui->txtTotalMass->setText(QString::number(mTotalMass));
-}
 
-void Leash::formatTree(QTreeWidgetItem *root)
-{
-	root->setFlags(root->flags() | Qt::ItemIsEditable);
-	for(int i=1; i<root->columnCount(); i++)
-		root->setTextAlignment(i,Qt::AlignHCenter);
+	for(int i=0; i<4; i++)
+		ui->tblMotorTrim->item(0,i)->setText(QString::number(mMotorTrim[i]));
 
-	if(root->childCount() > 0)
-		for(int i=0; i<root->childCount(); i++)
-			formatTree(root->child(i));
+	resizeTableWidget(ui->tblMotorTrim);
+	setVerticalTabOrder(ui->tblMotorTrim);
 }
 
 void Leash::toggleIbvs()

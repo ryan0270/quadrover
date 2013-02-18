@@ -150,136 +150,23 @@ void Observer_Angular::run()
 			magProcessed = false;
 		}
 
-// 		ASensorEvent event;
-// 		while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
-// 		{
-// 			uint64 curTimeMS;
-// 			uint64 logType = -1;
-// 			switch(event.type)
-// 			{
-// 				case ASENSOR_TYPE_ACCELEROMETER:
-// 					{
-// 						logType = ACCEL;
-// 
-// 						mMutex_data.lock();
-// 						mAccel[0][0] = event.data[0];
-// 						mAccel[1][0] = event.data[1];
-// 						mAccel[2][0] = event.data[2];
-// 						haveNewAccel = true;
-// 						
-// 						// for data logging at the bottom
-// //						event.data[0] = mAccel[0][0];
-// //						event.data[1] = mAccel[1][0];
-// //						event.data[2] = mAccel[2][0];
-// 						mMutex_data.unlock();
-// 					}
-// 					break;
-// 				case ASENSOR_TYPE_GYROSCOPE:
-// 					{
-// 						logType = GYRO;
-// 
-// 						mMutex_data.lock();
-// 						mGyro[0][0] = event.data[0];
-// 						mGyro[1][0] = event.data[1];
-// 						mGyro[2][0] = event.data[2];
-// 
-// 						if(doingBurnIn())
-// 						{
-// 							if(mStartTime.getElapsedTimeMS() > 1000) // ignore early data since it might be junk
-// 							{
-// 								if(mBurnCount == 0)
-// 									Log::alert(String("Beginning burn in."));
-// 								gyroSum += mGyro;
-// 								magSum += mMagnometer;
-// 								accelSum += mAccel;
-// 								mBurnCount++;
-// 							}
-// 							lastInnovationUpdateTime.setTime();
-// 						}
-// 						else if(mBurnCount > 0) // we've finished burn in so calculate bias
-// 						{
-// 							mGyroBias.inject(1.0/mBurnCount*gyroSum);
-// 							mMagDirNom.inject(1.0/norm2(magSum)*magSum);
-// 
-// 							/////////////////////////// HACK //////////////////////
-// //							mMagDirNom[0][0] = -21.7;
-// //							mMagDirNom[1][0] = 5.3;
-// //							mMagDirNom[2][0] = -40.4;
-// 							mMagDirNom[0][0] = -20.5;
-// 							mMagDirNom[1][0] = 7.0;
-// 							mMagDirNom[2][0] = -39.0;
-// 							mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
-// 							/////////////////////////// HACK //////////////////////
-// 
-// 
-// 							String str = String()+"Burn in done ("+mBurnCount+"): \t";
-// 							for(int i=0; i<3; i++)
-// 								str = str+mGyroBias[i][0]+"\t";
-// 							Log::alert(str);
-// 
-// 							str = String()+"mag dir: \t";
-// 							for(int i=0; i<mMagDirNom.dim1(); i++)
-// 								str = str+mMagDirNom[i][0]+"\t";
-// 							Log::alert(str);
-// 
-// 							mBurnCount = 0;
-// 						}
-// 						mMutex_data.unlock();
-// 						if(lastGyroUpdateTimeUS > 0)
-// 						{
-// 							double dtUS = event.timestamp/1.0e3-lastGyroUpdateTimeUS;
-// 							doGyroUpdate(dtUS/1.0e6);
-// 						}
-// 						lastGyroUpdateTimeUS = event.timestamp/1.0e3; // timestamp appears to be in nanoseconds // 					}
-// 					break;
-// 				case ASENSOR_TYPE_MAGNETIC_FIELD:
-// 					{
-// 						logType = MAGNOMETER;
-// 						mMutex_data.lock();
-// 						mMagnometer[0][0] = event.data[0];
-// 						mMagnometer[1][0] = event.data[1];
-// 						mMagnometer[2][0] = event.data[2];
-// //						mMagnometer = 1.0/norm2(mMagnometer)*mMagnometer;
-// 
-// //						if(!mHaveFirstMagnometer)
-// //						{
-// //							mMagDirNom.inject(matmult(mCurRotMat,mMagnometer));
-// //							mMagDirNom[0][0] = 0;
-// //							mMagDirNom[1][0] = 1;
-// //							mMagDirNom[2][0] = 0;
-// //						}
-// 						haveNewMagnometer = true;
-// 						mMutex_data.unlock();
-// 					}
-// 					break;
-// 				default:
-// 					Log::alert(String()+"Unknown sensor event: "+event.type);
-// 			}
+		if(!mDoingBurnIn && !accelProcessed && !magProcessed)
+		{
+			doInnovationUpdate(lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6);
+			lastInnovationUpdateTime.setTime();
+			accelProcessed = true;
+			magProcessed = true;
+		}
 
-			if(!mDoingBurnIn && !accelProcessed && !magProcessed)
-			{
-				doInnovationUpdate(lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6);
-				lastInnovationUpdateTime.setTime();
-				accelProcessed = true;
-				magProcessed = true;
-			}
-
-			if(!mDoingBurnIn && !gyroProcessed)
-			{
-				mMutex_cache.lock();
-				double dt = Time::calcDiffUS(lastGyroUpdateTime, mGyroData.timestamp)/1.0e6;
-				lastGyroUpdateTime.setTime(mGyroData.timestamp);
-				mMutex_cache.unlock();
-				doGyroUpdate(dt);
-				gyroProcessed = true;
-			}
-
-//			if(mQuadLogger != NULL && logType != -1)
-//			{
-//				String s=String()+" " + mStartTime.getElapsedTimeMS() + "\t" + event.type+"\t"+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
-//				mQuadLogger->addLine(s,logType);
-//			}
-//		}
+		if(!mDoingBurnIn && !gyroProcessed)
+		{
+			mMutex_cache.lock();
+			double dt = Time::calcDiffUS(lastGyroUpdateTime, mGyroData.timestamp)/1.0e6;
+			lastGyroUpdateTime.setTime(mGyroData.timestamp);
+			mMutex_cache.unlock();
+			doGyroUpdate(dt);
+			gyroProcessed = true;
+		}
 
 		sys.msleep(1);
 	}
@@ -492,22 +379,40 @@ void Observer_Angular::onNewCommObserverReset()
 	mQuadLogger->addLine(str,PC_UPDATES);
 }
 
-void Observer_Angular::onNewCommObserverGain(double gainP, double gainI, double gravWeight, double compWeight, double gravBandwidth)
+void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight)
 {
 	setGainP(gainP);
 	setGainI(gainI);
-	setWeights(gravWeight, compWeight);
+	setWeights(accelWeight, magWeight);
 
-	Log::alert("Observer gains updated");
+	{
+		String s = "Observer gains updated: \t";
+		s = s+gainP+"\t";
+		s = s+gainI+"\t";
+		s = s+accelWeight+"\t";
+		s = s+magWeight+"\t";
+		Log::alert(s);
+	}
 	String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-210\t";
 	str = str+gainP+"\t"+gainI+"\t";
-	str = str+gravWeight+"\t"+compWeight;
+	str = str+accelWeight+"\t"+magWeight;
 	mQuadLogger->addLine(str, PC_UPDATES);
 }
 
-void Observer_Angular::onNewCommSetYawZero()
+void Observer_Angular::onNewCommNominalMag(Collection<float> const &nomMag)
 {
-	setYawZero();
+	mMutex_data.lock();
+	for(int i=0; i<3; i++)
+		mMagDirNom[i][0] = nomMag[i];
+	mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
+	mMutex_data.unlock();
+
+	{
+		String s = "Nominal mag updated: \t";
+		for(int i=0; i<nomMag.size(); i++)
+			s = s+nomMag[i]+"\t";
+		Log::alert(s);
+	}
 }
 
 void Observer_Angular::onNewSensorUpdate(SensorData const &data)

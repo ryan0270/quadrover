@@ -59,12 +59,12 @@ class Observer_Translational : public toadlet::egg::Thread,
 	// from CommManagerListener
 	void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
 	void onNewCommMass(float m);
-	void onNewCommForceScaling(float k);
+	void onNewCommForceGain(float k);
 	void onNewCommAttBias(float roll, float pitch, float yaw);
-	void onNewCommAttBiasGain(float gain);
-	void onNewCommForceScalingGain(float gain);
-	void onNewCommKalmanPosMeasStd(float std);
-	void onNewCommKalmanVelMeasStd(float std);
+	void onNewCommAttBiasAdaptRate(toadlet::egg::Collection<float> const &rate);
+	void onNewCommForceGainAdaptRate(float rate);
+	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
+	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
 
 	// from MotorInterfaceListener
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
@@ -88,8 +88,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 	Array2D<double> mStateKF, mAttitude;
 	TNT::Array2D<double> mAttBias, mAttBiasReset;
 	TNT::Array2D<double> mLastMeas;
-	double mMass, mForceScalingReset, mForceScaling;
-	double mGainAttBias, mGainForceScaling;
+	double mMass, mForceGainReset, mForceGain;
+	Collection<double> mAttBiasAdaptRate;
+	double mForceGainAdaptRate;
 
 	toadlet::egg::Mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds;
 
