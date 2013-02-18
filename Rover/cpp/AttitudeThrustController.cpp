@@ -136,6 +136,9 @@ namespace Quadrotor {
 	
 		mDoControl = false;
 
+		if(!mMotorInterface.isMotorsEnabled())
+			for(int i=0; i<4; i++)
+				cmds[i] = 0;
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onAttitudeThrustControllerCmdsSent(cmds);
 	

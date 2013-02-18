@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>774</width>
-    <height>532</height>
+    <height>801</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -58,7 +58,7 @@
    <item row="1" column="0" colspan="5">
     <widget class="QTabWidget" name="tabWidget_2">
      <property name="currentIndex">
-      <number>3</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="tab_4">
       <attribute name="title">
@@ -661,105 +661,27 @@
          </item>
         </layout>
        </item>
-       <item row="0" column="2" rowspan="2">
-        <layout class="QVBoxLayout" name="verticalLayout_6">
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_15">
-           <item>
-            <widget class="QLabel" name="label_22">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Vicon Att:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwViconAtt">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_16">
-           <item>
-            <widget class="QLabel" name="label_23">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Vicon Pos:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwViconPos">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
+       <item row="0" column="1" rowspan="2" colspan="2">
+        <widget class="QTableView" name="vwViconState">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>9999</width>
+           <height>9999</height>
+          </size>
+         </property>
+        </widget>
        </item>
        <item row="1" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout_12">
@@ -816,14 +738,29 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
-        <widget class="Line" name="line_4">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+       <item row="2" column="1" rowspan="2" colspan="2">
+        <widget class="QTableView" name="vwState">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>9999</width>
+           <height>9999</height>
+          </size>
          </property>
         </widget>
        </item>
-       <item row="3" column="0" rowspan="3">
+       <item row="3" column="0" rowspan="2">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -1019,154 +956,6 @@
          </item>
         </layout>
        </item>
-       <item row="3" column="2">
-        <layout class="QVBoxLayout" name="verticalLayout">
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout">
-           <item>
-            <widget class="QLabel" name="label_14">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Att:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwAtt">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <item>
-            <widget class="QLabel" name="label_12">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Pos:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwPos">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
-           <item>
-            <widget class="QLabel" name="label_13">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Vel:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwVel">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </item>
        <item row="3" column="3">
         <spacer name="horizontalSpacer">
          <property name="orientation">
@@ -1174,175 +963,55 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>0</width>
+           <width>117</width>
            <height>20</height>
           </size>
          </property>
         </spacer>
        </item>
-       <item row="4" column="2">
-        <widget class="Line" name="line_5">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+       <item row="4" column="1" colspan="2">
+        <widget class="QTableView" name="vwDesState">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>9999</width>
+           <height>9999</height>
+          </size>
          </property>
         </widget>
        </item>
-       <item row="5" column="2" rowspan="3">
-        <layout class="QVBoxLayout" name="verticalLayout_4">
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_9">
-           <item>
-            <widget class="QLabel" name="label_15">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Des Att:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwDesAtt">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_10">
-           <item>
-            <widget class="QLabel" name="label_16">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Des Pos:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwDesPos">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_11">
-           <item>
-            <widget class="QLabel" name="label_17">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>10000</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Des Vel:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QTableView" name="vwDesVel">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>256</width>
-               <height>44</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </item>
-       <item row="6" column="0">
+       <item row="5" column="0">
         <widget class="Line" name="line_2">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item row="7" column="0">
+       <item row="5" column="2" rowspan="2">
+        <spacer name="verticalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>106</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="6" column="0">
         <layout class="QVBoxLayout" name="verticalLayout_5">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_13">
@@ -1442,7 +1111,7 @@
          </item>
         </layout>
        </item>
-       <item row="8" column="1">
+       <item row="7" column="1">
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -1450,7 +1119,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>1</height>
+           <height>188</height>
           </size>
          </property>
         </spacer>
@@ -1608,7 +1277,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>104</height>
+           <height>373</height>
           </size>
          </property>
         </spacer>
@@ -2180,6 +1849,9 @@
       <layout class="QGridLayout" name="gridLayout_9">
        <item row="0" column="0">
         <layout class="QFormLayout" name="formLayout">
+         <property name="fieldGrowthPolicy">
+          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+         </property>
          <item row="0" column="0">
           <widget class="QLabel" name="label_7">
            <property name="maximumSize">
@@ -2198,6 +1870,12 @@
          </item>
          <item row="0" column="1">
           <widget class="QLineEdit" name="txtMotorForceGain">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>20</height>
+            </size>
+           </property>
            <property name="maximumSize">
             <size>
              <width>50</width>
@@ -2227,6 +1905,12 @@
          </item>
          <item row="1" column="1">
           <widget class="QLineEdit" name="txtMotorTorqueGain">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>20</height>
+            </size>
+           </property>
            <property name="maximumSize">
             <size>
              <width>50</width>
@@ -2247,23 +1931,10 @@
             </size>
            </property>
            <property name="text">
-            <string>Motor Arm Length (mm)</string>
+            <string>Motor Arm Length (m)</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="txtMotorArmLength">
-           <property name="maximumSize">
-            <size>
-             <width>50</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>000</string>
            </property>
           </widget>
          </item>
@@ -2285,6 +1956,31 @@
          </item>
          <item row="3" column="1">
           <widget class="QLineEdit" name="txtTotalMass">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>50</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>0.000</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="txtMotorArmLength">
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>20</height>
+            </size>
+           </property>
            <property name="maximumSize">
             <size>
              <width>50</width>

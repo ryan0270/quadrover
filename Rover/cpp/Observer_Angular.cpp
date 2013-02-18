@@ -39,10 +39,12 @@ Observer_Angular::Observer_Angular() :
 	mBurnCount = 0;
 
 	mAccelDirNom[2][0] = 1; // accel is the opposite direction as gravity
-//	mMagDirNom[2][0] = 0;
-	mMagDirNom[0][0] = -20.5;
-	mMagDirNom[1][0] = 7.0;
-	mMagDirNom[2][0] = -39.0;
+//	mMagDirNom[0][0] = -20.5;
+//	mMagDirNom[1][0] = 7.0;
+//	mMagDirNom[2][0] = -39.0;
+	mMagDirNom[0][0] = 6;
+	mMagDirNom[1][0] = -1;
+	mMagDirNom[2][0] = -15;
 	mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
 
 	mDoingBurnIn = true;

@@ -299,6 +299,12 @@ namespace Quadrotor{
 
 	void Observer_Translational::onNewCommStateVicon(Collection<float> const &data)
 	{
+{
+String s = String();
+for(int i=0; i<data.size(); i++)
+	s = s+data[i]+"\t";
+Log::alert(s);
+}
 		Array2D<double> pos(3,1);
 		for(int i=0; i<3; i++)
 			pos[i][0] = data[i+6];

@@ -28,6 +28,7 @@
 
 #include "ICSL/Timer/src/Timer.h"
 #include "ICSL/xml_utils/xml_utils.h"
+#include "ICSL/TNT_Utils/TNT_Utils.h"
 
 #include "ui_Leash.h"
 #include "../../Rover/cpp/Common.h"
@@ -83,7 +84,7 @@ class Leash : public QWidget, public TelemetryViconListener
 
 		void clearLogBuffer(){mLogData.clear();}
 		void saveLogData(string dir, string filename);
-
+		
 		// for TelemetryViconListener
 		void onTelemetryUpdated(TelemetryViconDataRecord const &rec);
 
@@ -101,6 +102,9 @@ class Leash : public QWidget, public TelemetryViconListener
 		void onBtnClearLocalLog_clicked(){clearLogBuffer();}
 		void onChkViewBinarizedImage_clicked();
 		void onChkUseIbvsController_clicked();
+
+		// QWidget override
+		void show();
 
 	protected:
 		Ui::Leash *ui;
@@ -146,14 +150,15 @@ class Leash : public QWidget, public TelemetryViconListener
 
 		QImage cvMat2QImage(const cv::Mat &mat);
 
-		QList<QStandardItem*> mAttData, mPosData, mVelData;
-		QList<QStandardItem*> mDesAttData, mDesPosData, mDesVelData;
+		TNT::Array2D<float> mState, mDesState, mViconState;
+		QList<QStandardItem*> mStateData;
+		QList<QStandardItem*> mDesStateData;
+		QList<QStandardItem*> mViconStateData;
 		QList<QStandardItem*> mGyroData, mGyroBiasData;
 		QList<QStandardItem*> mAccelData;
 		QList<QStandardItem*> mMagData;
 		QList<QStandardItem*> mPosIntData, mTorqueIntData;
 		QList<QStandardItem*> mMotorData;
-		QList<QStandardItem*> mViconAttData, mViconPosData;
 
 		void populateControlUI();
 		void loadControllerConfig(mxml_node_t *cntlRoot);
@@ -174,6 +179,7 @@ class Leash : public QWidget, public TelemetryViconListener
 		void applyDataLoggingConfig();
 
 		static void resizeTableWidget(QTableWidget *tbl); // make the table widget match the cell size (not the same as having cells match their contents)
+		static void resizeTable(QTableView *tbl); // make the table widget match the cell size (not the same as having cells match their contents)
 		void setVerticalTabOrder(QTableWidget *tbl);
 
 		list<LogItem> mLogData;
