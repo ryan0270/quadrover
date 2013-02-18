@@ -194,12 +194,12 @@ namespace Quadrotor{
 				float secTemp = getSecTemp()/10.0;
 				float fuelgaugeTemp = getFuelgaugeTemp()/10.0;
 				float tmuTemp = getTmuTemp()/10.0;
-				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_BATTERY_TEMP + "\t";
+				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
 				s = s+battTemp+"\t";
 				s = s+secTemp+"\t";
 				s = s+fuelgaugeTemp+"\t";
 				s = s+tmuTemp+"\t";
-				mQuadLogger->addLine(s, BATTERY_TEMP);
+				mQuadLogger->addLine(s, PHONE_TEMP);
 			}
 
 			sys.msleep(5); // maintain a (roughly) 200Hz update rate
@@ -322,7 +322,6 @@ namespace Quadrotor{
 			mLastMeas[i][0] = pos[i][0];
 		for(int i=3; i<6; i++)
 			mLastMeas[i][0] = vel[i-3][0];
-// printArray("mLastMeas: \t",transpose(mLastMeas));
 		mMutex_meas.unlock();
 		mLastPosReceiveTime.setTime();
 
@@ -404,6 +403,10 @@ namespace Quadrotor{
 
 	void Observer_Translational::onAttitudeThrustControllerCmdsSent(double const cmds[4])
 	{
+//		String s = "cmds: \t";
+//		for(int i=0; i<4; i++)
+//			s = s+cmds[i]+"\t";
+//		Log::alert(s);
 		mMutex_cmds.lock();
 		for(int i=0; i<4; i++)
 			mMotorCmds[i] = cmds[i];

@@ -50,6 +50,8 @@ Leash::Leash(QWidget *parent) :
 	mMotorTorqueGain = 0;
 	mMotorArmLength = 1;
 	mTotalMass = 1;
+
+	mNewViconDataReady = false;
 }
 
 Leash::~Leash()
@@ -67,21 +69,16 @@ void Leash::initialize()
 	connect(ui->btnResetConfig,SIGNAL(clicked()),this,SLOT(onBtnResetConfig_clicked()));
 	connect(ui->btnApply,SIGNAL(clicked()),this,SLOT(onBtnApply_clicked()));
 	connect(ui->btnConnect,SIGNAL(clicked()),this,SLOT(onBtnConnect_clicked()));
+	connect(ui->btnClearPhoneLog,SIGNAL(clicked()),this,SLOT(onBtnClearPhoneLog_clicked()));
+	connect(ui->btnClearLocalLog,SIGNAL(clicked()),this,SLOT(onBtnClearLocalLog_clicked()));
+	connect(ui->btnGetPhoneLog,SIGNAL(clicked()),this,SLOT(onBtnGetPhoneLog_clicked()));
 //	connect(btnSendParameters,SIGNAL(clicked()),this,SLOT(onBtnSendParams_clicked()));
 //	connect(btnResetObserver,SIGNAL(clicked()),this,SLOT(onBtnResetObserver_clicked()));
 //	connect(btnSyncTime,SIGNAL(clicked()),this,SLOT(onBtnSyncTime_clicked()));
-//	connect(btnRequestLogFile,SIGNAL(clicked()),this,SLOT(onBtnRequestLogFile_clicked()));
-//	connect(btnClearLog,SIGNAL(clicked()),this,SLOT(onBtnClearLog_clicked()));
 //	connect(chkViewBinarizedImage,SIGNAL(clicked()),this,SLOT(onChkViewBinarizedImage_clicked()));
 
-	mSocketTCP = Socket::ptr(Socket::createTCPSocket());
 	mSocketTCP = NULL;
-//	mSocketUDP = Socket::ptr(Socket::createUDPSocket());
 	mSocketUDP = NULL;
-
-	mIbvsGainAngularRate.resize(3); mIbvsGainAngularRate[0] = mIbvsGainAngularRate[1] = mIbvsGainAngularRate[2] = 1;
-	mIbvsGainAngle = 1;
-//	mIbvsGainDynamic = 0.1;
 
 	// Views for onboard data
 	vector<QList<QStandardItem*>* > data;
@@ -97,6 +94,8 @@ void Leash::initialize()
 	data.push_back(&mMagData);
 	data.push_back(&mPosIntData);
 	data.push_back(&mTorqueIntData);
+	data.push_back(&mViconAttData);
+	data.push_back(&mViconPosData);
 	vector<QTableView**> views;
 	views.push_back(&ui->vwAtt);
 	views.push_back(&ui->vwPos);
@@ -110,6 +109,8 @@ void Leash::initialize()
 	views.push_back(&ui->vwMag);
 	views.push_back(&ui->vwPosInt);
 	views.push_back(&ui->vwTorqueInt);
+	views.push_back(&ui->vwViconAtt);
+	views.push_back(&ui->vwViconPos);
 	QStringList attLabels;
 	attLabels << "Roll" << "Pitch" << "Yaw";
 	QStringList xyzLabels;
@@ -119,12 +120,12 @@ void Leash::initialize()
 	{
 		for(int i=0; i<3; i++)
 		{
-			data[mdl]->push_back(new QStandardItem(QString("%1").arg(QString::number(0, 'f', 1),10)));
+			data[mdl]->push_back(new QStandardItem(QString("-000.0000")));
 			data[mdl]->back()->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
 		}
   		QStandardItemModel *model = new QStandardItemModel(this);
 		model->appendRow(*(data[mdl]));
-		if(data[mdl] == &mAttData || data[mdl] == &mTorqueIntData)
+		if(data[mdl] == &mAttData || data[mdl] == &mTorqueIntData || data[mdl] == &mViconAttData)
 			model->setHorizontalHeaderLabels(attLabels);
 		else
 			model->setHorizontalHeaderLabels(xyzLabels);
@@ -220,6 +221,7 @@ void Leash::initialize()
 void Leash::shutdown()
 {
 	sendMotorStop(false);
+	saveLogData("../data","data0.log");
 
 	if(mSocketTCP != NULL)
 	{
@@ -362,7 +364,7 @@ void Leash::pollTCP()
 				switch(code)
 				{
 					case COMM_LOG_FILE_DATA:
-						receiveLogFile(mSocketTCP,"../phoneLog.txt");
+						receiveLogFile(mSocketTCP,"../data/phoneLog.txt");
 						break;
 					case COMM_IMG_DATA:
 						{
@@ -417,17 +419,6 @@ void Leash::updateDisplay()
 {
 	double time = (mSys.mtime() - mStartTimeUniverseMS)/1.0e3;
 
-	////////////////// Temp just to keep the link alive /////////////////////
-	Packet pState;
-	pState.type = COMM_STATE_VICON;
-	pState.time = mSys.mtime()-mStartTimeUniverseMS;
-	pState.dataFloat.resize(12);
-	for(int i=0; i<pState.dataFloat.size(); i++)
-		pState.dataFloat[i] = 0;
-	Collection<tbyte> buff;
-	pState.serialize(buff);
-	sendUDP(buff.begin(), buff.size());
-	/////////////////////////////////////////////////////////////////////////
 	if(mSocketTCP != NULL)
 	{
 		pollUDP();
@@ -698,6 +689,9 @@ bool Leash::loadConfigFromFile(string filename)
 	else
 		cout << "Hardware section not found in config file" << endl;
 
+	mxml_node_t *logRoot = mxmlFindElement(xmlRoot, xmlRoot, "LogMask", NULL, NULL, MXML_DESCEND);
+	if(logRoot != NULL) stringstream(logRoot->child->value.text.string) >> mLogMask;
+
 	mxml_node_t *obsvRoot = mxmlFindElement(xmlRoot, xmlRoot, "Observer", NULL, NULL, MXML_DESCEND);
 	if(obsvRoot != NULL)
 		loadObserverConfig(obsvRoot);
@@ -951,9 +945,13 @@ void Leash::saveConfigToFile(string filename)
 	mxml_node_t *cntlRoot = mxmlNewElement(xmlRoot,"Controller");
 	mxml_node_t *obsvRoot = mxmlNewElement(xmlRoot,"Observer");
 	mxml_node_t *hdwRoot = mxmlNewElement(xmlRoot,"Hardware");
+	mxml_node_t *logRoot = mxmlNewElement(xmlRoot,"LogMask");
+
 	saveControllerConfig(cntlRoot);
 	saveObserverConfig(obsvRoot);
 	saveHardwareConfig(hdwRoot);
+
+	mxmlNewInteger(logRoot,mLogMask);
 
 	FILE *fp = fopen((filename).c_str(),"w");
 	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
@@ -1057,6 +1055,7 @@ void Leash::onBtnApply_clicked()
 	applyControllerConfig();
 	applyObserverConfig();
 	applyHardwareConfig();
+	applyDataLoggingConfig();
 
 	populateUI();
 }
@@ -1108,6 +1107,24 @@ void Leash::applyHardwareConfig()
 
 	for(int i=0; i<4; i++)
 		mMotorTrim[i] = ui->tblMotorTrim->item(0,i)->text().toInt();
+}
+
+void Leash::applyDataLoggingConfig()
+{
+	mLogMask = 0;
+	if(ui->chkLogState->isChecked()) mLogMask |= STATE;
+	if(ui->chkLogDesiredState->isChecked()) mLogMask |= STATE_DES;
+	if(ui->chkLogMotorCmds->isChecked()) mLogMask |= MOTORS;
+	if(ui->chkLogPcUpdates->isChecked()) mLogMask |= PC_UPDATES;
+	if(ui->chkLogObserverUpdates->isChecked()) mLogMask |= OBSV_UPDATE;
+	if(ui->chkLogObserverBias->isChecked()) mLogMask |= OBSV_BIAS;
+	if(ui->chkLogMagnometer->isChecked()) mLogMask |= MAGNOMETER;
+	if(ui->chkLogAccelerometer->isChecked()) mLogMask |= ACCEL;
+	if(ui->chkLogGyroscope->isChecked()) mLogMask |= GYRO;
+	if(ui->chkLogCameraResults->isChecked()) mLogMask |= CAM_RESULTS;
+	if(ui->chkLogCameraImages->isChecked()) mLogMask |= CAM_IMAGES;
+	if(ui->chkLogPressure->isChecked()) mLogMask |= PRESSURE;
+	if(ui->chkLogPhoneTemperature->isChecked()) mLogMask |= PHONE_TEMP;
 }
 
 void Leash::onBtnResetConfig_clicked()
@@ -1166,8 +1183,6 @@ void Leash::onBtnConnect_clicked()
 			ui->btnConnect->setText("Disconnect");
 
 			sendParams();
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onPhoneConnected();
 		}
 		catch (...)
 		{ 
@@ -1238,7 +1253,7 @@ void Leash::onBtnSyncTime_clicked()
 	sendTCP((tbyte*)&time, sizeof(time));
 }
 
-void Leash::onBtnRequestLogFile_clicked()
+void Leash::onBtnGetPhoneLog_clicked()
 {
 	if(mSocketTCP == NULL)
 	{
@@ -1251,7 +1266,7 @@ void Leash::onBtnRequestLogFile_clicked()
 	sendTCP((tbyte*)&code, sizeof(code));
 }
 
-void Leash::onBtnClearLog_clicked()
+void Leash::onBtnClearPhoneLog_clicked()
 {
 	if(mSocketTCP == NULL)
 	{
@@ -1264,24 +1279,6 @@ void Leash::onBtnClearLog_clicked()
 	int code = COMM_CLEAR_LOG;
 	sendTCP((tbyte*)&code, sizeof(code));
 }
-
-// void Leash::onChkUseMuCntl_clicked()
-// {
-// 	if(mSocketTCP == NULL)
-// 	{
-// 		QMessageBox box(QMessageBox::Warning, "Connection Error", "Can't enable mu controller because I'm currently not connected to the phone.");
-// 		box.exec();
-// 		return;
-// 	}
-// 
-// 	int code = COMM_CNTL_TYPE;
-// //	uint16 cntlType = chkUseMuCntl->isChecked() ? CNTL_TRANSLATION_SYS : CNTL_TRANSLATION_PID;
-// 	uint16 cntlType = CNTL_TRANSLATION_PID;
-// 
-// 	cout << "Setting control type" << endl;
-// 	sendTCP((tbyte*)&code, sizeof(code));
-// 	sendTCP((tbyte*)&cntlType, sizeof(cntlType));
-// }
 
 void Leash::onChkViewBinarizedImage_clicked()
 {
@@ -1324,6 +1321,7 @@ void Leash::populateUI()
 	populateControlUI();
 	populateObserverUI();
 	populateHardwareUI();
+	populateDataLoggingUI();
 }
 
 void Leash::populateControlUI()
@@ -1392,6 +1390,23 @@ void Leash::populateHardwareUI()
 
 	resizeTableWidget(ui->tblMotorTrim);
 	setVerticalTabOrder(ui->tblMotorTrim);
+}
+
+void Leash::populateDataLoggingUI()
+{
+	ui->chkLogState->setChecked( (mLogMask & STATE) > 0);
+	ui->chkLogDesiredState->setChecked( (mLogMask & STATE_DES) > 0);
+	ui->chkLogMotorCmds->setChecked( (mLogMask & MOTORS) > 0);
+	ui->chkLogPcUpdates->setChecked( (mLogMask & PC_UPDATES) > 0);
+	ui->chkLogObserverUpdates->setChecked( (mLogMask & OBSV_UPDATE) > 0);
+	ui->chkLogObserverBias->setChecked( (mLogMask & OBSV_BIAS) > 0);
+	ui->chkLogMagnometer->setChecked( (mLogMask & MAGNOMETER) > 0);
+	ui->chkLogAccelerometer->setChecked( (mLogMask & ACCEL) > 0);
+	ui->chkLogGyroscope->setChecked( (mLogMask & GYRO) > 0);
+	ui->chkLogCameraResults->setChecked( (mLogMask & CAM_RESULTS) > 0);
+	ui->chkLogCameraImages->setChecked( (mLogMask & CAM_IMAGES) > 0);
+	ui->chkLogPressure->setChecked( (mLogMask & PRESSURE) > 0);
+	ui->chkLogPhoneTemperature->setChecked( (mLogMask & PHONE_TEMP) > 0);
 }
 
 void Leash::toggleIbvs()
@@ -1494,6 +1509,68 @@ void Leash::setVerticalTabOrder(QTableWidget *tbl)
 			QWidget::setTabOrder(tbl->cellWidget(tbl->rowCount()-1,j), tbl->cellWidget(0,j+1));
 		else
 			QWidget::setTabOrder(tbl->cellWidget(tbl->rowCount()-1,j), tbl->cellWidget(0,0));
+	}
+}
+
+void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
+{
+	if(strcmp(rec.objectID.c_str(), "quadMikroPhone")==0)
+	{
+		mMutex_data.lock();
+		mViconAttData[0]->setData(QString::number(rec.roll,'f',3), Qt::DisplayRole);
+		mViconAttData[1]->setData(QString::number(rec.pitch,'f',3), Qt::DisplayRole);
+		mViconAttData[2]->setData(QString::number(rec.yaw,'f',3), Qt::DisplayRole);
+		mViconPosData[0]->setData(QString::number(rec.x,'f',3), Qt::DisplayRole);
+		mViconPosData[1]->setData(QString::number(rec.y,'f',3), Qt::DisplayRole);
+		mViconPosData[2]->setData(QString::number(rec.z,'f',3), Qt::DisplayRole);
+		mMutex_data.unlock();
+	}
+
+	String s = String();
+	s = s+rec.roll+"\t";
+	s = s+rec.pitch+"\t";
+	s = s+rec.yaw+"\t";
+	s = s+rec.x+"\t";
+	s = s+rec.y+"\t";
+	s = s+rec.z+"\t";
+	mMutex_logBuffer.lock();
+	mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
+	mMutex_logBuffer.unlock();
+
+	Packet pState;
+	pState.type = COMM_STATE_VICON;
+	pState.time = mSys.mtime()-mStartTimeUniverseMS;
+	pState.dataFloat.resize(12);
+	pState.dataFloat[0] = rec.roll;
+	pState.dataFloat[1] = rec.pitch;
+	pState.dataFloat[2] = rec.yaw;
+	pState.dataFloat[6] = rec.x;
+	pState.dataFloat[7] = rec.y;
+	pState.dataFloat[8] = rec.z;
+	for(int i=3; i<6; i++)
+		pState.dataFloat[i] = 0;
+	for(int i=9; i<12; i++)
+		pState.dataFloat[i] = 0;
+	Collection<tbyte> buff;
+	pState.serialize(buff);
+	sendUDP(buff.begin(), buff.size());
+}
+
+void Leash::saveLogData(string dir, string filename)
+{
+	fstream dataStream((dir+"/"+filename).c_str(), fstream::out);
+	if(dataStream.is_open())
+	{
+		mMutex_logBuffer.lock();
+		list<LogItem>::iterator iter = mLogData.begin();
+		while(iter != mLogData.end())
+		{
+			LogItem *item = (LogItem*)&(*iter);
+			dataStream << item->time << "\t" << item->type << "\t" << item->line.c_str() << endl; 
+			iter++;
+		}
+		dataStream.close();
+		mMutex_logBuffer.unlock();
 	}
 }
 

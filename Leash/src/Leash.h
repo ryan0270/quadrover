@@ -28,22 +28,33 @@
 
 #include "ICSL/Timer/src/Timer.h"
 #include "ICSL/xml_utils/xml_utils.h"
-//#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 
 #include "ui_Leash.h"
 #include "../../Rover/cpp/Common.h"
+#include "Quadrotor/TelemetryVicon/src/TelemetryVicon.h"
 
 namespace ICSL{
 namespace Quadrotor {
 using namespace std;
 
-class LeashListener
+enum LogType
 {
-	public:
-	virtual void onPhoneConnected(){};
+	LOG_TYPE_UNKNOWN=0,
+	LOG_TYPE_VICON_STATE,
 };
 
-class Leash : public QWidget
+class LogItem
+{
+	public:
+		LogItem(){toadlet::egg::System sys; time = sys.mtime(); line = ""; type = LOG_TYPE_UNKNOWN;}
+		LogItem(uint64 time, toadlet::egg::String s, LogType t){this->time = time; line = s; type = t;}
+
+		uint64 time;
+		String line;
+		LogType type;
+};
+
+class Leash : public QWidget, public TelemetryViconListener
 {
 	Q_OBJECT
 
@@ -70,7 +81,11 @@ class Leash : public QWidget
 		bool loadConfigFromFile(string filename);
 		void saveConfigToFile(string filename);
 
-		void addListener(LeashListener *l){mListeners.push_back(l);};
+		void clearLogBuffer(){mLogData.clear();}
+		void saveLogData(string dir, string filename);
+
+		// for TelemetryViconListener
+		void onTelemetryUpdated(TelemetryViconDataRecord const &rec);
 
 	protected slots:
 		void onBtnApply_clicked();
@@ -81,16 +96,16 @@ class Leash : public QWidget
 		void onBtnSendParams_clicked();
 		void onBtnResetObserver_clicked();
 		void onBtnSyncTime_clicked();
-		void onBtnRequestLogFile_clicked();
-//		void onBtnSendMuCntl_clicked();
-		void onBtnClearLog_clicked();
-//		void onChkUseMuCntl_clicked();
+		void onBtnGetPhoneLog_clicked();
+		void onBtnClearPhoneLog_clicked();
+		void onBtnClearLocalLog_clicked(){clearLogBuffer();}
 		void onChkViewBinarizedImage_clicked();
 		void onChkUseIbvsController_clicked();
 
 	protected:
 		Ui::Leash *ui;
 		bool mIsConnected;
+		bool mNewViconDataReady;
 		string mIP;
 		int mPort;
 		Socket::ptr mSocketUDP, mSocketTCP;
@@ -100,8 +115,6 @@ class Leash : public QWidget
 		float mMotorForceGain, mMotorTorqueGain, mMotorArmLength, mTotalMass;
 		Collection<float> mAttObsvDirWeights;
 		Collection<float> mAttObsvNominalMag;
-		toadlet::egg::Collection<float> mIbvsGainAngularRate;
-		float mIbvsGainAngle;
 		TNT::Array2D<float> mIntMemory;
 		int mMotorValues[4], mMotorValuesIbvs[4];
 		uint64 mTimeMS;
@@ -110,7 +123,7 @@ class Leash : public QWidget
 		System mSys;
 		unsigned long mStartTimeUniverseMS;
 
-		toadlet::egg::Mutex mMutex_socketUDP, mMutex_socketTCP;
+		toadlet::egg::Mutex mMutex_socketUDP, mMutex_socketTCP, mMutex_logBuffer;
 		toadlet::egg::Mutex mMutex_data;
 
 		void populateUI();
@@ -133,8 +146,6 @@ class Leash : public QWidget
 
 		QImage cvMat2QImage(const cv::Mat &mat);
 
-		toadlet::egg::Collection<LeashListener*> mListeners;
-
 		QList<QStandardItem*> mAttData, mPosData, mVelData;
 		QList<QStandardItem*> mDesAttData, mDesPosData, mDesVelData;
 		QList<QStandardItem*> mGyroData, mGyroBiasData;
@@ -142,6 +153,7 @@ class Leash : public QWidget
 		QList<QStandardItem*> mMagData;
 		QList<QStandardItem*> mPosIntData, mTorqueIntData;
 		QList<QStandardItem*> mMotorData;
+		QList<QStandardItem*> mViconAttData, mViconPosData;
 
 		void populateControlUI();
 		void loadControllerConfig(mxml_node_t *cntlRoot);
@@ -158,8 +170,13 @@ class Leash : public QWidget
 		void saveHardwareConfig(mxml_node_t *hdwRoot);
 		void applyHardwareConfig();
 
+		void populateDataLoggingUI();
+		void applyDataLoggingConfig();
+
 		static void resizeTableWidget(QTableWidget *tbl); // make the table widget match the cell size (not the same as having cells match their contents)
 		void setVerticalTabOrder(QTableWidget *tbl);
+
+		list<LogItem> mLogData;
 };
 }
 }

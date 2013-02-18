@@ -131,6 +131,8 @@ namespace Quadrotor{
 		}
 		catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 		cout << "Success" << endl;
+		mTelemVicon.addTrackedQuadrotor("quadMikroPhone");
+		mTelemVicon.addListener(mLeash);
 //		mTelemVicon.addTrackedQuadrotor(mQuad->getName());
 //		mTelemVicon.addListener(mQuad->getDynamicModel());
 

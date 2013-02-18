@@ -9,24 +9,24 @@ namespace Quadrotor {
 using toadlet::uint64;
 enum LogFlags
 {
-		STATE		= 1 << 0,
-		STATE_DES	= 1 << 1,
-		MOTORS 		= 1 << 2,
-		PC_UPDATES	= 1 << 3,
-		OBSV_UPDATE	= 1 << 4,
-		OBSV_BIAS	= 1 << 5,
-		MAGNOMETER	= 1 << 6,
-		ACCEL		= 1 << 7,
-		GYRO		= 1 << 8,
-		CAM_RESULTS	= 1 << 9,
-		CAM_IMAGES	= 1 << 10,
-		PRESSURE	= 1 << 11,
-	BATTERY_TEMP	= 1 << 12,
+	STATE		= 1 << 0,
+	STATE_DES	= 1 << 1,
+	MOTORS 		= 1 << 2,
+	PC_UPDATES	= 1 << 3,
+	OBSV_UPDATE	= 1 << 4,
+	OBSV_BIAS	= 1 << 5,
+	MAGNOMETER	= 1 << 6,
+	ACCEL		= 1 << 7,
+	GYRO		= 1 << 8,
+	CAM_RESULTS	= 1 << 9,
+	CAM_IMAGES	= 1 << 10,
+	PRESSURE	= 1 << 11,
+	PHONE_TEMP	= 1 << 12,
 };
 
 enum LogIDs
 {
-	LOG_ID_BATTERY_TEMP = 500,
+	LOG_ID_PHONE_TEMP = 500,
 };
 
 enum SensorDataType

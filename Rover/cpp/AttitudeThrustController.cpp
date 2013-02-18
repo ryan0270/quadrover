@@ -114,6 +114,9 @@ namespace Quadrotor {
 		cmds[1] = cmdThrust-cmdRoll+cmdPitch-cmdYaw;
 		cmds[2] = cmdThrust+cmdRoll+cmdPitch+cmdYaw;
 		cmds[3] = cmdThrust+cmdRoll-cmdPitch-cmdYaw;
+
+		for(int i=0; i<4; i++)
+			cmds[i] = min(1000.0, max(0.0, cmds[i]));
 	
 		Collection<uint16> motorCmds(4);
 		if(mPcIsConnected)

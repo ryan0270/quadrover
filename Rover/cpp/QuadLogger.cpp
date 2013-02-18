@@ -19,10 +19,10 @@ QuadLogger::QuadLogger()
 //	mTypeMask |= MAGNOMETER;
 //	mTypeMask |= ACCEL;
 //	mTypeMask |= GYRO;
-	mTypeMask |= PRESSURE;
+//	mTypeMask |= PRESSURE;
 //	mTypeMask |= CAM_RESULTS;
 //	mTypeMask |= CAM_IMAGES;
-	mTypeMask |= BATTERY_TEMP;
+	mTypeMask |= PHONE_TEMP;
 	mPaused = false;
 }
 
