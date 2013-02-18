@@ -68,8 +68,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 
 		// CommManagerListener functions
 		void onNewCommObserverReset();
-		void onNewCommObserverGain(double gainP, double gainI, double gravWeight, double compWeight, double gravBandwidth);
-		void onNewCommSetYawZero();
+		void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight);
+		void onNewCommNominalMag(toadlet::egg::Collection<float> const &nomMag);
 		
 		// for SensorManagerListener
 		void onNewSensorUpdate(SensorData const &data);

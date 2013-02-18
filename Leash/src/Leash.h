@@ -52,6 +52,7 @@ class Leash : public QWidget
 		virtual ~Leash();
 
 		void initialize();
+		void shutdown();
 		void pollUDP();
 		void pollTCP();
 		void updateDisplay();
@@ -59,7 +60,7 @@ class Leash : public QWidget
 		bool sendUDP(tbyte* data, int size);
 		bool sendTCP(tbyte* data, int size);
 		bool sendMotorStart();
-		bool sendMotorStop();
+		bool sendMotorStop(bool warnIfDisconnected);
 		bool sendParams();
 		bool isConnected(){return mIsConnected;};
 
@@ -86,9 +87,6 @@ class Leash : public QWidget
 //		void onChkUseMuCntl_clicked();
 		void onChkViewBinarizedImage_clicked();
 		void onChkUseIbvsController_clicked();
-		void onBtnResetDesImgMoment_clicked();
-		void onBtnConfirmDesImgMoment_clicked();
-		void onBtnSetYawZero_clicked();
 
 	protected:
 		Ui::Leash *ui;
@@ -96,15 +94,15 @@ class Leash : public QWidget
 		string mIP;
 		int mPort;
 		Socket::ptr mSocketUDP, mSocketTCP;
-		double mAttObsvGainP, mAttObsvGainI;
-		double mCntlGainTransP[3], mCntlGainTransD[3], mCntlGainTransI[3], mCntlGainTransILimit[3];
-		double mCntlGainAttP[3], mCntlGainAttD[3];
-		double mMotorForceGain, mMotorTorqueGain, mMotorArmLength, mTotalMass;
-		Collection<double> mAttObsvDirWeights;
-		Collection<double> mAttObsvNominalMag;
-		toadlet::egg::Collection<double> mIbvsGainAngularRate;
-		double mIbvsGainAngle;
-		TNT::Array2D<double> mIntMemory;
+		float mAttObsvGainP, mAttObsvGainI;
+		float mCntlGainTransP[3], mCntlGainTransD[3], mCntlGainTransI[3], mCntlGainTransILimit[3];
+		float mCntlGainAttP[3], mCntlGainAttD[3];
+		float mMotorForceGain, mMotorTorqueGain, mMotorArmLength, mTotalMass;
+		Collection<float> mAttObsvDirWeights;
+		Collection<float> mAttObsvNominalMag;
+		toadlet::egg::Collection<float> mIbvsGainAngularRate;
+		float mIbvsGainAngle;
+		TNT::Array2D<float> mIntMemory;
 		int mMotorValues[4], mMotorValuesIbvs[4];
 		uint64 mTimeMS;
 		int mMotorTrim[4];
@@ -113,19 +111,10 @@ class Leash : public QWidget
 		unsigned long mStartTimeUniverseMS;
 
 		toadlet::egg::Mutex mMutex_socketUDP, mMutex_socketTCP;
-		toadlet::egg::Mutex mMutex_data, mMutex_image;
+		toadlet::egg::Mutex mMutex_data;
 
-		uint32 mCntlCalcTimeUS, mImgProcTimeUS;
-
-		void applyCommConfig(QTreeWidgetItem *root);
-		void applyMotorConfig(QTreeWidgetItem *root);
-		void applyControlConfig(QTreeWidgetItem *root);
-//		void applyObserverConfig(QTreeWidgetItem *root);
-		void applyIbvsConfig(QTreeWidgetItem *root);
-		void applyKalmanFilterConfig(QTreeWidgetItem *root);
-		void applyLogConfig(QTreeWidgetItem *root);
 		void populateUI();
-		void formatTree(QTreeWidgetItem *root);
+
 		int receiveUDP(Socket::ptr socket, tbyte* data, int size);
 		int receiveTCP(Socket::ptr socket, tbyte* data, int size);
 		bool receivePacket(Socket::ptr socket, Packet &pck, int size);
@@ -133,11 +122,11 @@ class Leash : public QWidget
 
 		bool mUseIbvs;
 
-		TNT::Array2D<double> mAttBias;
-		double mAttBiasGain;
+		TNT::Array2D<float> mAttBias;
+		float mAttBiasGain;
 
-		float mKalmanForceGainAdaptGain;
-		Collection<float> mKalmanAttBias, mKalmanAttBiasAdaptGain;
+		float mKalmanForceGainAdaptRate;
+		Collection<float> mKalmanAttBias, mKalmanAttBiasAdaptRate;
 		Collection<float> mKalmanMeasVar, mKalmanDynVar;
 
 		uint32 mLogMask;

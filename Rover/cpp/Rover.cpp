@@ -242,7 +242,6 @@ void Rover::transmitDataUDP()
 	int arduinoStatus;
 	mMutex_cntl.lock();
 	MotorInterface* motorInterface = mAttitudeThrustController.getMotorInterface();
-//	if(mAttitudeThrustController.getMotorInterface()->isConnected())
 	if(motorInterface->isConnected())
 		arduinoStatus = 1;
 	else
@@ -252,33 +251,29 @@ void Rover::transmitDataUDP()
 	pUseMotors.type = COMM_USE_MOTORS;
 
 	Array2D<double> desAtt = mAttitudeThrustController.getDesAttitude();
+	Array2D<double> desTransState = mTranslationController.getDesiredState();
 	mMutex_cntl.unlock();
 
 	pArduinoStatus.dataInt32.push_back(arduinoStatus); 
 	pArduinoStatus.type = COMM_ARDUINO_STATUS;
 
-
 	mMutex_observer.lock();
 	Array2D<double> curAtt = mCurAtt.copy();
 	Array2D<double> curVel = mCurAngularVel.copy();
-	Array2D<double> curBias = mObsvAngular.getBias().copy();
+	Array2D<double> curBias = mObsvAngular.getBias();
+	Array2D<double> curTransState = mTranslationController.getCurState();
 	mMutex_observer.unlock();
-	Array2D<double> curState = stackVertical(curAtt, curVel);
+	Array2D<double> curState = stackVertical(stackVertical(curAtt, curVel), curTransState);
+	Array2D<double> desState = stackVertical(stackVertical(desAtt, Array2D<double>(3,1,0.0)), desTransState);
 
-	pState.dataFloat.resize(12);
+	pState.dataFloat.resize(curState.dim2());
 	for(int i=0; i<(int)pState.dataFloat.size(); i++)
-//		pState.dataFloat[i] = curState[i][0];
-pState.dataFloat[i] = i;
+		pState.dataFloat[i] = curState[i][0];
 	pState.type = COMM_STATE_PHONE;
 
-//	Array2D<double> curDesState(9,1,0.0); 
-//	for(int i=0; i<3; i++)
-//		curDesState[i][0] = desAtt[i][0];
-
-	pDesState.dataFloat.resize(12);
+	pDesState.dataFloat.resize(desState.dim2());
 	for(int i=0; i<(int)pDesState.dataFloat.size(); i++)
-		pDesState.dataFloat[i] = i+1;
-//		pDesState.dataFloat[i] = curDesState[i][0];
+		pDesState.dataFloat[i] = desState[i][0];
 	pDesState.type = COMM_DESIRED_STATE;
 
 	pCntl.dataInt32.resize(4);
@@ -300,12 +295,6 @@ pState.dataFloat[i] = i;
 	pIntMemTorque.dataFloat[1] = 0;
 	pIntMemTorque.dataFloat[2] = 0;
 	pIntMemTorque.type = COMM_INT_MEM_TORQUE;
-
-//	pCntlType.type = COMM_CNTL_TYPE;
-//	mMutex_cntl.lock();
-//	int cntlType = mTranslationController.getControlType();
-//	mMutex_cntl.unlock();
-//	pCntlType.dataInt32.push_back(cntlType);
 
 	pImgProcTime.type = COMM_IMGPROC_TIME_US;
 	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
@@ -471,40 +460,11 @@ void Rover::onNewCommTimeSync(int time)
 void Rover::onNewCommLogTransfer()
 {
 	mQuadLogger.close();
-//	sendLogFile(mSocketTCP, mQuadLogger.getFullPath().c_str());
 	Log::alert("Before sending log file");
 	mCommManager.sendLogFile(mQuadLogger.getFullPath().c_str());
 	Log::alert("After sending log file");
 	mQuadLogger.start();
 }
-
-// void Rover::onNewCommSendMuControl(Collection<tbyte> const &buff)
-// {
-// 	mMutex_cntl.lock();
-// 	mCntlSys.deserialize(buff);
-// 
-// 	int numIn = mCntlSys.getNumInputs();
-// 	int numState = mCntlSys.getNumStates();
-// 	int numOut = mCntlSys.getNumOutputs();
-// 
-// 	mCntlSys.setCurState(Array2D<double>(numState,1,0.0));
-// 	mMutex_cntl.unlock();
-// 
-// 	String str = String()+"Received mu controller system: ";
-// 	str = str +numIn+" inputs x "+numOut+" outputs x "+numState+" states";
-// 	Log::alert(str);
-// }
-
-//void Rover::onNewCommControlType(uint16 cntlType)
-//{
-//	mMutex_cntl.lock();
-//	mCurCntlType = cntlType;
-//	int numStates = mCntlSys.getNumStates();
-//	mCntlSys.setCurState(Array2D<double>(numStates,1,0.0));
-//	mMutex_cntl.unlock(); 
-//
-//	Log::alert(String()+"Control type set to "+cntlType);
-//}
 
 void Rover::onNewCommLogMask(uint32 mask)
 {

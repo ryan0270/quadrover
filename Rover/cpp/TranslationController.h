@@ -36,12 +36,9 @@ class TranslationController : 	public toadlet::egg::Thread,
 	void run();
 	void shutdown();
 
-	void setDesPosAccel(TNT::Array2D<double> const &a);
-
 	TNT::Array2D<double> const getDesiredState(){mMutex_data.lock(); Array2D<double> tempState = mDesState.copy(); mMutex_data.unlock(); return tempState;}
 	TNT::Array2D<double> const getCurState(){mMutex_data.lock(); Array2D<double> tempState = mCurState.copy(); mMutex_data.unlock(); return tempState;}
 	TNT::Array2D<double> const getErrorMemory(){mMutex_data.lock(); Array2D<double> tempInt = mErrInt.copy(); mMutex_data.unlock(); return tempInt;}
-	int getControlType(){mMutex_data.lock(); int temp = mCntlType; mMutex_data.unlock(); return temp;}
 
 	void calcControl();
 	void reset();
@@ -49,17 +46,15 @@ class TranslationController : 	public toadlet::egg::Thread,
 	void setStartTime(Time t){mStartTime = t;}
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 	void setRotViconToPhone(TNT::Array2D<double> const &rot){mRotViconToPhone.inject(rot);}
+	void setDesPosAccel(TNT::Array2D<double> const &a);
 
 	void addListener(TranslationControllerListener* listener){mListeners.push_back(listener);}
 
 	// from CommManagerListener
-	void onNewCommPosControllerGains(float const gainP[12], float const gainI[12], float const gainILimit[12], float mass, float forceScaling);
+	void onNewCommTransGains(toadlet::egg::Collection<float> const &gains);
 	void onNewCommMass(float m){mMass = m;}
 	void onNewCommDesState(toadlet::egg::Collection<float> const &data);
 	void onNewCommMotorOn();
-	void onNewCommSendControlSystem(Collection<tbyte> const &buff);
-	void onNewCommControlSystemGains(Collection<float> const &gains);
-	void onNewCommControlType(uint16 cntlType);
 
 	// for Observer_TranslationalListener
 	void onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel);
@@ -70,15 +65,11 @@ class TranslationController : 	public toadlet::egg::Thread,
 	QuadLogger *mQuadLogger;
 	TNT::Array2D<double> mCurState, mDesState, mDesPosAccel;
 	TNT::Array2D<double> mAccelCmd;
-	TNT::Array2D<double> mGainPID, mGainPIDInt;
+	TNT::Array2D<double> mGainP, mGainD, mGainI;
 	TNT::Array2D<double> mErrInt, mErrIntLimit;
 	TNT::Array2D<double> mRotViconToPhone;
 	TNT::Array2D<double> mDesAccel;
 	double mMass;
-
-	ICSL::SystemModelLinear mCntlSys;
-	TNT::Array2D<double> mGainCntlSys;
-	int mCntlType;
 
 	toadlet::egg::Mutex mMutex_data, mMutex_state;
 
@@ -90,7 +81,6 @@ class TranslationController : 	public toadlet::egg::Thread,
 	{ return min(maxVal, max(minVal, val)); }
 
 	TNT::Array2D<double> calcControlPID(TNT::Array2D<double> const &error, double dt);
-	TNT::Array2D<double> calcControlSystem(TNT::Array2D<double> const &error, double dt);
 };
 
 } // namespace Quadrotor
