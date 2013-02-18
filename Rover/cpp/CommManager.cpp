@@ -621,23 +621,23 @@ bool CommManager::sendLogFile(const char* filename)
 	char buff[buffSize];
 	int bytesRead = 1;
 	int code = COMM_LOG_FILE_DATA;
-//	mSocketTCP->send((tbyte*)&code, sizeof(code));
+	mSocketTCP->send((tbyte*)&code, sizeof(code));
 	while(bytesRead > 0)
 	{
 		bytesRead = logFile.read((tbyte*)&buff,buffSize);
 
 		if(bytesRead >0)
 		{
-//			String str = String() + "Sending " + bytesRead + " bytes";
-//			Log::alert(str);
-//			mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
-//			mSocketTCP->send((tbyte*)buff,bytesRead);
+			String str = String() + "Sending " + bytesRead + " bytes";
+			Log::alert(str);
+			mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
+			mSocketTCP->send((tbyte*)buff,bytesRead);
 		}
 	}
 	bytesRead= -1;
-//	String str = String() + "Sending " + bytesRead + " bytes";
-//	Log::alert(str);
-//	mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
+	String str = String() + "Sending " + bytesRead + " bytes";
+	Log::alert(str);
+	mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
 	logFile.close();
 	mMutex_socketTCP.unlock();
 

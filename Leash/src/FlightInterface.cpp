@@ -88,27 +88,11 @@ namespace Quadrotor{
 		mScToggleIbvs = new QShortcut(Qt::Key_V, this);
 		connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
 
-//		mQuad = new QuadrotorInterface();
 		mLeash = new Leash();
 		mLeash->initialize();
 		mLeash->loadConfigFromFile("../quad0.leashConfig");
 		
-//		int quadIndex = 0;
 		cout << "Initializing quad " << 0 << " ... ";
-//		mQuad->initialize(); // this is hopefully redundant with the load from file, but not sure right now
-//		string filename = "../quad" + QString::number(0).toStdString() + ".quadConfig";
-//		if(mQuad->loadConfigFromFile(filename))
-//		{
-//			filename = "../"+mQuad->getName()+".phoneConfig";
-//			mQuad->getPhoneInterface()->loadConfigFromFile(filename);
-//			cout << " success." << endl;
-//		}
-//		else
-//		{
-//			cout << filename << " not found. Continuing with defaults." << endl;
-//			mQuad->setName("Unk" + QString::number(quadIndex++).toStdString());
-//		}		
-
 		layQuadA->addWidget(mLeash);
 
 		cout << "Connecting to Vicon ... ";
@@ -116,27 +100,12 @@ namespace Quadrotor{
 		{
 			mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 			mTelemVicon.initializeMonitor();
-			if(mTelemVicon.connect("localhost:801") == false)
-			{
-//				mQuad->setSimulated(true);
-
-//				mQuad->setDeltaT(1000); // need something here
-//				// Do this so we start out at hover
-//				Array2D<double> stateRef = mQuad->getDesiredState();
-//				mQuad->setDesiredState(stateRef);
-//
-//				mQuad->calcControl();
-//				mQuad->sendControl();
-			}
+			mTelemVicon.connect("localhost:801") == false;
 		}
 		catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 		cout << "Success" << endl;
 		mTelemVicon.addTrackedQuadrotor("quadMikroPhone");
 		mTelemVicon.addListener(mLeash);
-//		mTelemVicon.addTrackedQuadrotor(mQuad->getName());
-//		mTelemVicon.addListener(mQuad->getDynamicModel());
-
-//		quadDisplayA = mLeash;
 	}
 
 	void FlightInterface::run()
@@ -150,7 +119,6 @@ namespace Quadrotor{
 	void FlightInterface::setDeltaT(double dt)
 	{
 		mDeltaT = dt;
-//		mLeash->setDeltaT(dt);
 	}
 
 	void FlightInterface::doEmergencyShutdown()
@@ -161,7 +129,6 @@ namespace Quadrotor{
 	void FlightInterface::doControl()
 	{
 		unsigned long cntlTime = mTmr.getCurTimeMS();
-//		cout << "Control time: " << cntlTime-mLastCntlTime << endl;
 		mLastCntlTime = cntlTime;
 		Array2D<double> out = runPathPlanner();
 		Array2D<double> desState = submat(out,0,11,0,0);

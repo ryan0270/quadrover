@@ -266,13 +266,13 @@ void Rover::transmitDataUDP()
 	Array2D<double> curState = stackVertical(stackVertical(curAtt, curVel), curTransState);
 	Array2D<double> desState = stackVertical(stackVertical(desAtt, Array2D<double>(3,1,0.0)), desTransState);
 
-	pState.dataFloat.resize(curState.dim2());
-	for(int i=0; i<(int)pState.dataFloat.size(); i++)
+	pState.dataFloat.resize(curState.dim1());
+	for(int i=0; i<pState.dataFloat.size(); i++)
 		pState.dataFloat[i] = curState[i][0];
 	pState.type = COMM_STATE_PHONE;
 
-	pDesState.dataFloat.resize(desState.dim2());
-	for(int i=0; i<(int)pDesState.dataFloat.size(); i++)
+	pDesState.dataFloat.resize(desState.dim1());
+	for(int i=0; i<pDesState.dataFloat.size(); i++)
 		pDesState.dataFloat[i] = desState[i][0];
 	pDesState.type = COMM_DESIRED_STATE;
 
@@ -378,6 +378,7 @@ void Rover::transmitDataUDP()
 
 void Rover::transmitImage()
 {
+	return;
 	if(!mCommManager.pcIsConnected())
 	{
 		mImageIsSending = false;

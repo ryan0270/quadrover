@@ -16,7 +16,10 @@ Leash::Leash(QWidget *parent) :
 	mKalmanMeasVar(6,1),
 	mKalmanDynVar(6,0),
 	mKalmanAttBias(3,0),
-	mKalmanAttBiasAdaptRate(3,0)
+	mKalmanAttBiasAdaptRate(3,0),
+	mState(12,1,0.0),
+	mDesState(12,1,0.0),
+	mViconState(12,1,0.0)
 {
 	ui->setupUi(this);
 
@@ -41,8 +44,6 @@ Leash::Leash(QWidget *parent) :
 
 //	mUseMotors = false;
 	mUseIbvs = false;
-
-	mKalmanForceGainAdaptRate = 0;
 
 	mKalmanForceGainAdaptRate = 0;
 
@@ -82,40 +83,23 @@ void Leash::initialize()
 
 	// Views for onboard data
 	vector<QList<QStandardItem*>* > data;
-	data.push_back(&mAttData);
-	data.push_back(&mPosData);
-	data.push_back(&mVelData);
-	data.push_back(&mDesAttData);
-	data.push_back(&mDesPosData);
-	data.push_back(&mDesVelData);
 	data.push_back(&mGyroData);
 	data.push_back(&mGyroBiasData);
 	data.push_back(&mAccelData);
 	data.push_back(&mMagData);
 	data.push_back(&mPosIntData);
 	data.push_back(&mTorqueIntData);
-	data.push_back(&mViconAttData);
-	data.push_back(&mViconPosData);
 	vector<QTableView**> views;
-	views.push_back(&ui->vwAtt);
-	views.push_back(&ui->vwPos);
-	views.push_back(&ui->vwVel);
-	views.push_back(&ui->vwDesAtt);
-	views.push_back(&ui->vwDesPos);
-	views.push_back(&ui->vwDesVel);
 	views.push_back(&ui->vwGyro);
 	views.push_back(&ui->vwGyroBias);
 	views.push_back(&ui->vwAccel);
 	views.push_back(&ui->vwMag);
 	views.push_back(&ui->vwPosInt);
 	views.push_back(&ui->vwTorqueInt);
-	views.push_back(&ui->vwViconAtt);
-	views.push_back(&ui->vwViconPos);
 	QStringList attLabels;
 	attLabels << "Roll" << "Pitch" << "Yaw";
 	QStringList xyzLabels;
 	xyzLabels << "x" << "y" << "z";
-
 	for(int mdl=0; mdl<(int)data.size(); mdl++)
 	{
 		for(int i=0; i<3; i++)
@@ -125,7 +109,7 @@ void Leash::initialize()
 		}
   		QStandardItemModel *model = new QStandardItemModel(this);
 		model->appendRow(*(data[mdl]));
-		if(data[mdl] == &mAttData || data[mdl] == &mTorqueIntData || data[mdl] == &mViconAttData)
+		if(data[mdl] == &mTorqueIntData)
 			model->setHorizontalHeaderLabels(attLabels);
 		else
 			model->setHorizontalHeaderLabels(xyzLabels);
@@ -134,21 +118,51 @@ void Leash::initialize()
 		(*views[mdl])->resizeColumnsToContents();
 		(*views[mdl])->resizeRowsToContents();
 		(*views[mdl])->verticalHeader()->hide();
+		resizeTable(*views[mdl]);
+	}
 
-		int totWidth = 0;
-		int totHeight = 0;
-		for(int i=0; i<(*views[mdl])->model()->columnCount(); i++)
-			totWidth += (*views[mdl])->columnWidth(i);
-		totHeight = (*views[mdl])->rowHeight(0)+(*views[mdl])->horizontalHeader()->height();// + (*views[mdl])->horizontalHeader()->frameWidth();
-		(*views[mdl])->setMaximumSize(totWidth, totHeight);
-		(*views[mdl])->setMinimumSize(totWidth, totHeight);
-		(*views[mdl])->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-		(*views[mdl])->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	data.clear();
+	data.push_back(&mStateData);
+	data.push_back(&mDesStateData);
+	data.push_back(&mViconStateData);
+	views.clear();
+	views.push_back(&ui->vwState);
+	views.push_back(&ui->vwDesState);
+	views.push_back(&ui->vwViconState);
+	string prefix[] = {"Cur ", "Des ", "Vicon "};
+	for(int mdl=0; mdl<data.size(); mdl++)
+	{
+		QStandardItemModel *model= new QStandardItemModel(this);
+		for(int i=0; i<4; i++)
+		{
+			QList<QStandardItem*> row;
+			for(int j=0; j<3; j++)
+			{
+				data[mdl]->push_back(new QStandardItem(QString("-00.0000")));
+				data[mdl]->back()->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
+				row.push_back(data[mdl]->back());
+			}
+			model->appendRow(row);
+		}
+		QStringList colHeadings, rowHeadings;
+		colHeadings << "x" << "y" << "z";
+		rowHeadings << (prefix[mdl]+"Att").c_str() << (prefix[mdl]+"Att Rate").c_str() << ( prefix[mdl]+"Pos").c_str() << (prefix[mdl]+"Vel").c_str();
+		model->setHorizontalHeaderLabels(colHeadings);
+		model->setVerticalHeaderLabels(rowHeadings);
+		(*views[mdl])->setModel(model);
+		(*views[mdl])->resizeColumnsToContents();
+		(*views[mdl])->resizeRowsToContents();
+		(*views[mdl])->horizontalHeader()->setDefaultAlignment(Qt::AlignHCenter);
+		(*views[mdl])->verticalHeader()->setDefaultAlignment(Qt::AlignRight);
+		(*views[mdl])->setRowHidden(1,true);
+		if(data[mdl] == &mViconStateData)
+			(*views[mdl])->setRowHidden(3,true);
+		resizeTable(*views[mdl]);
 	}
 
 	for(int i=0; i<4; i++)
 	{
-		mMotorData.push_back(new QStandardItem(QString("%1").arg("0000",4)));
+		mMotorData.push_back(new QStandardItem(QString("000000")));
 		mMotorData.back()->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
 	}
 	QStandardItemModel *motorModel = new QStandardItemModel(this);
@@ -159,17 +173,9 @@ void Leash::initialize()
 	ui->vwMotors->setModel(motorModel);
 	ui->vwMotors->resizeColumnsToContents();
 	ui->vwMotors->resizeRowsToContents();
+	ui->vwMotors->horizontalHeader()->show();
 	ui->vwMotors->verticalHeader()->hide();
-
-	int totWidth = 0;
-	int totHeight = 0;
-	for(int i=0; i<motorModel->columnCount(); i++)
-		totWidth += ui->vwMotors->columnWidth(i);
-	totHeight = ui->vwMotors->rowHeight(0)+ui->vwMotors->horizontalHeader()->height();// + ui->vwMotors->horizontalHeader()->frameWidth();
-	ui->vwMotors->setMaximumSize(totWidth, totHeight);
-	ui->vwMotors->setMinimumSize(totWidth, totHeight);
-	ui->vwMotors->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	ui->vwMotors->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	resizeTable(ui->vwMotors);
 
 	vector<QTableWidget*> tables;
 	for(int i=0; i<6; i++)
@@ -214,6 +220,11 @@ void Leash::initialize()
 	ui->lblImageDisplay->setPixmap(QPixmap::fromImage(cvMat2QImage(img)));
 	ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
 	ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
+
+	// Little hack to geth all the widgets to show the correct state
+	// show is overridden to draw everything
+	this->hide();
+	this->show();
 
 	populateUI();
 }
@@ -278,21 +289,17 @@ void Leash::pollUDP()
 							ui->lblMotorStatus->setText("Off");
 						break;
 					case COMM_STATE_PHONE:
-						for(int i=0; i<3; i++)
+						for(int i=0; i<pck.dataFloat.size(); i++)
 						{
-							mAttData[i]->setData(QString::number(pck.dataFloat[i],'f',2), Qt::DisplayRole);
-							// angular velocity is just the gyro measurement (minus bias, which is small)
-							mPosData[i]->setData(QString::number(pck.dataFloat[i+6],'f',3), Qt::DisplayRole);
-							mVelData[i]->setData(QString::number(pck.dataFloat[i+9],'f',3), Qt::DisplayRole);
+							mStateData[i]->setData(QString::number(pck.dataFloat[i],'f',3), Qt::DisplayRole);
+							mState[i][0] = pck.dataFloat[i];
 						}
 						break;
 					case COMM_DESIRED_STATE:
-						for(int i=0; i<3; i++)
+						for(int i=0; i<12; i++)
 						{
-							mDesAttData[i]->setData(QString::number(pck.dataFloat[i],'f',2), Qt::DisplayRole);
-							// angular velocity is just the gyro measurement (minus bias, which is small)
-							mDesPosData[i]->setData(QString::number(pck.dataFloat[i+6],'f',3), Qt::DisplayRole);
-							mDesVelData[i]->setData(QString::number(pck.dataFloat[i+9],'f',3), Qt::DisplayRole);
+							mDesStateData[i]->setData(QString::number(pck.dataFloat[i],'f',3), Qt::DisplayRole);
+							mDesState[i][0] = pck.dataFloat[i];
 						}
 						break;
 					case COMM_GYRO:
@@ -1499,6 +1506,23 @@ void Leash::resizeTableWidget(QTableWidget *tbl)
 	tbl->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 }
 
+void Leash::resizeTable(QTableView *tbl)
+{
+	int totWidth = 0;
+	int totHeight = 0;
+	totWidth = tbl->horizontalHeader()->length();
+	if(tbl->verticalHeader()->isVisible())
+		totWidth += tbl->verticalHeader()->width();
+
+	totHeight = tbl->verticalHeader()->length();
+	if(tbl->horizontalHeader()->isVisible())
+		totHeight += tbl->horizontalHeader()->height();
+	tbl->setMaximumSize(totWidth, totHeight);
+	tbl->setMinimumSize(totWidth, totHeight);
+	tbl->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	tbl->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+}
+
 void Leash::setVerticalTabOrder(QTableWidget *tbl)
 {
 	for(int j=0; j<tbl->columnCount(); j++)
@@ -1517,22 +1541,31 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 	if(strcmp(rec.objectID.c_str(), "quadMikroPhone")==0)
 	{
 		mMutex_data.lock();
-		mViconAttData[0]->setData(QString::number(rec.roll,'f',3), Qt::DisplayRole);
-		mViconAttData[1]->setData(QString::number(rec.pitch,'f',3), Qt::DisplayRole);
-		mViconAttData[2]->setData(QString::number(rec.yaw,'f',3), Qt::DisplayRole);
-		mViconPosData[0]->setData(QString::number(rec.x,'f',3), Qt::DisplayRole);
-		mViconPosData[1]->setData(QString::number(rec.y,'f',3), Qt::DisplayRole);
-		mViconPosData[2]->setData(QString::number(rec.z,'f',3), Qt::DisplayRole);
+		mViconStateData[0]->setData(QString::number(rec.roll,'f',3), Qt::DisplayRole);
+		mViconStateData[1]->setData(QString::number(rec.pitch,'f',3), Qt::DisplayRole);
+		mViconStateData[2]->setData(QString::number(rec.yaw,'f',3), Qt::DisplayRole);
+		mViconStateData[3]->setData(QString::number(0,'f',3), Qt::DisplayRole);
+		mViconStateData[4]->setData(QString::number(0,'f',3), Qt::DisplayRole);
+		mViconStateData[5]->setData(QString::number(0,'f',3), Qt::DisplayRole);
+		mViconStateData[6]->setData(QString::number(rec.x,'f',3), Qt::DisplayRole);
+		mViconStateData[7]->setData(QString::number(rec.y,'f',3), Qt::DisplayRole);
+		mViconStateData[8]->setData(QString::number(rec.z,'f',3), Qt::DisplayRole);
+		mViconStateData[9]->setData(QString::number(0,'f',3), Qt::DisplayRole);
+		mViconStateData[10]->setData(QString::number(0,'f',3), Qt::DisplayRole);
+		mViconStateData[11]->setData(QString::number(0,'f',3), Qt::DisplayRole);
+
+		mViconState[0][0] = rec.roll;
+		mViconState[1][0] = rec.pitch;
+		mViconState[2][0] = rec.yaw;
+		mViconState[6][0] = rec.x;
+		mViconState[7][0] = rec.y;
+		mViconState[8][0] = rec.z;
 		mMutex_data.unlock();
 	}
 
 	String s = String();
-	s = s+rec.roll+"\t";
-	s = s+rec.pitch+"\t";
-	s = s+rec.yaw+"\t";
-	s = s+rec.x+"\t";
-	s = s+rec.y+"\t";
-	s = s+rec.z+"\t";
+	for(int i=0; i<12; i++)
+		s = s+mViconState[i][0]+"\t";
 	mMutex_logBuffer.lock();
 	mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
 	mMutex_logBuffer.unlock();
@@ -1540,17 +1573,9 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 	Packet pState;
 	pState.type = COMM_STATE_VICON;
 	pState.time = mSys.mtime()-mStartTimeUniverseMS;
-	pState.dataFloat.resize(12);
-	pState.dataFloat[0] = rec.roll;
-	pState.dataFloat[1] = rec.pitch;
-	pState.dataFloat[2] = rec.yaw;
-	pState.dataFloat[6] = rec.x;
-	pState.dataFloat[7] = rec.y;
-	pState.dataFloat[8] = rec.z;
-	for(int i=3; i<6; i++)
-		pState.dataFloat[i] = 0;
-	for(int i=9; i<12; i++)
-		pState.dataFloat[i] = 0;
+	pState.dataFloat.resize(mViconState.dim1());
+	for(int i=0; i<mViconState.dim1(); i++)
+		pState.dataFloat[i] = mViconState[i][0];
 	Collection<tbyte> buff;
 	pState.serialize(buff);
 	sendUDP(buff.begin(), buff.size());
@@ -1572,6 +1597,22 @@ void Leash::saveLogData(string dir, string filename)
 		dataStream.close();
 		mMutex_logBuffer.unlock();
 	}
+}
+
+void Leash::show()
+{
+	QWidget::show();
+
+	resizeTable(ui->vwGyro);
+	resizeTable(ui->vwGyroBias);
+	resizeTable(ui->vwAccel);
+	resizeTable(ui->vwMag);
+	resizeTable(ui->vwPosInt);
+	resizeTable(ui->vwTorqueInt);
+	resizeTable(ui->vwMotors);
+	resizeTable(ui->vwState);
+	resizeTable(ui->vwDesState);
+	resizeTable(ui->vwViconState);
 }
 
 }
