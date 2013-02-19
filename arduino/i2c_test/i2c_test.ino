@@ -13,29 +13,33 @@ void setup()
 }
 
 byte MOTOR_BASE_ADDR = 0x53;
+byte MOTOR_ADDR_S = (0x53 + (0 << 1)) >> 1;
+byte MOTOR_ADDR_N = (0x53 + (2 << 1)) >> 1;
+byte MOTOR_ADDR_E = (0x53 + (1 << 1)) >> 1;
+byte MOTOR_ADDR_W = (0x53 + (3 << 1)) >> 1;
 int cnt = 0;
 byte power = 0;
 void loop()
 {
-  for(byte motorID = 0; motorID < 4; motorID++)
-  {
-    byte writeAddr = MOTOR_BASE_ADDR+(motorID << 1);
-    byte readAddr = MOTOR_BASE_ADDR+(motorID << 1);
-    Wire.beginTransmission(writeAddr >> 1);
+//  for(byte motorID = 0; motorID < 4; motorID++)
+//  {
+//    byte writeAddr = MOTOR_BASE_ADDR+(motorID << 1);
+//    Wire.beginTransmission(writeAddr >> 1);
+    Wire.beginTransmission(MOTOR_ADDR_W);
     Wire.write(power);
     byte result = Wire.endTransmission(true);
     if(result != 0)
     {
       Serial.print('xmit error: ');
       Serial.println(result);
-    }
+//    }
   }
 
   if(millis() - startTime > 1000)
   {
     power += 1;
     if(power == 1) power = 3; // power of 1 is crappy
-    else if(power > 20)
+    else if(power > 10)
       power = 0;
     startTime = millis();
     Serial.print("power: ");
