@@ -8,14 +8,11 @@
 
 #include "TNT/tnt.h"
 
-//#include "C:/Advantech/DAQNavi/Inc/bdaqctrl.h"
 #include "ICSL/constants.h"
-#include "ICSL/ControlTimer/src/ControlTimer.h"
 #include "ICSL/Timer/src/Timer.h"
-#include "ICSL/TNT_Utils//TNT_Utils.h"
+#include "ICSL/TNT_Utils/TNT_Utils.h"
 
-#include "Quadrotor/quadrotor_config.h"
-#include "Quadrotor/TelemetryVicon/src/TelemetryVicon.h"
+#include "TelemetryVicon/src/TelemetryVicon.h"
 
 //#include "FlightInterface.h"
 #include "Leash.h"
@@ -40,7 +37,6 @@ void doEmergencyShutdown();
 int main(int argc, char **argv)
 {
 	cout << "start chadding" << endl;
-	double deltaT = 0.1;
 
 	srand(time(NULL));
 
@@ -48,20 +44,12 @@ int main(int argc, char **argv)
 	Leash *leash = new Leash();
 	leash->initialize();
 
-//	ControlTimer cntlTimer;
-//	cntlTimer.setSelectedDevice(0);
-//	cntlTimer.setChannel(0);
-//	cntlTimer.setFrequency(1.0/deltaT);
-//	cntlTimer.addListener(flightInterface);
-//	cntlTimer.setEnabled(true);
-
 	leash->show();
 	leash->run();
 	qtApp.exec();
 	
-//	cntlTimer.setEnabled(false);
 	string dir = "../runData";
-	string filename = "data.csv";
+	string filename = "pcData.txt";
 	leash->saveLogData(dir, filename);
 
 	delete leash;

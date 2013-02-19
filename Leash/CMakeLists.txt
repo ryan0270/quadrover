@@ -4,7 +4,7 @@ project (leash CXX C)
 IF( ${UNIX})
 	set(ICSL_ICSL_DIR "/home/ryantr/Software/ICSL" CACHE PATH " ")
 	set(ICSL_EXTERNALSOFTWARE_DIR "/home/ryantr/Software/ExternalSoftware" CACHE PATH " ")
-	set(ICSL_QUADROTOR_DIR "/home/ryantr/Software/Quadrotor" CACHE PATH " ")
+	set(ICSL_QUADROVER_DIR "/home/ryantr/Software/QuadRover" CACHE PATH " ")
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH};/home/ryantr/toadlet/cmake/Modules CACHE PATH " ")
 	set(ICSL_CNTL_TIMER "Software" CACHE STRING " ")
 
@@ -16,7 +16,7 @@ IF( ${UNIX})
 ELSE()
 	set(ICSL_ICSL_DIR "C:/Users/ICSL/Desktop/Tyler/ICSL" CACHE PATH " ")
 	set(ICSL_EXTERNALSOFTWARE_DIR "C:/Users/ICSL/Desktop/Tyler/ExternalSoftware" CACHE PATH " ")
-	set(ICSL_QUADROTOR_DIR "C:/Users/ICSL/Desktop/Tyler/Quadrotor" CACHE PATH " ")
+	set(ICSL_QUADROVER_DIR "C:/Users/ICSL/Desktop/Tyler/QuadRover" CACHE PATH " ")
 	set(CMAKE_MODULE_PATH "C:/Users/ICSL/Desktop/Tyler/Toadlet/cmake/Modules" CACHE PATH " ")
 	set (OpenCV_DIR "C:/opencv/2.4 vs9/install" CACHE PATH " ")
 	set(ICSL_CNTL_TIMER "DAQNavi" CACHE STRING " ")
@@ -39,8 +39,6 @@ foreach (lib ${OpenCV_LIBS})
 endforeach()
 set(LIBS ${LIBS}
 	${TOADLET_EGG_LIB}
-#	${TOADLET_LIBRARIES}
-#	${TOADLET_LIBRARY_DIR}/libtoadlet_egg.so
 	${OpenCV_LIBS}
 	${QT_LIBRARIES}
 	)
@@ -49,7 +47,7 @@ set(LIBS ${LIBS}
 set (includeDirs ${includeDirs}
 	${leash_SOURCE_DIR/src}
 	${ICSL_ICSL_DIR}
-	${ICSL_QUADROTOR_DIR}
+	${ICSL_QUADROVER_DIR}
 	${ICSL_EXTERNALSOFTWARE_DIR}
 	${TOADLET_INCLUDE_DIR}
 	${OpenCV_INCLUDE_DIRS}
@@ -59,47 +57,26 @@ set (includeDirs ${includeDirs}
 # Source files
 set (SRC ${SRC}
 	src/main.cpp
-#	src/FlightInterface.cpp
-#	src/SystemControllerHierarchical.cpp
-#	src/SystemControllerFeedbackLin.cpp
-#	src/QuadrotorInterface.cpp
 	src/Leash.cpp
-	${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/src/TelemetryVicon.cpp
-#	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.cpp
+	${ICSL_QUADROVER_DIR}/TelemetryVicon/src/TelemetryVicon.cpp
 )
 
 # Headers
 set (H ${H}
-#	src/FlightInterface.h
-#	src/SystemControllerHierarchical.h
-#	src/SystemControllerFeedbackLin.h
-#	src/QuadrotorInterface.h
 	src/Leash.h
 	../Rover/cpp/Common.h
-	${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/src/TelemetryVicon.h
-#	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.h
+	${ICSL_QUADROVER_DIR}/TelemetryVicon/src/TelemetryVicon.h
 )
 
 set (FORMS ${FORMS}
-#	src/FlightInterface.ui
-#	src/QuadrotorInterface.ui
 	src/Leash.ui
 	)
 
 set (RES ${RES})
 
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/ControlTimer/headers.cmake)
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/ControlTimer/source.cmake)
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/ControlTimer/libraries.cmake)
 INCLUDE(${ICSL_ICSL_DIR}/ICSL/MeasurementSystems/headers.cmake)
 INCLUDE(${ICSL_ICSL_DIR}/ICSL/MeasurementSystems/source.cmake)
 INCLUDE(${ICSL_ICSL_DIR}/ICSL/MeasurementSystems/libraries.cmake)
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/SystemModel/headers.cmake)
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/SystemModel/source.cmake)
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/SystemModel/libraries.cmake)
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/Timer/headers.cmake)
-INCLUDE(${ICSL_ICSL_DIR}/ICSL/Timer/source.cmake)
-#INCLUDE(${ICSL_ICSL_DIR}/ICSL/Timer/libraries.cmake)
 INCLUDE(${ICSL_ICSL_DIR}/ICSL/TNT_Utils/headers.cmake)
 INCLUDE(${ICSL_ICSL_DIR}/ICSL/xml_utils/headers.cmake)
 
@@ -131,22 +108,11 @@ QT4_WRAP_UI(FORM_HEADERS ${FORMS})
 QT4_ADD_RESOURCES(RES_RCC ${RES})
 
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/main.cpp)
-#SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.ui)
-#SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.h)
-#SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.cpp)
-# SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.ui)
-# SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.h)
-# SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.cpp)
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.ui)
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.h)
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.cpp)
-#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.h)
-#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.cpp)
-#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.h)
-#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.cpp)
-#SOURCE_GROUP(Quadrotor\\SystemModelQuadrotor ${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/.*)
-SOURCE_GROUP(Quadrotor\\Telemetry\\Vicon ${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/.*)
-SOURCE_GROUP(Quadrotor\\Moc ../.*moc.*)
+SOURCE_GROUP(TelemetryVicon ${ICSL_QUADROVER_DIR}/TelemetryVicon/.*)
+SOURCE_GROUP(QuadRover\\Moc ../.*moc.*)
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 #	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wreorder -Wunused-but-set-variable -Wunused-variable -Wsign-compare")

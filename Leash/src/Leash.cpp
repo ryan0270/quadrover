@@ -464,7 +464,7 @@ void Leash::pollTCP()
 				switch(code)
 				{
 					case COMM_LOG_FILE_DATA:
-						receiveLogFile(mSocketTCP,"../data/phoneLog.txt");
+						receiveLogFile(mSocketTCP,"../runData/phoneLog.txt");
 						break;
 					case COMM_IMG_DATA:
 						{
