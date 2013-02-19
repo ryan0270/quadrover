@@ -23,13 +23,12 @@
 #include "ICSL/icsl_config.h"
 #include "ICSL/constants.h"
 
-#include "ICSL/ControlTimer/src/ControlTimer.h"
 #include "ICSL/xml_utils/xml_utils.h"
 #include "ICSL/TNT_Utils/TNT_Utils.h"
 
 #include "ui_Leash.h"
 #include "../../Rover/cpp/Common.h"
-#include "Quadrotor/TelemetryVicon/src/TelemetryVicon.h"
+#include "TelemetryVicon/src/TelemetryVicon.h"
 
 namespace ICSL{
 namespace Quadrotor {
