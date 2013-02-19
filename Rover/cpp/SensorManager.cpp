@@ -90,10 +90,14 @@ namespace Quadrotor{
 
 	void SensorManager::shutdown()
 	{
+		Log::alert("////////////////////// SensorManager shutdown started //////////////////");
 		mRunning = false;
 		toadlet::egg::System sys;
 		while(!mDone) 
+		{
+			Log::alert("SensorManager waiting");
 			sys.msleep(10);
+		}
 
 		if(mMagSensor != NULL)
 			ASensorEventQueue_disableSensor(mSensorEventQueue, mMagSensor);
@@ -106,6 +110,7 @@ namespace Quadrotor{
 
 		if(mSensorManager != NULL && mSensorEventQueue != NULL)
 			ASensorManager_destroyEventQueue(mSensorManager, mSensorEventQueue);
+		Log::alert("////////////////////// SensorManager shutdown done //////////////////");
 	}
 
 	void SensorManager::run()
