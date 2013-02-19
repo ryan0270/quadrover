@@ -14,10 +14,10 @@ class MotorInterface : public toadlet::egg::Thread
 	void shutdown();
 	void initialize();
 
-	//TODO: Need to make this function constant
+	//TODO: Need to make this function const
 	bool isConnected();
 
-	void sendCommand(toadlet::egg::Collection<uint16> const &cmds);
+	void sendCommand(toadlet::egg::Collection<uint8> const &cmds);
 
 	void enableMotors(bool on);
 	bool isMotorsEnabled() const {return mMotorsEnabled;}
@@ -30,12 +30,12 @@ class MotorInterface : public toadlet::egg::Thread
 	bool mRunning, mShutdown;
 	bool mMotorsEnabled, mIsConnected;
 	bool mWaitingForConnection;
-	uint16 mMotorCmds[4];
+	uint8 mMotorCmds[4];
 
 	toadlet::egg::Mutex mMutex_data, mMutex_socket;
 
 	// skips enabled/disabled checks
-	void sendCommandForced(toadlet::egg::Collection<uint16> const &cmds);
+	void sendCommandForced(toadlet::egg::Collection<uint8> const &cmds);
 };
 
 } // namespace Quadrotor
