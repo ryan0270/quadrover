@@ -378,7 +378,6 @@ void Rover::transmitDataUDP()
 
 void Rover::transmitImage()
 {
-	return;
 	if(!mCommManager.pcIsConnected())
 	{
 		mImageIsSending = false;
@@ -396,7 +395,7 @@ void Rover::transmitImage()
 //	params.push_back(3);
 
 	// now send it
-	code = 2000;
+//	code = 2000;
 	numRows = img.rows;
 	numCols = img.cols;
 	numChannels = img.channels();

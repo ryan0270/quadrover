@@ -17,7 +17,8 @@
 #include "Quadrotor/quadrotor_config.h"
 #include "Quadrotor/TelemetryVicon/src/TelemetryVicon.h"
 
-#include "FlightInterface.h"
+//#include "FlightInterface.h"
+#include "Leash.h"
 
 using namespace std;
 using namespace ICSL;
@@ -44,28 +45,26 @@ int main(int argc, char **argv)
 	srand(time(NULL));
 
 	QApplication qtApp(argc, argv);
-	FlightInterface *flightInterface;
-	flightInterface = new FlightInterface();
-	flightInterface->initialize();
-	flightInterface->setDeltaT(deltaT);
+	Leash *leash = new Leash();
+	leash->initialize();
 
-	ControlTimer cntlTimer;
-	cntlTimer.setSelectedDevice(0);
-	cntlTimer.setChannel(0);
-	cntlTimer.setFrequency(1.0/deltaT);
-	cntlTimer.addListener(flightInterface);
-	cntlTimer.setEnabled(true);
+//	ControlTimer cntlTimer;
+//	cntlTimer.setSelectedDevice(0);
+//	cntlTimer.setChannel(0);
+//	cntlTimer.setFrequency(1.0/deltaT);
+//	cntlTimer.addListener(flightInterface);
+//	cntlTimer.setEnabled(true);
 
-	flightInterface->show();
-	flightInterface->run();
+	leash->show();
+	leash->run();
 	qtApp.exec();
 	
-	cntlTimer.setEnabled(false);
+//	cntlTimer.setEnabled(false);
 	string dir = "../runData";
 	string filename = "data.csv";
-	flightInterface->saveData(dir, filename);;
+	leash->saveLogData(dir, filename);
 
-	delete flightInterface;
+	delete leash;
 	cout << "chad accomplished" << endl;
     return 0;
 }

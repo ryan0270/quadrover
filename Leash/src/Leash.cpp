@@ -7,7 +7,7 @@ using namespace TNT;
 using namespace ICSL::Constants;
 
 Leash::Leash(QWidget *parent) : 
-	QWidget(parent),
+	QMainWindow(parent),
 	ui(new Ui::Leash),
 	mAttBias(3,1,0.0),
 	mIntMemory(3,1,0.0),
@@ -22,6 +22,12 @@ Leash::Leash(QWidget *parent) :
 	mViconState(12,1,0.0)
 {
 	ui->setupUi(this);
+	mTmrGui = new QTimer(this);
+
+	QSettings settings("ICSL", "QuadRover Leash");
+	restoreGeometry(settings.value("geometry").toByteArray());
+	int uiVersion= 1;
+	restoreState(settings.value("state").toByteArray(),uiVersion);
 
 	mIP = string("0.0.0.0");
 	mPort = 13120;
@@ -53,6 +59,8 @@ Leash::Leash(QWidget *parent) :
 	mTotalMass = 1;
 
 	mNewViconDataReady = false;
+
+	mFirstDraw = true;
 }
 
 Leash::~Leash()
@@ -61,10 +69,36 @@ Leash::~Leash()
 		mSocketTCP->close();
 	if(mSocketUDP != NULL)
 		mSocketUDP->close();
+
+	QSettings settings("ICSL", "QuadRover Leash");
+	settings.setValue("geometry", saveGeometry());
+	settings.setValue("state", saveState(1));
+
+	mTelemVicon.stopMonitor();
+	mTelemVicon.disconnect();
+
+	if(mTmrGui != NULL)
+		delete mTmrGui;
+
+	delete mScStartMotors;
+	delete mScStopMotors;
+	delete mScQuit;
+
+	delete mScIncreaseHeight;
+	delete mScDecreaseHeight;
+	delete mScMoveLeft;
+	delete mScMoveRight;
+	delete mScMoveForward;
+	delete mScMoveBackward;
+	delete mScToggleIbvs;
 }
 
 void Leash::initialize()
 {
+	connect(mTmrGui, SIGNAL(timeout()), this, SLOT(updateDisplay()));
+	connect(ui->btnStartMotors, SIGNAL(clicked()), this, SLOT(onBtnStartMotors_clicked()));
+	connect(ui->btnStopMotors,  SIGNAL(clicked()), this, SLOT(onBtnStopMotors_clicked()));
+	connect(ui->btnQuit, SIGNAL(clicked()), this, SLOT(onBtnQuit_clicked()));
 	connect(ui->btnLoadConfig,SIGNAL(clicked()),this,SLOT(onBtnLoadConfig_clicked()));
 	connect(ui->btnSaveConfig,SIGNAL(clicked()),this,SLOT(onBtnSaveConfig_clicked()));
 	connect(ui->btnResetConfig,SIGNAL(clicked()),this,SLOT(onBtnResetConfig_clicked()));
@@ -73,10 +107,47 @@ void Leash::initialize()
 	connect(ui->btnClearPhoneLog,SIGNAL(clicked()),this,SLOT(onBtnClearPhoneLog_clicked()));
 	connect(ui->btnClearLocalLog,SIGNAL(clicked()),this,SLOT(onBtnClearLocalLog_clicked()));
 	connect(ui->btnGetPhoneLog,SIGNAL(clicked()),this,SLOT(onBtnGetPhoneLog_clicked()));
-//	connect(btnSendParameters,SIGNAL(clicked()),this,SLOT(onBtnSendParams_clicked()));
+	connect(ui->btnSendParams,SIGNAL(clicked()),this,SLOT(onBtnSendParams_clicked()));
 //	connect(btnResetObserver,SIGNAL(clicked()),this,SLOT(onBtnResetObserver_clicked()));
 //	connect(btnSyncTime,SIGNAL(clicked()),this,SLOT(onBtnSyncTime_clicked()));
 //	connect(chkViewBinarizedImage,SIGNAL(clicked()),this,SLOT(onChkViewBinarizedImage_clicked()));
+
+	mScStartMotors = new QShortcut(Qt::Key_W, this);
+	mScStopMotors = new QShortcut(Qt::Key_Space, this);
+	mScQuit = new QShortcut(Qt::Key_Q, this);
+	connect(mScStartMotors,SIGNAL(activated()), this, SLOT(onBtnStartMotors_clicked()));
+	connect(mScStopMotors,SIGNAL(activated()), this, SLOT(onBtnStopMotors_clicked()));
+	connect(mScQuit,SIGNAL(activated()), this, SLOT(onBtnQuit_clicked()));
+
+	mScIncreaseHeight = new QShortcut(Qt::Key_9, this);
+	mScDecreaseHeight = new QShortcut(Qt::Key_7, this);
+	mScMoveLeft = new QShortcut(Qt::Key_4, this);
+	mScMoveRight = new QShortcut(Qt::Key_6, this);
+	mScMoveForward = new QShortcut(Qt::Key_8, this);
+	mScMoveBackward = new QShortcut(Qt::Key_2, this);
+	connect(mScIncreaseHeight,SIGNAL(activated()), this, SLOT(onIncreaseHeight()));
+	connect(mScDecreaseHeight,SIGNAL(activated()), this, SLOT(onDecreaseHeight()));
+	connect(mScMoveLeft,SIGNAL(activated()), this, SLOT(onMoveLeft()));
+	connect(mScMoveRight,SIGNAL(activated()), this, SLOT(onMoveRight()));
+	connect(mScMoveForward,SIGNAL(activated()), this, SLOT(onMoveForward()));
+	connect(mScMoveBackward,SIGNAL(activated()), this, SLOT(onMoveBackward()));
+
+	mScToggleIbvs = new QShortcut(Qt::Key_V, this);
+	connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
+
+	loadConfigFromFile("../quad0.leashConfig");
+
+	cout << "Connecting to Vicon ... ";
+	try
+	{
+		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
+		mTelemVicon.initializeMonitor();
+		mTelemVicon.connect("localhost:801") == false;
+	}
+	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
+	cout << "Success" << endl;
+	mTelemVicon.addTrackedQuadrotor("quadMikroPhone");
+	mTelemVicon.addListener(this);
 
 	mSocketTCP = NULL;
 	mSocketUDP = NULL;
@@ -212,8 +283,7 @@ void Leash::initialize()
 	{
 		tables[tbl]->resizeColumnsToContents();
 		tables[tbl]->resizeRowsToContents();
-		resizeTableWidget(tables[tbl]);
-//		setVerticalTabOrder(tables[tbl]);
+		setVerticalTabOrder(tables[tbl]);
 	}
 
 	cv::Mat img(240,320,CV_8UC3,cv::Scalar(0));
@@ -221,10 +291,26 @@ void Leash::initialize()
 	ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
 	ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
 
-	// Little hack to geth all the widgets to show the correct state
-	// show is overridden to draw everything
-	this->hide();
-	this->show();
+	// need to draw everything before tables get properly resized
+	for(int i=0; i<ui->tabWidget->count(); i++)
+	{
+		ui->tabWidget->setCurrentIndex(i);
+		populateUI();
+	}
+	ui->tabWidget->setCurrentIndex(0);
+
+	resizeTable(ui->vwGyro);
+	resizeTable(ui->vwGyroBias);
+	resizeTable(ui->vwAccel);
+	resizeTable(ui->vwMag);
+	resizeTable(ui->vwPosInt);
+	resizeTable(ui->vwTorqueInt);
+	resizeTable(ui->vwMotors);
+	resizeTable(ui->vwState);
+	resizeTable(ui->vwDesState);
+	resizeTable(ui->vwViconState);
+
+	setVerticalTabOrder(ui->tblTransCntl);
 
 	populateUI();
 }
@@ -239,6 +325,13 @@ void Leash::shutdown()
 		int code = COMM_CLIENT_EXIT;
 		sendTCP((tbyte*)&code, sizeof(code));
 	}
+}
+
+void Leash::run()
+{
+	mTelemVicon.startMonitor();
+	mStartTimeUniverseMS = mSys.mtime();
+	mTmrGui->start(50);
 }
 
 void Leash::pollUDP()
@@ -425,6 +518,25 @@ void Leash::pollTCP()
 void Leash::updateDisplay()
 {
 	double time = (mSys.mtime() - mStartTimeUniverseMS)/1.0e3;
+	if(mFirstDraw)
+	{
+		// HACK because widgets don't have the right size yet during startup
+		populateUI();
+
+		ui->tabWidget->setCurrentIndex(2);
+		resizeTable(ui->vwGyro);
+		resizeTable(ui->vwGyroBias);
+		resizeTable(ui->vwAccel);
+		resizeTable(ui->vwMag);
+		resizeTable(ui->vwPosInt);
+		resizeTable(ui->vwTorqueInt);
+		resizeTable(ui->vwMotors);
+		resizeTable(ui->vwState);
+		resizeTable(ui->vwDesState);
+		resizeTable(ui->vwViconState);
+
+		mFirstDraw = false;
+	}
 
 	if(mSocketTCP != NULL)
 	{
@@ -1323,6 +1435,71 @@ void Leash::onChkUseIbvsController_clicked()
 	sendTCP((tbyte*)&useIbvs, sizeof(useIbvs));
 }
 
+void Leash::onBtnStartMotors_clicked()
+{
+	sendParams();
+	sendMotorStart();
+}
+
+void Leash::onBtnStopMotors_clicked()
+{
+	sendMotorStop(true);
+}
+
+void Leash::onBtnQuit_clicked()
+{
+	shutdown();
+	qApp->quit(); // qApp is a global I think
+}
+
+void Leash::onIncreaseHeight()
+{
+	mDesState[8][0] = min(1.0, mDesState[8][0]+0.050);
+	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
+
+	sendDesiredState();
+}
+
+void Leash::onDecreaseHeight()
+{
+	mDesState[8][0] = max(0.0, mDesState[8][0]-0.050);
+	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
+
+	sendDesiredState();
+}
+
+void Leash::onMoveLeft()
+{
+	mDesState[6][0] = mDesState[6][0]-0.200;
+	mDesStateData[6]->setData(QString::number(mDesState[6][0],'f',3), Qt::DisplayRole);
+
+	sendDesiredState();
+}
+
+void Leash::onMoveRight()
+{
+	mDesState[6][0] = mDesState[6][0]+0.200;
+	mDesStateData[6]->setData(QString::number(mDesState[6][0],'f',3), Qt::DisplayRole);
+
+	sendDesiredState();
+}
+
+void Leash::onMoveForward()
+{
+	mDesState[7][0] = mDesState[7][0]+0.200;
+	mDesStateData[7]->setData(QString::number(mDesState[7][0],'f',3), Qt::DisplayRole);
+
+	sendDesiredState();
+}
+
+void Leash::onMoveBackward()
+{
+	mDesState[7][0] = mDesState[7][0]-0.200;
+	mDesStateData[7]->setData(QString::number(mDesState[7][0],'f',3), Qt::DisplayRole);
+
+	sendDesiredState();
+}
+
 void Leash::populateUI()
 {
 	populateControlUI();
@@ -1581,6 +1758,21 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 	sendUDP(buff.begin(), buff.size());
 }
 
+void Leash::sendDesiredState()
+{
+	Packet pState;
+	pState.type = COMM_SET_DESIRED_STATE;
+	pState.time = mSys.mtime()-mStartTimeUniverseMS;
+	for(int i=0; i<mDesState.dim1(); i++)
+		pState.dataFloat.push_back(mDesState[i][0]);
+	// need to tack on desired acceleration
+	for(int i=0; i<3; i++)
+		pState.dataFloat.push_back(0);
+	Collection<tbyte> buff;
+	pState.serialize(buff);
+	sendUDP(buff.begin(), buff.size());
+}
+
 void Leash::saveLogData(string dir, string filename)
 {
 	fstream dataStream((dir+"/"+filename).c_str(), fstream::out);
@@ -1599,21 +1791,5 @@ void Leash::saveLogData(string dir, string filename)
 	}
 }
 
-void Leash::show()
-{
-	QWidget::show();
-
-	resizeTable(ui->vwGyro);
-	resizeTable(ui->vwGyroBias);
-	resizeTable(ui->vwAccel);
-	resizeTable(ui->vwMag);
-	resizeTable(ui->vwPosInt);
-	resizeTable(ui->vwTorqueInt);
-	resizeTable(ui->vwMotors);
-	resizeTable(ui->vwState);
-	resizeTable(ui->vwDesState);
-	resizeTable(ui->vwViconState);
-}
-
-}
-}
+} // namespace Quadrotor
+} // namespace ICSL
