@@ -33,7 +33,7 @@ namespace Quadrotor{
 	void MotorInterface::initialize()
 	{
 		mServerSocket = Socket::ptr(Socket::createTCPSocket());
-		mServerSocket->bind(4567);
+		mServerSocket->bind(45670);
 		mServerSocket->listen(1);
 		mServerSocket->setBlocking(false);
 
