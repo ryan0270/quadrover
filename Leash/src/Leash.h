@@ -8,8 +8,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-//#include <opencv2/features2d/features2d.hpp>
-//#include <algorithm>
 
 #include <fstream>
 #include <iostream>
@@ -19,14 +17,13 @@
 #include <QObject>
 #include <QWidget>
 #include <QtGui>
-//#include <QMutex>
 
 #include "TNT/tnt.h"
 
 #include "ICSL/icsl_config.h"
 #include "ICSL/constants.h"
 
-#include "ICSL/Timer/src/Timer.h"
+#include "ICSL/ControlTimer/src/ControlTimer.h"
 #include "ICSL/xml_utils/xml_utils.h"
 #include "ICSL/TNT_Utils/TNT_Utils.h"
 
@@ -55,7 +52,7 @@ class LogItem
 		LogType type;
 };
 
-class Leash : public QWidget, public TelemetryViconListener
+class Leash : public QMainWindow, public TelemetryViconListener
 {
 	Q_OBJECT
 
@@ -64,10 +61,10 @@ class Leash : public QWidget, public TelemetryViconListener
 		virtual ~Leash();
 
 		void initialize();
+		void run(); // this is for Qt's startup, not a toadlet thread
 		void shutdown();
 		void pollUDP();
 		void pollTCP();
-		void updateDisplay();
 		
 		bool sendUDP(tbyte* data, int size);
 		bool sendTCP(tbyte* data, int size);
@@ -84,6 +81,8 @@ class Leash : public QWidget, public TelemetryViconListener
 
 		void clearLogBuffer(){mLogData.clear();}
 		void saveLogData(string dir, string filename);
+
+		void sendDesiredState();
 		
 		// for TelemetryViconListener
 		void onTelemetryUpdated(TelemetryViconDataRecord const &rec);
@@ -103,13 +102,22 @@ class Leash : public QWidget, public TelemetryViconListener
 		void onChkViewBinarizedImage_clicked();
 		void onChkUseIbvsController_clicked();
 
-		// QWidget override
-		void show();
+		void updateDisplay();
+		void onBtnStartMotors_clicked();
+		void onBtnStopMotors_clicked();
+		void onBtnQuit_clicked();
+		void onIncreaseHeight();
+		void onDecreaseHeight();
+		void onMoveLeft();
+		void onMoveRight();
+		void onMoveForward();
+		void onMoveBackward();
 
 	protected:
 		Ui::Leash *ui;
 		bool mIsConnected;
 		bool mNewViconDataReady;
+		bool mFirstDraw;
 		string mIP;
 		int mPort;
 		Socket::ptr mSocketUDP, mSocketTCP;
@@ -183,6 +191,15 @@ class Leash : public QWidget, public TelemetryViconListener
 		void setVerticalTabOrder(QTableWidget *tbl);
 
 		list<LogItem> mLogData;
+
+		QTimer *mTmrGui;
+		TelemetryVicon mTelemVicon;
+
+		QShortcut *mScStartMotors, *mScStopMotors, *mScQuit;
+		QShortcut *mScIncreaseHeight, *mScDecreaseHeight, *mScMoveLeft, *mScMoveRight, *mScMoveForward, *mScMoveBackward;
+		QShortcut *mScToggleIbvs;
+
+		TNT::Array2D<double> runPathPlannerCircle();
 };
 }
 }

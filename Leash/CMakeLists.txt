@@ -59,29 +59,29 @@ set (includeDirs ${includeDirs}
 # Source files
 set (SRC ${SRC}
 	src/main.cpp
-	src/FlightInterface.cpp
+#	src/FlightInterface.cpp
 #	src/SystemControllerHierarchical.cpp
 #	src/SystemControllerFeedbackLin.cpp
 #	src/QuadrotorInterface.cpp
 	src/Leash.cpp
 	${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/src/TelemetryVicon.cpp
-	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.cpp
+#	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.cpp
 )
 
 # Headers
 set (H ${H}
-	src/FlightInterface.h
+#	src/FlightInterface.h
 #	src/SystemControllerHierarchical.h
 #	src/SystemControllerFeedbackLin.h
 #	src/QuadrotorInterface.h
 	src/Leash.h
 	../Rover/cpp/Common.h
 	${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/src/TelemetryVicon.h
-	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.h
+#	${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/src/SystemModelQuadrotor.h
 )
 
 set (FORMS ${FORMS}
-	src/FlightInterface.ui
+#	src/FlightInterface.ui
 #	src/QuadrotorInterface.ui
 	src/Leash.ui
 	)
@@ -131,20 +131,20 @@ QT4_WRAP_UI(FORM_HEADERS ${FORMS})
 QT4_ADD_RESOURCES(RES_RCC ${RES})
 
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/main.cpp)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.ui)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.h)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.cpp)
+#SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.ui)
+#SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.h)
+#SOURCE_GROUP(QuadRover\\Leash FILES ./src/FlightInterface.cpp)
 # SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.ui)
 # SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.h)
 # SOURCE_GROUP(QuadRover\\Leash FILES ./src/QuadrotorInterface.cpp)
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.ui)
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.h)
 SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.cpp)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.h)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.cpp)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.h)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.cpp)
-SOURCE_GROUP(Quadrotor\\SystemModelQuadrotor ${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/.*)
+#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.h)
+#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerHierarchical.cpp)
+#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.h)
+#SOURCE_GROUP(QuadRover\\Leash FILES ./src/SystemControllerFeedbackLin.cpp)
+#SOURCE_GROUP(Quadrotor\\SystemModelQuadrotor ${ICSL_QUADROTOR_DIR}/Quadrotor/SystemModelQuadrotor/.*)
 SOURCE_GROUP(Quadrotor\\Telemetry\\Vicon ${ICSL_QUADROTOR_DIR}/Quadrotor/TelemetryVicon/.*)
 SOURCE_GROUP(Quadrotor\\Moc ../.*moc.*)
 

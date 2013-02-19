@@ -216,10 +216,11 @@ void CommManager::pollUDP()
 						mListeners[i]->onNewCommStateVicon(pck.dataFloat);
 					mLastCmdRcvTime.setTime();
 					break;
-				case COMM_DES_STATE:
+				case COMM_SET_DESIRED_STATE:
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommDesState(pck.dataFloat);
 					mLastCmdRcvTime.setTime();
+					break;
 				default:
 					Log::alert(String()+"Unknown UDP comm: " + pck.type);
 			}
