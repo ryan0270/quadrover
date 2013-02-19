@@ -116,19 +116,19 @@ namespace Quadrotor {
 		cmds[3] = cmdThrust+cmdRoll-cmdPitch-cmdYaw;
 
 		for(int i=0; i<4; i++)
-			cmds[i] = min(1000.0, max(0.0, cmds[i]));
+			cmds[i] = min(255.0, max(0.0, cmds[i]));
 	
-		Collection<uint16> motorCmds(4);
+		Collection<uint8> motorCmds(4);
 		if(mPcIsConnected)
 		{
 			mMutex_data.lock();
 			for(int i=0; i<4; i++)
-				motorCmds[i] = (uint16)(cmds[i]+0.5+1000)+mMotorTrim[i];
+				motorCmds[i] = (uint8)(cmds[i]+mMotorTrim[i]+0.5);
 			mMutex_data.unlock();
 		}
 		else
 			for(int i=0; i<4;i++)
-				motorCmds[i] = 1000;
+				motorCmds[i] = 0;
 		mMutex_motorInterface.lock();
 		mMotorInterface.sendCommand(motorCmds);
 		mLastMotorCmds = motorCmds; // should copy all the data

@@ -21,18 +21,23 @@ int cnt = 0;
 byte power = 0;
 void loop()
 {
-//  for(byte motorID = 0; motorID < 4; motorID++)
-//  {
+  byte addrs[4];
+  addrs[0] = MOTOR_ADDR_N;
+  addrs[1] = MOTOR_ADDR_E;
+  addrs[2] = MOTOR_ADDR_S;
+  addrs[3] = MOTOR_ADDR_W;
+  for(byte motorID = 0; motorID < 4; motorID++)
+  {
 //    byte writeAddr = MOTOR_BASE_ADDR+(motorID << 1);
 //    Wire.beginTransmission(writeAddr >> 1);
-    Wire.beginTransmission(MOTOR_ADDR_W);
+    Wire.beginTransmission(addrs[motorID]);
     Wire.write(power);
     byte result = Wire.endTransmission(true);
     if(result != 0)
     {
       Serial.print('xmit error: ');
       Serial.println(result);
-//    }
+    }
   }
 
   if(millis() - startTime > 1000)
