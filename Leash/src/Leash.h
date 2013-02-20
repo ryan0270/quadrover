@@ -197,8 +197,6 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		QShortcut *mScStartMotors, *mScStopMotors, *mScQuit;
 		QShortcut *mScIncreaseHeight, *mScDecreaseHeight, *mScMoveLeft, *mScMoveRight, *mScMoveForward, *mScMoveBackward;
 		QShortcut *mScToggleIbvs;
-
-		TNT::Array2D<double> runPathPlannerCircle();
 };
 }
 }

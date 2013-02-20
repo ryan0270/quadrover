@@ -6,7 +6,6 @@ IF( ${UNIX})
 	set(ICSL_EXTERNALSOFTWARE_DIR "/home/ryantr/Software/ExternalSoftware" CACHE PATH " ")
 	set(ICSL_QUADROVER_DIR "/home/ryantr/Software/QuadRover" CACHE PATH " ")
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH};/home/ryantr/toadlet/cmake/Modules CACHE PATH " ")
-	set(ICSL_CNTL_TIMER "Software" CACHE STRING " ")
 
 	set (LIBS ${LIBS} 
 		 -lmxml
@@ -18,10 +17,8 @@ ELSE()
 	set(ICSL_EXTERNALSOFTWARE_DIR "C:/Users/ICSL/Desktop/Tyler/ExternalSoftware" CACHE PATH " ")
 	set(ICSL_QUADROVER_DIR "C:/Users/ICSL/Desktop/Tyler/QuadRover" CACHE PATH " ")
 	set(CMAKE_MODULE_PATH "C:/Users/ICSL/Desktop/Tyler/Toadlet/cmake/Modules" CACHE PATH " ")
-	set (OpenCV_DIR "C:/opencv/2.4 vs9/install" CACHE PATH " ")
-	set(ICSL_CNTL_TIMER "DAQNavi" CACHE STRING " ")
+	set (OpenCV_DIR "C:/opencv-2.4.3/vs9/install" CACHE PATH " ")
 ENDIF()
-	set_property(CACHE ICSL_CNTL_TIMER PROPERTY STRINGS "Software" "DAQNavi")
 
 FIND_PACKAGE(Qt4 REQUIRED)
 INCLUDE(${QT_USE_FILE})

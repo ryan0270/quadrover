@@ -142,7 +142,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-		mTelemVicon.connect("localhost:801") == false;
+		//mTelemVicon.connect("147.46.243.133");
+		mTelemVicon.connect("192.168.100.109");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -811,6 +812,12 @@ bool Leash::loadConfigFromFile(string filename)
 	mxml_node_t *logRoot = mxmlFindElement(xmlRoot, xmlRoot, "LogMask", NULL, NULL, MXML_DESCEND);
 	if(logRoot != NULL) stringstream(logRoot->child->value.text.string) >> mLogMask;
 
+	mxml_node_t *ipRoot = mxmlFindElement(xmlRoot, xmlRoot, "IP", NULL, NULL, MXML_DESCEND);
+	if(ipRoot != NULL) mIP = ipRoot->child->value.text.string;
+
+	mxml_node_t *portRoot = mxmlFindElement(xmlRoot, xmlRoot, "Port", NULL, NULL, MXML_DESCEND);
+	if(portRoot != NULL) stringstream(portRoot->child->value.text.string) >> mPort;
+
 	mxml_node_t *obsvRoot = mxmlFindElement(xmlRoot, xmlRoot, "Observer", NULL, NULL, MXML_DESCEND);
 	if(obsvRoot != NULL)
 		loadObserverConfig(obsvRoot);
@@ -1065,12 +1072,16 @@ void Leash::saveConfigToFile(string filename)
 	mxml_node_t *obsvRoot = mxmlNewElement(xmlRoot,"Observer");
 	mxml_node_t *hdwRoot = mxmlNewElement(xmlRoot,"Hardware");
 	mxml_node_t *logRoot = mxmlNewElement(xmlRoot,"LogMask");
+	mxml_node_t *ipRoot = mxmlNewElement(xmlRoot,"IP");
+	mxml_node_t *portRoot = mxmlNewElement(xmlRoot,"Port");
 
 	saveControllerConfig(cntlRoot);
 	saveObserverConfig(obsvRoot);
 	saveHardwareConfig(hdwRoot);
 
 	mxmlNewInteger(logRoot,mLogMask);
+	mxmlNewText(ipRoot,0,mIP.c_str());
+	mxmlNewInteger(portRoot,mPort);
 
 	FILE *fp = fopen((filename).c_str(),"w");
 	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
@@ -1175,6 +1186,9 @@ void Leash::onBtnApply_clicked()
 	applyObserverConfig();
 	applyHardwareConfig();
 	applyDataLoggingConfig();
+
+	mIP = ui->txtIP->text().toStdString();
+	mPort = ui->txtPort->text().toInt();
 
 	populateUI();
 }
@@ -1283,8 +1297,8 @@ void Leash::onBtnConnect_clicked()
 {
 	if(ui->btnConnect->text() == "Connect")
 	{
-		mIP = ui->txtIP->toPlainText().toStdString();
-		mPort = ui->txtPort->toPlainText().toInt();
+		mIP = ui->txtIP->text().toStdString();
+		mPort = ui->txtPort->text().toInt();
 		cout << "Connecting to phone at " << mIP << ":" << mPort << " ... ";
 //		lblPhoneStatus->setText("Connecting ...");
 		try
@@ -1506,6 +1520,9 @@ void Leash::populateUI()
 	populateObserverUI();
 	populateHardwareUI();
 	populateDataLoggingUI();
+
+	ui->txtIP->setText(mIP.c_str());
+	ui->txtPort->setText(QString::number(mPort));
 }
 
 void Leash::populateControlUI()

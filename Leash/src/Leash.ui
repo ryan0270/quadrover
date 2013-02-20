@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>774</width>
-    <height>839</height>
+    <height>835</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -145,7 +145,7 @@
     <item row="1" column="0" colspan="13">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tabController">
        <attribute name="title">
@@ -500,11 +500,11 @@
        <attribute name="title">
         <string>Communication</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_7">
+       <layout class="QGridLayout" name="gridLayout_6">
         <item row="0" column="0" colspan="2">
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_8">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QLabel" name="label_13">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -528,48 +528,30 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPlainTextEdit" name="txtIP">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
+          <item>
+           <widget class="QLineEdit" name="txtIP">
             <property name="minimumSize">
              <size>
-              <width>121</width>
-              <height>21</height>
+              <width>101</width>
+              <height>20</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>121</width>
-              <height>21</height>
+              <width>101</width>
+              <height>20</height>
              </size>
             </property>
-            <property name="baseSize">
-             <size>
-              <width>121</width>
-              <height>21</height>
-             </size>
+            <property name="text">
+             <string>000.000.000.000</string>
             </property>
-            <property name="verticalScrollBarPolicy">
-             <enum>Qt::ScrollBarAlwaysOff</enum>
-            </property>
-            <property name="horizontalScrollBarPolicy">
-             <enum>Qt::ScrollBarAlwaysOff</enum>
-            </property>
-            <property name="lineWrapMode">
-             <enum>QPlainTextEdit::NoWrap</enum>
-            </property>
-            <property name="plainText">
-             <string>192.168.123.159</string>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_21">
+          <item>
+           <widget class="QLabel" name="label_12">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -578,65 +560,59 @@
             </property>
             <property name="minimumSize">
              <size>
-              <width>35</width>
+              <width>0</width>
               <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16</width>
+              <height>20</height>
              </size>
             </property>
             <property name="layoutDirection">
              <enum>Qt::LeftToRight</enum>
             </property>
             <property name="text">
-             <string>Port:</string>
+             <string>:</string>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QPlainTextEdit" name="txtPort">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
+          <item>
+           <widget class="QLineEdit" name="txtPort">
             <property name="minimumSize">
              <size>
-              <width>121</width>
-              <height>21</height>
+              <width>41</width>
+              <height>20</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>121</width>
-              <height>21</height>
+              <width>41</width>
+              <height>20</height>
              </size>
             </property>
-            <property name="baseSize">
-             <size>
-              <width>121</width>
-              <height>21</height>
-             </size>
+            <property name="text">
+             <string>00000</string>
             </property>
-            <property name="verticalScrollBarPolicy">
-             <enum>Qt::ScrollBarAlwaysOff</enum>
-            </property>
-            <property name="horizontalScrollBarPolicy">
-             <enum>Qt::ScrollBarAlwaysOff</enum>
-            </property>
-            <property name="lineWrapMode">
-             <enum>QPlainTextEdit::NoWrap</enum>
-            </property>
-            <property name="plainText">
-             <string>13120
-</string>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>
          </layout>
         </item>
-        <item row="0" column="2">
+        <item row="1" column="0">
+         <widget class="QPushButton" name="btnStartMotors">
+          <property name="text">
+           <string>Start Motors</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2" rowspan="2">
          <spacer name="horizontalSpacer_2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -648,6 +624,33 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item row="2" column="0">
+         <widget class="QPushButton" name="btnStopMotors">
+          <property name="text">
+           <string>Stop Motors</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <spacer name="horizontalSpacer_11">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>117</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="btnClearBuffers">
+          <property name="text">
+           <string>Clear Buffers</string>
+          </property>
+         </widget>
         </item>
         <item row="4" column="0">
          <spacer name="verticalSpacer_2">
@@ -661,27 +664,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item row="2" column="0">
-         <widget class="QPushButton" name="btnStopMotors">
-          <property name="text">
-           <string>Stop Motors</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="btnStartMotors">
-          <property name="text">
-           <string>Start Motors</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QPushButton" name="btnClearBuffers">
-          <property name="text">
-           <string>Clear Buffers</string>
-          </property>
-         </widget>
         </item>
        </layout>
       </widget>
@@ -880,7 +862,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Gyro;</string>
+               <string>Gyro:</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -928,7 +910,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Gyro Bias;</string>
+               <string>Gyro Bias:</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -2283,7 +2265,7 @@
      <x>0</x>
      <y>0</y>
      <width>774</width>
-     <height>19</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>
