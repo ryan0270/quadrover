@@ -28,7 +28,7 @@ Observer_Angular::Observer_Angular() :
 	mGainP = 1;
 	mGainI = 0.0; 
 	mAccelWeight = 2;
-	mMagWeight = 0.3;
+	mMagWeight = 0;
 
 	mGainB = 2;
 	mIntSat = 0.005;
@@ -48,6 +48,8 @@ Observer_Angular::Observer_Angular() :
 	mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
 
 	mDoingBurnIn = true;
+
+	mYawVicon = 0;
 }
 
 Observer_Angular::~Observer_Angular()
@@ -415,6 +417,18 @@ void Observer_Angular::onNewCommNominalMag(Collection<float> const &nomMag)
 			s = s+nomMag[i]+"\t";
 		Log::alert(s);
 	}
+}
+
+void Observer_Angular::onNewCommStateVicon(Collection<float> const &data)
+{
+	mMutex_data.lock();
+	mYawVicon = -data[2];
+
+	Array2D<double> R1 = createRotMat(2,-mCurAttitude[2][0]);
+	Array2D<double> R2 = createRotMat(2,mYawVicon);
+	mCurRotMat = matmult(R2, matmult(R1, mCurRotMat));
+	mCurAttitude = extractEulerAngles(mCurRotMat);
+	mMutex_data.unlock();
 }
 
 void Observer_Angular::onNewSensorUpdate(SensorData const &data)

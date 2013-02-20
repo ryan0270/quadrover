@@ -111,6 +111,7 @@ namespace Quadrotor {
 		for(int i=0; i<3; i++)
 			mErrInt[i][0] = constrain(mErrInt[i][0]+dt*error[i][0],-mErrIntLimit[i][0],mErrIntLimit[i][0]);
 
+
 		for(int i=0; i<3; i++)
 			mAccelCmd[i][0] =	-mGainP[i][0]*error[i][0]
 								-mGainD[i][0]*error[i+3][0]
