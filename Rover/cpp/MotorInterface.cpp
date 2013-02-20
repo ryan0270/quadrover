@@ -10,7 +10,7 @@ namespace Quadrotor{
 		mShutdown = true;
 
 		mMotorsEnabled = false;
-		mMotorCmds[0] = mMotorCmds[1] = mMotorCmds[2] = mMotorCmds[3] = 1000;
+		mMotorCmds[0] = mMotorCmds[1] = mMotorCmds[2] = mMotorCmds[3] = 0;
 
 		mWaitingForConnection = true;
 	}
@@ -33,7 +33,7 @@ namespace Quadrotor{
 	void MotorInterface::initialize()
 	{
 		mServerSocket = Socket::ptr(Socket::createTCPSocket());
-		mServerSocket->bind(4567);
+		mServerSocket->bind(45670);
 		mServerSocket->listen(1);
 		mServerSocket->setBlocking(false);
 
@@ -61,26 +61,26 @@ namespace Quadrotor{
 			else if(!mMotorsEnabled)
 			{
 				// this is just to keep the connection alive
-				Collection<uint16> cmds(4,1000);
-				cmds[0] = 1000;
-				cmds[1] = 1001;
-				cmds[2] = 1002;
-				cmds[3] = 1003;
+				Collection<uint8> cmds(4,0);
+				cmds[0] = 3;
+				cmds[1] = 4;
+				cmds[2] = 5;
+				cmds[3] = 6;
 				sendCommandForced(cmds);
 			}
 
 			sys.msleep(50);
 		}
 
-		Collection<uint16> cmds(4,1000);
+		Collection<uint8> cmds(4,0);
 		sendCommandForced(cmds);
 //		mMutex_data.lock();
-//		mMotorCmds[0] = mMotorCmds[1] = mMotorCmds[2] = mMotorCmds[3] = 1000;
+//		mMotorCmds[0] = mMotorCmds[1] = mMotorCmds[2] = mMotorCmds[3] = 0;
 //		mMutex_data.unlock();
 		mMutex_socket.lock();
 		if(mSocket != NULL && mSocket->connected())
 		{
-			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
+			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
 			mSocket->close();
 			mSocket = NULL;
 		}
@@ -91,7 +91,7 @@ namespace Quadrotor{
 		mShutdown = true;
 	}
 
-	void MotorInterface::sendCommand(Collection<uint16> const &cmds)
+	void MotorInterface::sendCommand(Collection<uint8> const &cmds)
 	{
 		if(!isConnected() || !mMotorsEnabled)
 			return;
@@ -100,11 +100,11 @@ namespace Quadrotor{
 
 		for(int i=0; i<cmds.size(); i++)
 			mMotorCmds[i] = cmds[i];
-		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
+		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
 
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
-		if(result != 4*sizeof(uint16))
+		if(result != 4*sizeof(uint8))
 		{
 			if(mSocket != NULL && mSocket->connected())
 				mSocket->close();
@@ -114,7 +114,7 @@ namespace Quadrotor{
 		}
 	}
 
-	void MotorInterface::sendCommandForced(Collection<uint16> const &cmds)
+	void MotorInterface::sendCommandForced(Collection<uint8> const &cmds)
 	{
 		if(!isConnected())
 			return;
@@ -123,11 +123,11 @@ namespace Quadrotor{
 
 		for(int i=0; i<cmds.size(); i++)
 			mMotorCmds[i] = cmds[i];
-		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
+		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
 
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
-		if(result != 4*sizeof(uint16))
+		if(result != 4*sizeof(uint8))
 		{
 			if(mSocket != NULL && mSocket->connected())
 				mSocket->close();
@@ -142,7 +142,7 @@ namespace Quadrotor{
 		mMotorsEnabled = on;
 
 		// make sure we are always at a good starting point
-		Collection<uint16> cmds(4,1000);
+		Collection<uint8> cmds(4,0);
 		sendCommandForced(cmds);
 
 		if(mMotorsEnabled)
