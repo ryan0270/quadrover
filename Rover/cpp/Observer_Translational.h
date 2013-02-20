@@ -1,5 +1,5 @@
-#ifndef OBSERVER_TRANSLATIONAL
-#define OBSERVER_TRANSLATIONAL
+#ifndef ICSL_OBSERVER_TRANSLATIONAL
+#define ICSL_OBSERVER_TRANSLATIONAL
 #include <fstream>
 
 #include <android/sensor.h>

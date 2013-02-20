@@ -62,10 +62,6 @@ namespace Quadrotor{
 			{
 				// this is just to keep the connection alive
 				Collection<uint8> cmds(4,0);
-				cmds[0] = 3;
-				cmds[1] = 4;
-				cmds[2] = 5;
-				cmds[3] = 6;
 				sendCommandForced(cmds);
 			}
 
@@ -101,7 +97,6 @@ namespace Quadrotor{
 		for(int i=0; i<cmds.size(); i++)
 			mMotorCmds[i] = cmds[i];
 		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
-
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
 		if(result != 4*sizeof(uint8))

@@ -70,6 +70,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		void onNewCommObserverReset();
 		void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight);
 		void onNewCommNominalMag(toadlet::egg::Collection<float> const &nomMag);
+		void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
 		
 		// for SensorManagerListener
 		void onNewSensorUpdate(SensorData const &data);
@@ -103,6 +104,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 		Collection<Observer_AngularListener*> mListeners;
 
 		QuadLogger *mQuadLogger;
+
+		double mYawVicon;
 };
 
 }

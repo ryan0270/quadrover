@@ -48,7 +48,7 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 	// TODO: Need to adjust MotorInterface class so this can be a const pointer
 	MotorInterface* getMotorInterface(){return &mMotorInterface;}
 
-	Collection<uint16> getLastMotorCmds(){mMutex_motorInterface.lock(); Collection<uint16> temp(mLastMotorCmds); mMutex_motorInterface.unlock(); return temp;}
+	Collection<uint8> getLastMotorCmds(){mMutex_motorInterface.lock(); Collection<uint8> temp(mLastMotorCmds); mMutex_motorInterface.unlock(); return temp;}
 	TNT::Array2D<double> getDesAttitude(){mMutex_data.lock(); TNT::Array2D<double> temp = mDesAtt.copy(); mMutex_data.unlock(); return temp;}
 
 	void addListener(AttitudeThrustControllerListener* l){mListeners.push_back(l);}
@@ -78,7 +78,7 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 
 	double mForceScaling, mTorqueScaling;
 	int mMotorTrim[4];
-	Collection<uint16> mLastMotorCmds;
+	Collection<uint8> mLastMotorCmds;
 
 	MotorInterface mMotorInterface;
 

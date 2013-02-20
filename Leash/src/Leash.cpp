@@ -133,7 +133,7 @@ void Leash::initialize()
 	connect(mScMoveBackward,SIGNAL(activated()), this, SLOT(onMoveBackward()));
 
 	mScToggleIbvs = new QShortcut(Qt::Key_V, this);
-	connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
+//	connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
 
 	loadConfigFromFile("../quad0.leashConfig");
 
@@ -143,7 +143,7 @@ void Leash::initialize()
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
 		//mTelemVicon.connect("147.46.243.133");
-		mTelemVicon.connect("192.168.100.109");
+		mTelemVicon.connect("192.168.100.108");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
