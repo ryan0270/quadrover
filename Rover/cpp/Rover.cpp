@@ -114,6 +114,7 @@ void Rover::shutdown()
 		sys.msleep(10);
 	}
 
+	mSensorManager.shutdown();
 	mMutex_cntl.lock();
 	mAttitudeThrustController.shutdown();
 	mTranslationController.shutdown();

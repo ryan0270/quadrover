@@ -1,6 +1,6 @@
 #include "VisionProcessor.h"
 
-#include "tbb/parallel_for.h"
+//#include "tbb/parallel_for.h"
 
 using namespace toadlet;
 //using namespace cv;

@@ -12,9 +12,6 @@
 #include "ICSL/Timer/src/Timer.h"
 #include "ICSL/TNT_Utils/TNT_Utils.h"
 
-#include "TelemetryVicon/src/TelemetryVicon.h"
-
-//#include "FlightInterface.h"
 #include "Leash.h"
 
 using namespace std;
