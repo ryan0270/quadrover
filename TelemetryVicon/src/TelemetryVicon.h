@@ -6,18 +6,10 @@
 #include <string> 
 #include <exception> 
 
-//// #include <QMainWindow> // for emitting signals
-//#include <QObject>
 #include <QtGui>
-//#include <QMessageBox>
-//// #include <QMetaType>
 
 #include "toadlet/egg.h"
-#include "toadlet/egg/Thread.h" 
-#include "toadlet/egg/Mutex.h" 
-#include "toadlet/egg/WaitCondition.h"
 
-#define TNT_BOUNDS_CHECK
 #include "TNT/tnt.h"
 
 #include "ICSL/Timer/src/Timer.h"

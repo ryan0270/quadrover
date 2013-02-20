@@ -1,13 +1,16 @@
 #ifndef CLASS_PHONEINTERFACE
 #define CLASS_PHONEINTERFACE
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+using ::int64;
+using ::uint64;
+
 #include "toadlet/egg.h"
 //using toadlet::int64;
 //using toadlet::uint64;
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 #include <fstream>
 #include <iostream>
