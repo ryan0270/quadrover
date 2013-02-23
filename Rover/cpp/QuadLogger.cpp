@@ -101,6 +101,8 @@ void QuadLogger::saveImageBuffer(list<cv::Mat> const &imgBuffer, list<SensorData
 		id++;
 	}
 
+	mxmlNewInteger(mxmlNewElement(xml,"NumImages"),id);
+
 	FILE *fp = fopen((mDir+"/images/data.xml").c_str(),"w");
 	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
 	fclose(fp);
