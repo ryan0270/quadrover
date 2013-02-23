@@ -70,7 +70,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(SensorData const &data);
+	void onNewSensorUpdate(SensorData const *data);
 
 	private:
 	bool mRunning, mDone;

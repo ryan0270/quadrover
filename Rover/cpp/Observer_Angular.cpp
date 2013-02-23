@@ -431,25 +431,25 @@ void Observer_Angular::onNewCommStateVicon(Collection<float> const &data)
 	mMutex_data.unlock();
 }
 
-void Observer_Angular::onNewSensorUpdate(SensorData const &data)
+void Observer_Angular::onNewSensorUpdate(SensorData const *data)
 {
-	switch(data.type)
+	switch(data->type)
 	{
 		case SENSOR_DATA_TYPE_ACCEL:
 			mMutex_cache.lock();
-			((SensorDataVector*)&data)->copyTo(mAccelData);
+			((SensorDataVector*)data)->copyTo(mAccelData);
 			mNewAccelReady = true;
 			mMutex_cache.unlock();
 			break;
 		case SENSOR_DATA_TYPE_GYRO:
 			mMutex_cache.lock();
-			((SensorDataVector*)&data)->copyTo(mGyroData);
+			((SensorDataVector*)data)->copyTo(mGyroData);
 			mNewGyroReady = true;
 			mMutex_cache.unlock();
 			break;
 		case SENSOR_DATA_TYPE_MAG:
 			mMutex_cache.lock();
-			((SensorDataVector*)&data)->copyTo(mMagData);
+			((SensorDataVector*)data)->copyTo(mMagData);
 			mNewMagReady = true;
 			mMutex_cache.unlock();
 			break;

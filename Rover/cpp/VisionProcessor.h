@@ -21,49 +21,10 @@ using toadlet::egg::String;
 #include "Observer_Angular.h"
 #include "Time.h"
 #include "CommManager.h"
+#include "SensorManager.h"
 
 namespace ICSL {
 namespace Quadrotor {
-class ImageGrabber : public toadlet::egg::Thread
-{
-	public:
-		explicit ImageGrabber();
-		virtual ~ImageGrabber(){};
-
-		void copyImage(cv::Mat *dstImage);
-		void copyImageGray(cv::Mat *dstImage);
-
-		void shutdown();
-
-		bool isNewImageReady(){return  mNewImageReady;}
-
-		void markBottleneck(bool isBottleneck){mIsBottleneck = isBottleneck;}
-
-		bool imageConversionDone(){return mImgConversionDone;}
-
-		TNT::Array2D<double> getImageAtt();
-		TNT::Array2D<double> getRotVel();
-
-		void setAttitudeObserver(Observer_Angular *obs){mAttObserver = obs;}
-
-		void setStartTime(Time t){mStartTime = t;}
-		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
-
-	protected:
-		bool mNewImageReady, mIsBottleneck;
-		bool mRunning, mFinished;
-		bool mImgConversionDone;
-		cv::Mat mCurImage, mCurImageGray;
-		toadlet::egg::Mutex mMutex_image, mMutex_data;
-		TNT::Array2D<double> mImgAtt, mImgRotVel;
-
-		Observer_Angular *mAttObserver;
-
-		Time mStartTime;
-		QuadLogger *mQuadLogger;
-
-		void run();
-};
 
 class VisionProcessorListener
 {
@@ -75,7 +36,9 @@ class VisionProcessorListener
 };
 
 
-class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
+class VisionProcessor : public toadlet::egg::Thread, 
+						public CommManagerListener,
+						public SensorManagerListener
 {
 	public:
 		explicit VisionProcessor();
@@ -87,10 +50,8 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
 		void setVisionParams(toadlet::egg::Collection<int> const &p);
-		void setStartTime(Time t){mStartTime = t; mImageGrabber.setStartTime(t);}
-		void setQuadLogger(QuadLogger *log){mQuadLogger = log; mImageGrabber.setQuadLogger(log);}
-
-		void setAttitudeObserver(Observer_Angular *obs){mImageGrabber.setAttitudeObserver(obs);};
+		void setStartTime(Time t){mStartTime = t;}
+		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
 		void enableIbvs(bool enable);
 
@@ -105,11 +66,15 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 		void calcOpticalFlow(vector<vector<cv::Point2f> > const &points);
 
 		// CommManagerListener functions
+		
+		// SensorManagerListener
+		void onNewSensorUpdate(SensorData const *data);
 
 	protected:
 		bool mUseIbvs;
 		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
+		bool mNewImageReady;
 		cv::Mat	mCurImage, mCurImageGray;
 		cv::Mat mLastImageGray;
 		vector<vector<double> > mMSERHuMoments;
@@ -117,15 +82,15 @@ class VisionProcessor : public toadlet::egg::Thread, public CommManagerListener
 
 		double mFocalLength;
 
+		SensorDataImage mImageData;
+
 		Time mStartTime, mLastImgFoundTime, mLastProcessTime;
 
 		toadlet::uint32 mImgProcTimeUS;
 
-		ImageGrabber mImageGrabber;
-
 		QuadLogger *mQuadLogger;
 
-		toadlet::egg::Mutex mMutex_data, mMutex_image;
+		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData;
 
 		Collection<VisionProcessorListener*> mListeners;
 

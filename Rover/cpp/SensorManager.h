@@ -9,6 +9,12 @@
 #include "toadlet/egg.h"
 #include "TNT/tnt.h"
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/video/tracking.hpp>
+
 #include "Common.h"
 #include "QuadLogger.h"
 #include "Time.h"
@@ -16,6 +22,14 @@
 namespace ICSL{
 namespace Quadrotor{
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
+
+enum ImageFormat
+{
+	IMG_FORMAT_BGR=1,
+	IMG_FORMAT_RGB,
+	IMG_FORMAT_HSV,
+	IMG_FORMAT_GRAY,
+};
 
 class SensorData
 {
@@ -42,23 +56,25 @@ class SensorDataVector : public SensorData
 class SensorDataImage : public SensorData
 {
 	public:
-	SensorDataImage(){type = SENSOR_DATA_TYPE_UNDEFINED;}
-	SensorDataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1){
+	SensorDataImage(){type = SENSOR_DATA_TYPE_IMAGE; imgFormat = IMG_FORMAT_BGR;}
+	SensorDataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
 		img1.copyTo(img);
 		att = att1.copy();
 		angularVel = angularVel.copy();
+		imgFormat = fmt;
 	}
 
 	void copyTo(SensorDataImage &d){d.timestamp.setTime(timestamp); img.copyTo(d.img); d.att = att.copy(); d.angularVel = angularVel.copy();}
 	cv::Mat img;
 	TNT::Array2D<double> att;
 	TNT::Array2D<double> angularVel;
+	ImageFormat imgFormat;
 };
 
 class SensorManagerListener
 {
 	public:
-	virtual void onNewSensorUpdate(SensorData const &data)=0;
+	virtual void onNewSensorUpdate(SensorData const *data)=0;
 };
 
 class SensorManager : public toadlet::egg::Thread
@@ -72,7 +88,7 @@ class SensorManager : public toadlet::egg::Thread
 	void shutdown();
 
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
-	void setStartTime(Time time){mStartTime = time;}
+	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime = time; mMutex_startTime.unlock();}
 
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
@@ -91,11 +107,14 @@ class SensorManager : public toadlet::egg::Thread
 
 	TNT::Array2D<double> mLastAccel, mLastGyro, mLastMag;
 	double mLastPressure;
-	toadlet::egg::Mutex mMutex_data, mMutex_listeners;
+	toadlet::egg::Mutex mMutex_data, mMutex_listeners, mMutex_startTime;
 
 	Time mStartTime;
 
 	Collection<SensorManagerListener *> mListeners;
+
+	cv::VideoCapture* initCamera();
+	void runImgAcq(cv::VideoCapture *cap);
 };
 
 
