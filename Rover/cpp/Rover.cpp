@@ -85,6 +85,7 @@ void Rover::initialize()
 
 	mVisionProcessor.setStartTime(mStartTime);
 	mVisionProcessor.setQuadLogger(&mQuadLogger);
+	mCommManager.addListener(&mVisionProcessor);
 	mVisionProcessor.start();
 
 	mSensorManager.initialize();
@@ -95,6 +96,8 @@ void Rover::initialize()
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
 	mSensorManager.addListener(&mVisionProcessor);
+
+	mQuadLogger.setStartTime(mStartTime);
 
 	this->start();
 
@@ -216,7 +219,7 @@ void Rover::run()
 				// finish making log string
 				for(int i=0; i<usage.size(); i++)
 					str = str+usage[i]+"\t";
-				mQuadLogger.addLine(str,PC_UPDATES);
+				mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);
 			}
 			cpuUsagePrev.inject(cpuUsageCur);
 		}
@@ -460,7 +463,7 @@ void Rover::onNewCommTimeSync(int time)
 	mMutex_cntl.unlock();
 	String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-500\t" + delta;
 	mMutex_cntl.unlock();
-	mQuadLogger.addLine(str,PC_UPDATES);
+	mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);
 }
 
 void Rover::onNewCommLogTransfer()

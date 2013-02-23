@@ -28,6 +28,11 @@ VisionProcessor::VisionProcessor()
  	mFocalLength = 3.7*320.0/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 
 	mNewImageReady = false;
+
+	mImgBufferMaxSize = 10;
+	
+	mLogImages = false;
+mLogImages = true;
 }
 
 void VisionProcessor::shutdown()
@@ -63,13 +68,15 @@ void VisionProcessor::run()
 	mFinished = false;
 	mRunning = true;
 	Array2D<double> imgAtt(3,1,0.0), rotVel(3,1,0.0);
+	SensorDataImage data;
 	while(mRunning)
 	{
 		if(mNewImageReady)
 		{
 			mMutex_imageSensorData.lock();
-			mImageData.img.copyTo(mCurImage);
+			mImageData.copyTo(data);
 			mMutex_imageSensorData.unlock();
+			data.img.copyTo(mCurImage);
 			mNewImageReady = false;
 
 			Time procStart;
@@ -85,15 +92,29 @@ void VisionProcessor::run()
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			{
 				String str = String()+" "+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
-				mQuadLogger->addLine(str,CAM_RESULTS);
+				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+			}
+
+			if(mLogImages)
+			{
+				mMutex_imgBuffer.lock();
+				mImgBuffer.push_back(mCurImage.clone());
+				mImgDataBuffer.push_back(data);
+				while(mImgBuffer.size() > mImgBufferMaxSize)
+					mImgBuffer.pop_front();
+				while(mImgDataBuffer.size() > mImgBufferMaxSize)
+					mImgDataBuffer.pop_front();
+				mMutex_imgBuffer.unlock();
 			}
 
 			mCurImageGray.copyTo(mLastImageGray);
-
 		}
 
 		sys.msleep(10);
 	}
+
+	if(mLogImages)
+		mQuadLogger->saveImageBuffer(mImgBuffer, mImgDataBuffer);
 
 	mFinished = true;
 }
@@ -413,7 +434,7 @@ void VisionProcessor::enableIbvs(bool enable)
 	{
 		Log::alert("Turning IBVS on");
 		String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-605\t";
-		mQuadLogger->addLine(str,PC_UPDATES);
+		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 		mLastImgFoundTime.setTime();
 		mFirstImageProcessed = false;
 	}
@@ -421,7 +442,7 @@ void VisionProcessor::enableIbvs(bool enable)
 	{
 		Log::alert("Turning IBVS off");
 		String str = String() + mStartTime.getElapsedTimeMS() + "\t-606\t";
-		mQuadLogger->addLine(str,PC_UPDATES);
+		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 		mFirstImageProcessed = false;
 	}
 }
@@ -446,6 +467,25 @@ void VisionProcessor::onNewSensorUpdate(SensorData const *data)
 		mMutex_imageSensorData.unlock();
 		mNewImageReady = true;
 	}
+}
+
+void VisionProcessor::onNewCommLogMask(uint32 mask)
+{
+	if((mask & LOG_FLAG_CAM_IMAGES) > 0)
+		mLogImages = true;
+	else
+	{
+		mLogImages = false;
+		mImgBuffer.clear();
+		mImgDataBuffer.clear();
+	}
+}
+
+void VisionProcessor::onNewCommImgBufferSize(int size)
+{
+	mMutex_imgBuffer.lock();
+	mImgBufferMaxSize = size;
+	mMutex_imgBuffer.unlock();
 }
 
 } // namespace Quadrotor

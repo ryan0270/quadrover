@@ -126,7 +126,7 @@ namespace Quadrotor{
 							{
 								String s=String() + mStartTime.getElapsedTimeMS() + "\t" + event.type + "\t";
 								s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
-								mQuadLogger->addLine(s,PRESSURE);
+								mQuadLogger->addLine(s,LOG_FLAG_PRESSURE);
 							}
 						}
 						break;
@@ -199,7 +199,7 @@ namespace Quadrotor{
 				s = s+secTemp+"\t";
 				s = s+fuelgaugeTemp+"\t";
 				s = s+tmuTemp+"\t";
-				mQuadLogger->addLine(s, PHONE_TEMP);
+				mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
 			}
 
 			sys.msleep(5); // maintain a (roughly) 200Hz update rate
@@ -279,11 +279,11 @@ namespace Quadrotor{
 			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t-710\t";
 			for(int i=0; i<mAttBias.dim1(); i++)
 				str1 = str1+mAttBias[i][0]+"\t";
-			mQuadLogger->addLine(str1,STATE);
+			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
 
 			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t-711\t";
 			str2 = str2+mForceGain+"\t";
-			mQuadLogger->addLine(str2,STATE);
+			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
 		}
 		mMutex_data.unlock();
 

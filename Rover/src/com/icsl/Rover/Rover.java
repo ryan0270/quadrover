@@ -102,7 +102,24 @@ public class Rover extends Activity implements Runnable
 		}
 		else
 			Log.i(ME,"Log dir: "+logDir.toString()+" already exists.");
+		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
+		if(imgLogDir.exists())
+		{
+			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
+			if(bakDir.exists())
+				deleteDir(bakDir);
+			imgLogDir.renameTo(bakDir);
+		}
+		imgLogDir.mkdir();
 		setLogDir(logDir.toString());
+		File logFile = new File(logDir.getAbsolutePath()+"/log.txt");
+		if(logFile.exists())
+		{
+			File bakFile = new File(logFile.getAbsolutePath()+".bak");
+			if(bakFile.exists())
+				bakFile.delete();
+			logFile.renameTo(bakFile);
+		}
 		startLogging();
 
 //		populateVisionParams();
@@ -307,6 +324,24 @@ public class Rover extends Activity implements Runnable
 			//Default to return 1 core
 			return 1;
 		}
+	}
+
+	// taken from 
+	// http://www.rgagnon.com/javadetails/java-0483.html
+	static private boolean deleteDir(File path)
+	{
+		if( path.exists() ) {
+			File[] files = path.listFiles();
+			for(int i=0; i<files.length; i++) {
+				if(files[i].isDirectory()) {
+					deleteDir(files[i]);
+				}
+				else {
+					files[i].delete();
+				}
+			}
+		}
+		return( path.delete() );
 	}
 
 	public native String nativeTest();

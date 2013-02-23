@@ -9,19 +9,19 @@ namespace Quadrotor {
 using toadlet::uint64;
 enum LogFlags
 {
-	STATE		= 1 << 0,
-	STATE_DES	= 1 << 1,
-	MOTORS 		= 1 << 2,
-	PC_UPDATES	= 1 << 3,
-	OBSV_UPDATE	= 1 << 4,
-	OBSV_BIAS	= 1 << 5,
-	MAGNOMETER	= 1 << 6,
-	ACCEL		= 1 << 7,
-	GYRO		= 1 << 8,
-	CAM_RESULTS	= 1 << 9,
-	CAM_IMAGES	= 1 << 10,
-	PRESSURE	= 1 << 11,
-	PHONE_TEMP	= 1 << 12,
+	LOG_FLAG_STATE		= 1 << 0,
+	LOG_FLAG_STATE_DES	= 1 << 1,
+	LOG_FLAG_MOTORS 		= 1 << 2,
+	LOG_FLAG_PC_UPDATES	= 1 << 3,
+	LOG_FLAG_OBSV_UPDATE	= 1 << 4,
+	LOG_FLAG_OBSV_BIAS	= 1 << 5,
+	LOG_FLAG_MAGNOMETER	= 1 << 6,
+	LOG_FLAG_ACCEL		= 1 << 7,
+	LOG_FLAG_GYRO		= 1 << 8,
+	LOG_FLAG_CAM_RESULTS	= 1 << 9,
+	LOG_FLAG_CAM_IMAGES	= 1 << 10,
+	LOG_FLAG_PRESSURE	= 1 << 11,
+	LOG_FLAG_PHONE_TEMP	= 1 << 12,
 };
 
 enum LogIDs
@@ -84,6 +84,7 @@ enum CommID
 	COMM_HOST_EXIT,
 	COMM_NOMINAL_MAG,
 	COMM_MOTOR_ARM_LENGTH,
+	COMM_IMG_BUFFER_SIZE,
 };
 
 class Packet

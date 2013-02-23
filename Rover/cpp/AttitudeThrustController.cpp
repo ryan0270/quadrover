@@ -161,9 +161,9 @@ namespace Quadrotor {
 				s3 = s3+curStateAngular[i][0] + "\t";
 			mMutex_data.unlock();
 
-			mQuadLogger->addLine(s1,MOTORS);
-			mQuadLogger->addLine(s2,STATE_DES);
-			mQuadLogger->addLine(s3,STATE);
+			mQuadLogger->addLine(s1,LOG_FLAG_MOTORS);
+			mQuadLogger->addLine(s2,LOG_FLAG_STATE_DES);
+			mQuadLogger->addLine(s3,LOG_FLAG_STATE);
 		}
 	}
 	

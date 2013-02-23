@@ -188,6 +188,8 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		void populateDataLoggingUI();
 		void applyDataLoggingConfig();
 
+		int mImgBufferSize;
+
 		static void resizeTableWidget(QTableWidget *tbl); // make the table widget match the cell size (not the same as having cells match their contents)
 		static void resizeTable(QTableView *tbl); // make the table widget match the cell size (not the same as having cells match their contents)
 		void setVerticalTabOrder(QTableWidget *tbl);

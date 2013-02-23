@@ -93,6 +93,7 @@
       <West>5.000000</West>
    </MotorTrim>
 </Hardware>
-<LogMask>79</LogMask>
+<LogMask>1103</LogMask>
+<ImgBufferSize>20</ImgBufferSize>
 <IP>192.168.43.1</IP>
 <Port>13120</Port>

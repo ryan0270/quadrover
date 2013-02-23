@@ -530,6 +530,19 @@ void CommManager::pollTCP()
 						resetSocket = true;
 					}
 					break;
+				case COMM_IMG_BUFFER_SIZE:
+					{
+						int size;
+						bool received = receiveTCP((tbyte*)&size, sizeof(size));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommImgBufferSize(size);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
 				default:
 					Log::alert(String()+"Unknown code: " + code);
 			}
