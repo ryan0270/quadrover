@@ -11,143 +11,6 @@ using namespace ICSL::Constants;
 namespace ICSL {
 namespace Quadrotor{
 
-ImageGrabber::ImageGrabber() :
-	mImgAtt(3,1,0.0),
-	mImgRotVel(3,1,0.0)
-{
-	mRunning = false;
-	mFinished = true;
-	mIsBottleneck = false;
-	mNewImageReady = false;
-	mImgConversionDone= false;
-
-	mCurImage.create(240, 320, CV_8UC3); mCurImage = cv::Scalar(0);
-	mCurImageGray.create(240, 320, CV_8UC1); mCurImageGray = cv::Scalar(0);
-
-	mAttObserver = NULL;
-}
-
-void ImageGrabber::copyImage(cv::Mat *dstImage)
-{
-	mMutex_image.lock();
-	mCurImage.copyTo(*dstImage);
-	mNewImageReady = false;
-	mMutex_image.unlock();
-}
-
-void ImageGrabber::copyImageGray(cv::Mat *dstImage)
-{
-	mMutex_image.lock();
-	mCurImageGray.copyTo(*dstImage);
-	mNewImageReady = false;
-	mMutex_image.unlock();
-}
-
-void ImageGrabber::shutdown()
-{
-	Log::alert("-------------------------- Image grabber shutdown started ----------------------");
-	mRunning = false;
-	System sys;
-	while(!mFinished)
-		sys.msleep(5);
-
-	mCurImage.release();
-	
-	Log::alert("-------------------------- Image grabber done ----------------------");
-}
-
-void ImageGrabber::run()
-{
-	cv::VideoCapture cap;
-	
-	cap.open(CV_CAP_ANDROID+0); // back camera
-	if(cap.isOpened())
-	{
-		Log::alert("Successfully opened the camera");
-		mRunning = true;
-
-		cap.set(CV_CAP_PROP_FRAME_WIDTH, 320);
-		cap.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
-//		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_TORCH); // for now just leave this on the whole time
-		cap.set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO);
-//		cap.set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_INFINITY);
-		cap.set(CV_CAP_PROP_EXPOSURE, -4);
-//		cap.set(CV_CAP_PROP_AUTO_EXPOSURE, 5);
-		cap.set(CV_CAP_PROP_ANDROID_ANTIBANDING, CV_CAP_ANDROID_ANTIBANDING_OFF);
-		cap.set(CV_CAP_PROP_AUTOGRAB, 1); // any nonzero is "on"
-	}
-	else
-	{
-		Log::alert("Failed to open the camera");
-		mRunning = false;
-	}
-
-	System sys;
-	cv::Mat newImg;
-	mFinished = false;
-	Array2D<double> lastAtt(3,1,0.0);
-	Time imgAcqTime;
-	while(mRunning)
-	{          	
-		cap.grab();
-		double dt = imgAcqTime.getElapsedTimeMS();
-		mMutex_data.lock();
-		imgAcqTime.setTime();
-		if(mAttObserver != NULL && dt > 0 && dt < 1)
-		{
-			mImgAtt.inject(mAttObserver->getCurAttitude());
-			mImgRotVel.inject(1.0/dt*(mImgAtt-lastAtt));
-			lastAtt.inject(mImgAtt);
-		}
-		mMutex_data.unlock();
-		cap.retrieve(newImg);
-		mMutex_image.lock();
-		newImg.copyTo(mCurImage);
-		mImgConversionDone = false;
-//		if(!mIsBottleneck)
-//		{
-//			cvtColor(newImg, mCurImageHSV, CV_BGR2HSV);
-			cvtColor(newImg, mCurImageGray, CV_BGR2GRAY);
-			mImgConversionDone = true;
-//		}
-		mMutex_image.unlock();
-		mNewImageReady = true;
-
-		sys.msleep(1);
-	}
-
-	if(cap.isOpened())
-	{
-		mMutex_image.lock();
-		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF);
-		cap.release();
-		mMutex_image.unlock();
-	}
-
-	mFinished = true;
-}
-
-Array2D<double> ImageGrabber::getImageAtt()
-{
-	mMutex_data.lock();
-	Array2D<double> temp = mImgAtt.copy();
-	mMutex_data.unlock();
-
-	return temp;
-}
-
-Array2D<double> ImageGrabber::getRotVel()
-{
-	mMutex_data.lock();
-	Array2D<double> temp = mImgRotVel.copy();
-	mMutex_data.unlock();
-
-	return temp;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////
 VisionProcessor::VisionProcessor()
 {
 	mRunning = false;
@@ -163,6 +26,8 @@ VisionProcessor::VisionProcessor()
 	mLastProcessTime.setTimeMS(0);
 
  	mFocalLength = 3.7*320.0/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+
+	mNewImageReady = false;
 }
 
 void VisionProcessor::shutdown()
@@ -182,8 +47,6 @@ void VisionProcessor::shutdown()
 	mLastImageGray.release();
 	mMutex_image.unlock();
 
-	mImageGrabber.shutdown();
-
 	Log::alert("-------------------------- Vision processor done ----------------------");
 }
 
@@ -199,46 +62,35 @@ void VisionProcessor::run()
 	System sys;
 	mFinished = false;
 	mRunning = true;
-	mImageGrabber.start();
 	Array2D<double> imgAtt(3,1,0.0), rotVel(3,1,0.0);
 	while(mRunning)
 	{
-		if(!mImageGrabber.isNewImageReady())
-			mImageGrabber.markBottleneck(true); // I don't want this in the polling loop
-		while(!mImageGrabber.isNewImageReady())
-			sys.msleep(1);
-		mMutex_image.lock();
-		mImageGrabber.markBottleneck(false);
-		imgAtt.inject(mImageGrabber.getImageAtt());
-		rotVel.inject(mImageGrabber.getRotVel());
-
-		Time procStart;
-		mImageGrabber.copyImage(&mCurImage);
-//		if(mImageGrabber.imageConversionDone())
-//		{
-			mImageGrabber.copyImageGray(&mCurImageGray);
-//		}
-//		else
-//		{
-//			mImageGrabber.copyImage(&mCurImage);
-//			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
-//		}
-
-//		if(mUseIbvs)
+		if(mNewImageReady)
 		{
-//			vector<vector<cv::Point2f> > points = getMatchingPoints();
-//			if(points.size() > 0)
-//				calcOpticalFlow(points);
-		}
+			mMutex_imageSensorData.lock();
+			mImageData.img.copyTo(mCurImage);
+			mMutex_imageSensorData.unlock();
+			mNewImageReady = false;
 
-		mMutex_image.unlock();
-		mImgProcTimeUS = procStart.getElapsedTimeUS();
-		{
-			String str = String()+" "+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
-			mQuadLogger->addLine(str,CAM_RESULTS);
-		}
+			Time procStart;
+			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
-		mCurImageGray.copyTo(mLastImageGray);
+//			if(mUseIbvs)
+			{
+//				vector<vector<cv::Point2f> > points = getMatchingPoints();
+//				if(points.size() > 0)
+//					calcOpticalFlow(points);
+			}
+
+			mImgProcTimeUS = procStart.getElapsedTimeUS();
+			{
+				String str = String()+" "+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
+				mQuadLogger->addLine(str,CAM_RESULTS);
+			}
+
+			mCurImageGray.copyTo(mLastImageGray);
+
+		}
 
 		sys.msleep(10);
 	}
@@ -583,6 +435,17 @@ Collection<int> VisionProcessor::getVisionParams()
 
 void VisionProcessor::setVisionParams(Collection<int> const &p)
 {
+}
+
+void VisionProcessor::onNewSensorUpdate(SensorData const *data)
+{
+	if(data->type == SENSOR_DATA_TYPE_IMAGE)
+	{
+		mMutex_imageSensorData.lock();
+		((SensorDataImage*)data)->copyTo(mImageData);
+		mMutex_imageSensorData.unlock();
+		mNewImageReady = true;
+	}
 }
 
 } // namespace Quadrotor

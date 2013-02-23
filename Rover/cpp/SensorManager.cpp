@@ -115,9 +115,23 @@ namespace Quadrotor{
 
 	void SensorManager::run()
 	{
+		mRunning = true;
+		cv::VideoCapture *cap = initCamera();
+		if(cap == NULL)
+			mRunning = false;
+
+		class : public Thread{
+			public:
+			void run(){parent->runImgAcq(cap);}
+			cv::VideoCapture *cap;
+			SensorManager *parent;
+		} imgAcqThread;
+		imgAcqThread.parent = this;
+		imgAcqThread.cap = cap;
+		imgAcqThread.start();
+
 		System sys;
 		mDone = false;
-		mRunning = true;
 		Time lastBattTempTime;
 		while(mRunning)
 		{
@@ -177,22 +191,83 @@ namespace Quadrotor{
 
 				if(data != NULL)
 				{
+					mMutex_listeners.lock();
 					for(int i=0; i<mListeners.size(); i++)
-						mListeners[i]->onNewSensorUpdate(*data);
+						mListeners[i]->onNewSensorUpdate(data);
+					mMutex_listeners.unlock();
 					delete data;
 				}
-
-//				if(mQuadLogger != NULL && logType != -1)
-//				{
-//					String s=String()+" " + mStartTime.getElapsedTimeMS() + "\t" + event.type+"\t"+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
-//					mQuadLogger->addLine(s,logType);
-//				}
 			}
 
 			sys.msleep(1);
 		}
 
+		imgAcqThread.join();
+
 		mDone = true;
+	}
+
+	cv::VideoCapture* SensorManager::initCamera()
+	{
+		cv::VideoCapture *cap = new cv::VideoCapture(); // this will be deleted in runImgAcq
+
+		cap->open(CV_CAP_ANDROID+0); // back camera
+		if(cap->isOpened())
+		{
+			Log::alert("Successfully opened the camera");
+			mRunning = true;
+
+			cap->set(CV_CAP_PROP_FRAME_WIDTH, 320);
+			cap->set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+			//		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_TORCH); // for now just leave this on the whole time
+			cap->set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO);
+			//		cap.set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_INFINITY);
+			cap->set(CV_CAP_PROP_EXPOSURE, -4);
+			//		cap.set(CV_CAP_PROP_AUTO_EXPOSURE, 5);
+			cap->set(CV_CAP_PROP_ANDROID_ANTIBANDING, CV_CAP_ANDROID_ANTIBANDING_OFF);
+			cap->set(CV_CAP_PROP_AUTOGRAB, 1); // any nonzero is "on"
+		}
+		else
+		{
+			Log::alert("Failed to open the camera");
+			cap = NULL;
+		}
+
+		return cap;
+	}
+
+	void SensorManager::runImgAcq(cv::VideoCapture *cap)
+	{
+		if(cap == NULL)
+			return;
+
+		cv::Mat img;
+		SensorData *data = new SensorDataImage();
+		while(mRunning)
+		{
+			data->type = SENSOR_DATA_TYPE_IMAGE;
+			data->timestamp.setTime();
+			cap->grab();
+			cap->retrieve(((SensorDataImage*)data)->img);
+
+			((SensorDataImage*)data)->att.inject(Array2D<double>(3,1,0.0));
+			((SensorDataImage*)data)->angularVel.inject(Array2D<double>(3,1,0.0));
+			((SensorDataImage*)data)->imgFormat = IMG_FORMAT_BGR;
+
+			mMutex_listeners.lock();
+			for(int i=0; i<mListeners.size(); i++)
+				mListeners[i]->onNewSensorUpdate(data);
+			mMutex_listeners.unlock();
+		}
+		delete data;
+
+		if(cap->isOpened())
+		{
+			cap->set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF);
+			cap->release();
+		}
+
+		delete cap;
 	}
 
 	int SensorManager::getBatteryTemp()

@@ -85,7 +85,6 @@ void Rover::initialize()
 
 	mVisionProcessor.setStartTime(mStartTime);
 	mVisionProcessor.setQuadLogger(&mQuadLogger);
-	mVisionProcessor.setAttitudeObserver(&mObsvAngular);
 	mVisionProcessor.start();
 
 	mSensorManager.initialize();
@@ -94,6 +93,7 @@ void Rover::initialize()
 	mSensorManager.start();
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
+	mSensorManager.addListener(&mVisionProcessor);
 
 	this->start();
 
@@ -239,6 +239,7 @@ void Rover::transmitDataUDP()
 
 	Packet pArduinoStatus, pUseMotors, pState, pDesState, pGyro, pAccel, pComp, pBias, pCntl, pIntMemPos, pIntMemTorque;
 	Packet pImgProcTime, pUseIbvs;
+	Packet pTime;
 	mMutex_cntl.lock();
 	int arduinoStatus;
 	mMutex_cntl.lock();
@@ -343,6 +344,9 @@ void Rover::transmitDataUDP()
 	pComp.dataFloat[2] = lastCompass[2][0];
 	pComp.type = COMM_MAGNOMETER;
 
+	pTime.dataInt32.push_back(mStartTime.getElapsedTimeMS());
+	pTime.type = COMM_HOST_TIME_MS;
+
 	uint64 time = mStartTime.getElapsedTimeMS();
 	pArduinoStatus.time = time;
 	pUseMotors.time = time;
@@ -355,9 +359,9 @@ void Rover::transmitDataUDP()
 	pCntl.time = time;
 	pIntMemPos.time = time;
 	pIntMemTorque.time = time;
-//	pCntlType.time = time;
 	pImgProcTime.time = time;
 	pUseIbvs.time = time;
+	pTime.time = time;
 
 	mCommManager.transmitUDP(pArduinoStatus);
 	mCommManager.transmitUDP(pUseMotors);
@@ -370,9 +374,9 @@ void Rover::transmitDataUDP()
 	mCommManager.transmitUDP(pCntl);
 	mCommManager.transmitUDP(pIntMemPos);
 	mCommManager.transmitUDP(pIntMemTorque);
-//	mCommManager.transmitUDP(pCntlType);
 	mCommManager.transmitUDP(pImgProcTime);
 	mCommManager.transmitUDP(pUseIbvs);
+	mCommManager.transmitUDP(pTime);
 
 	mDataIsSending = false;
 }

@@ -108,9 +108,7 @@ void Leash::initialize()
 	connect(ui->btnClearLocalLog,SIGNAL(clicked()),this,SLOT(onBtnClearLocalLog_clicked()));
 	connect(ui->btnGetPhoneLog,SIGNAL(clicked()),this,SLOT(onBtnGetPhoneLog_clicked()));
 	connect(ui->btnSendParams,SIGNAL(clicked()),this,SLOT(onBtnSendParams_clicked()));
-//	connect(btnResetObserver,SIGNAL(clicked()),this,SLOT(onBtnResetObserver_clicked()));
-//	connect(btnSyncTime,SIGNAL(clicked()),this,SLOT(onBtnSyncTime_clicked()));
-//	connect(chkViewBinarizedImage,SIGNAL(clicked()),this,SLOT(onChkViewBinarizedImage_clicked()));
+	connect(ui->btnSyncTime,SIGNAL(clicked()),this,SLOT(onBtnSyncTime_clicked()));
 
 	mScStartMotors = new QShortcut(Qt::Key_W, this);
 	mScStopMotors = new QShortcut(Qt::Key_Space, this);
@@ -133,7 +131,6 @@ void Leash::initialize()
 	connect(mScMoveBackward,SIGNAL(activated()), this, SLOT(onMoveBackward()));
 
 	mScToggleIbvs = new QShortcut(Qt::Key_V, this);
-//	connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
 
 	loadConfigFromFile("../quad0.leashConfig");
 
@@ -142,8 +139,9 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-		//mTelemVicon.connect("147.46.243.133");
-		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("147.46.243.133");
+//		mTelemVicon.connect("192.168.100.108");
+		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -432,7 +430,12 @@ void Leash::pollUDP()
 							ui->lblIbvsStatus->setText("On");
 						else
 							ui->lblIbvsStatus->setText("Off");
-//						chkUseIbvsController->setChecked(mUseIbvs);
+						break;
+					case COMM_HOST_TIME_MS:
+						{
+							float time = pck.dataInt32[0]/1.0e3;
+							ui->lblHostTime->setText(QString::number(time,'f',0));
+						}
 						break;
 					default:
 						cout << "Unknown phone code: " << pck.type << endl;
@@ -519,6 +522,8 @@ void Leash::pollTCP()
 void Leash::updateDisplay()
 {
 	double time = (mSys.mtime() - mStartTimeUniverseMS)/1.0e3;
+	ui->lblRunTime->setText(QString::number(time,'f',0));
+
 	if(mFirstDraw)
 	{
 		// HACK because widgets don't have the right size yet during startup

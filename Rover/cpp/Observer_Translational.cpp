@@ -413,9 +413,9 @@ namespace Quadrotor{
 		mMutex_cmds.unlock();
 	}
 
-	void Observer_Translational::onNewSensorUpdate(SensorData const &data)
+	void Observer_Translational::onNewSensorUpdate(SensorData const *data)
 	{
-		if(data.type == SENSOR_DATA_TYPE_PRESSURE)
+		if(data->type == SENSOR_DATA_TYPE_PRESSURE)
 		{
 //			Log::alert("Recieved pressure data");
 		}
