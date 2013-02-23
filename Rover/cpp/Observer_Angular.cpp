@@ -221,7 +221,7 @@ void Observer_Angular::doInnovationUpdate(double dt)
 		s1 = s1+mGyroBias[i][0] + "\t";
 	mMutex_data.unlock();
 
-	mQuadLogger->addLine(s1,OBSV_BIAS);
+	mQuadLogger->addLine(s1,LOG_FLAG_OBSV_BIAS);
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer
@@ -372,7 +372,7 @@ void Observer_Angular::setYawZero()
 	String str1 = String()+" "+mStartTime.getElapsedTimeMS()+"\t-805\t";
 	for(int i=0; i<temp.dim1(); i++)
 		str1 = str1+temp[i][0]+"\t";
-	mQuadLogger->addLine(str1, PC_UPDATES);
+	mQuadLogger->addLine(str1,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommObserverReset()
@@ -380,7 +380,7 @@ void Observer_Angular::onNewCommObserverReset()
 	reset();
 	Log::alert("Observer reset");
 	String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-200\t";
-	mQuadLogger->addLine(str,PC_UPDATES);
+	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight)
@@ -400,7 +400,7 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 	String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-210\t";
 	str = str+gainP+"\t"+gainI+"\t";
 	str = str+accelWeight+"\t"+magWeight;
-	mQuadLogger->addLine(str, PC_UPDATES);
+	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommNominalMag(Collection<float> const &nomMag)

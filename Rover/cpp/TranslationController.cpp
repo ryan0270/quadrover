@@ -98,8 +98,8 @@ namespace Quadrotor {
 			for(int i=0; i<curState.dim1(); i++)
 				s2 = s2+curState[i][0]+"\t";
 
-			mQuadLogger->addLine(s1,STATE_DES);
-			mQuadLogger->addLine(s2,STATE);
+			mQuadLogger->addLine(s1,LOG_FLAG_STATE_DES);
+			mQuadLogger->addLine(s2,LOG_FLAG_STATE);
 		}
 
 		mNewMeasAvailable = false;

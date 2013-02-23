@@ -158,13 +158,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnClearBuffers">
-        <property name="text">
-         <string>Clear Buffers</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="Line" name="line_4">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -188,7 +181,7 @@
       <property name="sizeHint" stdset="0">
        <size>
         <width>20</width>
-        <height>409</height>
+        <height>439</height>
        </size>
       </property>
      </spacer>
@@ -196,7 +189,7 @@
     <item row="0" column="1" rowspan="2">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>5</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tabController">
        <attribute name="title">
@@ -1258,35 +1251,35 @@
         <string>Data Logging</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_12">
-        <item row="0" column="0">
+        <item row="0" column="0" colspan="2">
          <widget class="QCheckBox" name="chkLogState">
           <property name="text">
            <string>State</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="2">
+        <item row="0" column="3">
          <widget class="QPushButton" name="btnGetPhoneLog">
           <property name="text">
            <string>Get Phone Log</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="1" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogDesiredState">
           <property name="text">
            <string>Desired State</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="2" rowspan="2">
+        <item row="1" column="3" rowspan="2">
          <widget class="QPushButton" name="btnClearPhoneLog">
           <property name="text">
            <string>Clear Phone Log</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="3" rowspan="2">
+        <item row="1" column="4">
          <spacer name="horizontalSpacer_10">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -1299,35 +1292,42 @@
           </property>
          </spacer>
         </item>
-        <item row="2" column="0">
+        <item row="2" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogMotorCmds">
           <property name="text">
            <string>Motor cmds</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="3" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogPcUpdates">
           <property name="text">
            <string>PC Updates</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="2">
+        <item row="3" column="3">
          <widget class="QPushButton" name="btnClearLocalLog">
           <property name="text">
            <string>Clear Local Log</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="0" colspan="2">
+        <item row="4" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogObserverUpdates">
           <property name="text">
            <string>Observer updates</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="2" rowspan="9">
+        <item row="5" column="0" colspan="3">
+         <widget class="QCheckBox" name="chkLogObserverBias">
+          <property name="text">
+           <string>Observer bias</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="3" rowspan="8">
          <spacer name="verticalSpacer_3">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -1340,21 +1340,14 @@
           </property>
          </spacer>
         </item>
-        <item row="5" column="0">
-         <widget class="QCheckBox" name="chkLogObserverBias">
-          <property name="text">
-           <string>Observer bias</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0">
+        <item row="6" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogCameraResults">
           <property name="text">
            <string>Camera results</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="0">
+        <item row="7" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogCameraImages">
           <property name="text">
            <string>Camera images</string>
@@ -1362,41 +1355,75 @@
          </widget>
         </item>
         <item row="8" column="0">
+         <spacer name="horizontalSpacer_5">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>18</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item row="8" column="1" colspan="2">
+         <layout class="QFormLayout" name="formLayout_4">
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spnImgBufferSize">
+            <property name="maximum">
+             <number>999999</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>Buffer Size</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="9" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogAccelerometer">
           <property name="text">
            <string>Accelerometer</string>
           </property>
          </widget>
         </item>
-        <item row="9" column="0">
+        <item row="10" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogGyroscope">
           <property name="text">
            <string>Gyroscope</string>
           </property>
          </widget>
         </item>
-        <item row="10" column="0">
+        <item row="11" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogMagnometer">
           <property name="text">
            <string>Magnometer</string>
           </property>
          </widget>
         </item>
-        <item row="11" column="0">
+        <item row="12" column="0" colspan="2">
          <widget class="QCheckBox" name="chkLogPressure">
           <property name="text">
            <string>Pressure</string>
           </property>
          </widget>
         </item>
-        <item row="12" column="0" colspan="2">
+        <item row="13" column="0" colspan="3">
          <widget class="QCheckBox" name="chkLogPhoneTemperature">
           <property name="text">
            <string>Phone Temperature</string>
           </property>
          </widget>
         </item>
-        <item row="13" column="1">
+        <item row="14" column="2">
          <spacer name="verticalSpacer_10">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -1410,6 +1437,26 @@
          </spacer>
         </item>
        </layout>
+       <zorder>chkLogState</zorder>
+       <zorder>btnGetPhoneLog</zorder>
+       <zorder>chkLogDesiredState</zorder>
+       <zorder>btnClearPhoneLog</zorder>
+       <zorder>chkLogMotorCmds</zorder>
+       <zorder>chkLogPcUpdates</zorder>
+       <zorder>btnClearLocalLog</zorder>
+       <zorder>chkLogObserverUpdates</zorder>
+       <zorder>chkLogObserverBias</zorder>
+       <zorder>chkLogCameraResults</zorder>
+       <zorder>chkLogCameraImages</zorder>
+       <zorder>chkLogAccelerometer</zorder>
+       <zorder>chkLogGyroscope</zorder>
+       <zorder>chkLogMagnometer</zorder>
+       <zorder>chkLogPressure</zorder>
+       <zorder>chkLogPhoneTemperature</zorder>
+       <zorder>spnImgBufferSize</zorder>
+       <zorder>label_5</zorder>
+       <zorder>horizontalSpacer_5</zorder>
+       <zorder>label_5</zorder>
       </widget>
       <widget class="QWidget" name="tabObserver">
        <attribute name="title">

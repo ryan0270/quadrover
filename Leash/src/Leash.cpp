@@ -46,7 +46,8 @@ Leash::Leash(QWidget *parent) :
 
 	mMotorTrim[0] = mMotorTrim[1] = mMotorTrim[2] = mMotorTrim[3] = 0;
 
-	mLogMask = PC_UPDATES;
+	mLogMask = LOG_FLAG_PC_UPDATES;
+	mImgBufferSize = 10;
 
 //	mUseMotors = false;
 	mUseIbvs = false;
@@ -689,6 +690,10 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&mLogMask, sizeof(mLogMask));
 
+	code = COMM_IMG_BUFFER_SIZE;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&mImgBufferSize, sizeof(mImgBufferSize));
+
 	float forceGain= mMotorForceGain;
 	code = COMM_MOTOR_FORCE_GAIN; 
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
@@ -816,6 +821,9 @@ bool Leash::loadConfigFromFile(string filename)
 
 	mxml_node_t *logRoot = mxmlFindElement(xmlRoot, xmlRoot, "LogMask", NULL, NULL, MXML_DESCEND);
 	if(logRoot != NULL) stringstream(logRoot->child->value.text.string) >> mLogMask;
+
+	mxml_node_t *imgBufferSizeRoot = mxmlFindElement(xmlRoot, xmlRoot, "ImgBufferSize", NULL, NULL, MXML_DESCEND);
+	if(imgBufferSizeRoot != NULL) stringstream(imgBufferSizeRoot->child->value.text.string) >> mImgBufferSize;
 
 	mxml_node_t *ipRoot = mxmlFindElement(xmlRoot, xmlRoot, "IP", NULL, NULL, MXML_DESCEND);
 	if(ipRoot != NULL) mIP = ipRoot->child->value.text.string;
@@ -1077,6 +1085,7 @@ void Leash::saveConfigToFile(string filename)
 	mxml_node_t *obsvRoot = mxmlNewElement(xmlRoot,"Observer");
 	mxml_node_t *hdwRoot = mxmlNewElement(xmlRoot,"Hardware");
 	mxml_node_t *logRoot = mxmlNewElement(xmlRoot,"LogMask");
+	mxml_node_t *imgBufferSizeRoot = mxmlNewElement(xmlRoot,"ImgBufferSize");
 	mxml_node_t *ipRoot = mxmlNewElement(xmlRoot,"IP");
 	mxml_node_t *portRoot = mxmlNewElement(xmlRoot,"Port");
 
@@ -1085,11 +1094,12 @@ void Leash::saveConfigToFile(string filename)
 	saveHardwareConfig(hdwRoot);
 
 	mxmlNewInteger(logRoot,mLogMask);
+	mxmlNewInteger(imgBufferSizeRoot, mImgBufferSize);
 	mxmlNewText(ipRoot,0,mIP.c_str());
 	mxmlNewInteger(portRoot,mPort);
 
 	FILE *fp = fopen((filename).c_str(),"w");
-	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
+	mxmlSaveFile(xmlRoot, fp, MXML_NO_CALLBACK);
 	fclose(fp);
 }
 
@@ -1250,19 +1260,21 @@ void Leash::applyHardwareConfig()
 void Leash::applyDataLoggingConfig()
 {
 	mLogMask = 0;
-	if(ui->chkLogState->isChecked()) mLogMask |= STATE;
-	if(ui->chkLogDesiredState->isChecked()) mLogMask |= STATE_DES;
-	if(ui->chkLogMotorCmds->isChecked()) mLogMask |= MOTORS;
-	if(ui->chkLogPcUpdates->isChecked()) mLogMask |= PC_UPDATES;
-	if(ui->chkLogObserverUpdates->isChecked()) mLogMask |= OBSV_UPDATE;
-	if(ui->chkLogObserverBias->isChecked()) mLogMask |= OBSV_BIAS;
-	if(ui->chkLogMagnometer->isChecked()) mLogMask |= MAGNOMETER;
-	if(ui->chkLogAccelerometer->isChecked()) mLogMask |= ACCEL;
-	if(ui->chkLogGyroscope->isChecked()) mLogMask |= GYRO;
-	if(ui->chkLogCameraResults->isChecked()) mLogMask |= CAM_RESULTS;
-	if(ui->chkLogCameraImages->isChecked()) mLogMask |= CAM_IMAGES;
-	if(ui->chkLogPressure->isChecked()) mLogMask |= PRESSURE;
-	if(ui->chkLogPhoneTemperature->isChecked()) mLogMask |= PHONE_TEMP;
+	if(ui->chkLogState->isChecked()) mLogMask |= LOG_FLAG_STATE;
+	if(ui->chkLogDesiredState->isChecked()) mLogMask |= LOG_FLAG_STATE_DES;
+	if(ui->chkLogMotorCmds->isChecked()) mLogMask |= LOG_FLAG_MOTORS;
+	if(ui->chkLogPcUpdates->isChecked()) mLogMask |= LOG_FLAG_PC_UPDATES;
+	if(ui->chkLogObserverUpdates->isChecked()) mLogMask |= LOG_FLAG_OBSV_UPDATE;
+	if(ui->chkLogObserverBias->isChecked()) mLogMask |= LOG_FLAG_OBSV_BIAS;
+	if(ui->chkLogMagnometer->isChecked()) mLogMask |= LOG_FLAG_MAGNOMETER;
+	if(ui->chkLogAccelerometer->isChecked()) mLogMask |= LOG_FLAG_ACCEL;
+	if(ui->chkLogGyroscope->isChecked()) mLogMask |= LOG_FLAG_GYRO;
+	if(ui->chkLogCameraResults->isChecked()) mLogMask |= LOG_FLAG_CAM_RESULTS;
+	if(ui->chkLogCameraImages->isChecked()) mLogMask |= LOG_FLAG_CAM_IMAGES;
+	if(ui->chkLogPressure->isChecked()) mLogMask |= LOG_FLAG_PRESSURE;
+	if(ui->chkLogPhoneTemperature->isChecked()) mLogMask |= LOG_FLAG_PHONE_TEMP;
+
+	mImgBufferSize = ui->spnImgBufferSize->value();
 }
 
 void Leash::onBtnResetConfig_clicked()
@@ -1600,19 +1612,21 @@ void Leash::populateHardwareUI()
 
 void Leash::populateDataLoggingUI()
 {
-	ui->chkLogState->setChecked( (mLogMask & STATE) > 0);
-	ui->chkLogDesiredState->setChecked( (mLogMask & STATE_DES) > 0);
-	ui->chkLogMotorCmds->setChecked( (mLogMask & MOTORS) > 0);
-	ui->chkLogPcUpdates->setChecked( (mLogMask & PC_UPDATES) > 0);
-	ui->chkLogObserverUpdates->setChecked( (mLogMask & OBSV_UPDATE) > 0);
-	ui->chkLogObserverBias->setChecked( (mLogMask & OBSV_BIAS) > 0);
-	ui->chkLogMagnometer->setChecked( (mLogMask & MAGNOMETER) > 0);
-	ui->chkLogAccelerometer->setChecked( (mLogMask & ACCEL) > 0);
-	ui->chkLogGyroscope->setChecked( (mLogMask & GYRO) > 0);
-	ui->chkLogCameraResults->setChecked( (mLogMask & CAM_RESULTS) > 0);
-	ui->chkLogCameraImages->setChecked( (mLogMask & CAM_IMAGES) > 0);
-	ui->chkLogPressure->setChecked( (mLogMask & PRESSURE) > 0);
-	ui->chkLogPhoneTemperature->setChecked( (mLogMask & PHONE_TEMP) > 0);
+	ui->chkLogState->setChecked( (mLogMask & LOG_FLAG_STATE) > 0);
+	ui->chkLogDesiredState->setChecked( (mLogMask & LOG_FLAG_STATE_DES) > 0);
+	ui->chkLogMotorCmds->setChecked( (mLogMask & LOG_FLAG_MOTORS) > 0);
+	ui->chkLogPcUpdates->setChecked( (mLogMask & LOG_FLAG_PC_UPDATES) > 0);
+	ui->chkLogObserverUpdates->setChecked( (mLogMask & LOG_FLAG_OBSV_UPDATE) > 0);
+	ui->chkLogObserverBias->setChecked( (mLogMask & LOG_FLAG_OBSV_BIAS) > 0);
+	ui->chkLogMagnometer->setChecked( (mLogMask & LOG_FLAG_MAGNOMETER) > 0);
+	ui->chkLogAccelerometer->setChecked( (mLogMask & LOG_FLAG_ACCEL) > 0);
+	ui->chkLogGyroscope->setChecked( (mLogMask & LOG_FLAG_GYRO) > 0);
+	ui->chkLogCameraResults->setChecked( (mLogMask & LOG_FLAG_CAM_RESULTS) > 0);
+	ui->chkLogCameraImages->setChecked( (mLogMask & LOG_FLAG_CAM_IMAGES) > 0);
+	ui->chkLogPressure->setChecked( (mLogMask & LOG_FLAG_PRESSURE) > 0);
+	ui->chkLogPhoneTemperature->setChecked( (mLogMask & LOG_FLAG_PHONE_TEMP) > 0);
+
+	ui->spnImgBufferSize->setValue(mImgBufferSize);
 }
 
 void Leash::toggleIbvs()

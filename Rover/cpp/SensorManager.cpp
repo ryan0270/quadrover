@@ -147,14 +147,14 @@ namespace Quadrotor{
 				{
 					case ASENSOR_TYPE_PRESSURE:
 						{
-							logType = PRESSURE;
+							logType = LOG_FLAG_PRESSURE;
 							data = new SensorData(event.data[0], SENSOR_DATA_TYPE_PRESSURE);
 							mLastPressure = event.pressure;
 						}
 						break;
 					case ASENSOR_TYPE_ACCELEROMETER:
 						{
-							logType = ACCEL;
+							logType = LOG_FLAG_ACCEL;
 
 							mMutex_data.lock();
 							mLastAccel[0][0] = event.data[0];
@@ -166,7 +166,7 @@ namespace Quadrotor{
 						break;
 					case ASENSOR_TYPE_GYROSCOPE:
 						{
-							logType = GYRO;
+							logType = LOG_FLAG_GYRO;
 
 							mMutex_data.lock();
 							mLastGyro[0][0] = event.data[0];
@@ -178,7 +178,7 @@ namespace Quadrotor{
 						break;
 					case ASENSOR_TYPE_MAGNETIC_FIELD:
 						{
-							logType = MAGNOMETER;
+							logType = LOG_FLAG_MAGNOMETER;
 							mMutex_data.lock();
 							mLastMag[0][0] = event.data[0];
 							mLastMag[1][0] = event.data[1];
@@ -245,6 +245,8 @@ namespace Quadrotor{
 
 		cv::Mat img;
 		SensorData *data = new SensorDataImage();
+		((SensorDataImage*)data)->att.inject(mCurAtt);
+		((SensorDataImage*)data)->angularVel.inject(mCurAngularVel);
 		while(mRunning)
 		{
 			data->type = SENSOR_DATA_TYPE_IMAGE;

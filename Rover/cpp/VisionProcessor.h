@@ -2,6 +2,7 @@
 #define VISIONPROCESSOR_H
 #include <sched.h>
 #include <math.h>
+#include <list>
 
 #include <toadlet/egg.h>
 using toadlet::egg::String;
@@ -66,6 +67,8 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void calcOpticalFlow(vector<vector<cv::Point2f> > const &points);
 
 		// CommManagerListener functions
+		void onNewCommLogMask(uint32 mask);
+		void onNewCommImgBufferSize(int size);
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(SensorData const *data);
@@ -75,6 +78,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
 		bool mNewImageReady;
+		bool mLogImages;
 		cv::Mat	mCurImage, mCurImageGray;
 		cv::Mat mLastImageGray;
 		vector<vector<double> > mMSERHuMoments;
@@ -90,13 +94,15 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		QuadLogger *mQuadLogger;
 
-		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData;
+		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData, mMutex_imgBuffer;
 
 		Collection<VisionProcessorListener*> mListeners;
 
 		void run();
-//		static bool compareBlobsBySize(cv::KeyPoint p1, cv::KeyPoint p2)
-//			{return (p1.size > p2.size);}
+
+		int mImgBufferMaxSize;
+		list<cv::Mat> mImgBuffer;
+		list<SensorDataImage> mImgDataBuffer;
 };
 
 } // namespace Quadrotor

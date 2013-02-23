@@ -10,19 +10,19 @@ QuadLogger::QuadLogger()
 	mFilename = "quadLog.txt";
 	mLogStream = NULL;
 	mTypeMask = 0;
-	mTypeMask = PC_UPDATES ;
-//	mTypeMask |= STATE;
-//	mTypeMask |= STATE_DES;
-//	mTypeMask |= MOTORS;
-//	mTypeMask |= OBSV_UPDATE;
-//	mTypeMask |= OBSV_BIAS;
-//	mTypeMask |= MAGNOMETER;
-//	mTypeMask |= ACCEL;
-//	mTypeMask |= GYRO;
-//	mTypeMask |= PRESSURE;
-//	mTypeMask |= CAM_RESULTS;
-//	mTypeMask |= CAM_IMAGES;
-	mTypeMask |= PHONE_TEMP;
+	mTypeMask = LOG_FLAG_PC_UPDATES ;
+//	mTypeMask |= LOG_FLAG_STATE;
+//	mTypeMask |= LOG_FLAG_STATE_DES;
+//	mTypeMask |= LOG_FLAG_MOTORS;
+//	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
+//	mTypeMask |= LOG_FLAG_OBSV_BIAS;
+//	mTypeMask |= LOG_FLAG_MAGNOMETER;
+//	mTypeMask |= LOG_FLAG_ACCEL;
+//	mTypeMask |= LOG_FLAG_GYRO;
+//	mTypeMask |= LOG_FLAG_PRESSURE;
+//	mTypeMask |= LOG_FLAG_CAM_RESULTS;
+//	mTypeMask |= LOG_FLAG_CAM_IMAGES;
+	mTypeMask |= LOG_FLAG_PHONE_TEMP;
 	mPaused = false;
 }
 
@@ -71,6 +71,39 @@ void QuadLogger::close()
 		mLogStream->close();
 		mLogStream = NULL;
 	}
+}
+
+void QuadLogger::saveImageBuffer(list<cv::Mat> const &imgBuffer, list<SensorDataImage> const &dataBuffer)
+{
+	list<cv::Mat>::const_iterator imgIter = imgBuffer.begin();
+	list<SensorDataImage>::const_iterator dataIter = dataBuffer.begin();
+	int id = 0;
+	mxml_node_t *xml = mxmlNewXML("1.0");
+	while(imgIter != imgBuffer.end())
+	{
+		cv::Mat *mat = (cv::Mat*)&(*imgIter++);
+		SensorDataImage *data = (SensorDataImage*)&(*dataIter++);
+		String filename = mDir+"/images/img_"+id+".bmp";
+		cv::imwrite(filename.c_str(), *mat);
+
+		stringstream ss; ss << "img_" << id;
+		mxml_node_t *imgNode = mxmlNewElement(xml,ss.str().c_str());
+			mxmlNewInteger(mxmlNewElement(imgNode,"time"),Time::calcDiffMS(mStartTime, data->timestamp));
+			mxml_node_t *attNode = mxmlNewElement(imgNode,"att");
+				mxmlNewReal(mxmlNewElement(attNode,"roll"),data->att[0][0]);
+				mxmlNewReal(mxmlNewElement(attNode,"pitch"),data->att[1][0]);
+				mxmlNewReal(mxmlNewElement(attNode,"yaw"),data->att[2][0]);
+			mxml_node_t *angularVelNode = mxmlNewElement(imgNode,"angularVel");
+				mxmlNewReal(mxmlNewElement(angularVelNode,"x"),data->angularVel[0][0]);
+				mxmlNewReal(mxmlNewElement(angularVelNode,"y"),data->angularVel[1][0]);
+				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
+
+		id++;
+	}
+
+	FILE *fp = fopen((mDir+"/images/data.xml").c_str(),"w");
+	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
+	fclose(fp);
 }
 
 }

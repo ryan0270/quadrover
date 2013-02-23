@@ -15,7 +15,6 @@ class CommManagerListener
 	explicit CommManagerListener(){};
 	virtual ~CommManagerListener(){};
 
-//	virtual void onNewCommRateCmd(toadlet::egg::Collection<float> const &data){};
 	virtual void onNewCommMotorOn(){};
 	virtual void onNewCommMotorOff(){};
 	virtual void onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float const yawPID[3]){};
@@ -24,7 +23,6 @@ class CommManagerListener
 	virtual void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight){};
 	virtual void onNewCommTimeSync(int time){};
 	virtual void onNewCommLogTransfer(){};
-//	virtual void onNewCommControlType(uint16 cntlType){};
 	virtual void onNewCommControlSystemGains(Collection<float> const &gains){};
 	virtual void onNewCommSendControlSystem(Collection<tbyte> const &buff){};
 	virtual void onNewCommLogMask(uint32 mask){};
@@ -46,6 +44,7 @@ class CommManagerListener
 	virtual void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &std){};
 	virtual void onNewCommNominalMag(toadlet::egg::Collection<float> const &nomMag){};
 	virtual void onNewCommMotorArmLength(float l){};
+	virtual void onNewCommImgBufferSize(int size){};
 
 }; // class CommManagerListener
 

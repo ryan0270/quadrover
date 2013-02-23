@@ -1,31 +1,10 @@
-#ifndef ICSL_SENSOR_MANAGER
-#define ICSL_SENSOR_MANAGER
-
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <android/sensor.h>
+#ifndef ICSL_SENSOR_DATA
+#define ICSL_SENSOR_DATA
 #include <opencv2/core/core.hpp>
-#include "toadlet/egg.h"
 #include "TNT/tnt.h"
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/video/tracking.hpp>
-
 #include "Common.h"
-#include "QuadLogger.h"
 #include "Time.h"
-#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
-#include "Observer_Angular.h"
-#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
-
-namespace ICSL{
-namespace Quadrotor{
-static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
-
+namespace ICSL{ namespace Quadrotor{
 enum ImageFormat
 {
 	IMG_FORMAT_BGR=1,
@@ -73,6 +52,37 @@ class SensorDataImage : public SensorData
 	TNT::Array2D<double> angularVel;
 	ImageFormat imgFormat;
 };
+}}
+#endif
+
+#ifndef ICSL_SENSOR_DATA_ONLY
+#ifndef ICSL_SENSOR_MANAGER
+#define ICSL_SENSOR_MANAGER
+
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <android/sensor.h>
+#include <opencv2/core/core.hpp>
+#include "toadlet/egg.h"
+#include "TNT/tnt.h"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/video/tracking.hpp>
+
+#include "Common.h"
+#include "QuadLogger.h"
+#include "Time.h"
+#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+#include "Observer_Angular.h"
+#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+
+namespace ICSL{
+namespace Quadrotor{
+static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
 class SensorManagerListener
 {
@@ -127,4 +137,5 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 
 } // namespace Quadrotor
 } // namespace ICSL
+#endif
 #endif

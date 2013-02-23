@@ -1,9 +1,21 @@
 #ifndef QUADLOGGER
 #define QUADLOGGER
+#include <list>
+#include <sstream>
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include "mxml.h"
 
 #include <toadlet/toadlet.h>
 #include "Common.h"
+#include "Time.h"
+#define ICSL_SENSOR_DATA_ONLY
+#include "SensorManager.h"
+#undef ICSL_SENSOR_DATA_ONLY
 
+using namespace std;
 
 namespace ICSL {
 namespace Quadrotor {
@@ -29,12 +41,17 @@ class QuadLogger
 
 		void pause(){mPaused = true;}
 		void unpause(){mPaused = false;}
+
+		void saveImageBuffer(list<cv::Mat> const &imgBuffer, list<SensorDataImage> const &dataBuffer);
+
+		void setStartTime(Time time){mStartTime.setTime(time);}
 	protected:
 		String mDir, mFilename;
 		uint32 mTypeMask;
 		FileStream::ptr mLogStream;
 		Mutex mMutex;
 		bool mPaused;
+		Time mStartTime;
 };
 
 }
