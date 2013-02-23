@@ -10,7 +10,9 @@ namespace Quadrotor{
 		mLastAccel(3,1,0.0),
 		mLastGyro(3,1,0.0),
 		mLastMag(3,1,0.0),
-		mLastPressure(0)
+		mLastPressure(0),
+		mCurAtt(3,1,0.0),
+		mCurAngularVel(3,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -250,8 +252,10 @@ namespace Quadrotor{
 			cap->grab();
 			cap->retrieve(((SensorDataImage*)data)->img);
 
-			((SensorDataImage*)data)->att.inject(Array2D<double>(3,1,0.0));
-			((SensorDataImage*)data)->angularVel.inject(Array2D<double>(3,1,0.0));
+			mMutex_attData.lock();
+			((SensorDataImage*)data)->att.inject(mCurAtt);
+			((SensorDataImage*)data)->angularVel.inject(mCurAngularVel);
+			mMutex_attData.unlock();
 			((SensorDataImage*)data)->imgFormat = IMG_FORMAT_BGR;
 
 			mMutex_listeners.lock();
@@ -351,5 +355,14 @@ namespace Quadrotor{
 
 		return temp;
 	}
+
+	void SensorManager::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
+	{
+		mMutex_attData.lock();
+		mCurAtt.inject(att);
+		mCurAngularVel.inject(angularVel);
+		mMutex_attData.unlock();
+	}
+
 } // namespace Quadrotor
 } // namespace ICSL

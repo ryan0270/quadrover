@@ -1,3 +1,19 @@
+// Separate this out to avoid some circular include problems
+#ifndef ICSL_OBSERVER_ANGULAR_LISTENER
+#include "TNT/tnt.h"
+namespace ICSL{ namespace Quadrotor{
+class Observer_AngularListener
+{
+	public:
+	virtual ~Observer_AngularListener(){};
+
+	virtual void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel)=0;
+};
+}}
+#define ICSL_OBSERVER_ANGULAR_LISTENER
+#endif
+
+#ifndef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #ifndef ICSL_OBSERVER_ANGULAR 
 #define ICSL_OBSERVER_ANGULAR 
 #include <toadlet/egg.h>
@@ -14,14 +30,6 @@ using toadlet::uint64;
 
 namespace ICSL{
 namespace Quadrotor{
-
-class Observer_AngularListener
-{
-	public:
-	virtual ~Observer_AngularListener(){};
-
-	virtual void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel)=0;
-};
 
 //class Observer_Angular : public InputDeviceListener
 class Observer_Angular : public toadlet::egg::Thread, 
@@ -111,4 +119,5 @@ class Observer_Angular : public toadlet::egg::Thread,
 }
 }
 
+#endif
 #endif

@@ -91,6 +91,7 @@ void Rover::initialize()
 	mSensorManager.setStartTime(mStartTime);
 	mSensorManager.setQuadLogger(&mQuadLogger);
 	mSensorManager.start();
+	mObsvAngular.addListener(&mSensorManager);
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
 	mSensorManager.addListener(&mVisionProcessor);

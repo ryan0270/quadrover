@@ -18,6 +18,9 @@
 #include "Common.h"
 #include "QuadLogger.h"
 #include "Time.h"
+#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+#include "Observer_Angular.h"
+#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 
 namespace ICSL{
 namespace Quadrotor{
@@ -56,7 +59,7 @@ class SensorDataVector : public SensorData
 class SensorDataImage : public SensorData
 {
 	public:
-	SensorDataImage(){type = SENSOR_DATA_TYPE_IMAGE; imgFormat = IMG_FORMAT_BGR;}
+	SensorDataImage() : att(3,1,0.0), angularVel(3,1,0.0) {type = SENSOR_DATA_TYPE_IMAGE; imgFormat = IMG_FORMAT_BGR;}
 	SensorDataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
 		img1.copyTo(img);
 		att = att1.copy();
@@ -77,7 +80,7 @@ class SensorManagerListener
 	virtual void onNewSensorUpdate(SensorData const *data)=0;
 };
 
-class SensorManager : public toadlet::egg::Thread
+class SensorManager : public toadlet::egg::Thread, public Observer_AngularListener
 {
 	public:
 	SensorManager();
@@ -91,6 +94,9 @@ class SensorManager : public toadlet::egg::Thread
 	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime = time; mMutex_startTime.unlock();}
 
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
+
+	// for Observer_AngularListener
+	void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel);
 
 	protected:
 	bool mRunning, mDone;
@@ -107,7 +113,7 @@ class SensorManager : public toadlet::egg::Thread
 
 	TNT::Array2D<double> mLastAccel, mLastGyro, mLastMag;
 	double mLastPressure;
-	toadlet::egg::Mutex mMutex_data, mMutex_listeners, mMutex_startTime;
+	toadlet::egg::Mutex mMutex_data, mMutex_listeners, mMutex_startTime, mMutex_attData;
 
 	Time mStartTime;
 
@@ -115,6 +121,7 @@ class SensorManager : public toadlet::egg::Thread
 
 	cv::VideoCapture* initCamera();
 	void runImgAcq(cv::VideoCapture *cap);
+	TNT::Array2D<double> mCurAtt, mCurAngularVel;
 };
 
 
