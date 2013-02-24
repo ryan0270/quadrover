@@ -543,6 +543,22 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
+				case COMM_BAROMETER_ZERO_HEIGHT:
+					{
+						float h;
+						bool received = receiveTCP((tbyte*)&h, sizeof(h));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+							{
+								Log::alert(String()+"Listener "+i);
+								mListeners[i]->onNewCommBarometerZeroHeight(h);
+							}
+						}
+						else
+							resetSocket = true;
+					}
+					break;
 				default:
 					Log::alert(String()+"Unknown code: " + code);
 			}

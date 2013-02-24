@@ -153,6 +153,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		float mAttBiasGain;
 
 		float mKalmanForceGainAdaptRate;
+		float mBarometerZeroHeight;
 		Collection<float> mKalmanAttBias, mKalmanAttBiasAdaptRate;
 		Collection<float> mKalmanMeasVar, mKalmanDynVar;
 

@@ -543,7 +543,7 @@ void TelemetryVicon::Monitor::run()
 
 		// Vicon itself only updates at 100Hz
 //		tmr.sleepMS(mPollingDelay);
-		tmr.sleepMS(100);
+		tmr.sleepMS(1);
 	}
 } 
 }

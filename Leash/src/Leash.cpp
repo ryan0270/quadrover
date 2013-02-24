@@ -53,6 +53,7 @@ Leash::Leash(QWidget *parent) :
 	mUseIbvs = false;
 
 	mKalmanForceGainAdaptRate = 0;
+	mBarometerZeroHeight = 76;
 
 	mMotorForceGain = 0;
 	mMotorTorqueGain = 0;
@@ -141,8 +142,8 @@ void Leash::initialize()
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
 //		mTelemVicon.connect("147.46.243.133");
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -766,6 +767,11 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&forceGainAdaptRate, sizeof(float));
 
+	float baromZeroHeight=  mBarometerZeroHeight;
+	code = COMM_BAROMETER_ZERO_HEIGHT;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&baromZeroHeight, sizeof(float));
+
 	Collection<float> nomMag(mAttObsvNominalMag);
 	int nomMagSize = nomMag.size();
 	code = COMM_NOMINAL_MAG;
@@ -1003,6 +1009,9 @@ void Leash::loadObserverConfig(mxml_node_t *obsvRoot)
 
 		mxml_node_t *forceScalingAdaptRateNode = mxmlFindElement(transNode, transNode, "ForceGainAdaptRate", NULL, NULL, MXML_DESCEND);
 		if(forceScalingAdaptRateNode!= NULL) stringstream(forceScalingAdaptRateNode->child->value.text.string) >> mKalmanForceGainAdaptRate;
+
+		mxml_node_t *baromZeroHeightNode = mxmlFindElement(transNode, transNode, "BarometerZeroHeight", NULL, NULL, MXML_DESCEND);
+		if(baromZeroHeightNode != NULL) stringstream(baromZeroHeightNode->child->value.text.string) >> mBarometerZeroHeight;
 	}
 	else
 		cout << "Translation observer section not found in config file" << endl;
@@ -1163,6 +1172,7 @@ void Leash::saveObserverConfig(mxml_node_t *obsvRoot)
 		}
 
 		mxmlNewReal(mxmlNewElement(transNode,"ForceGainAdaptRate"), mKalmanForceGainAdaptRate);
+		mxmlNewReal(mxmlNewElement(transNode,"BarometerZeroHeight"), mBarometerZeroHeight);
 	}
 
 	mxml_node_t *attNode = mxmlNewElement(obsvRoot, "Attitude");
@@ -1235,6 +1245,7 @@ void Leash::applyObserverConfig()
 	}
 
 	mKalmanForceGainAdaptRate = ui->txtKalmanForceGainAdaptRate->text().toDouble();
+	mBarometerZeroHeight = ui->txtBarometerZeroHeight->text().toDouble();
 
 	mAttObsvGainP = ui->tblAttObsvGains->item(0,0)->text().toDouble();
 	mAttObsvGainI = ui->tblAttObsvGains->item(0,1)->text().toDouble();
@@ -1493,7 +1504,7 @@ void Leash::onIncreaseHeight()
 
 void Leash::onDecreaseHeight()
 {
-	mDesState[8][0] = max(0.0, mDesState[8][0]-0.050);
+	mDesState[8][0] = mDesState[8][0]-0.050;
 	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
@@ -1575,6 +1586,7 @@ void Leash::populateObserverUI()
 	}
 
 	ui->txtKalmanForceGainAdaptRate->setText(QString::number(mKalmanForceGainAdaptRate));
+	ui->txtBarometerZeroHeight->setText(QString::number(mBarometerZeroHeight));
 	
 	ui->tblAttObsvGains->item(0,0)->setText(QString::number(mAttObsvGainP));
 	ui->tblAttObsvGains->item(0,1)->setText(QString::number(mAttObsvGainI));
@@ -1774,24 +1786,24 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mViconState[7][0] = rec.y;
 		mViconState[8][0] = rec.z;
 		mMutex_data.unlock();
+
+		String s = String();
+		for(int i=0; i<12; i++)
+			s = s+mViconState[i][0]+"\t";
+		mMutex_logBuffer.lock();
+		mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
+		mMutex_logBuffer.unlock();
+
+		Packet pState;
+		pState.type = COMM_STATE_VICON;
+		pState.time = mSys.mtime()-mStartTimeUniverseMS;
+		pState.dataFloat.resize(mViconState.dim1());
+		for(int i=0; i<mViconState.dim1(); i++)
+			pState.dataFloat[i] = mViconState[i][0];
+		Collection<tbyte> buff;
+		pState.serialize(buff);
+		sendUDP(buff.begin(), buff.size());
 	}
-
-	String s = String();
-	for(int i=0; i<12; i++)
-		s = s+mViconState[i][0]+"\t";
-	mMutex_logBuffer.lock();
-	mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
-	mMutex_logBuffer.unlock();
-
-	Packet pState;
-	pState.type = COMM_STATE_VICON;
-	pState.time = mSys.mtime()-mStartTimeUniverseMS;
-	pState.dataFloat.resize(mViconState.dim1());
-	for(int i=0; i<mViconState.dim1(); i++)
-		pState.dataFloat[i] = mViconState[i][0];
-	Collection<tbyte> buff;
-	pState.serialize(buff);
-	sendUDP(buff.begin(), buff.size());
 }
 
 void Leash::sendDesiredState()

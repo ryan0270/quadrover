@@ -52,6 +52,21 @@ class SensorDataImage : public SensorData
 	TNT::Array2D<double> angularVel;
 	ImageFormat imgFormat;
 };
+
+class SensorDataPhoneTemp : public SensorData
+{
+	public:
+	SensorDataPhoneTemp(){type = SENSOR_DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = tmuTemp = -1;}
+
+	void copyTo(SensorDataPhoneTemp &d){
+		d.timestamp.setTime(timestamp); 
+		d.battTemp = battTemp;
+		d.secTemp = secTemp;
+		d.fgTemp = fgTemp;
+		d.tmuTemp = tmuTemp;
+	}
+	float battTemp, secTemp, fgTemp, tmuTemp;
+};
 }}
 #endif
 

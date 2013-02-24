@@ -134,27 +134,30 @@ namespace Quadrotor{
 
 		System sys;
 		mDone = false;
-		Time lastBattTempTime;
+		Time lastTempMeasureTime;
 		while(mRunning)
 		{
 			ASensorEvent event;
 			while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
 			{
-				int logType = -1;
+				int logFlag = -1;
+				int logID = -1;
 				uint64 curTimeMS;
 				SensorData *data = NULL;
 				switch(event.type)
 				{
 					case ASENSOR_TYPE_PRESSURE:
 						{
-							logType = LOG_FLAG_PRESSURE;
+							logFlag= LOG_FLAG_PRESSURE;
+							logID = LOG_ID_PRESSURE;
 							data = new SensorData(event.data[0], SENSOR_DATA_TYPE_PRESSURE);
 							mLastPressure = event.pressure;
 						}
 						break;
 					case ASENSOR_TYPE_ACCELEROMETER:
 						{
-							logType = LOG_FLAG_ACCEL;
+							logFlag= LOG_FLAG_ACCEL;
+							logID = LOG_ID_ACCEL;
 
 							mMutex_data.lock();
 							mLastAccel[0][0] = event.data[0];
@@ -166,7 +169,8 @@ namespace Quadrotor{
 						break;
 					case ASENSOR_TYPE_GYROSCOPE:
 						{
-							logType = LOG_FLAG_GYRO;
+							logFlag= LOG_FLAG_GYRO;
+							logID = LOG_ID_GYRO;
 
 							mMutex_data.lock();
 							mLastGyro[0][0] = event.data[0];
@@ -178,7 +182,8 @@ namespace Quadrotor{
 						break;
 					case ASENSOR_TYPE_MAGNETIC_FIELD:
 						{
-							logType = LOG_FLAG_MAGNOMETER;
+							logFlag= LOG_FLAG_MAGNOMETER;
+							logID = LOG_ID_MAGNOMETER;
 							mMutex_data.lock();
 							mLastMag[0][0] = event.data[0];
 							mLastMag[1][0] = event.data[1];
@@ -191,6 +196,12 @@ namespace Quadrotor{
 						Log::alert(String()+"Unknown sensor event: "+event.type);
 				}
 
+				if(mQuadLogger != NULL && logFlag != -1)
+				{
+					String s=String()+ mStartTime.getElapsedTimeMS() + "\t" + logID +"\t"+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
+					mQuadLogger->addLine(s,logFlag);
+				}
+
 				if(data != NULL)
 				{
 					mMutex_listeners.lock();
@@ -199,6 +210,33 @@ namespace Quadrotor{
 					mMutex_listeners.unlock();
 					delete data;
 				}
+			}
+
+			if(lastTempMeasureTime.getElapsedTimeMS() > 1e3)
+			{
+				lastTempMeasureTime.setTime();
+				float battTemp = getBatteryTemp()/10.0;
+				float secTemp = getSecTemp()/10.0;
+				float fgTemp= getFuelgaugeTemp()/10.0;
+				float tmuTemp = getTmuTemp()/10.0;
+
+				SensorData *data = new SensorDataPhoneTemp();
+				((SensorDataPhoneTemp*)data)->battTemp = battTemp;
+				((SensorDataPhoneTemp*)data)->secTemp = secTemp;
+				((SensorDataPhoneTemp*)data)->fgTemp = fgTemp;
+				((SensorDataPhoneTemp*)data)->tmuTemp = tmuTemp;
+				mMutex_listeners.lock();
+				for(int i=0; i<mListeners.size(); i++)
+					mListeners[i]->onNewSensorUpdate(data);
+				mMutex_listeners.unlock();
+				delete data;
+
+				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
+				s = s+battTemp+"\t";
+				s = s+secTemp+"\t";
+				s = s+fgTemp+"\t";
+				s = s+tmuTemp+"\t";
+				mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
 			}
 
 			sys.msleep(1);

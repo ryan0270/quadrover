@@ -45,6 +45,7 @@ class CommManagerListener
 	virtual void onNewCommNominalMag(toadlet::egg::Collection<float> const &nomMag){};
 	virtual void onNewCommMotorArmLength(float l){};
 	virtual void onNewCommImgBufferSize(int size){};
+	virtual void onNewCommBarometerZeroHeight(float h){};
 
 }; // class CommManagerListener
 

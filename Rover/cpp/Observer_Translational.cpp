@@ -22,7 +22,8 @@ namespace Quadrotor{
 		mAttBiasReset(3,1,0.0),
 		mAttBiasAdaptRate(3,0.0),
 		mAttitude(3,1,0.0),
-		mLastMeas(6,1,0.0)
+		mLastMeas(6,1,0.0),
+		mBarometerHeightState(2,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -33,6 +34,7 @@ namespace Quadrotor{
 		
 		mLastMeasUpdateTime.setTimeMS(0);
 		mLastPosReceiveTime.setTimeMS(0);
+		mLastBarometerMeasTime.setTimeMS(0);
 		
 		mAkf.inject(createIdentity(6));
 		mCkf.inject(createIdentity(6));
@@ -48,6 +50,10 @@ namespace Quadrotor{
 
 		for(int i=0; i<4; i++)
 			mMotorCmds[i] = 0;
+
+		mZeroHeight = 76;
+		
+		mDoMeasUpdate = mDoMeasUpdate_xyOnly = mDoMeasUpdate_zOnly = false;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -62,31 +68,11 @@ namespace Quadrotor{
 		while(!mDone)
 			sys.msleep(10);
 
-		if(mPressureSensor != NULL)
-			ASensorEventQueue_disableSensor(mSensorEventQueue, mPressureSensor);
-
-		if(mSensorManager != NULL && mSensorEventQueue != NULL)
-			ASensorManager_destroyEventQueue(mSensorManager, mSensorEventQueue);
-
 		Log::alert("------------------------- Observer_Translational shutdown done");
 	}
 
 	void Observer_Translational::initialize()
 	{
-		mSensorManager = ASensorManager_getInstance();
-		ALooper *looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-		mSensorEventQueue = ASensorManager_createEventQueue(mSensorManager, looper, 0, NULL, NULL);
-
-		mPressureSensor = ASensorManager_getDefaultSensor(mSensorManager, ASENSOR_TYPE_PRESSURE);
-		if(mPressureSensor != NULL)
-		{
-			const char* name = ASensor_getName(mPressureSensor);
-			const char* vendor = ASensor_getVendor(mPressureSensor);
-			float res = ASensor_getResolution(mPressureSensor);
-			Log::alert(String()+"Pressure sensor:\n\t"+name+"\n\t"+vendor+"\n\tresolution: "+res);
-			ASensorEventQueue_enableSensor(mSensorEventQueue, mPressureSensor);
-			ASensorEventQueue_setEventRate(mSensorEventQueue, mPressureSensor, 10*1000); // this is the best it actually achieves
-		}
 	}
 
 	void Observer_Translational::run()
@@ -104,37 +90,6 @@ namespace Quadrotor{
 		Time lastBattTempTime;
 		while(mRunning)
 		{
-			ASensorEvent event;
-			while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
-			{
-				uint64 curTimeMS;
-				switch(event.type)
-				{
-					case ASENSOR_TYPE_PRESSURE:
-						{
-							{
-								String s = "Pressure: ";
-								s = s+event.data[0]+"\t";
-								s = s+event.data[1]+"\t";
-								s = s+event.data[2]+"\t";
-								s = s+event.data[3]+"\t";
-								s = s+event.pressure+"\t";
-//								Log::alert(s);
-							}
-
-							if(mQuadLogger != NULL)
-							{
-								String s=String() + mStartTime.getElapsedTimeMS() + "\t" + event.type + "\t";
-								s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
-								mQuadLogger->addLine(s,LOG_FLAG_PRESSURE);
-							}
-						}
-						break;
-					default:
-						Log::alert(String()+"Unknown sensor event: "+event.type);
-				}
-			}
-
 			double thrust = 0;
 			mMutex_cmds.lock();
 			for(int i=0; i<4; i++)
@@ -153,7 +108,9 @@ namespace Quadrotor{
 				r[1][0] = c3*s1*s2-c1*s3;
 				r[2][0] = c2*c3;
 
+				mMutex_data.lock();
 				accel.inject(thrust/mMass*r);
+				mMutex_data.unlock();
 				accel[2][0] -= GRAVITY;
 			}
 			else // assume thrust = 0 means the motors are off and we're sitting still on the ground
@@ -176,6 +133,23 @@ namespace Quadrotor{
 				mMutex_meas.lock(); measTemp.inject(mLastMeas); mMutex_meas.unlock();
 				doMeasUpdateKF(measTemp);
 			}
+			if(mDoMeasUpdate_xyOnly)
+			{
+				Array2D<double> xyTemp(4,1,0.0);
+				mMutex_meas.lock(); 
+				xyTemp[0][0] = mLastMeas[0][0];
+				xyTemp[1][0] = mLastMeas[1][0];
+				xyTemp[2][0] = mLastMeas[3][0];
+				xyTemp[3][0] = mLastMeas[4][0];
+				mMutex_meas.unlock();
+				doMeasUpdateKF_xyOnly(measTemp);
+			}
+			if(mDoMeasUpdate_zOnly)
+			{
+				Array2D<double> zTemp(2,1,0.0);
+				mMutex_meas.lock(); zTemp.inject(mBarometerHeightState); mMutex_meas.unlock();
+				doMeasUpdateKF_zOnly(measTemp);
+			}
 
 			mMutex_data.lock();
 			for(int i=0; i<3; i++)
@@ -186,21 +160,6 @@ namespace Quadrotor{
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
-
-			if(lastBattTempTime.getElapsedTimeMS() > 1e3)
-			{
-				lastBattTempTime.setTime();
-				float battTemp = getBatteryTemp()/10.0;
-				float secTemp = getSecTemp()/10.0;
-				float fuelgaugeTemp = getFuelgaugeTemp()/10.0;
-				float tmuTemp = getTmuTemp()/10.0;
-				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
-				s = s+battTemp+"\t";
-				s = s+secTemp+"\t";
-				s = s+fuelgaugeTemp+"\t";
-				s = s+tmuTemp+"\t";
-				mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
-			}
 
 			sys.msleep(5); // maintain a (roughly) 200Hz update rate
 		}
@@ -290,6 +249,100 @@ namespace Quadrotor{
 		mDoMeasUpdate = false;
 	}
 
+	void Observer_Translational::doMeasUpdateKF_xyOnly(TNT::Array2D<double> const &meas)
+	{
+		mMutex_data.lock();
+		Array2D<double> errCov(4,4);
+		errCov[0][0] = mErrCovKF[0][0];
+		errCov[0][1] = errCov[1][0] = mErrCovKF[0][1];
+		errCov[0][2] = errCov[2][0] = mErrCovKF[0][3];
+		errCov[0][3] = errCov[3][0] = mErrCovKF[0][4];
+		errCov[1][1] = mErrCovKF[1][1];
+		errCov[1][2] = errCov[2][1] = mErrCovKF[1][3];
+		errCov[1][3] = errCov[3][1] = mErrCovKF[1][4];
+		errCov[2][2] = mErrCovKF[3][3];
+		errCov[2][3] = errCov[3][2] = mErrCovKF[3][4];
+		errCov[3][3] = mErrCovKF[4][4];
+
+		Array2D<double> C(4,6,0.0);
+		C[0][0] = C[1][1] = C[2][3] = C[3][4] = 1;
+		Array2D<double> C_T = transpose(C);
+		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
+		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C)) + mMeasCov);
+
+		// I need to solve K = m1*inv(m2) which is the wrong order
+		// so solve K^T = inv(m2^T)*m1^T
+// The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
+// of this function was no longer symmetric
+//		JAMA::QR<double> m2QR(m2_T); 
+//	 	mGainKF.inject(transpose(m2QR.solve(m1_T)));
+		JAMA::LU<double> m2LU(m2_T);
+		mGainKF.inject(transpose(m2LU.solve(m1_T)));
+
+		if(mGainKF.dim1() == 0 || mGainKF.dim2() == 0)
+		{
+			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
+			mMutex_data.unlock();
+			return;
+		}
+
+		// \hat{x} = \hat{x} + K (meas - C \hat{x})
+		Array2D<double> err = meas-matmult(C, mStateKF);
+		mStateKF += matmult(mGainKF, err);
+
+		// S = (I-KC) S
+		mErrCovKF.inject(matmult(createIdentity(6)-matmult(mGainKF, C), mErrCovKF));
+
+		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
+		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
+
+		mMutex_data.unlock();
+		mDoMeasUpdate_xyOnly = false;
+	}
+
+	void Observer_Translational::doMeasUpdateKF_zOnly(TNT::Array2D<double> const &meas)
+	{
+		mMutex_data.lock();
+		Array2D<double> errCov(2,2);
+		errCov[0][0] = mErrCovKF[2][2];
+		errCov[0][1] = errCov[1][0] = mErrCovKF[2][5];
+		errCov[1][1] = mErrCovKF[5][5];
+		Array2D<double> C(2,6,0.0);
+		C[0][2] = C[1][5] = 1;
+		Array2D<double> C_T = transpose(C);
+		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
+		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C)) + mMeasCov);
+
+		// I need to solve K = m1*inv(m2) which is the wrong order
+		// so solve K^T = inv(m2^T)*m1^T
+// The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
+// of this function was no longer symmetric
+//		JAMA::QR<double> m2QR(m2_T); 
+//	 	mGainKF.inject(transpose(m2QR.solve(m1_T)));
+		JAMA::LU<double> m2LU(m2_T);
+		mGainKF.inject(transpose(m2LU.solve(m1_T)));
+
+		if(mGainKF.dim1() == 0 || mGainKF.dim2() == 0)
+		{
+			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
+			mMutex_data.unlock();
+			return;
+		}
+
+		// \hat{x} = \hat{x} + K (meas - C \hat{x})
+		Array2D<double> err = meas-matmult(C, mStateKF);
+		mStateKF += matmult(mGainKF, err);
+
+		// S = (I-KC) S
+		mErrCovKF.inject(matmult(createIdentity(6)-matmult(mGainKF, C), mErrCovKF));
+
+		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
+		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
+
+		mMutex_data.unlock();
+		mDoMeasUpdate_zOnly = false;
+	}
+
 	void Observer_Translational::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
 	{
 		mMutex_att.lock();
@@ -310,7 +363,7 @@ namespace Quadrotor{
 			// This velocity ``measurement'' is very noisy, but it helps to correct some
 			// of the bias error that occurs when the attitude estimate is wrong
 			double dt = mLastPosReceiveTime.getElapsedTimeUS()/1.0e6;
-			if(dt > 1e-3) // reduce the effect of noise
+			if(dt > 1.0e-3) // reduce the effect of noise
 				vel.inject(1.0/dt*(pos-submat(mLastMeas,0,2,0,0)));
 			else
 			{
@@ -327,12 +380,15 @@ namespace Quadrotor{
 
 		// use this to signal the run() thread to avoid tying up the 
 		// CommManager thread calling this function
-		mDoMeasUpdate = true;
+//		mDoMeasUpdate = true;
+		mDoMeasUpdate_xyOnly = true;
 	}
 
 	void Observer_Translational::onNewCommMass(float m)
 	{
+		mMutex_data.lock();
 		mMass = m;
+		mMutex_data.unlock();
 	}
 
 	void Observer_Translational::onNewCommForceGain(float k)
@@ -401,6 +457,15 @@ namespace Quadrotor{
 		Log::alert(s);
 	}
 
+	void Observer_Translational::onNewCommBarometerZeroHeight(float h)
+	{
+		Log::alert(String()+"Barometer zero height set to " + h + " m");
+		mMutex_meas.lock();
+		mZeroHeight = h;
+		mMutex_meas.unlock();
+		return;
+	}
+
 	void Observer_Translational::onAttitudeThrustControllerCmdsSent(double const cmds[4])
 	{
 //		String s = "cmds: \t";
@@ -415,93 +480,59 @@ namespace Quadrotor{
 
 	void Observer_Translational::onNewSensorUpdate(SensorData const *data)
 	{
-		if(data->type == SENSOR_DATA_TYPE_PRESSURE)
+		switch(data->type)
 		{
-//			Log::alert("Recieved pressure data");
+			case SENSOR_DATA_TYPE_PRESSURE:
+			{
+				// equation taken from wikipedia
+				double pressure = data->data;
+				double Rstar = 8.31432; // N·m /(mol·K)
+				double Tb = 288.15; // K
+				double g0 = 9.80665; // m/s^2
+				double M = 0.0289644; // kg/mol
+				double Pb = 1013.25; // milliBar
+
+				mMutex_phoneTempData.lock();
+				if(mPhoneTempData.tmuTemp == 0) // no updates yet
+					return;
+				float tmuTemp = mPhoneTempData.tmuTemp;
+				mMutex_phoneTempData.unlock();
+				double k = (999.5-1000.0)/(45.0-37.0); // taken from experimental data
+				double pressComp = pressure-k*(tmuTemp-37.0);
+
+				mMutex_meas.lock();
+				double h = -Rstar*Tb/g0/M*log(pressure/Pb);
+				double hComp = -Rstar*Tb/g0/M*log(pressComp/Pb);
+
+				if(mLastBarometerMeasTime.getMS() > 0)
+				{
+					double dt = mLastBarometerMeasTime.getElapsedTimeUS()/1.0e6;
+					if(dt > 1.0e-3)
+						mBarometerHeightState[1][0] = 1.0/dt*(h-mZeroHeight-mBarometerHeightState[0][0]);
+					else
+						mBarometerHeightState[1][0] = mBarometerHeightState[1][0];
+				}
+				else
+					mBarometerHeightState[1][0] = 0;
+				mBarometerHeightState[0][0]= h-mZeroHeight;
+				mMutex_meas.unlock();
+
+				mDoMeasUpdate_zOnly = true;
+				if(mQuadLogger != NULL)
+				{
+					String s = String() + mStartTime.getElapsedTimeMS() + "\t1234\t" + h + "\t" + hComp;
+					mQuadLogger->addLine(s,LOG_FLAG_PC_UPDATES);
+				}
+			}
+			break;
+			case SENSOR_DATA_TYPE_PHONE_TEMP:
+			{
+				mMutex_phoneTempData.lock();
+				((SensorDataPhoneTemp*)data)->copyTo(mPhoneTempData);
+				mMutex_phoneTempData.unlock();
+			}
+			break;
 		}
 	}
-
-	int Observer_Translational::getBatteryTemp()
-	{
-		int temp = 0;
-		string filename = "/sys/class/power_supply/battery/temp";
-		ifstream file(filename.c_str());
-		if(file.is_open())
-		{
-			string line;
-			getline(file,line);
-			file.close();
-
-			stringstream ss(line);
-			ss >> temp;
-		}
-		else
-			Log::alert("Failed to open "+String(filename.c_str()));
-
-		return temp;
-	}
-
-	int Observer_Translational::getSecTemp()
-	{
-		int temp = 0;
-		// this path is for the SIII
-		string filename = "/sys/devices/platform/sec-thermistor/temperature";
-		ifstream file(filename.c_str());
-		if(file.is_open())
-		{
-			string line;
-			getline(file,line);
-			file.close();
-
-			stringstream ss(line);
-			ss >> temp;
-		}
-		else
-			Log::alert("Failed to open "+String(filename.c_str()));
-
-		return temp;
-	}
-
-	int Observer_Translational::getFuelgaugeTemp()
-	{
-		int temp = 0;
-		string filename = "/sys/class/power_supply/max17047-fuelgauge/temp";
-		ifstream file(filename.c_str());
-		if(file.is_open())
-		{
-			string line;
-			getline(file,line);
-			file.close();
-
-			stringstream ss(line);
-			ss >> temp;
-		}
-		else
-			(("Failed to open "+filename).c_str());
-
-		return temp;
-	}
-
-	int Observer_Translational::getTmuTemp()
-	{
-		int temp = 0;
-		// this path is for the SIII
-		string filename = "/sys/devices/platform/s5p-tmu/curr_temp";
-		ifstream file(filename.c_str());
-		if(file.is_open())
-		{
-			string line;
-			getline(file,line);
-			file.close();
-
-			stringstream ss(line);
-			ss >> temp;
-		}
-		else
-			Log::alert("Failed to open "+String(filename.c_str()));
-
-		return temp;
-	}
-
 } // namespace Quadrotor
 } // namespace ICSL

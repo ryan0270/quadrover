@@ -2,8 +2,6 @@
 #define ICSL_OBSERVER_TRANSLATIONAL
 #include <fstream>
 
-#include <android/sensor.h>
-
 #include "toadlet/egg.h"
 
 #include "TNT/tnt.h"
@@ -21,7 +19,6 @@
 
 namespace ICSL{
 namespace Quadrotor{
-
 class Observer_TranslationalListener
 {
 	public:
@@ -65,6 +62,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onNewCommForceGainAdaptRate(float rate);
 	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
+	void onNewCommBarometerZeroHeight(float h);
 
 	// from MotorInterfaceListener
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
@@ -74,7 +72,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	private:
 	bool mRunning, mDone;
-	bool mDoMeasUpdate;
+	bool mDoMeasUpdate, mDoMeasUpdate_xyOnly, mDoMeasUpdate_zOnly;
 	Time mStartTime;
 
 	Array2D<double> mRotViconToPhone;
@@ -92,24 +90,20 @@ class Observer_Translational : public toadlet::egg::Thread,
 	Collection<double> mAttBiasAdaptRate;
 	double mForceGainAdaptRate;
 
-	toadlet::egg::Mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds;
+	toadlet::egg::Mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
 
-	Time mLastMeasUpdateTime, mLastPosReceiveTime;
+	Time mLastMeasUpdateTime, mLastPosReceiveTime, mLastBarometerMeasTime;
 
 	double mMotorCmds[4];
 
 	void doTimeUpdateKF(TNT::Array2D<double> const &actuator, double dt);
 	void doMeasUpdateKF(TNT::Array2D<double> const &meas);
+	void doMeasUpdateKF_xyOnly(TNT::Array2D<double> const &meas);
+	void doMeasUpdateKF_zOnly(TNT::Array2D<double> const &meas);
 
-	ASensorManager* mSensorManager;
-	ASensorEventQueue* mSensorEventQueue;
-	const ASensor* mPressureSensor;
-
-	int getBatteryTemp();
-	int getSecTemp();
-	int getFuelgaugeTemp();
-	int getTmuTemp();
-
+	SensorDataPhoneTemp mPhoneTempData;
+	double mZeroHeight;
+	TNT::Array2D<double> mBarometerHeightState;
 };
 
 } // namespace Quadrotor
