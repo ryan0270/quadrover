@@ -1,0 +1,7 @@
+Need to modify build/CMakeFiles/input.dir/link.txt
+- move gnustl_static to the end of the list
+
+Just do "make" and manually copy libinput.so to libs/armeabi-v7a
+	- make install gives stupid linker errors (related to ANDROID_STL=GNU_STATIC I think)
+Manually copy OpenCV *.so files into libs/armeabi-v7a directory
+Manually copy OpenCV class.jar into libs
