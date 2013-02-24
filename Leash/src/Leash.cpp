@@ -1099,7 +1099,7 @@ void Leash::saveConfigToFile(string filename)
 	mxmlNewInteger(portRoot,mPort);
 
 	FILE *fp = fopen((filename).c_str(),"w");
-	mxmlSaveFile(xmlRoot, fp, MXML_NO_CALLBACK);
+	mxmlSaveFile(xmlRoot, fp, ICSL::XmlUtils::whitespaceCallback);
 	fclose(fp);
 }
 
