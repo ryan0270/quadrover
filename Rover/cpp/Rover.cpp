@@ -242,7 +242,7 @@ void Rover::transmitDataUDP()
 	}
 
 	Packet pArduinoStatus, pUseMotors, pState, pDesState, pGyro, pAccel, pComp, pBias, pCntl, pIntMemPos, pIntMemTorque;
-	Packet pImgProcTime, pUseIbvs;
+	Packet pImgProcTime, pUseIbvs, pBarometerHeight, pPressure, mPhoneTemp;
 	Packet pTime;
 	mMutex_cntl.lock();
 	int arduinoStatus;
@@ -283,9 +283,7 @@ void Rover::transmitDataUDP()
 	pDesState.type = COMM_DESIRED_STATE;
 
 	pCntl.dataInt32.resize(4);
-	mMutex_cntl.lock();
-	Collection<uint8> cmds = mAttitudeThrustController.getLastMotorCmds();
-	mMutex_cntl.unlock();
+	mMutex_cntl.lock(); Collection<uint8> cmds = mAttitudeThrustController.getLastMotorCmds(); mMutex_cntl.unlock();
 	for(int i=0; i<4; i++)
 		pCntl.dataInt32[i] = cmds[i];
 	pCntl.type = COMM_MOTOR_VAL;
@@ -303,7 +301,9 @@ void Rover::transmitDataUDP()
 	pIntMemTorque.type = COMM_INT_MEM_TORQUE;
 
 	pImgProcTime.type = COMM_IMGPROC_TIME_US;
+	mMutex_vision.lock();
 	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
+	mMutex_vision.unlock();
 
 	pUseIbvs.type = COMM_USE_IBVS;
 	pUseIbvs.dataBool.push_back(mUseIbvs);
@@ -323,6 +323,9 @@ void Rover::transmitDataUDP()
 		lastAccel = mObsvAngular.getLastAccel();
 		lastCompass = mObsvAngular.getLastMagnometer();
 	}
+
+	pBarometerHeight.dataFloat.push_back(mObsvTranslational.getBaromterHeight());
+	pBarometerHeight.type = COMM_BAROMETER_HEIGHT;
 	mMutex_observer.unlock();
 	pGyro.dataFloat.resize(3);
 	pGyro.dataFloat[0] = lastGyro[0][0];
@@ -348,10 +351,19 @@ void Rover::transmitDataUDP()
 	pComp.dataFloat[2] = lastCompass[2][0];
 	pComp.type = COMM_MAGNOMETER;
 
+	mMutex_data.lock();
 	pTime.dataInt32.push_back(mStartTime.getElapsedTimeMS());
 	pTime.type = COMM_HOST_TIME_MS;
 
+	pPressure.dataFloat.push_back(mPressure);
+	pPressure.type = COMM_PRESSURE;
+
+	pPhoneTemp.dataFloat.push_back(mPhoneTemp);
+	pPhoneTemp.type = COMM_PHONE_TEMP;
+
 	uint64 time = mStartTime.getElapsedTimeMS();
+	mMutex_data.unlock();
+
 	pArduinoStatus.time = time;
 	pUseMotors.time = time;
 	pState.time = time;
@@ -366,6 +378,9 @@ void Rover::transmitDataUDP()
 	pImgProcTime.time = time;
 	pUseIbvs.time = time;
 	pTime.time = time;
+	pBarometerHeight.time = time;
+	pPressure.time = time;
+	pPhoneTemp.time = time;
 
 	mCommManager.transmitUDP(pArduinoStatus);
 	mCommManager.transmitUDP(pUseMotors);
@@ -381,6 +396,9 @@ void Rover::transmitDataUDP()
 	mCommManager.transmitUDP(pImgProcTime);
 	mCommManager.transmitUDP(pUseIbvs);
 	mCommManager.transmitUDP(pTime);
+	mCommManager.transmitUDP(pBarometerHeight);
+	mCommManager.transmitUDP(pPressure);
+	mCommManager.transmitUDP(pPhoneTemp);
 
 	mDataIsSending = false;
 }

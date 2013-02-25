@@ -28,6 +28,7 @@ namespace ICSL {
 namespace Quadrotor {
 class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
+				 public SensorManagerListener,
 				 public toadlet::egg::Thread
 {
 public:
@@ -81,7 +82,7 @@ protected:
 
 	TNT::Array2D<double> mRotViconToQuad, mRotQuadToPhone, mRotCamToPhone, mRotPhoneToCam, mRotViconToPhone;
 
-	Mutex mMutex_cntl, mMutex_observer, mMutex_vision, mMutex_vicon;
+	Mutex mMutex_cntl, mMutex_observer, mMutex_vision, mMutex_vicon, mMutex_data;
 	
 	void run();
 	void transmitDataUDP();
@@ -98,6 +99,8 @@ protected:
 	TNT::Array2D<int> getCpuUsage();
 
 	int mNumCpuCores;
+
+	double mPressure, mPhoneTemp;
 }; // class Rover
 
 } // namespace Quadrotor
