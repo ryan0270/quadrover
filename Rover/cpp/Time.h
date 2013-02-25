@@ -2,6 +2,7 @@
 #define ICSL_TIME_H
 
 #include <time.h>
+#include <toadlet/egg.h>
 
 using namespace std;
 using toadlet::uint64;

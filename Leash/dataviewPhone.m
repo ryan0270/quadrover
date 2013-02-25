@@ -66,9 +66,9 @@ mainRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -400);
 mainRunTimeTime = phoneData(mainRunTimeIndices,1)'/1000;
 mainRunTime = phoneData(mainRunTimeIndices,3:6)';
 
-visionRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -401);
-visionRunTimeTime = phoneData(visionRunTimeIndices,1)'/1000;
-visionRunTime = phoneData(visionRunTimeIndices,3:8)';
+featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -600);
+featureMatchTimeTime = phoneData(featureMatchTimeIndices,1)'/1000;
+featureMatchTime = phoneData(featureMatchTimeIndices,3)';
 
 imageGrabberRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -402);
 imageGrabberRunTimeTime = phoneData(imageGrabberRunTimeIndices,1)'/1000;
@@ -86,9 +86,9 @@ forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -711);
 forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
 forceScaling = phoneData(forceScalingIndices,3)';
 
-% cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
-% cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
-% cpuUsage = phoneData(cpuUsageIndices,3:end)';
+cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
+cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
+cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
 phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 500);
 phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
@@ -101,7 +101,7 @@ if exist('cpuUsage','var') && ~isempty(cpuUsage)
 	xlabel('Time [s]');
 	ylabel('Usage ratio');
 % 	legend('total','cpu0','cpu1','cpu2','cpu2')
-	axis([0 20 0 0.5])
+	axis([cpuUsageTime(1) cpuUsageTime(end) 0 1])
 end
 
 %%
@@ -264,5 +264,13 @@ if isfinite(motor_dt)
         plot(motorTime, motorCmd(i,:));
         title(labelsMotor(i));
     end
+end
+
+%%
+if exist('featureMatchTime','var') && ~isempty(featureMatchTime)
+	figure(600);
+	plot(featureMatchTimeTime, featureMatchTime/1000);
+	xlabel('Time [s]');
+	ylabel('Feature match time [ms]');
 end
 
