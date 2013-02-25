@@ -142,8 +142,8 @@ void Leash::initialize()
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
 //		mTelemVicon.connect("147.46.243.133");
-		mTelemVicon.connect("192.168.100.108");
-//		mTelemVicon.connect("localhost");
+//		mTelemVicon.connect("192.168.100.108");
+		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -438,6 +438,15 @@ void Leash::pollUDP()
 							float time = pck.dataInt32[0]/1.0e3;
 							ui->lblHostTime->setText(QString::number(time,'f',0));
 						}
+						break;
+					case COMM_BAROMETER_HEIGHT:
+						ui->lblBarometerHeight->setText(QString::number(pck.dataFloat[0],'f',2)+'m');
+						break;
+					case COMM_PRESSURE:
+						ui->lblPressure->setText(QString::number(pck.dataFloat[0],'f',1)+"mbar");
+						break;
+					case COMM_PHONE_TEMP:
+						ui->lblPhoneTemp->setText(QString::number(pck.dataFloat[0],'f',1)+QChar(0x00B0));
 						break;
 					default:
 						cout << "Unknown phone code: " << pck.type << endl;

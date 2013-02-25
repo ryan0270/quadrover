@@ -17,7 +17,6 @@ namespace Quadrotor{
 		mDynCov(6,6,0.0),
 		mErrCovKF(6,6,0.0),
 		mStateKF(6,1,0.0),
-		mGainKF(6,6,0.0),
 		mAttBias(3,1,0.0),
 		mAttBiasReset(3,1,0.0),
 		mAttBiasAdaptRate(3,0.0),
@@ -142,13 +141,13 @@ namespace Quadrotor{
 				xyTemp[2][0] = mLastMeas[3][0];
 				xyTemp[3][0] = mLastMeas[4][0];
 				mMutex_meas.unlock();
-				doMeasUpdateKF_xyOnly(measTemp);
+				doMeasUpdateKF_xyOnly(xyTemp);
 			}
 			if(mDoMeasUpdate_zOnly)
 			{
 				Array2D<double> zTemp(2,1,0.0);
 				mMutex_meas.lock(); zTemp.inject(mBarometerHeightState); mMutex_meas.unlock();
-				doMeasUpdateKF_zOnly(measTemp);
+				doMeasUpdateKF_zOnly(zTemp);
 			}
 
 			mMutex_data.lock();
@@ -200,11 +199,11 @@ namespace Quadrotor{
 // The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
 // of this function was no longer symmetric
 //		JAMA::QR<double> m2QR(m2_T); 
-//	 	mGainKF.inject(transpose(m2QR.solve(m1_T)));
+//	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
 		JAMA::LU<double> m2LU(m2_T);
-		mGainKF.inject(transpose(m2LU.solve(m1_T)));
+		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
 
-		if(mGainKF.dim1() == 0 || mGainKF.dim2() == 0)
+		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
 		{
 			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
 			mMutex_data.unlock();
@@ -213,10 +212,10 @@ namespace Quadrotor{
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
 		Array2D<double> err = meas-matmult(mCkf, mStateKF);
-		mStateKF += matmult(mGainKF, err);
+		mStateKF += matmult(gainKF, err);
 
 		// S = (I-KC) S
-		mErrCovKF.inject(matmult(createIdentity(6)-matmult(mGainKF, mCkf), mErrCovKF));
+		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, mCkf), mErrCovKF));
 
 		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
@@ -251,35 +250,34 @@ namespace Quadrotor{
 
 	void Observer_Translational::doMeasUpdateKF_xyOnly(TNT::Array2D<double> const &meas)
 	{
-		mMutex_data.lock();
-		Array2D<double> errCov(4,4);
-		errCov[0][0] = mErrCovKF[0][0];
-		errCov[0][1] = errCov[1][0] = mErrCovKF[0][1];
-		errCov[0][2] = errCov[2][0] = mErrCovKF[0][3];
-		errCov[0][3] = errCov[3][0] = mErrCovKF[0][4];
-		errCov[1][1] = mErrCovKF[1][1];
-		errCov[1][2] = errCov[2][1] = mErrCovKF[1][3];
-		errCov[1][3] = errCov[3][1] = mErrCovKF[1][4];
-		errCov[2][2] = mErrCovKF[3][3];
-		errCov[2][3] = errCov[3][2] = mErrCovKF[3][4];
-		errCov[3][3] = mErrCovKF[4][4];
+		Array2D<double> measCov(4,4);
+		measCov[0][0] = mMeasCov[0][0];
+		measCov[0][1] = measCov[1][0] = mMeasCov[0][1];
+		measCov[0][2] = measCov[2][0] = mMeasCov[0][3];
+		measCov[0][3] = measCov[3][0] = mMeasCov[0][4];
+		measCov[1][1] = mMeasCov[1][1];
+		measCov[1][2] = measCov[2][1] = mMeasCov[1][3];
+		measCov[1][3] = measCov[3][1] = mMeasCov[1][4];
+		measCov[2][2] = mMeasCov[3][3];
+		measCov[2][3] = measCov[3][2] = mMeasCov[3][4];
+		measCov[3][3] = mMeasCov[4][4];
 
 		Array2D<double> C(4,6,0.0);
 		C[0][0] = C[1][1] = C[2][3] = C[3][4] = 1;
 		Array2D<double> C_T = transpose(C);
-		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
-		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C)) + mMeasCov);
+		Array2D<double> m1_T = transpose(matmult(mErrCovKF, C_T));
+		Array2D<double> m2_T = transpose(matmult(C, matmult(mErrCovKF, C_T)) + measCov);
 
 		// I need to solve K = m1*inv(m2) which is the wrong order
 		// so solve K^T = inv(m2^T)*m1^T
 // The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
 // of this function was no longer symmetric
 //		JAMA::QR<double> m2QR(m2_T); 
-//	 	mGainKF.inject(transpose(m2QR.solve(m1_T)));
+//	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
 		JAMA::LU<double> m2LU(m2_T);
-		mGainKF.inject(transpose(m2LU.solve(m1_T)));
+		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
 
-		if(mGainKF.dim1() == 0 || mGainKF.dim2() == 0)
+		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
 		{
 			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
 			mMutex_data.unlock();
@@ -288,10 +286,10 @@ namespace Quadrotor{
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
 		Array2D<double> err = meas-matmult(C, mStateKF);
-		mStateKF += matmult(mGainKF, err);
+		mStateKF += matmult(gainKF, err);
 
 		// S = (I-KC) S
-		mErrCovKF.inject(matmult(createIdentity(6)-matmult(mGainKF, C), mErrCovKF));
+		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, C), mErrCovKF));
 
 		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
@@ -303,26 +301,26 @@ namespace Quadrotor{
 	void Observer_Translational::doMeasUpdateKF_zOnly(TNT::Array2D<double> const &meas)
 	{
 		mMutex_data.lock();
-		Array2D<double> errCov(2,2);
-		errCov[0][0] = mErrCovKF[2][2];
-		errCov[0][1] = errCov[1][0] = mErrCovKF[2][5];
-		errCov[1][1] = mErrCovKF[5][5];
+		Array2D<double> measCov(2,2);
+		measCov[0][0] = mMeasCov[2][2];
+		measCov[0][1] = measCov[1][0] = mMeasCov[2][5];
+		measCov[1][1] = mMeasCov[5][5];
 		Array2D<double> C(2,6,0.0);
 		C[0][2] = C[1][5] = 1;
 		Array2D<double> C_T = transpose(C);
-		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
-		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C)) + mMeasCov);
+		Array2D<double> m1_T = transpose(matmult(mErrCovKF, C_T));
+		Array2D<double> m2_T = transpose(matmult(C, matmult(mErrCovKF, C_T)) + measCov);
 
 		// I need to solve K = m1*inv(m2) which is the wrong order
 		// so solve K^T = inv(m2^T)*m1^T
 // The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
 // of this function was no longer symmetric
 //		JAMA::QR<double> m2QR(m2_T); 
-//	 	mGainKF.inject(transpose(m2QR.solve(m1_T)));
+//	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
 		JAMA::LU<double> m2LU(m2_T);
-		mGainKF.inject(transpose(m2LU.solve(m1_T)));
+		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
 
-		if(mGainKF.dim1() == 0 || mGainKF.dim2() == 0)
+		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
 		{
 			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
 			mMutex_data.unlock();
@@ -331,10 +329,10 @@ namespace Quadrotor{
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
 		Array2D<double> err = meas-matmult(C, mStateKF);
-		mStateKF += matmult(mGainKF, err);
+		mStateKF += matmult(gainKF, err);
 
 		// S = (I-KC) S
-		mErrCovKF.inject(matmult(createIdentity(6)-matmult(mGainKF, C), mErrCovKF));
+		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, C), mErrCovKF));
 
 		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
@@ -468,10 +466,6 @@ namespace Quadrotor{
 
 	void Observer_Translational::onAttitudeThrustControllerCmdsSent(double const cmds[4])
 	{
-//		String s = "cmds: \t";
-//		for(int i=0; i<4; i++)
-//			s = s+cmds[i]+"\t";
-//		Log::alert(s);
 		mMutex_cmds.lock();
 		for(int i=0; i<4; i++)
 			mMotorCmds[i] = cmds[i];

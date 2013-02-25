@@ -66,6 +66,9 @@ public:
 	void onNewCommLogMask(uint32 mask);
 	void onNewCommLogClear();
 
+	// for SensorManagerListener
+	void onNewSensorUpdate(SensorData const *data);
+
 protected:
 	CommManager mCommManager;
 	bool mRunCommPC, mRunnerIsDone;
