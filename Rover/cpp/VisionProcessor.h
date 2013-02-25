@@ -23,6 +23,7 @@ using toadlet::egg::String;
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
+#include "Matcher.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -47,7 +48,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		void shutdown();
 
-		vector<vector<cv::Point2f> > getMatchingPoints();
+		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
 		void setVisionParams(toadlet::egg::Collection<int> const &p);
@@ -103,6 +104,8 @@ class VisionProcessor : public toadlet::egg::Thread,
 		int mImgBufferMaxSize;
 		list<cv::Mat> mImgBuffer;
 		list<SensorDataImage> mImgDataBuffer;
+
+		Matcher mMatcher;
 };
 
 } // namespace Quadrotor
