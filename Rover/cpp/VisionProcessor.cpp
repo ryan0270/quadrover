@@ -18,22 +18,23 @@ VisionProcessor::VisionProcessor() :
 	mFinished = true;
 	mUseIbvs = false;
 	mFirstImageProcessed = false;
-	mCurImage.create(240, 320, CV_8UC3); mCurImage = cv::Scalar(0);
-	mCurImageGray.create(240, 320, CV_8UC1); mCurImageGray = cv::Scalar(0);
-	mCurImageGray.copyTo(mLastImageGray);
+	int width = 640;
+	int height = 480;
+	mCurImage.create(height, width, CV_8UC3); mCurImage = cv::Scalar(0);
+	mCurImageAnnotated.create(height, width, CV_8UC3); mCurImageAnnotated = cv::Scalar(0);
+	mCurImageGray.create(height, width, CV_8UC1); mCurImageGray = cv::Scalar(0);
 
 	mImgProcTimeUS = 0;
 
 	mLastProcessTime.setTimeMS(0);
 
- 	mFocalLength = 3.7*320.0/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+ 	mFocalLength = 3.7*width/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 
 	mNewImageReady = false;
 
 	mImgBufferMaxSize = 10;
 	
 	mLogImages = false;
-mLogImages = true;
 }
 
 void VisionProcessor::shutdown()
@@ -50,7 +51,6 @@ void VisionProcessor::shutdown()
 	mMutex_image.lock();
 	mCurImage.release();
 	mCurImageGray.release();
-	mLastImageGray.release();
 	mMutex_image.unlock();
 
 	Log::alert("-------------------------- Vision processor done ----------------------");
@@ -59,7 +59,16 @@ void VisionProcessor::shutdown()
 void VisionProcessor::getLastImage(cv::Mat *outImage)
 {
 	mMutex_image.lock();
+	outImage->create(mCurImage.rows,mCurImage.cols,mCurImage.type());
 	mCurImage.copyTo(*outImage);
+	mMutex_image.unlock();
+}
+
+void VisionProcessor::getLastImageAnnotated(cv::Mat *outImage)
+{
+	mMutex_image.lock();
+	outImage->create(mCurImage.rows,mCurImage.cols,mCurImage.type());
+	mCurImageAnnotated.copyTo(*outImage);
 	mMutex_image.unlock();
 }
 
@@ -77,6 +86,13 @@ void VisionProcessor::run()
 			mMutex_imageSensorData.lock();
 			mImageData.copyTo(data);
 			mMutex_imageSensorData.unlock();
+
+			if(data.img.rows != mCurImage.rows || data.img.cols != mCurImage.cols)
+			{
+				mCurImage.create(data.img.rows, data.img.cols, data.img.type());
+				mCurImageGray.create(data.img.rows, data.img.cols, data.img.type());
+				mCurImageAnnotated.create(data.img.rows, data.img.cols, data.img.type());
+			}
 			data.img.copyTo(mCurImage);
 			mNewImageReady = false;
 
@@ -84,7 +100,9 @@ void VisionProcessor::run()
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
-Log::alert(String()+"Found " + points[0].size() + " matches");
+			mCurImage.copyTo(mCurImageAnnotated);
+			drawMatches(points, mCurImageAnnotated);
+//Log::alert(String()+"Found " + points[0].size() + " matches");
 
 //			if(mUseIbvs)
 			{
@@ -110,8 +128,6 @@ Log::alert(String()+"Found " + points[0].size() + " matches");
 					mImgDataBuffer.pop_front();
 				mMutex_imgBuffer.unlock();
 			}
-
-			mCurImageGray.copyTo(mLastImageGray);
 		}
 
 		sys.msleep(10);
@@ -136,6 +152,18 @@ vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &i
 	}
 
 	return points;
+}
+
+void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img)
+{
+	for(int i=0; i<points[0].size(); i++)
+	{
+		cv::Point2f p1 = points[0][i];
+		cv::Point2f p2 = points[1][i];
+ 		circle(img,p1,3,cv::Scalar(0,255,0),-1);
+ 		circle(img,p2,3,cv::Scalar(255,0,0),-1);
+ 		line(img,p1,p2,cv::Scalar(255,255,255),1);
+	}
 }
 
 // vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints()

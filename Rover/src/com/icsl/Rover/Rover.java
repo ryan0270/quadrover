@@ -248,6 +248,11 @@ public class Rover extends Activity implements Runnable
 				Mat img = new Mat();
 				try{
 					Imgproc.cvtColor(mImage,img,Imgproc.COLOR_BGR2RGB);
+					if(mBitmap.getWidth() != mImage.width() || mBitmap.getHeight() != mImage.height())
+					{
+						mBitmap.recycle();
+						mBitmap = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
+					}
 					Utils.matToBitmap(img, mBitmap);
 				} catch(Exception e){
 					img = null;
