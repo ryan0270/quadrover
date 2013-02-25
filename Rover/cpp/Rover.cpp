@@ -416,7 +416,7 @@ void Rover::transmitImage()
 	}
 
 	cv::Mat img;
-	mVisionProcessor.getLastImage(&img);
+	mVisionProcessor.getLastImageAnnotated(&img);
 
 	int code, numRows, numCols, numChannels, type, size;
 	vector<int> params;
@@ -526,7 +526,7 @@ void Rover::copyImageData(cv::Mat *m)
 	if(!mRunCommPC) // use this as an indicator that we are shutting down
 		return;
 
-	mVisionProcessor.getLastImage(m);
+	mVisionProcessor.getLastImageAnnotated(m);
 }
 
 // assume p is sized for 16 elements

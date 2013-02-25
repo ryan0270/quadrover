@@ -48,7 +48,6 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		void shutdown();
 
-		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
 		void setVisionParams(toadlet::egg::Collection<int> const &p);
@@ -60,6 +59,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImgProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
 		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImgProcTimeUS; mMutex_data.unlock(); return temp;}
 		void getLastImage(cv::Mat *outImage);
+		void getLastImageAnnotated(cv::Mat *outImage);
 		toadlet::egg::Collection<int> getVisionParams();
 
 		void addListener(VisionProcessorListener *listener){mListeners.push_back(listener);}
@@ -80,8 +80,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		bool mRunning, mFinished;
 		bool mNewImageReady;
 		bool mLogImages;
-		cv::Mat	mCurImage, mCurImageGray;
-		cv::Mat mLastImageGray;
+		cv::Mat	mCurImage, mCurImageGray, mCurImageAnnotated;
 		vector<vector<double> > mMSERHuMoments;
 		vector<cv::Point2f> mMSERCentroids;
 
@@ -106,6 +105,9 @@ class VisionProcessor : public toadlet::egg::Thread,
 		list<SensorDataImage> mImgDataBuffer;
 
 		Matcher mMatcher;
+
+		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
+		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);
 };
 
 } // namespace Quadrotor

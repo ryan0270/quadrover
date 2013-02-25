@@ -176,7 +176,7 @@
     <item row="0" column="1" rowspan="2">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>4</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tabController">
        <attribute name="title">
@@ -789,18 +789,18 @@
              <widget class="QLabel" name="lblPressure">
               <property name="minimumSize">
                <size>
-                <width>71</width>
+                <width>80</width>
                 <height>16</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>71</width>
+                <width>80</width>
                 <height>16</height>
                </size>
               </property>
               <property name="text">
-               <string>0000mbar</string>
+               <string>0000.0mbar</string>
               </property>
              </widget>
             </item>
@@ -815,13 +815,13 @@
              <widget class="QLabel" name="lblPhoneTemp">
               <property name="minimumSize">
                <size>
-                <width>71</width>
+                <width>80</width>
                 <height>16</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>71</width>
+                <width>80</width>
                 <height>16</height>
                </size>
               </property>
@@ -841,13 +841,13 @@
              <widget class="QLabel" name="lblBarometerHeight">
               <property name="minimumSize">
                <size>
-                <width>71</width>
+                <width>80</width>
                 <height>16</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
-                <width>71</width>
+                <width>80</width>
                 <height>16</height>
                </size>
               </property>
