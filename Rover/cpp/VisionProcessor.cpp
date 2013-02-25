@@ -130,7 +130,7 @@ void VisionProcessor::run()
 			}
 		}
 
-		sys.msleep(10);
+		sys.msleep(1);
 	}
 
 	if(mLogImages)

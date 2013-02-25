@@ -46,7 +46,12 @@ class SensorDataImage : public SensorData
 		imgFormat = fmt;
 	}
 
-	void copyTo(SensorDataImage &d){d.timestamp.setTime(timestamp); img.copyTo(d.img); d.att = att.copy(); d.angularVel = angularVel.copy();}
+	void copyTo(SensorDataImage &d){
+		d.timestamp.setTime(timestamp); 
+		img.copyTo(d.img); 
+		d.att = att.copy(); 
+		d.angularVel = angularVel.copy();
+	}
 	cv::Mat img;
 	TNT::Array2D<double> att;
 	TNT::Array2D<double> angularVel;

@@ -1,3 +1,6 @@
+//////////////////////////////////
+// Lim Hyon's feature matcher
+/////////////////////////////////
 #ifndef _MATCHER_H_
 #define _MATCHER_H_
 
@@ -13,6 +16,8 @@
 #include <set>
 #include <algorithm>
 #include <iostream>
+
+#include "Time.h"
 
 //#include "BRIEF.h"
 
@@ -98,10 +103,10 @@ class Matcher
 
             // default settings
             parameters() {
-                    ratio_threshold = 0.85f;
+                    ratio_threshold = 0.65f; // lower is more strict
+                    match_radius = 60; // distance between pixels
                     maxFeatureNum = 1500;
                     match_binsize = 60;
-                    match_radius = 60;
                     match_disp_tolerance = 2;
                     half_resolution = 0;
                     minMatches = 20;

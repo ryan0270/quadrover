@@ -185,7 +185,7 @@ void Rover::run()
 		}
 
 
-		if(mLastCpuUsageTime.getElapsedTimeMS() > 100)
+		if(mLastCpuUsageTime.getElapsedTimeMS() > 500)
 		{
 			cpuUsageCur = getCpuUsage();
 			mLastCpuUsageTime.setTime();
