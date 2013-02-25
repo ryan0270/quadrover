@@ -150,7 +150,7 @@ namespace Quadrotor{
 						{
 							logFlag= LOG_FLAG_PRESSURE;
 							logID = LOG_ID_PRESSURE;
-							data = new SensorData(event.data[0], SENSOR_DATA_TYPE_PRESSURE);
+							data = new SensorData(event.pressure, SENSOR_DATA_TYPE_PRESSURE);
 							mLastPressure = event.pressure;
 						}
 						break;

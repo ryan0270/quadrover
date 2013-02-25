@@ -45,8 +45,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void setStartTime(Time t){mStartTime = t;}
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 	void setRotViconToPhone(TNT::Array2D<double> const &rot){mRotViconToPhone.inject(rot);}
-
 	void setMotorCmds(double const cmds[4]);
+
+	double getBarometerHeight(){mMutex_meas.lock(); double temp = mBarometerHeightState[0][0]+mZeroHeight; mMutex_meas.unlock(); return temp;}
 
 	void addListener(Observer_TranslationalListener *listener){mListeners.push_back(listener);}
 
@@ -82,7 +83,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	// for the translational Kalman Filter
 	Array2D<double> mAkf, mAkf_T, mBkf, mCkf, mCkf_T;
-	Array2D<double> mMeasCov, mDynCov, mErrCovKF, mGainKF;
+	Array2D<double> mMeasCov, mDynCov, mErrCovKF;
 	Array2D<double> mStateKF, mAttitude;
 	TNT::Array2D<double> mAttBias, mAttBiasReset;
 	TNT::Array2D<double> mLastMeas;

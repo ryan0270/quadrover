@@ -37,6 +37,9 @@ Rover::Rover() :
 	mRotViconToPhone = matmult(mRotQuadToPhone, mRotViconToQuad);
 
 	mNumCpuCores = 1;
+
+	mPressure = 0;
+	mPhoneTemp = 0;
 }
 
 Rover::~Rover()
@@ -96,6 +99,7 @@ void Rover::initialize()
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
 	mSensorManager.addListener(&mVisionProcessor);
+	mSensorManager.addListener(this);
 
 	mQuadLogger.setStartTime(mStartTime);
 
@@ -242,7 +246,7 @@ void Rover::transmitDataUDP()
 	}
 
 	Packet pArduinoStatus, pUseMotors, pState, pDesState, pGyro, pAccel, pComp, pBias, pCntl, pIntMemPos, pIntMemTorque;
-	Packet pImgProcTime, pUseIbvs, pBarometerHeight, pPressure, mPhoneTemp;
+	Packet pImgProcTime, pUseIbvs, pBarometerHeight, pPressure, pPhoneTemp;
 	Packet pTime;
 	mMutex_cntl.lock();
 	int arduinoStatus;
@@ -324,7 +328,7 @@ void Rover::transmitDataUDP()
 		lastCompass = mObsvAngular.getLastMagnometer();
 	}
 
-	pBarometerHeight.dataFloat.push_back(mObsvTranslational.getBaromterHeight());
+	pBarometerHeight.dataFloat.push_back(mObsvTranslational.getBarometerHeight());
 	pBarometerHeight.type = COMM_BAROMETER_HEIGHT;
 	mMutex_observer.unlock();
 	pGyro.dataFloat.resize(3);
@@ -503,6 +507,18 @@ void Rover::onNewCommLogClear()
 {
 	mQuadLogger.clearLog();
 	Log::alert(String()+"Log cleared");
+}
+
+void Rover::onNewSensorUpdate(SensorData const *data)
+{
+	switch(data->type)
+	{
+		case SENSOR_DATA_TYPE_PRESSURE:
+			mPressure = data->data;
+			break;
+		case SENSOR_DATA_TYPE_PHONE_TEMP:
+			mPhoneTemp = ((SensorDataPhoneTemp*)data)->tmuTemp;
+	}
 }
 
 void Rover::copyImageData(cv::Mat *m)
