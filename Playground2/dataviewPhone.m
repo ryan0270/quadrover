@@ -94,10 +94,6 @@ phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 500);
 phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
 phoneTemp = phoneData(phoneTempIndices,3:6)';
 
-velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 12345);
-velEstTime = phoneData(velEstIndices,1)'/1000;
-velEst = phoneData(velEstIndices,3:5)';
-
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
 	figure(2000); set(gcf,'Name','CPU Usage')
@@ -278,11 +274,3 @@ if exist('featureMatchTime','var') && ~isempty(featureMatchTime)
 	ylabel('Feature match time [ms]');
 end
 
-%%
-if exist('velEst','var') && ~isempty(velEst)
-	figure(123456)
-	plot(velEstTime, velEst');
-	xlabel('Time [s]');
-	ylabel('Vel [m/s]');
-	legend('x', 'y', 'z');
-end

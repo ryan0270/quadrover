@@ -12,7 +12,7 @@ namespace ICSL {
 namespace Quadrotor{
 
 VisionProcessor::VisionProcessor() :
-	mFeatureMatcher("FAST_GRID","BRIEF")
+	mMatcher("FAST_GRID","BRIEF")
 {
 	mRunning = false;
 	mFinished = true;
@@ -77,26 +77,21 @@ void VisionProcessor::run()
 	System sys;
 	mFinished = false;
 	mRunning = true;
+	Array2D<double> imgAtt(3,1,0.0), rotVel(3,1,0.0);
 	SensorDataImage data;
 	while(mRunning)
 	{
 		if(mNewImageReady)
 		{
 			mMutex_imageSensorData.lock();
-			double dt = Time::calcDiffUS(data.timestamp, mImageData.timestamp)/1.0e6;
-			Array2D<double> prevAtt = data.att.copy();
 			mImageData.copyTo(data);
 			mMutex_imageSensorData.unlock();
-			data.featurePoint_dt = dt;
-			data.featurePrevAtt.inject(prevAtt);
-			data.focalLength = mFocalLength;
 
 			if(data.img.rows != mCurImage.rows || data.img.cols != mCurImage.cols)
 			{
 				mCurImage.create(data.img.rows, data.img.cols, data.img.type());
 				mCurImageGray.create(data.img.rows, data.img.cols, data.img.type());
 				mCurImageAnnotated.create(data.img.rows, data.img.cols, data.img.type());
- 				mFocalLength = 3.7*mCurImage.cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 			}
 			data.img.copyTo(mCurImage);
 			mNewImageReady = false;
@@ -104,12 +99,9 @@ void VisionProcessor::run()
 			Time procStart;
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
-			data.featurePoints = getMatchingPoints(mCurImageGray);
+			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
 			mCurImage.copyTo(mCurImageAnnotated);
-			drawMatches(data.featurePoints, mCurImageAnnotated);
-
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onImageProcessed(data);
+			drawMatches(points, mCurImageAnnotated);
 //Log::alert(String()+"Found " + points[0].size() + " matches");
 
 //			if(mUseIbvs)
@@ -121,7 +113,7 @@ void VisionProcessor::run()
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
+				String str = String()+" "+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 			}
 
@@ -149,12 +141,12 @@ void VisionProcessor::run()
 
 vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &img)
 {
-	int result = mFeatureMatcher.Track(img, false);
+	int result = mMatcher.Track(img, false);
 	vector<vector<cv::Point2f> > points(2);
 
-	for(int i=0; i<mFeatureMatcher.vMatches.size(); i++)
+	for(int i=0; i<mMatcher.vMatches.size(); i++)
 	{
-		Matcher::p_match match = mFeatureMatcher.vMatches[i];
+		Matcher::p_match match = mMatcher.vMatches[i];
 		points[0].push_back(cv::Point2f(match.u1p, match.v1p));
 		points[1].push_back(cv::Point2f(match.u1c, match.v1c));
 	}
@@ -335,7 +327,7 @@ void VisionProcessor::enableIbvs(bool enable)
 	if(mUseIbvs)
 	{
 		Log::alert("Turning IBVS on");
-		String str = String()+ mStartTime.getElapsedTimeMS() + "\t-605\t";
+		String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-605\t";
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 		mLastImgFoundTime.setTime();
 		mFirstImageProcessed = false;

@@ -1,6 +1,5 @@
 #include "Observer_Translational.h"
 #include "TNT/jama_lu.h"
-#include "TNT/jama_qr.h"
 
 using namespace toadlet::egg;
 using namespace ICSL::Constants;
@@ -40,8 +39,6 @@ namespace Quadrotor{
 		mCkf.inject(createIdentity(6));
 		mMeasCov[0][0] = mMeasCov[1][1] = mMeasCov[2][2] = 0.01*0.01;
 		mMeasCov[3][3] = mMeasCov[4][4] = mMeasCov[5][5] = 0.3*0.3;
-		mMeasCov[2][2] = 0.05*0.05;
-		mMeasCov[5][5] = 0.1*0.1;
 		mDynCov.inject(0.02*0.02*createIdentity(6));
 		mDynCov[5][5] *= 10;
 		mErrCovKF.inject(1e-4*createIdentity(6));
@@ -56,8 +53,6 @@ namespace Quadrotor{
 		mZeroHeight = 76;
 		
 		mDoMeasUpdate = mDoMeasUpdate_xyOnly = mDoMeasUpdate_zOnly = false;
-
-		mNewImageResultsReady = false;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -155,12 +150,6 @@ namespace Quadrotor{
 				doMeasUpdateKF_zOnly(zTemp);
 			}
 
-			if(mNewImageResultsReady)
-			{
-				calcOpticalFlow(mImageData);
-				mNewImageResultsReady = false;
-			}
-
 			mMutex_data.lock();
 			for(int i=0; i<3; i++)
 				pos[i][0] = mStateKF[i][0];
@@ -175,92 +164,6 @@ namespace Quadrotor{
 		}
 
 		mDone = true;
-	}
-
-	// See eqn 98 in the Feb 25, 2013 notes
-	Array2D<double> Observer_Translational::calcOpticalFlow(SensorDataImage const &img)
-	{
-		if(img.featurePoints[0].size() < 5)
-			return Array2D<double>(3,1,0.0);
-		double dt = img.featurePoint_dt;
-		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
-		Array2D<double> Sn = 1*1*createIdentity(2);
-		Array2D<double> SnInv(2,2,0.0);
-		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
-		Array2D<double> Sv = submat(mErrCovKF,3,5,3,5);
-//Array2D<double> Sv = 1e6*createIdentity(3);
-		JAMA::LU<double> SvLU(Sv);
-		Array2D<double> SvInv = SvLU.solve(createIdentity(3));
-		double z = mStateKF[2][0];
-		z = 0.010;
-		z = 0.5;
-
-		double cx = img.img.cols/2.0;
-		double cy = img.img.rows/2.0;
-		Array2D<double> A(1,3,0.0);
-		Array2D<double> B(3,3,0.0);
-		Array2D<double> R1 = createRotMat_ZYX(img.featurePrevAtt[2][0], img.featurePrevAtt[1][0], img.featurePrevAtt[0][0]);
-		Array2D<double> R2 = createRotMat_ZYX(img.att[2][0], img.att[1][0], img.att[0][0]);
-		Array2D<double> R = matmult(R1, transpose(R2));
-		Array2D<double> q1a(3,1), q2a(3,1);
-		Array2D<double> q1(2,1), q2(2,1);
-		Array2D<double> Lv(2,3);
-//		Array2D<double> LvStack(0,3);
-//		Array2D<double> qDotStack(0,1);
-		for(int i=0; i<img.featurePoints[0].size(); i++)
-		{
-			q1a[0][0] = img.featurePoints[0][i].x-cx;
-			q1a[1][0] = img.featurePoints[0][i].y-cy;
-			q1a[2][0] = img.focalLength;
-			q2a[0][0] = img.featurePoints[1][i].x-cx;
-			q2a[1][0] = img.featurePoints[1][i].y-cy;
-			q2a[2][0] = img.focalLength;
-			// change q2 points to q1 attitude
-//			q2a = matmult(R, q2a); 
-
-			// back to 2d points
-			q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
-			q2[0][0] = q2a[0][0]; q2[1][0] = q2a[1][0];
-
-			// Velocity jacobian
-			Lv[0][0] = -1; Lv[0][1] = 0; Lv[0][2] = q1[0][0];
-			Lv[1][0] = 0; Lv[1][1] = -1; Lv[1][2] = q1[1][0];
-			Lv = 1.0/img.focalLength*Lv;
-
-			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
-			B += matmult(transpose(Lv), matmult(SnInv, Lv));
-
-//			LvStack = stackVertical(LvStack, 1/z*Lv);
-//			qDotStack = stackVertical(qDotStack, 1.0/dt*(q2-q1));
-		}
-		Array2D<double> temp1 = (dt/z)*A+matmult(transpose(mu_v), SvInv);
-		Array2D<double> temp2 = ((dt*dt)/(z*z))*B+SvInv;
-		JAMA::LU<double> temp2_TQR(transpose(temp2));
-		Array2D<double> vel = temp2_TQR.solve(transpose(temp1));
-
-		JAMA::LU<double> B_TLU(transpose(B));
-		Array2D<double> vel2 = z/dt*B_TLU.solve(transpose(A));
-
-//		Array2D<double> chad = matmult(transpose(LvStack),LvStack);
-//		JAMA::LU<double> chadLU(chad);
-//		Array2D<double> vel3 = chadLU.solve(matmult(transpose(LvStack), qDotStack));
-
-//Log::alert("----------------------------------------------------------------------------------------------------");
-//printArray("SvInv: \n", SvInv);
-//printArray("B: \n", B);
-//printArray("temp1: \t", temp1);
-//printArray("temp2: \n", temp2);
-//printArray("vel: \t", transpose(vel));
-//printArray("vel2: \t", transpose(vel2));
-//printArray("vel3: \t", transpose(vel3));
-//Log::alert("////////////////////////////////////////////////////////////////////////////////////////////////////");
-
-		String str = String()+mStartTime.getElapsedTimeMS() + "\t12345\t";
-		for(int i=0; i<vel.dim1(); i++)
-			str = str+vel[i][0]+"\t";
-		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
-
-		return vel;
 	}
 
 	void Observer_Translational::setMotorCmds(double const cmds[4])
@@ -624,15 +527,6 @@ namespace Quadrotor{
 			}
 			break;
 		}
-	}
-
-	void Observer_Translational::onImageProcessed(SensorDataImage const &data)
-	{
-		mMutex_imageData.lock();
-		data.copyTo(mImageData);
-		mMutex_imageData.unlock();
-
-		mNewImageResultsReady = true;
 	}
 } // namespace Quadrotor
 } // namespace ICSL

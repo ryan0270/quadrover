@@ -16,7 +16,6 @@
 #include "Observer_Angular.h"
 #include "AttitudeThrustControllerListener.h"
 #include "SensorManager.h"
-#include "VisionProcessor.h"
 
 namespace ICSL{
 namespace Quadrotor{
@@ -33,8 +32,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 								public Observer_AngularListener,
 								public CommManagerListener,
 								public AttitudeThrustControllerListener,
-								public SensorManagerListener,
-								public VisionProcessorListener
+								public SensorManagerListener
 {
 	public:
 	Observer_Translational();
@@ -73,11 +71,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	// for SensorManagerListener
 	void onNewSensorUpdate(SensorData const *data);
 
-	// for VisionProcessorListener
-	void onImageProcessed(SensorDataImage const &data);
-	void onImageLost(){};
-
-	protected:
+	private:
 	bool mRunning, mDone;
 	bool mDoMeasUpdate, mDoMeasUpdate_xyOnly, mDoMeasUpdate_zOnly;
 	Time mStartTime;
@@ -111,11 +105,6 @@ class Observer_Translational : public toadlet::egg::Thread,
 	SensorDataPhoneTemp mPhoneTempData;
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
-
-	bool mNewImageResultsReady;
-	toadlet::egg::Mutex mMutex_imageData;
-	SensorDataImage mImageData; 
-	TNT::Array2D<double> calcOpticalFlow(SensorDataImage const &img);
 };
 
 } // namespace Quadrotor

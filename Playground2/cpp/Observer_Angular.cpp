@@ -369,7 +369,7 @@ void Observer_Angular::setYawZero()
 	temp = mMagDirNom.copy();
 	mMutex_data.unlock();
 
-	String str1 = String()+mStartTime.getElapsedTimeMS()+"\t-805\t";
+	String str1 = String()+" "+mStartTime.getElapsedTimeMS()+"\t-805\t";
 	for(int i=0; i<temp.dim1(); i++)
 		str1 = str1+temp[i][0]+"\t";
 	mQuadLogger->addLine(str1,LOG_FLAG_PC_UPDATES);
@@ -379,7 +379,7 @@ void Observer_Angular::onNewCommObserverReset()
 {
 	reset();
 	Log::alert("Observer reset");
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t-200\t";
+	String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-200\t";
 	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 }
 
@@ -397,7 +397,7 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 		s = s+magWeight+"\t";
 		Log::alert(s);
 	}
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t-210\t";
+	String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-210\t";
 	str = str+gainP+"\t"+gainI+"\t";
 	str = str+accelWeight+"\t"+magWeight;
 	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);

@@ -145,18 +145,18 @@ namespace Quadrotor {
 		// Logging
 		if(mQuadLogger != NULL)
 		{
-			String s1=String() +  mStartTime.getElapsedTimeMS() + "\t" + "-1000" +"\t";
+			String s1=String() + " " + mStartTime.getElapsedTimeMS() + "\t" + "-1000" +"\t";
 			for(int i=0; i<4; i++)
 				s1 = s1+cmds[i] + "\t";
 
 			mMutex_data.lock();
-			String s2=String() +  mStartTime.getElapsedTimeMS() + "\t" + "-1001" +"\t";
+			String s2=String() + " " + mStartTime.getElapsedTimeMS() + "\t" + "-1001" +"\t";
 			for(int i=0; i<mDesAtt.dim1(); i++)
 				s2 = s2 + mDesAtt[i][0] + "\t";
 			for(int i=0; i<3; i++)
 				s2 = s2+"0\t";
 
-			String s3=String() +  mStartTime.getElapsedTimeMS() + "\t" + "-1002" +"\t";
+			String s3=String() + " " + mStartTime.getElapsedTimeMS() + "\t" + "-1002" +"\t";
 			for(int i=0; i<curStateAngular.dim1(); i++)
 				s3 = s3+curStateAngular[i][0] + "\t";
 			mMutex_data.unlock();

@@ -243,6 +243,7 @@ class LU
       // Copy right hand side with pivoting
       int nx = B.dim2();
 
+
 	  Array2D<Real> X = permute_copy(B, piv, 0, nx-1);
 
       // Solve L*Y = B(piv,:)
