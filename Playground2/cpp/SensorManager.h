@@ -19,7 +19,7 @@ class SensorData
 	SensorData(){type = SENSOR_DATA_TYPE_UNDEFINED;}
 	SensorData(double d, SensorDataType t){data = d; type = t;}
 
-	virtual void copyTo(SensorData &d) const {d.timestamp.setTime(timestamp); d.data = data; d.type = type;}
+	virtual void copyTo(SensorData &d){d.timestamp.setTime(timestamp); d.data = data; d.type = type;}
 	double data;
 	Time timestamp;
 	SensorDataType type;
@@ -38,11 +38,7 @@ class SensorDataVector : public SensorData
 class SensorDataImage : public SensorData
 {
 	public:
-	SensorDataImage() : att(3,1,0.0), angularVel(3,1,0.0), featurePrevAtt(3,1,0.0) {
-		type = SENSOR_DATA_TYPE_IMAGE; 
-		imgFormat = IMG_FORMAT_BGR; 
-		featurePoint_dt = 100;
-	}
+	SensorDataImage() : att(3,1,0.0), angularVel(3,1,0.0) {type = SENSOR_DATA_TYPE_IMAGE; imgFormat = IMG_FORMAT_BGR;}
 	SensorDataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
 		img1.copyTo(img);
 		att = att1.copy();
@@ -50,24 +46,16 @@ class SensorDataImage : public SensorData
 		imgFormat = fmt;
 	}
 
-	void copyTo(SensorDataImage &d) const {
+	void copyTo(SensorDataImage &d){
 		d.timestamp.setTime(timestamp); 
 		img.copyTo(d.img); 
-		d.featurePoints = featurePoints;
-		d.featurePoint_dt = featurePoint_dt;
-		d.att.inject(att);
-		d.angularVel.inject(angularVel);
-		d.featurePrevAtt.inject(featurePrevAtt);
-		d.focalLength = focalLength;
+		d.att = att.copy(); 
+		d.angularVel = angularVel.copy();
 	}
 	cv::Mat img;
 	TNT::Array2D<double> att;
 	TNT::Array2D<double> angularVel;
-	vector<vector<cv::Point2f> > featurePoints;
-	double featurePoint_dt; // timestep between images used for featurePoint matching
-	TNT::Array2D<double> featurePrevAtt; // attitude of previous image used in feature finding
 	ImageFormat imgFormat;
-	double focalLength;
 };
 
 class SensorDataPhoneTemp : public SensorData
@@ -75,7 +63,7 @@ class SensorDataPhoneTemp : public SensorData
 	public:
 	SensorDataPhoneTemp(){type = SENSOR_DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = tmuTemp = -1;}
 
-	void copyTo(SensorDataPhoneTemp &d) const {
+	void copyTo(SensorDataPhoneTemp &d){
 		d.timestamp.setTime(timestamp); 
 		d.battTemp = battTemp;
 		d.secTemp = secTemp;

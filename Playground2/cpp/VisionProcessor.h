@@ -33,7 +33,7 @@ class VisionProcessorListener
 	public:
 		virtual ~VisionProcessorListener(){};
 
-		virtual void onImageProcessed(SensorDataImage const &data)=0;
+		virtual void onImageProcessed(toadlet::egg::Collection<cv::Point2f> const &boxCenters, toadlet::egg::Collection<bool> const &boxFound, TNT::Array2D<double> const &attitude, TNT::Array2D<double> const &rotVel)=0;
 		virtual void onImageLost()=0;
 };
 
@@ -104,7 +104,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		list<cv::Mat> mImgBuffer;
 		list<SensorDataImage> mImgDataBuffer;
 
-		Matcher mFeatureMatcher;
+		Matcher mMatcher;
 
 		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
 		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);

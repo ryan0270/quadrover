@@ -88,9 +88,8 @@ void Rover::initialize()
 
 	mVisionProcessor.setStartTime(mStartTime);
 	mVisionProcessor.setQuadLogger(&mQuadLogger);
-	mVisionProcessor.start();
 	mCommManager.addListener(&mVisionProcessor);
-	mVisionProcessor.addListener(&mObsvTranslational);
+	mVisionProcessor.start();
 
 	mSensorManager.initialize();
 	mSensorManager.setStartTime(mStartTime);
@@ -211,7 +210,7 @@ void Rover::run()
 					usage.push_back(used/total);
 				}
 			}
-			String str = String()+mStartTime.getElapsedTimeMS()+"\t-2000\t";
+			String str = String()+" "+mStartTime.getElapsedTimeMS()+"\t-2000\t";
 			if(cpuUsageCur[0][0] != 0 && cpuUsagePrev[0][0] != 0)
 			{
 				// overall total has to be handled separately since it only counts cpus that were turned on
@@ -484,7 +483,7 @@ void Rover::onNewCommTimeSync(int time)
 	mTranslationController.setStartTime(mStartTime);
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mMutex_cntl.unlock();
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t-500\t" + delta;
+	String str = String()+" " + mStartTime.getElapsedTimeMS() + "\t-500\t" + delta;
 	mMutex_cntl.unlock();
 	mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);
 }
