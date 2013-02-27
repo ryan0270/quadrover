@@ -218,10 +218,10 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 
 
 	//! Comparison between current and previous
-	for(std::vector<Feature>::iterator it=vCurrentFeatures.begin(); it!= vCurrentFeatures.end();++it)
+	for(int i=0; i<vCurrentFeatures.size(); i++)
 	{
 		//! Reset score.
-		it->ResetScore();
+		vCurrentFeatures[i].ResetScore();
 
 		int32_t match_binsize;
 
@@ -231,7 +231,7 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 			match_binsize = params.match_binsize;
 
 		//! boundary computation
-		const cv::KeyPoint &currentKpt = it->keypoint;
+		const cv::KeyPoint &currentKpt = vCurrentFeatures[i].keypoint;
 		int nCenter = currentKpt.pt.x;
 		int nTop = currentKpt.pt.y - match_binsize;
 		int nBottom = currentKpt.pt.y + match_binsize; // because we'd like to search before +1
@@ -246,26 +246,22 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 		if (nBottom <= 0)
 			continue;
 
-		//! Assign iterators
-		std::vector<Feature>::iterator it_start;
-		std::vector<Feature>::iterator it_end;
+		int start = vKeypointRowLUT[nTop];
 
-		it_start = vPrevFeatures.begin() + vKeypointRowLUT[nTop];
-
+		int stop;
 		if (nBottom >= frame.rows)
-			it_end = vPrevFeatures.end();
+			stop = vPrevFeatures.size();
 		else
-			it_end = vPrevFeatures.begin() + vKeypointRowLUT[nBottom];
+			stop = vKeypointRowLUT[nBottom];
 
 		//! TODO: Can we make this multi-threaded?
-		//! Sweep over iterators.
-		for (; it_start < it_end; it_start++)
+		for(int j=start; j<stop; j++)
 		{
-			if (it_start->keypoint.pt.x < nLeft || it_start->keypoint.pt.x > nRight)
+			if (vPrevFeatures[j].keypoint.pt.x < nLeft || vPrevFeatures[j].keypoint.pt.x > nRight)
 				continue;
 
-			int dx = currentKpt.pt.x - it_start->keypoint.pt.x;
-			int dy = currentKpt.pt.y - it_start->keypoint.pt.y;
+			int dx = currentKpt.pt.x - vPrevFeatures[j].keypoint.pt.x;
+			int dy = currentKpt.pt.y - vPrevFeatures[j].keypoint.pt.y;
 
 			int32_t match_radius;
 
@@ -280,24 +276,22 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 				continue;
 			}
 
-			int idx = std::distance(vPrevFeatures.begin(),it_start);
-
 			float r = 10000.0;
 
 			if (bUseHammingDistance)
-				r = cv::normHamming(it_start->descriptor.data,it->descriptor.data,extractor->descriptorSize());
+				r = cv::normHamming(vPrevFeatures[j].descriptor.data,vCurrentFeatures[i].descriptor.data,extractor->descriptorSize());
 			else
 				//! SIFT or SURF
-				r = std::sqrt(cv::normL2Sqr_(it_start->descriptor.ptr<float>(),it->descriptor.ptr<float>(),extractor->descriptorSize()));
+				r = std::sqrt(cv::normL2Sqr_(vPrevFeatures[j].descriptor.ptr<float>(),vCurrentFeatures[i].descriptor.ptr<float>(),extractor->descriptorSize()));
 
-			if (r < it->scoreFirst)
+			if (r < vCurrentFeatures[i].scoreFirst)
 			{
-				it->scoreSecond = it->scoreFirst;
-				it->scoreFirst = r;
-				it->bestPos = idx; //! set best previous position, initial value -1
-			} else if (r > it->scoreFirst && r < it->scoreSecond)
+				vCurrentFeatures[i].scoreSecond = vCurrentFeatures[i].scoreFirst;
+				vCurrentFeatures[i].scoreFirst = r;
+				vCurrentFeatures[i].bestPos = j; //! set best previous position, initial value -1
+			} else if (r > vCurrentFeatures[i].scoreFirst && r < vCurrentFeatures[i].scoreSecond)
 			{
-				it->scoreSecond = r;
+				vCurrentFeatures[i].scoreSecond = r;
 			}
 		} //! end inner for
 	} //! end outer for
@@ -315,9 +309,9 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 	}
 
 	//! Backward match
-	for(std::vector<Feature>::iterator it=vPrevFeatures.begin(); it!= vPrevFeatures.end();++it)
+	for(int i=0; i<vPrevFeatures.size(); i++)
 	{
-		const cv::KeyPoint &currentKpt = it->keypoint;
+		const cv::KeyPoint &currentKpt = vPrevFeatures[i].keypoint;
 		int nCenter = currentKpt.pt.x;
 
 		int32_t match_binsize;
@@ -340,24 +334,22 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 		if (nBottom <= 0)
 			continue;
 
-		std::vector<Feature>::iterator it_start;
-		std::vector<Feature>::iterator it_end;
+		int start = vKeypointRowLUT[nTop];
 
-		it_start = vCurrentFeatures.begin() + vKeypointRowLUT[nTop];
-
+		int stop;
 		if (nBottom >= frame.rows)
-			it_end = vCurrentFeatures.end();
+			stop = vCurrentFeatures.size();
 		else
-			it_end = vCurrentFeatures.begin() + vKeypointRowLUT[nBottom];
+			stop = vKeypointRowLUT[nBottom];
 
 		/// Current;
-		for (; it_start < it_end; it_start++)
+		for(int j=start; j<stop; j++)
 		{
-			if (it_start->keypoint.pt.x < nLeft || it_start->keypoint.pt.x > nRight)
+			if (vCurrentFeatures[j].keypoint.pt.x < nLeft || vCurrentFeatures[j].keypoint.pt.x > nRight)
 				continue;
 
-			int dx = currentKpt.pt.x - it_start->keypoint.pt.x;
-			int dy = currentKpt.pt.y - it_start->keypoint.pt.y;
+			int dx = currentKpt.pt.x - vCurrentFeatures[j].keypoint.pt.x;
+			int dy = currentKpt.pt.y - vCurrentFeatures[j].keypoint.pt.y;
 
 			int32_t match_radius;
 
@@ -371,22 +363,21 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 				continue;
 			}
 
-			int idx = std::distance(vCurrentFeatures.begin(),it_start);
 			float r = 10000.0;
 
 			if (bUseHammingDistance)
-				r = cv::normHamming(it_start->descriptor.data,it->descriptor.data,extractor->descriptorSize());
+				r = cv::normHamming(vCurrentFeatures[j].descriptor.data,vPrevFeatures[i].descriptor.data,extractor->descriptorSize());
 			else
-				r = std::sqrt(cv::normL2Sqr_(it_start->descriptor.ptr<float>(),it->descriptor.ptr<float>(),extractor->descriptorSize()));
+				r = std::sqrt(cv::normL2Sqr_(vCurrentFeatures[j].descriptor.ptr<float>(),vPrevFeatures[i].descriptor.ptr<float>(),extractor->descriptorSize()));
 
-			if (r < it_start->scoreFirst_back)
+			if (r < vCurrentFeatures[j].scoreFirst_back)
 			{
-				it_start->scoreSecond_back = it_start->scoreFirst_back;
-				it_start->scoreFirst_back = r;
-				it_start->bestPos_back = idx; // set best next position, initial value -1
-			} else if (r > it_start->scoreFirst_back && r < it_start->scoreSecond_back)
+				vCurrentFeatures[j].scoreSecond_back = vCurrentFeatures[j].scoreFirst_back;
+				vCurrentFeatures[j].scoreFirst_back = r;
+				vCurrentFeatures[j].bestPos_back = j; // set best next position, initial value -1
+			} else if (r > vCurrentFeatures[j].scoreFirst_back && r < vCurrentFeatures[j].scoreSecond_back)
 			{
-				it_start->scoreSecond_back = r;
+				vCurrentFeatures[j].scoreSecond_back = r;
 			}
 		} //! end inner for
 	} //! end outer for
@@ -395,16 +386,14 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 	vMatches.clear();
 	std::set<int> featurePool;
 
-	for(std::vector<Feature>::iterator it=vCurrentFeatures.begin(); it!= vCurrentFeatures.end();++it)
+	for(int i=0; i<vCurrentFeatures.size(); i++)
 	{
-		int idx = std::distance(vCurrentFeatures.begin(),it);
-
-		if ((float) (it->scoreFirst / it->scoreSecond) < params.ratio_threshold
-						&& it->bestPos_back == idx) /* feature marriage check */
+		if ((float) (vCurrentFeatures[i].scoreFirst / vCurrentFeatures[i].scoreSecond) < params.ratio_threshold
+						&& vCurrentFeatures[i].bestPos_back == i) /* feature marriage check */
 		{
 			if(bUseHammingDistance)
 			{
-				if(it->scoreFirst > params.minHammingDist)
+				if(vCurrentFeatures[i].scoreFirst > params.minHammingDist)
 					continue;
 			}
 
@@ -416,23 +405,23 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 				factor = 1.0;
 
 			/// Skip duplicated feature.
-			if(featurePool.count(it->bestPos) > 0)
+			if(featurePool.count(vCurrentFeatures[i].bestPos) > 0)
 				continue;
 
 			/// p_match preparation
 			p_match match;
 
 			/// from current frame.
-			match.u1c = it->keypoint.pt.x*factor;
-			match.v1c = it->keypoint.pt.y*factor;
-			match.i1c = idx;	/// index number in current frame.
+			match.u1c = vCurrentFeatures[i].keypoint.pt.x*factor;
+			match.v1c = vCurrentFeatures[i].keypoint.pt.y*factor;
+			match.i1c = i;	/// index number in current frame.
 
 			/// from previous frame.
-			match.u1p = vPrevFeatures[it->bestPos].keypoint.pt.x*factor;
-			match.v1p = vPrevFeatures[it->bestPos].keypoint.pt.y*factor;
-			match.i1p = it->bestPos;	/// index number in previous frame.
+			match.u1p = vPrevFeatures[vCurrentFeatures[i].bestPos].keypoint.pt.x*factor;
+			match.v1p = vPrevFeatures[vCurrentFeatures[i].bestPos].keypoint.pt.y*factor;
+			match.i1p = vCurrentFeatures[i].bestPos;	/// index number in previous frame.
 
-			featurePool.insert(it->bestPos);
+			featurePool.insert(vCurrentFeatures[i].bestPos);
 
 			/// Pushback
 			vMatches.push_back(match);

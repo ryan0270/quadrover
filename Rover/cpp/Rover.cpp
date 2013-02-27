@@ -173,7 +173,6 @@ void Rover::run()
 		if(!mDataIsSending && mLastDataSendTime.getElapsedTimeMS() > 100)
 		{
 			mDataIsSending = true;
-			// assume the last send finished already
 			dataSendThread.join();
 			dataSendThread.start();
 			mLastDataSendTime.setTime();
