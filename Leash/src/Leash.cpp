@@ -431,7 +431,7 @@ void Leash::pollUDP()
 						{
 						ui->lblImgProcTime->setText(QString::number(pck.dataInt32[0]/1.0e3,'f',0)+"ms");
 						mImgProcTimeBuffer.push_back(pck.dataInt32[0]);
-						while(mImgProcTimeBuffer.size() > 20)
+						while(mImgProcTimeBuffer.size() > 100)
 							mImgProcTimeBuffer.pop_front();
 						double avg = 0;
 						list<float>::iterator iter = mImgProcTimeBuffer.begin();
