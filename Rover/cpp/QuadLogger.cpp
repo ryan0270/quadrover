@@ -82,9 +82,7 @@ Log::alert(String()+"Saving "+dataBuffer.size()+" images");
 	while(iter != dataBuffer.end())
 	{
 		shared_ptr<SensorDataImage> data = static_pointer_cast<SensorDataImage>(*iter);
-//		cv::Mat mat = *(data->img); 
-//		shared_ptr<cv::Mat> mat = data->img; 
-		shared_ptr<cv::Mat> mat = dataBuffer.front()->img;
+		shared_ptr<cv::Mat> mat = data->img; 
 		String filename = mDir+"/images/img_"+id+".bmp";
 		cv::imwrite(filename.c_str(), *mat);
 
