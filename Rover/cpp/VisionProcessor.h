@@ -1,5 +1,6 @@
 #ifndef VISIONPROCESSOR_H
 #define VISIONPROCESSOR_H
+#include <memory>
 #include <sched.h>
 #include <math.h>
 #include <list>
@@ -28,15 +29,22 @@ using toadlet::egg::String;
 namespace ICSL {
 namespace Quadrotor {
 
+class ImageMatchData
+{
+	public:
+	vector<vector<cv::Point2f> > featurePoints;
+	shared_ptr<SensorDataImage> imgData0, imgData1;
+	double dt;
+};
+
 class VisionProcessorListener
 {
 	public:
 		virtual ~VisionProcessorListener(){};
 
-		virtual void onImageProcessed(SensorDataImage const &data)=0;
+		virtual void onImageProcessed(shared_ptr<ImageMatchData> const data)=0;
 		virtual void onImageLost()=0;
 };
-
 
 class VisionProcessor : public toadlet::egg::Thread, 
 						public CommManagerListener,
@@ -64,15 +72,12 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		void addListener(VisionProcessorListener *listener){mListeners.push_back(listener);}
 
-		// this will eventually move to some listener
-		void calcOpticalFlow(vector<vector<cv::Point2f> > const &points);
-
 		// CommManagerListener functions
 		void onNewCommLogMask(uint32 mask);
 		void onNewCommImgBufferSize(int size);
 		
 		// SensorManagerListener
-		void onNewSensorUpdate(SensorData const *data);
+		void onNewSensorUpdate(shared_ptr<SensorData> const data);
 
 	protected:
 		bool mUseIbvs;
@@ -84,9 +89,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		vector<vector<double> > mMSERHuMoments;
 		vector<cv::Point2f> mMSERCentroids;
 
-		double mFocalLength;
-
-		SensorDataImage mImageData;
+		shared_ptr<SensorDataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
 
 		Time mStartTime, mLastImgFoundTime, mLastProcessTime;
 
@@ -101,8 +104,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void run();
 
 		int mImgBufferMaxSize;
-		list<cv::Mat> mImgBuffer;
-		list<SensorDataImage> mImgDataBuffer;
+		list<shared_ptr<SensorDataImage> > mImgDataBuffer;
 
 		Matcher mFeatureMatcher;
 

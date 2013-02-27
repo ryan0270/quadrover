@@ -28,13 +28,14 @@ VisionProcessor::VisionProcessor() :
 
 	mLastProcessTime.setTimeMS(0);
 
- 	mFocalLength = 3.7*width/5.76; // (focal length mm)*(img width px)/(ccd width mm)
-
 	mNewImageReady = false;
 
-	mImgBufferMaxSize = 10;
+	mImgBufferMaxSize = 500;
 	
 	mLogImages = false;
+mLogImages = true;
+
+	mImageDataPrev = mImageDataCur = mImageDataNext = NULL;
 }
 
 void VisionProcessor::shutdown()
@@ -77,47 +78,37 @@ void VisionProcessor::run()
 	System sys;
 	mFinished = false;
 	mRunning = true;
-	SensorDataImage data;
 	while(mRunning)
 	{
-		if(mNewImageReady)
+		if(mNewImageReady && mImageDataCur == NULL)
+			mImageDataCur = mImageDataNext;
+		else if(mNewImageReady)
 		{
 			mMutex_imageSensorData.lock();
-			double dt = Time::calcDiffUS(data.timestamp, mImageData.timestamp)/1.0e6;
-			Array2D<double> prevAtt = data.att.copy();
-			mImageData.copyTo(data);
+			mImageDataPrev = mImageDataCur;
+			mImageDataCur = mImageDataNext;
+			double dt = Time::calcDiffUS(mImageDataPrev->timestamp, mImageDataCur->timestamp)/1.0e6;
 			mMutex_imageSensorData.unlock();
-			data.featurePoint_dt = dt;
-			data.featurePrevAtt.inject(prevAtt);
-			data.focalLength = mFocalLength;
 
-			if(data.img.rows != mCurImage.rows || data.img.cols != mCurImage.cols)
-			{
-				mCurImage.create(data.img.rows, data.img.cols, data.img.type());
-				mCurImageGray.create(data.img.rows, data.img.cols, data.img.type());
-				mCurImageAnnotated.create(data.img.rows, data.img.cols, data.img.type());
- 				mFocalLength = 3.7*mCurImage.cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
-			}
-			data.img.copyTo(mCurImage);
-			mNewImageReady = false;
+			mCurImage = *(mImageDataCur->img);
+			mCurImageGray.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
+			mCurImageAnnotated.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
 
 			Time procStart;
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
-			data.featurePoints = getMatchingPoints(mCurImageGray);
+			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
 			mCurImage.copyTo(mCurImageAnnotated);
-			drawMatches(data.featurePoints, mCurImageAnnotated);
-
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onImageProcessed(data);
+			drawMatches(points, mCurImageAnnotated);
 //Log::alert(String()+"Found " + points[0].size() + " matches");
 
-//			if(mUseIbvs)
-			{
-//				vector<vector<cv::Point2f> > points = getMatchingPoints();
-//				if(points.size() > 0)
-//					calcOpticalFlow(points);
-			}
+			shared_ptr<ImageMatchData> data(new ImageMatchData());
+			data->dt = dt;
+			data->featurePoints = points;
+			data->imgData0 = mImageDataPrev;
+			data->imgData1 = mImageDataCur;
+			for(int i=0; i<mListeners.size(); i++)
+				mListeners[i]->onImageProcessed(data);
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			{
@@ -128,21 +119,20 @@ void VisionProcessor::run()
 			if(mLogImages)
 			{
 				mMutex_imgBuffer.lock();
-				mImgBuffer.push_back(mCurImage.clone());
-				mImgDataBuffer.push_back(data);
-				while(mImgBuffer.size() > mImgBufferMaxSize)
-					mImgBuffer.pop_front();
+				mImgDataBuffer.push_back(shared_ptr<SensorDataImage>(mImageDataCur));
 				while(mImgDataBuffer.size() > mImgBufferMaxSize)
 					mImgDataBuffer.pop_front();
 				mMutex_imgBuffer.unlock();
 			}
+
+			mNewImageReady = false;
 		}
 
 		sys.msleep(1);
 	}
 
 	if(mLogImages)
-		mQuadLogger->saveImageBuffer(mImgBuffer, mImgDataBuffer);
+		mQuadLogger->saveImageBuffer(mImgDataBuffer);
 
 	mFinished = true;
 }
@@ -274,61 +264,6 @@ void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv
 // 	return points;
 // }
 
-void VisionProcessor::calcOpticalFlow(vector<vector<cv::Point2f> > const &points)
-{
-	if(mLastProcessTime.getMS() == 0)
-	{
-		mLastProcessTime.setTime();
-		return;
-	}
-	double dt = mLastProcessTime.getElapsedTimeUS()/1.0e6;
- 	Array2D<double> curRotMat = createIdentity(3);
- 	Array2D<double> curAngularVel(3,1,0.0);
- 	Array2D<double> normDir(3,1,0.0);
-	
-	int numPoints = points[0].size();
-	Array2D<double> avgFlow(3,1,0.0);
-	double maxViewAngle = 0;
-	for(int i=0; i<numPoints; i++)
-	{
-		Array2D<double> p0(3,1), p1(3,1);
-		p0[0][0] = points[0][i].x;
-		p0[1][0] = points[0][i].y;
-		p0[2][0] = mFocalLength;
-		p0 = 1.0/norm2(p0)*p0;
-
-		p1[0][0] = points[1][i].x;
-		p1[1][0] = points[1][i].y;
-		p1[2][0] = mFocalLength;
-		p1 = 1.0/norm2(p1)*p1;
-		
-		avgFlow += 1.0/dt*(p1-p0);
-		avgFlow[0][0] = points[0][i].x-points[1][i].x;
-		avgFlow[1][0] = points[0][i].y-points[1][i].y;
-		avgFlow[2][0] = 0;
-
-		double viewAngle = acos(matmultS(transpose(p1),matmult(transpose(curRotMat),normDir)));
-		maxViewAngle = max(maxViewAngle,viewAngle);
-	}
-	avgFlow = 1.0/numPoints*avgFlow;
-printArray("avgFlow: \t\t\t\t\t\t\t\t\t\t",transpose(avgFlow));
- 
- 	// Flow calc taken from
- 	// Herisse et al (2012) - Landing a VTOL Unmanned Aerial Vehicle on a Moving Platform Using Optical Flow
- 	double viewAngle = maxViewAngle;
- 	double lambda = pow(sin(viewAngle),2)/(4.0-pow(sin(viewAngle),2));
- 	Array2D<double> LambdaInv(3,3,0.0);
- 	LambdaInv[0][0] = LambdaInv[1][1] = lambda;
- 	LambdaInv[2][2] = 0.5;
- 	LambdaInv = 4.0/PI/pow(sin(lambda),4)*LambdaInv;
- 
- 	normDir[2][0] = 1;
- 	Array2D<double> transFlow = -1.0*matmult(LambdaInv,
- 										matmult(curRotMat,
- 											avgFlow + PI*pow(sin(viewAngle),2)*cross(curAngularVel, matmult(transpose(curRotMat),normDir))));
-//	printArray("transFlow: \t",transpose(transFlow));
-}
-
 void VisionProcessor::enableIbvs(bool enable)
 {
 	mUseIbvs = enable;
@@ -360,12 +295,12 @@ void VisionProcessor::setVisionParams(Collection<int> const &p)
 {
 }
 
-void VisionProcessor::onNewSensorUpdate(SensorData const *data)
+void VisionProcessor::onNewSensorUpdate(shared_ptr<SensorData> const data)
 {
 	if(data->type == SENSOR_DATA_TYPE_IMAGE)
 	{
 		mMutex_imageSensorData.lock();
-		((SensorDataImage*)data)->copyTo(mImageData);
+		mImageDataNext = static_pointer_cast<SensorDataImage>(data);
 		mMutex_imageSensorData.unlock();
 		mNewImageReady = true;
 	}
@@ -378,7 +313,6 @@ void VisionProcessor::onNewCommLogMask(uint32 mask)
 	else
 	{
 		mLogImages = false;
-		mImgBuffer.clear();
 		mImgDataBuffer.clear();
 	}
 }

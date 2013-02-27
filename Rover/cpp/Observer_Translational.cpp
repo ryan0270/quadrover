@@ -58,6 +58,9 @@ namespace Quadrotor{
 		mDoMeasUpdate = mDoMeasUpdate_xyOnly = mDoMeasUpdate_zOnly = false;
 
 		mNewImageResultsReady = false;
+
+		mPhoneTempData = NULL;
+		mImageMatchData = NULL;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -157,7 +160,7 @@ namespace Quadrotor{
 
 			if(mNewImageResultsReady)
 			{
-				calcOpticalFlow(mImageData);
+				calcOpticalFlow(mImageMatchData);
 				mNewImageResultsReady = false;
 			}
 
@@ -178,11 +181,11 @@ namespace Quadrotor{
 	}
 
 	// See eqn 98 in the Feb 25, 2013 notes
-	Array2D<double> Observer_Translational::calcOpticalFlow(SensorDataImage const &img)
+	Array2D<double> Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
 	{
-		if(img.featurePoints[0].size() < 5)
+		if(matchData->featurePoints[0].size() < 5)
 			return Array2D<double>(3,1,0.0);
-		double dt = img.featurePoint_dt;
+		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
 		Array2D<double> Sn = 1*1*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
@@ -195,28 +198,28 @@ namespace Quadrotor{
 		z = 0.010;
 		z = 0.5;
 
-		double cx = img.img.cols/2.0;
-		double cy = img.img.rows/2.0;
+		double cx = matchData->imgData1->img->cols/2.0;
+		double cy = matchData->imgData1->img->rows/2.0;
 		Array2D<double> A(1,3,0.0);
 		Array2D<double> B(3,3,0.0);
-		Array2D<double> R1 = createRotMat_ZYX(img.featurePrevAtt[2][0], img.featurePrevAtt[1][0], img.featurePrevAtt[0][0]);
-		Array2D<double> R2 = createRotMat_ZYX(img.att[2][0], img.att[1][0], img.att[0][0]);
+		Array2D<double> R1 = createRotMat_ZYX(matchData->imgData0->att[2][0], matchData->imgData0->att[1][0], matchData->imgData0->att[0][0]);
+		Array2D<double> R2 = createRotMat_ZYX(matchData->imgData1->att[2][0], matchData->imgData1->att[1][0], matchData->imgData1->att[0][0]);
 		Array2D<double> R = matmult(R1, transpose(R2));
 		Array2D<double> q1a(3,1), q2a(3,1);
 		Array2D<double> q1(2,1), q2(2,1);
 		Array2D<double> Lv(2,3);
 //		Array2D<double> LvStack(0,3);
 //		Array2D<double> qDotStack(0,1);
-		for(int i=0; i<img.featurePoints[0].size(); i++)
+		for(int i=0; i<matchData->featurePoints[0].size(); i++)
 		{
-			q1a[0][0] = img.featurePoints[0][i].x-cx;
-			q1a[1][0] = img.featurePoints[0][i].y-cy;
-			q1a[2][0] = img.focalLength;
-			q2a[0][0] = img.featurePoints[1][i].x-cx;
-			q2a[1][0] = img.featurePoints[1][i].y-cy;
-			q2a[2][0] = img.focalLength;
+			q1a[0][0] = matchData->featurePoints[0][i].x-cx;
+			q1a[1][0] = matchData->featurePoints[0][i].y-cy;
+			q1a[2][0] = matchData->imgData0->focalLength;
+			q2a[0][0] = matchData->featurePoints[1][i].x-cx;
+			q2a[1][0] = matchData->featurePoints[1][i].y-cy;
+			q2a[2][0] = matchData->imgData1->focalLength;
 			// change q2 points to q1 attitude
-//			q2a = matmult(R, q2a); 
+			q2a = matmult(R, q2a); 
 
 			// back to 2d points
 			q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
@@ -225,7 +228,7 @@ namespace Quadrotor{
 			// Velocity jacobian
 			Lv[0][0] = -1; Lv[0][1] = 0; Lv[0][2] = q1[0][0];
 			Lv[1][0] = 0; Lv[1][1] = -1; Lv[1][2] = q1[1][0];
-			Lv = 1.0/img.focalLength*Lv;
+			Lv = 1.0/matchData->imgData0->focalLength*Lv;
 
 			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
 			B += matmult(transpose(Lv), matmult(SnInv, Lv));
@@ -569,7 +572,7 @@ namespace Quadrotor{
 		mMutex_cmds.unlock();
 	}
 
-	void Observer_Translational::onNewSensorUpdate(SensorData const *data)
+	void Observer_Translational::onNewSensorUpdate(shared_ptr<SensorData> const data)
 	{
 		switch(data->type)
 		{
@@ -584,9 +587,9 @@ namespace Quadrotor{
 				double Pb = 1013.25; // milliBar
 
 				mMutex_phoneTempData.lock();
-				if(mPhoneTempData.tmuTemp == 0) // no updates yet
+				if(mPhoneTempData == NULL) 
 					return;
-				float tmuTemp = mPhoneTempData.tmuTemp;
+				float tmuTemp = mPhoneTempData->tmuTemp;
 				mMutex_phoneTempData.unlock();
 				double k = (999.5-1000.0)/(45.0-37.0); // taken from experimental data
 				double pressComp = pressure-k*(tmuTemp-37.0);
@@ -619,17 +622,18 @@ namespace Quadrotor{
 			case SENSOR_DATA_TYPE_PHONE_TEMP:
 			{
 				mMutex_phoneTempData.lock();
-				((SensorDataPhoneTemp*)data)->copyTo(mPhoneTempData);
+				mPhoneTempData = static_pointer_cast<SensorDataPhoneTemp>(data);
 				mMutex_phoneTempData.unlock();
 			}
 			break;
 		}
 	}
 
-	void Observer_Translational::onImageProcessed(SensorDataImage const &data)
+	void Observer_Translational::onImageProcessed(shared_ptr<ImageMatchData> const data)
 	{
 		mMutex_imageData.lock();
-		data.copyTo(mImageData);
+//		data.copyTo(mImageData);
+		mImageMatchData = data;
 		mMutex_imageData.unlock();
 
 		mNewImageResultsReady = true;

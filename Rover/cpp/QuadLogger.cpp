@@ -73,16 +73,18 @@ void QuadLogger::close()
 	}
 }
 
-void QuadLogger::saveImageBuffer(list<cv::Mat> const &imgBuffer, list<SensorDataImage> const &dataBuffer)
+void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer)
 {
-	list<cv::Mat>::const_iterator imgIter = imgBuffer.begin();
-	list<SensorDataImage>::const_iterator dataIter = dataBuffer.begin();
+Log::alert(String()+"Saving "+dataBuffer.size()+" images");
+	list<shared_ptr<SensorDataImage> >::const_iterator iter = dataBuffer.begin();
 	int id = 0;
 	mxml_node_t *xml = mxmlNewXML("1.0");
-	while(imgIter != imgBuffer.end())
+	while(iter != dataBuffer.end())
 	{
-		cv::Mat *mat = (cv::Mat*)&(*imgIter++);
-		SensorDataImage *data = (SensorDataImage*)&(*dataIter++);
+		shared_ptr<SensorDataImage> data = static_pointer_cast<SensorDataImage>(*iter);
+//		cv::Mat mat = *(data->img); 
+//		shared_ptr<cv::Mat> mat = data->img; 
+		shared_ptr<cv::Mat> mat = dataBuffer.front()->img;
 		String filename = mDir+"/images/img_"+id+".bmp";
 		cv::imwrite(filename.c_str(), *mat);
 
@@ -99,6 +101,7 @@ void QuadLogger::saveImageBuffer(list<cv::Mat> const &imgBuffer, list<SensorData
 				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
 
 		id++;
+		iter++;
 	}
 
 	mxmlNewInteger(mxmlNewElement(xml,"NumImages"),id);

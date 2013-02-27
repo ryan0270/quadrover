@@ -1,5 +1,6 @@
 #ifndef ROVER_H
 #define ROVER_H
+#include <memory>
 #include <fstream>
 #include <sstream>
 
@@ -67,7 +68,7 @@ public:
 	void onNewCommLogClear();
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(SensorData const *data);
+	void onNewSensorUpdate(shared_ptr<SensorData> const data);
 
 protected:
 	CommManager mCommManager;

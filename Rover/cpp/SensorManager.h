@@ -1,9 +1,12 @@
 #ifndef ICSL_SENSOR_DATA
 #define ICSL_SENSOR_DATA
+#include <memory>
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include "TNT/tnt.h"
 #include "Common.h"
 #include "Time.h"
+#include "TNT_Utils.h"
 namespace ICSL{ namespace Quadrotor{
 enum ImageFormat
 {
@@ -38,13 +41,14 @@ class SensorDataVector : public SensorData
 class SensorDataImage : public SensorData
 {
 	public:
-	SensorDataImage() : att(3,1,0.0), angularVel(3,1,0.0), featurePrevAtt(3,1,0.0) {
+	SensorDataImage() : att(3,1,0.0), angularVel(3,1,0.0) {
 		type = SENSOR_DATA_TYPE_IMAGE; 
 		imgFormat = IMG_FORMAT_BGR; 
-		featurePoint_dt = 100;
+		img = shared_ptr<cv::Mat>(new cv::Mat());
+		cap = NULL;
 	}
 	SensorDataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
-		img1.copyTo(img);
+		img1.copyTo(*img);
 		att = att1.copy();
 		angularVel = angularVel.copy();
 		imgFormat = fmt;
@@ -52,22 +56,17 @@ class SensorDataImage : public SensorData
 
 	void copyTo(SensorDataImage &d) const {
 		d.timestamp.setTime(timestamp); 
-		img.copyTo(d.img); 
-		d.featurePoints = featurePoints;
-		d.featurePoint_dt = featurePoint_dt;
+		img->copyTo(*(d.img)); 
 		d.att.inject(att);
 		d.angularVel.inject(angularVel);
-		d.featurePrevAtt.inject(featurePrevAtt);
 		d.focalLength = focalLength;
 	}
-	cv::Mat img;
+	shared_ptr<cv::Mat> img;
 	TNT::Array2D<double> att;
 	TNT::Array2D<double> angularVel;
-	vector<vector<cv::Point2f> > featurePoints;
-	double featurePoint_dt; // timestep between images used for featurePoint matching
-	TNT::Array2D<double> featurePrevAtt; // attitude of previous image used in feature finding
 	ImageFormat imgFormat;
 	double focalLength;
+	shared_ptr<cv::VideoCapture> cap;
 };
 
 class SensorDataPhoneTemp : public SensorData
@@ -91,12 +90,15 @@ class SensorDataPhoneTemp : public SensorData
 #ifndef ICSL_SENSOR_MANAGER
 #define ICSL_SENSOR_MANAGER
 
+#include <memory>
 #include <string>
 #include <fstream>
 #include <sstream>
+
 #include <android/sensor.h>
 #include <opencv2/core/core.hpp>
-#include "toadlet/egg.h"
+#include <toadlet/egg.h>
+
 #include "TNT/tnt.h"
 
 #include <opencv2/core/core.hpp>
@@ -115,11 +117,13 @@ class SensorDataPhoneTemp : public SensorData
 namespace ICSL{
 namespace Quadrotor{
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
+using namespace std;
 
 class SensorManagerListener
 {
 	public:
-	virtual void onNewSensorUpdate(SensorData const *data)=0;
+//	virtual void onNewSensorUpdate(SensorData const *data)=0;
+	virtual void onNewSensorUpdate(shared_ptr<SensorData> const data)=0;
 };
 
 class SensorManager : public toadlet::egg::Thread, public Observer_AngularListener
@@ -161,8 +165,8 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 
 	Collection<SensorManagerListener *> mListeners;
 
-	cv::VideoCapture* initCamera();
-	void runImgAcq(cv::VideoCapture *cap);
+	shared_ptr<cv::VideoCapture> initCamera();
+	void runImgAcq(shared_ptr<cv::VideoCapture> cap);
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
 };
 

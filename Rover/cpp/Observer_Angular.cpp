@@ -50,6 +50,8 @@ Observer_Angular::Observer_Angular() :
 	mDoingBurnIn = true;
 
 	mYawVicon = 0;
+
+	mAccelData = mGyroData = mMagData = NULL;
 }
 
 Observer_Angular::~Observer_Angular()
@@ -109,7 +111,7 @@ void Observer_Angular::run()
 		{
 			mMutex_data.lock();
 			mMutex_cache.lock();
-			mGyro.inject(mGyroData.data);
+			mGyro.inject(mGyroData->data);
 			mMutex_cache.unlock();
 			if(mDoingBurnIn && mBurnCount < 2000)
 			{
@@ -125,7 +127,7 @@ void Observer_Angular::run()
 					printArray("\tGyro bias: \t",transpose(mGyroBias));
 
 					mMutex_cache.lock();
-					lastGyroUpdateTime.setTime(mGyroData.timestamp);
+					lastGyroUpdateTime.setTime(mGyroData->timestamp);
 					mMutex_cache.unlock();
 				}
 			}
@@ -137,7 +139,7 @@ void Observer_Angular::run()
 		{
 			mMutex_data.lock();
 			mMutex_cache.lock();
-			mAccel.inject(mAccelData.data);
+			mAccel.inject(mAccelData->data);
 			mMutex_cache.unlock();
 			mNewAccelReady = false;
 			mMutex_data.unlock();
@@ -147,7 +149,7 @@ void Observer_Angular::run()
 		{
 			mMutex_data.lock();
 			mMutex_cache.lock();
-			mMagnometer.inject(mMagData.data);
+			mMagnometer.inject(mMagData->data);
 			mMutex_cache.unlock();
 			mNewMagReady = false;
 			mMutex_data.unlock();
@@ -165,8 +167,8 @@ void Observer_Angular::run()
 		if(!mDoingBurnIn && !gyroProcessed)
 		{
 			mMutex_cache.lock();
-			double dt = Time::calcDiffUS(lastGyroUpdateTime, mGyroData.timestamp)/1.0e6;
-			lastGyroUpdateTime.setTime(mGyroData.timestamp);
+			double dt = Time::calcDiffUS(lastGyroUpdateTime, mGyroData->timestamp)/1.0e6;
+			lastGyroUpdateTime.setTime(mGyroData->timestamp);
 			mMutex_cache.unlock();
 			doGyroUpdate(dt);
 			gyroProcessed = true;
@@ -431,25 +433,25 @@ void Observer_Angular::onNewCommStateVicon(Collection<float> const &data)
 	mMutex_data.unlock();
 }
 
-void Observer_Angular::onNewSensorUpdate(SensorData const *data)
+void Observer_Angular::onNewSensorUpdate(shared_ptr<SensorData> const data)
 {
 	switch(data->type)
 	{
 		case SENSOR_DATA_TYPE_ACCEL:
 			mMutex_cache.lock();
-			((SensorDataVector*)data)->copyTo(mAccelData);
+			mAccelData = static_pointer_cast<SensorDataVector>(data);
 			mNewAccelReady = true;
 			mMutex_cache.unlock();
 			break;
 		case SENSOR_DATA_TYPE_GYRO:
 			mMutex_cache.lock();
-			((SensorDataVector*)data)->copyTo(mGyroData);
+			mGyroData = static_pointer_cast<SensorDataVector>(data);
 			mNewGyroReady = true;
 			mMutex_cache.unlock();
 			break;
 		case SENSOR_DATA_TYPE_MAG:
 			mMutex_cache.lock();
-			((SensorDataVector*)data)->copyTo(mMagData);
+			mMagData = static_pointer_cast<SensorDataVector>(data);
 			mNewMagReady = true;
 			mMutex_cache.unlock();
 			break;

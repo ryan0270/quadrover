@@ -2,6 +2,7 @@
 #define QUADLOGGER
 #include <list>
 #include <sstream>
+#include <memory>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -42,7 +43,7 @@ class QuadLogger
 		void pause(){mPaused = true;}
 		void unpause(){mPaused = false;}
 
-		void saveImageBuffer(list<cv::Mat> const &imgBuffer, list<SensorDataImage> const &dataBuffer);
+		void saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer);
 
 		void setStartTime(Time time){mStartTime.setTime(time);}
 	protected:

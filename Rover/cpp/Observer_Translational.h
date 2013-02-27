@@ -1,5 +1,6 @@
 #ifndef ICSL_OBSERVER_TRANSLATIONAL
 #define ICSL_OBSERVER_TRANSLATIONAL
+#include <memory>
 #include <fstream>
 
 #include "toadlet/egg.h"
@@ -71,10 +72,10 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(SensorData const *data);
+	void onNewSensorUpdate(shared_ptr<SensorData> const data);
 
 	// for VisionProcessorListener
-	void onImageProcessed(SensorDataImage const &data);
+	void onImageProcessed(shared_ptr<ImageMatchData> const data);
 	void onImageLost(){};
 
 	protected:
@@ -108,14 +109,14 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void doMeasUpdateKF_xyOnly(TNT::Array2D<double> const &meas);
 	void doMeasUpdateKF_zOnly(TNT::Array2D<double> const &meas);
 
-	SensorDataPhoneTemp mPhoneTempData;
+	shared_ptr<SensorDataPhoneTemp> mPhoneTempData;
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
 
 	bool mNewImageResultsReady;
 	toadlet::egg::Mutex mMutex_imageData;
-	SensorDataImage mImageData; 
-	TNT::Array2D<double> calcOpticalFlow(SensorDataImage const &img);
+	shared_ptr<ImageMatchData> mImageMatchData; 
+	TNT::Array2D<double> calcOpticalFlow(shared_ptr<ImageMatchData> const img);
 };
 
 } // namespace Quadrotor
