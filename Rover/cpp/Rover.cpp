@@ -40,6 +40,8 @@ Rover::Rover() :
 
 	mPressure = 0;
 	mPhoneTemp = 0;
+
+	mImageMatchData = NULL;
 }
 
 Rover::~Rover()
@@ -91,6 +93,7 @@ void Rover::initialize()
 	mVisionProcessor.start();
 	mCommManager.addListener(&mVisionProcessor);
 	mVisionProcessor.addListener(&mObsvTranslational);
+	mVisionProcessor.addListener(this);
 
 	mSensorManager.initialize();
 	mSensorManager.setStartTime(mStartTime);
@@ -103,6 +106,8 @@ void Rover::initialize()
 	mSensorManager.addListener(this);
 
 	mQuadLogger.setStartTime(mStartTime);
+
+	mNumCpuCores = android_getCpuCount();
 
 	this->start();
 
@@ -131,12 +136,8 @@ void Rover::shutdown()
 
 	mCommManager.shutdown(); // mCommManager is only ever accessed via the run thread or via functions returning bools so doesn't have a mutex
 
-	mVisionProcessor.shutdown();
-	mMutex_observer.lock(); 
-	mObsvAngular.shutdown(); 
-	mObsvTranslational.shutdown();
-	mMutex_observer.unlock();
-
+	mMutex_vision.lock(); mVisionProcessor.shutdown(); mMutex_vision.unlock();
+	mMutex_observer.lock(); mObsvAngular.shutdown(); mObsvTranslational.shutdown(); mMutex_observer.unlock();
 
 	stopLogging();
 
@@ -211,7 +212,7 @@ void Rover::run()
 					usage.push_back(used/total);
 				}
 			}
-			String str = String()+mStartTime.getElapsedTimeMS()+"\t-2000\t";
+			String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CPU_USAGE+"\t";
 			if(cpuUsageCur[0][0] != 0 && cpuUsagePrev[0][0] != 0)
 			{
 				// overall total has to be handled separately since it only counts cpus that were turned on
@@ -229,7 +230,7 @@ void Rover::run()
 			cpuUsagePrev.inject(cpuUsageCur);
 		}
 
-		sys.msleep(1);
+		sys.msleep(10);
 	}
 
 	Log::alert(String("----------------- Rover runner dead -------------"));
@@ -366,6 +367,19 @@ void Rover::transmitDataUDP()
 	pPhoneTemp.dataFloat.push_back(mPhoneTemp);
 	pPhoneTemp.type = COMM_PHONE_TEMP;
 
+	Packet pNumFeatures;
+	pNumFeatures.type = COMM_VISION_NUM_FEATURES;
+	mMutex_vision.lock();
+	if(mImageMatchData != NULL)
+	{
+		mImageMatchData->lock();
+		pNumFeatures.dataInt32.push_back(mImageMatchData->featurePoints[0].size());
+		mImageMatchData->unlock();
+	}
+	else
+		pNumFeatures.dataInt32.push_back(0);
+	mMutex_vision.unlock();
+
 	uint64 time = mStartTime.getElapsedTimeMS();
 	mMutex_data.unlock();
 
@@ -386,6 +400,7 @@ void Rover::transmitDataUDP()
 	pBarometerHeight.time = time;
 	pPressure.time = time;
 	pPhoneTemp.time = time;
+	pNumFeatures.time = time;
 
 	mCommManager.transmitUDP(pArduinoStatus);
 	mCommManager.transmitUDP(pUseMotors);
@@ -404,6 +419,7 @@ void Rover::transmitDataUDP()
 	mCommManager.transmitUDP(pBarometerHeight);
 	mCommManager.transmitUDP(pPressure);
 	mCommManager.transmitUDP(pPhoneTemp);
+	mCommManager.transmitUDP(pNumFeatures);
 
 	mDataIsSending = false;
 }
@@ -417,7 +433,18 @@ void Rover::transmitImage()
 	}
 
 	cv::Mat img;
+	mMutex_vision.lock();
+//	if(mImageMatchData == NULL)
+//	{
+//		mMutex_vision.unlock();
+//		mImageIsSending = false;
+//		return;
+//	}
+//	mImageMatchData->lock();
+//	mImageMatchData->imgData1->img->copyTo(img);
+//	mImageMatchData->unlock();
 	mVisionProcessor.getLastImageAnnotated(&img);
+	mMutex_vision.unlock();
 
 	int code, numRows, numCols, numChannels, type, size;
 	vector<int> params;
@@ -484,7 +511,7 @@ void Rover::onNewCommTimeSync(int time)
 	mTranslationController.setStartTime(mStartTime);
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mMutex_cntl.unlock();
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t-500\t" + delta;
+	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_TIME_SYNC + "\t" + delta;
 	mMutex_cntl.unlock();
 	mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);
 }
@@ -524,12 +551,21 @@ void Rover::onNewSensorUpdate(shared_ptr<SensorData> const data)
 	}
 }
 
+void Rover::onImageProcessed(shared_ptr<ImageMatchData> const data)
+{
+	mMutex_vision.lock();
+	mImageMatchData = data;
+	mMutex_vision.unlock();
+}
+
 void Rover::copyImageData(cv::Mat *m)
 {
 	if(!mRunCommPC) // use this as an indicator that we are shutting down
 		return;
 
+	mMutex_vision.lock();
 	mVisionProcessor.getLastImageAnnotated(m);
+	mMutex_vision.unlock();
 }
 
 // assume p is sized for 16 elements

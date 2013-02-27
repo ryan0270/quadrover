@@ -20,6 +20,8 @@ endif()
 # Find toadlet
 find_package (toadlet REQUIRED)
 
+set( CPUFEATURES_PATH "${ANDROID_NDK}/sources/android/cpufeatures")
+
 # Includes
 set (INC ${INC}
 	${Rover_SOURCE_DIR}/cpp
@@ -27,6 +29,7 @@ set (INC ${INC}
 	${OpenCV_INCLUDE_DIRS}
 	${MXML_DIR}/include
 	${TBB_DIR}/include # note that the TBB lib comes in with OpenCV libs
+	${CPUFEATURES_PATH}
 	)
 include_directories (${INC})
 
@@ -64,6 +67,7 @@ set (SRC ${SRC}
 	./cpp/SensorManager.cpp
 	./cpp/Matcher.cpp
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
+	${CPUFEATURES_PATH}/cpu-features.c
 )
 
 # Headers
@@ -85,6 +89,7 @@ set (H ${H}
 	./cpp/ICSL/SystemModel/ISystemModel.h
 	./cpp/ICSL/SystemModel/ISystemModelAffine.h
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
+	${CPUFEATURES_PATH}/cpu-features.h
 )
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")

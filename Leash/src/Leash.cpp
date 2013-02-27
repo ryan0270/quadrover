@@ -63,6 +63,9 @@ Leash::Leash(QWidget *parent) :
 	mNewViconDataReady = false;
 
 	mFirstDraw = true;
+
+	mRatioThreshold = 0.65;
+	mMatchRadius = 60;
 }
 
 Leash::~Leash()
@@ -425,7 +428,18 @@ void Leash::pollUDP()
 							mTorqueIntData[i]->setData(QString::number(pck.dataFloat[i],'f',3), Qt::DisplayRole);
 						break;
 					case COMM_IMGPROC_TIME_US:
-						ui->lblImgProcTime->setText(QString::number(pck.dataInt32[0]/1.0e3,'f',0));
+						{
+						ui->lblImgProcTime->setText(QString::number(pck.dataInt32[0]/1.0e3,'f',0)+"ms");
+						mImgProcTimeBuffer.push_back(pck.dataInt32[0]);
+						while(mImgProcTimeBuffer.size() > 20)
+							mImgProcTimeBuffer.pop_front();
+						double avg = 0;
+						list<float>::iterator iter = mImgProcTimeBuffer.begin();
+						while(iter != mImgProcTimeBuffer.end())
+							avg += *(iter++);
+						avg = avg/mImgProcTimeBuffer.size();
+						ui->lblImgProcTimeAvg->setText(QString::number(avg/1.0e3,'f',0)+"ms");
+						}
 						break;
 					case COMM_USE_IBVS:
 						if(pck.dataBool[0])
@@ -447,6 +461,9 @@ void Leash::pollUDP()
 						break;
 					case COMM_PHONE_TEMP:
 						ui->lblPhoneTemp->setText(QString::number(pck.dataFloat[0],'f',1)+QChar(0x00B0));
+						break;
+					case COMM_VISION_NUM_FEATURES:
+						ui->lblNumFeatureMatches->setText(QString::number(pck.dataInt32[0]));
 						break;
 					default:
 						cout << "Unknown phone code: " << pck.type << endl;
@@ -793,6 +810,15 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&armLength,sizeof(armLength));
 
+	float ratio = mRatioThreshold;
+	code = COMM_VISION_RATIO_THRESHOLD;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&ratio,sizeof(ratio));
+
+	float radius = mMatchRadius;
+	code = COMM_VISION_MATCH_RADIUS;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&radius,sizeof(radius));
 
 	if(result)
 		cout << "Phone params sent." << endl;
@@ -851,6 +877,12 @@ bool Leash::loadConfigFromFile(string filename)
 		loadObserverConfig(obsvRoot);
 	else
 		cout << "Observer section not found in config file" << endl;
+
+	mxml_node_t *visionRoot = mxmlFindElement(xmlRoot, xmlRoot, "Vision", NULL, NULL, MXML_DESCEND);
+	if(visionRoot != NULL)
+		loadVisionConfig(visionRoot);
+	else
+		cout << "Vision section not found in config file" << endl;
 
 	populateUI();
 	return true;
@@ -1096,12 +1128,24 @@ void Leash::loadHardwareConfig(mxml_node_t *hdwRoot)
 	mMutex_data.unlock();
 }
 
+void Leash::loadVisionConfig(mxml_node_t *visionRoot)
+{
+	mMutex_data.lock();
+	mxml_node_t *ratioNode = mxmlFindElement(visionRoot, visionRoot, "RatioThreshold", NULL, NULL, MXML_DESCEND);
+	if(ratioNode != NULL) stringstream(ratioNode->child->value.text.string) >> mRatioThreshold;
+
+	mxml_node_t *radiusNode = mxmlFindElement(visionRoot, visionRoot, "MatchRadius", NULL, NULL, MXML_DESCEND);
+	if(radiusNode != NULL) stringstream(radiusNode->child->value.text.string) >> mMatchRadius;
+	mMutex_data.unlock();
+}
+
 void Leash::saveConfigToFile(string filename)
 {
 	mxml_node_t *xmlRoot = mxmlNewXML("1.0");
 	mxml_node_t *cntlRoot = mxmlNewElement(xmlRoot,"Controller");
 	mxml_node_t *obsvRoot = mxmlNewElement(xmlRoot,"Observer");
 	mxml_node_t *hdwRoot = mxmlNewElement(xmlRoot,"Hardware");
+	mxml_node_t *visionRoot = mxmlNewElement(xmlRoot,"Vision");
 	mxml_node_t *logRoot = mxmlNewElement(xmlRoot,"LogMask");
 	mxml_node_t *imgBufferSizeRoot = mxmlNewElement(xmlRoot,"ImgBufferSize");
 	mxml_node_t *ipRoot = mxmlNewElement(xmlRoot,"IP");
@@ -1110,6 +1154,7 @@ void Leash::saveConfigToFile(string filename)
 	saveControllerConfig(cntlRoot);
 	saveObserverConfig(obsvRoot);
 	saveHardwareConfig(hdwRoot);
+	saveVisionConfig(visionRoot);
 
 	mxmlNewInteger(logRoot,mLogMask);
 	mxmlNewInteger(imgBufferSizeRoot, mImgBufferSize);
@@ -1214,11 +1259,20 @@ void Leash::saveHardwareConfig(mxml_node_t *hdwRoot)
 	mMutex_data.unlock();
 }
 
+void Leash::saveVisionConfig(mxml_node_t *visionRoot)
+{
+	mMutex_data.lock();
+	mxmlNewReal(mxmlNewElement(visionRoot, "RatioThreshold"), mRatioThreshold);
+	mxmlNewReal(mxmlNewElement(visionRoot, "MatchRadius"), mMatchRadius);
+	mMutex_data.unlock();
+}
+
 void Leash::onBtnApply_clicked()
 {
 	applyControllerConfig();
 	applyObserverConfig();
 	applyHardwareConfig();
+	applyVisionConfig();
 	applyDataLoggingConfig();
 
 	mIP = ui->txtIP->text().toStdString();
@@ -1268,6 +1322,7 @@ void Leash::applyObserverConfig()
 
 void Leash::applyHardwareConfig()
 {
+	mMutex_data.lock();
 	mMotorForceGain = ui->txtMotorForceGain->text().toDouble();
 	mMotorTorqueGain = ui->txtMotorTorqueGain->text().toDouble();
 	mMotorArmLength = ui->txtMotorArmLength->text().toDouble();
@@ -1275,6 +1330,15 @@ void Leash::applyHardwareConfig()
 
 	for(int i=0; i<4; i++)
 		mMotorTrim[i] = ui->tblMotorTrim->item(0,i)->text().toInt();
+	mMutex_data.unlock();
+}
+
+void Leash::applyVisionConfig()
+{
+	mMutex_data.lock();
+	mRatioThreshold = ui->txtRatioThreshold->text().toDouble();
+	mMatchRadius = ui->txtMatchRadius->text().toDouble();
+	mMutex_data.unlock();
 }
 
 void Leash::applyDataLoggingConfig()
@@ -1557,6 +1621,7 @@ void Leash::populateUI()
 	populateObserverUI();
 	populateHardwareUI();
 	populateDataLoggingUI();
+	populateVisionUI();
 
 	ui->txtIP->setText(mIP.c_str());
 	ui->txtPort->setText(QString::number(mPort));
@@ -1633,6 +1698,7 @@ void Leash::populateHardwareUI()
 
 void Leash::populateDataLoggingUI()
 {
+	mMutex_data.lock();
 	ui->chkLogState->setChecked( (mLogMask & LOG_FLAG_STATE) > 0);
 	ui->chkLogDesiredState->setChecked( (mLogMask & LOG_FLAG_STATE_DES) > 0);
 	ui->chkLogMotorCmds->setChecked( (mLogMask & LOG_FLAG_MOTORS) > 0);
@@ -1648,6 +1714,15 @@ void Leash::populateDataLoggingUI()
 	ui->chkLogPhoneTemperature->setChecked( (mLogMask & LOG_FLAG_PHONE_TEMP) > 0);
 
 	ui->spnImgBufferSize->setValue(mImgBufferSize);
+	mMutex_data.unlock();
+}
+
+void Leash::populateVisionUI()
+{
+	mMutex_data.lock();
+	ui->txtRatioThreshold->setText(QString::number(mRatioThreshold));
+	ui->txtMatchRadius->setText(QString::number(mMatchRadius));
+	mMutex_data.unlock();
 }
 
 void Leash::toggleIbvs()

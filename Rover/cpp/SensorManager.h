@@ -22,10 +22,25 @@ class SensorData
 	SensorData(){type = SENSOR_DATA_TYPE_UNDEFINED;}
 	SensorData(double d, SensorDataType t){data = d; type = t;}
 
-	virtual void copyTo(SensorData &d) const {d.timestamp.setTime(timestamp); d.data = data; d.type = type;}
+	virtual void lock(){mMutex.lock();}
+	virtual void unlock(){mMutex.unlock();}
+
+	virtual void copyTo(SensorData &d) {
+		if(&d == this)
+			return;
+		lock();
+		d.lock();
+		d.timestamp.setTime(timestamp); 
+		d.data = data; d.type = type;
+		d.unlock();
+		unlock();
+	}
 	double data;
 	Time timestamp;
 	SensorDataType type;
+
+	protected:
+	toadlet::egg::Mutex mMutex;
 };
 
 class SensorDataVector : public SensorData
@@ -34,7 +49,17 @@ class SensorDataVector : public SensorData
 	SensorDataVector(){type = SENSOR_DATA_TYPE_UNDEFINED;};
 	SensorDataVector(TNT::Array2D<double> const &d, SensorDataType t){data = d.copy(); type = t;}
 
-	void copyTo(SensorDataVector &d) const {d.timestamp.setTime(timestamp); d.data = data.copy(); d.type = type;}
+	void copyTo(SensorDataVector &d) {
+		if(&d == this)
+			return;
+		lock();
+		d.lock();
+		d.timestamp.setTime(timestamp); 
+		d.data = data.copy(); 
+		d.type = type;
+		d.unlock();
+		unlock();
+	}
 	TNT::Array2D<double> data;
 };
 
@@ -54,12 +79,18 @@ class SensorDataImage : public SensorData
 		imgFormat = fmt;
 	}
 
-	void copyTo(SensorDataImage &d) const {
+	void copyTo(SensorDataImage &d) {
+		if(&d == this)
+			return;
+		lock();
+		d.lock();
 		d.timestamp.setTime(timestamp); 
 		img->copyTo(*(d.img)); 
 		d.att.inject(att);
 		d.angularVel.inject(angularVel);
 		d.focalLength = focalLength;
+		d.unlock();
+		unlock();
 	}
 	shared_ptr<cv::Mat> img;
 	TNT::Array2D<double> att;

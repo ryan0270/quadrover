@@ -30,14 +30,6 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_onJNIStart(JNIEnv* env, jobject
 	rover->initialize();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setNumCpuCores(JNIEnv* env, jobject thiz, jint numCores)
-{
-	if(rover == NULL)
-		return;
-
-	rover->setNumCpuCores(numCores);
-}
-
 JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setLogDir(JNIEnv* env, jobject thiz, jstring jdir)
 {
 	if(rover == NULL)

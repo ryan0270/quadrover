@@ -75,13 +75,13 @@ void QuadLogger::close()
 
 void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer)
 {
-Log::alert(String()+"Saving "+dataBuffer.size()+" images");
 	list<shared_ptr<SensorDataImage> >::const_iterator iter = dataBuffer.begin();
 	int id = 0;
 	mxml_node_t *xml = mxmlNewXML("1.0");
 	while(iter != dataBuffer.end())
 	{
 		shared_ptr<SensorDataImage> data = static_pointer_cast<SensorDataImage>(*iter);
+		data->lock();
 		shared_ptr<cv::Mat> mat = data->img; 
 		String filename = mDir+"/images/img_"+id+".bmp";
 		cv::imwrite(filename.c_str(), *mat);
@@ -97,6 +97,7 @@ Log::alert(String()+"Saving "+dataBuffer.size()+" images");
 				mxmlNewReal(mxmlNewElement(angularVelNode,"x"),data->angularVel[0][0]);
 				mxmlNewReal(mxmlNewElement(angularVelNode,"y"),data->angularVel[1][0]);
 				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
+		data->unlock();
 
 		id++;
 		iter++;

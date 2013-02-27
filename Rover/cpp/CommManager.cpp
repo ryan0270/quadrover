@@ -550,10 +550,33 @@ void CommManager::pollTCP()
 						if(received)
 						{
 							for(int i=0; i<mListeners.size(); i++)
-							{
-								Log::alert(String()+"Listener "+i);
 								mListeners[i]->onNewCommBarometerZeroHeight(h);
-							}
+						}
+						else
+							resetSocket = true;
+					}
+					break;
+				case COMM_VISION_RATIO_THRESHOLD:
+					{
+						float h;
+						bool received = receiveTCP((tbyte*)&h, sizeof(h));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommVisionRatioThreshold(h);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
+				case COMM_VISION_MATCH_RADIUS:
+					{
+						float r;
+						bool received = receiveTCP((tbyte*)&r, sizeof(r));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommVisionMatchRadius(r);
 						}
 						else
 							resetSocket = true;
