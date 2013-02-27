@@ -118,14 +118,14 @@ namespace Quadrotor{
 	void SensorManager::run()
 	{
 		mRunning = true;
-		cv::VideoCapture *cap = initCamera();
+		shared_ptr<cv::VideoCapture> cap = initCamera();
 		if(cap == NULL)
 			mRunning = false;
 
 		class : public Thread{
 			public:
 			void run(){parent->runImgAcq(cap);}
-			cv::VideoCapture *cap;
+			shared_ptr<cv::VideoCapture> cap;
 			SensorManager *parent;
 		} imgAcqThread;
 		imgAcqThread.parent = this;
@@ -143,14 +143,14 @@ namespace Quadrotor{
 				int logFlag = -1;
 				int logID = -1;
 				uint64 curTimeMS;
-				SensorData *data = NULL;
+				shared_ptr<SensorData> data = NULL;
 				switch(event.type)
 				{
 					case ASENSOR_TYPE_PRESSURE:
 						{
 							logFlag= LOG_FLAG_PRESSURE;
 							logID = LOG_ID_PRESSURE;
-							data = new SensorData(event.pressure, SENSOR_DATA_TYPE_PRESSURE);
+							data = shared_ptr<SensorData>(new SensorData(event.pressure, SENSOR_DATA_TYPE_PRESSURE));
 							mLastPressure = event.pressure;
 						}
 						break;
@@ -163,7 +163,7 @@ namespace Quadrotor{
 							mLastAccel[0][0] = event.data[0];
 							mLastAccel[1][0] = event.data[1];
 							mLastAccel[2][0] = event.data[2];
-							data = new SensorDataVector(mLastAccel, SENSOR_DATA_TYPE_ACCEL);
+							data = shared_ptr<SensorData>(new SensorDataVector(mLastAccel, SENSOR_DATA_TYPE_ACCEL));
 							mMutex_data.unlock();
 						}
 						break;
@@ -176,7 +176,7 @@ namespace Quadrotor{
 							mLastGyro[0][0] = event.data[0];
 							mLastGyro[1][0] = event.data[1];
 							mLastGyro[2][0] = event.data[2];
-							data = new SensorDataVector(mLastGyro, SENSOR_DATA_TYPE_GYRO);
+							data = shared_ptr<SensorData>(new SensorDataVector(mLastGyro, SENSOR_DATA_TYPE_GYRO));
 							mMutex_data.unlock();
 						}
 						break;
@@ -188,7 +188,7 @@ namespace Quadrotor{
 							mLastMag[0][0] = event.data[0];
 							mLastMag[1][0] = event.data[1];
 							mLastMag[2][0] = event.data[2];
-							data = new SensorDataVector(mLastMag, SENSOR_DATA_TYPE_MAG);
+							data = shared_ptr<SensorData>(new SensorDataVector(mLastMag, SENSOR_DATA_TYPE_MAG));
 							mMutex_data.unlock();
 						}
 						break;
@@ -208,7 +208,7 @@ namespace Quadrotor{
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewSensorUpdate(data);
 					mMutex_listeners.unlock();
-					delete data;
+//					delete data;
 				}
 			}
 
@@ -220,16 +220,16 @@ namespace Quadrotor{
 				float fgTemp= getFuelgaugeTemp()/10.0;
 				float tmuTemp = getTmuTemp()/10.0;
 
-				SensorData *data = new SensorDataPhoneTemp();
-				((SensorDataPhoneTemp*)data)->battTemp = battTemp;
-				((SensorDataPhoneTemp*)data)->secTemp = secTemp;
-				((SensorDataPhoneTemp*)data)->fgTemp = fgTemp;
-				((SensorDataPhoneTemp*)data)->tmuTemp = tmuTemp;
+				shared_ptr<SensorData> data = shared_ptr<SensorData>(new SensorDataPhoneTemp());
+				static_pointer_cast<SensorDataPhoneTemp>(data)->battTemp = battTemp;
+				static_pointer_cast<SensorDataPhoneTemp>(data)->secTemp = secTemp;
+				static_pointer_cast<SensorDataPhoneTemp>(data)->fgTemp = fgTemp;
+				static_pointer_cast<SensorDataPhoneTemp>(data)->tmuTemp = tmuTemp;
 				mMutex_listeners.lock();
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onNewSensorUpdate(data);
 				mMutex_listeners.unlock();
-				delete data;
+//				delete data;
 
 				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
 				s = s+battTemp+"\t";
@@ -247,9 +247,9 @@ namespace Quadrotor{
 		mDone = true;
 	}
 
-	cv::VideoCapture* SensorManager::initCamera()
+	shared_ptr<cv::VideoCapture> SensorManager::initCamera()
 	{
-		cv::VideoCapture *cap = new cv::VideoCapture(); // this will be deleted in runImgAcq
+		shared_ptr<cv::VideoCapture> cap = shared_ptr<cv::VideoCapture>(new cv::VideoCapture());
 
 		cap->open(CV_CAP_ANDROID+0); // back camera
 		if(cap->isOpened())
@@ -278,34 +278,37 @@ namespace Quadrotor{
 		return cap;
 	}
 
-	void SensorManager::runImgAcq(cv::VideoCapture *cap)
+	void SensorManager::runImgAcq(shared_ptr<cv::VideoCapture> cap)
 	{
 		if(cap == NULL)
 			return;
 
 		cv::Mat img;
-		SensorData *data = new SensorDataImage();
-		((SensorDataImage*)data)->att.inject(mCurAtt);
-		((SensorDataImage*)data)->angularVel.inject(mCurAngularVel);
 		while(mRunning)
 		{
+			shared_ptr<SensorData> data = shared_ptr<SensorData>(new SensorDataImage());
 			data->type = SENSOR_DATA_TYPE_IMAGE;
 			data->timestamp.setTime();
 			cap->grab();
-			cap->retrieve(((SensorDataImage*)data)->img);
+			shared_ptr<cv::Mat> img(new cv::Mat);
+			cap->retrieve(*img);
+//			static_pointer_cast<SensorDataImage>(data)->img = img;
+			img->copyTo(*static_pointer_cast<SensorDataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
+			static_pointer_cast<SensorDataImage>(data)->cap = cap;
+			static_pointer_cast<SensorDataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 
 			mMutex_attData.lock();
-			((SensorDataImage*)data)->att.inject(mCurAtt);
-			((SensorDataImage*)data)->angularVel.inject(mCurAngularVel);
+			static_pointer_cast<SensorDataImage>(data)->att.inject(mCurAtt);
+			static_pointer_cast<SensorDataImage>(data)->angularVel.inject(mCurAngularVel);
 			mMutex_attData.unlock();
-			((SensorDataImage*)data)->imgFormat = IMG_FORMAT_BGR;
+			static_pointer_cast<SensorDataImage>(data)->imgFormat = IMG_FORMAT_BGR;
 
 			mMutex_listeners.lock();
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onNewSensorUpdate(data);
 			mMutex_listeners.unlock();
 		}
-		delete data;
+//		delete data;
 
 		if(cap->isOpened())
 		{
@@ -313,7 +316,7 @@ namespace Quadrotor{
 			cap->release();
 		}
 
-		delete cap;
+//		delete cap;
 	}
 
 	int SensorManager::getBatteryTemp()

@@ -24,6 +24,7 @@ unlet s:cpo_save
 set autoindent
 set background=dark
 set backspace=2
+set completeopt=preview,menuone
 set fileencodings=ucs-bom,utf-8,default,latin1
 set formatoptions=cqr,t
 set helplang=en
@@ -49,26 +50,29 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +1 Rover.h
-badd +0 Rover.cpp
-badd +0 Observer_Angular.h
-badd +0 Observer_Angular.cpp
-badd +0 Observer_Translational.h
-badd +0 Observer_Translational.cpp
-badd +0 AttitudeThrustController.h
-badd +0 AttitudeThrustController.cpp
-badd +0 TranslationController.h
-badd +0 TranslationController.cpp
-badd +0 MotorInterface.h
-badd +0 MotorInterface.cpp
-badd +0 CommManager.h
-badd +0 CommManager.cpp
-badd +0 SensorManager.h
-badd +0 SensorManager.cpp
-badd +0 VisionProcessor.h
-badd +0 VisionProcessor.cpp
+badd +71 Rover.h
+badd +47 Rover.cpp
+badd +96 Observer_Angular.h
+badd +142 Observer_Angular.cpp
+badd +105 Observer_Translational.h
+badd +628 Observer_Translational.cpp
+badd +1 AttitudeThrustController.h
+badd +1 AttitudeThrustController.cpp
+badd +1 TranslationController.h
+badd +1 TranslationController.cpp
+badd +1 MotorInterface.h
+badd +1 MotorInterface.cpp
+badd +1 CommManager.h
+badd +1 CommManager.cpp
+badd +166 SensorManager.h
+badd +308 SensorManager.cpp
+badd +113 VisionProcessor.h
+badd +365 VisionProcessor.cpp
+badd +1 Common.h
+badd +47 QuadLogger.h
+badd +76 QuadLogger.cpp
 args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp VisionProcessor.h VisionProcessor.cpp
-edit Rover.cpp
+edit Rover.h
 set splitbelow splitright
 wincmd _ | wincmd |
 vsplit
@@ -81,7 +85,6 @@ set winheight=1 winwidth=1
 exe 'vert 1resize ' . ((&columns * 135 + 135) / 271)
 exe 'vert 2resize ' . ((&columns * 135 + 135) / 271)
 argglobal
-edit Rover.cpp
 setlocal keymap=
 setlocal noarabic
 setlocal autoindent
@@ -193,7 +196,7 @@ normal! zt
 normal! 0
 wincmd w
 argglobal
-edit Rover.h
+edit Rover.cpp
 setlocal keymap=
 setlocal noarabic
 setlocal autoindent
@@ -304,7 +307,6 @@ normal! zt
 1
 normal! 0
 wincmd w
-2wincmd w
 exe 'vert 1resize ' . ((&columns * 135 + 135) / 271)
 exe 'vert 2resize ' . ((&columns * 135 + 135) / 271)
 tabnext 1

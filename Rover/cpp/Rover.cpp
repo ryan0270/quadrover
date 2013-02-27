@@ -510,7 +510,7 @@ void Rover::onNewCommLogClear()
 	Log::alert(String()+"Log cleared");
 }
 
-void Rover::onNewSensorUpdate(SensorData const *data)
+void Rover::onNewSensorUpdate(shared_ptr<SensorData> const data)
 {
 	switch(data->type)
 	{
@@ -518,7 +518,9 @@ void Rover::onNewSensorUpdate(SensorData const *data)
 			mPressure = data->data;
 			break;
 		case SENSOR_DATA_TYPE_PHONE_TEMP:
-			mPhoneTemp = ((SensorDataPhoneTemp*)data)->tmuTemp;
+//			mPhoneTemp = ((SensorDataPhoneTemp*)data)->tmuTemp;
+			mPhoneTemp = static_pointer_cast<SensorDataPhoneTemp>(data)->tmuTemp;
+			break;
 	}
 }
 
