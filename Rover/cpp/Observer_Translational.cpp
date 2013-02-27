@@ -86,6 +86,15 @@ namespace Quadrotor{
 	{
 		mDone = false;
 		mRunning = true;
+
+		class : public Thread{
+					public:
+					void run(){imageMatchData->lock(); parent->calcOpticalFlow(imageMatchData); imageMatchData->unlock();}
+					shared_ptr<ImageMatchData> imageMatchData;
+					Observer_Translational *parent;
+				} flowCalcThread;
+		flowCalcThread.parent = this;
+
 		System sys;
 		Time lastUpdateTime;
 		Array2D<double> measTemp(6,1);
@@ -158,13 +167,13 @@ namespace Quadrotor{
 				doMeasUpdateKF_zOnly(zTemp);
 			}
 
-			if(mNewImageResultsReady)
-			{
-				mImageMatchData->lock();
-				calcOpticalFlow(mImageMatchData);
-				mImageMatchData->unlock();
-				mNewImageResultsReady = false;
-			}
+//			if(mNewImageResultsReady && mFlowCalcDone)
+//			{
+//				// if we're here then the previous thread should already be finished
+//				flowCalcThread.imageMatchData = mImageMatchData;
+//				flowCalcThread.start();
+//				mNewImageResultsReady = false;
+//			}
 
 			mMutex_data.lock();
 			for(int i=0; i<3; i++)
@@ -185,7 +194,6 @@ namespace Quadrotor{
 	// See eqn 98 in the Feb 25, 2013 notes
 	Array2D<double> Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
 	{
-Time start;
 		if(matchData->featurePoints[0].size() < 5)
 			return Array2D<double>(3,1,0.0);
 		double dt = matchData->dt;
@@ -266,7 +274,7 @@ Time start;
 			str = str+vel[i][0]+"\t";
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 
-Log::alert(String()+"Flow calc time: "+start.getElapsedTimeMS());
+		mFlowCalcDone = true;
 		return vel;
 	}
 

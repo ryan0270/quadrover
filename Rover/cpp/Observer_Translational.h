@@ -113,7 +113,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
 
-	bool mNewImageResultsReady;
+	bool mNewImageResultsReady, mFlowCalcDone;
 	toadlet::egg::Mutex mMutex_imageData;
 	shared_ptr<ImageMatchData> mImageMatchData; 
 	TNT::Array2D<double> calcOpticalFlow(shared_ptr<ImageMatchData> const img);
