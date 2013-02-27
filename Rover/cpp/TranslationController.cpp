@@ -90,11 +90,11 @@ namespace Quadrotor {
 		// Logging
 		if(mQuadLogger != NULL)
 		{
-			String s1 = String()+mStartTime.getElapsedTimeMS() + "\t" + "-1011" + "\t";
+			String s1 = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_DES_TRANS_STATE + "\t";
 			for(int i=0; i<desState.dim1(); i++)
 				s1 = s1+desState[i][0]+"\t";
 
-			String s2 = String()+mStartTime.getElapsedTimeMS()+"\t"+"-1012"+"\t";
+			String s2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CUR_TRANS_STATE+"\t";
 			for(int i=0; i<curState.dim1(); i++)
 				s2 = s2+curState[i][0]+"\t";
 

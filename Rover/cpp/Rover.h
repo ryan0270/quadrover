@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <cpu-features.h>
+
 #include <toadlet/egg.h>
 using toadlet::int64;
 using toadlet::uint64;
@@ -30,6 +32,7 @@ namespace Quadrotor {
 class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public SensorManagerListener,
+				 public VisionProcessorListener,
 				 public toadlet::egg::Thread
 {
 public:
@@ -39,7 +42,6 @@ public:
 	void initialize();
 	void shutdown();
 
-	void setNumCpuCores(int numCores){mNumCpuCores = numCores;}
 	void setLogFilename(String name);
 	void setLogDir(String dir);
 	void startLogging();
@@ -69,6 +71,10 @@ public:
 
 	// for SensorManagerListener
 	void onNewSensorUpdate(shared_ptr<SensorData> const data);
+
+	// for VisionProcessorListener
+	void onImageProcessed(shared_ptr<ImageMatchData> const data);
+	void onImageLost(){};
 
 protected:
 	CommManager mCommManager;
@@ -105,6 +111,8 @@ protected:
 	int mNumCpuCores;
 
 	double mPressure, mPhoneTemp;
+
+	shared_ptr<ImageMatchData> mImageMatchData;
 }; // class Rover
 
 } // namespace Quadrotor

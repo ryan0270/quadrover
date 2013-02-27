@@ -30,10 +30,9 @@ VisionProcessor::VisionProcessor() :
 
 	mNewImageReady = false;
 
-	mImgBufferMaxSize = 500;
+	mImgBufferMaxSize = 10;
 	
 	mLogImages = false;
-mLogImages = true;
 
 	mImageDataPrev = mImageDataCur = mImageDataNext = NULL;
 }
@@ -46,7 +45,7 @@ void VisionProcessor::shutdown()
 	while(!mFinished)
 	{
 		Log::alert("VisionProcessor waiting");
-		sys.msleep(5);
+		sys.msleep(100); // this can take a while if we are saving a lot of images
 	}
 
 	mMutex_image.lock();
@@ -87,12 +86,15 @@ void VisionProcessor::run()
 			mMutex_imageSensorData.lock();
 			mImageDataPrev = mImageDataCur;
 			mImageDataCur = mImageDataNext;
+			mImageDataPrev->lock(); mImageDataCur->lock();
 			double dt = Time::calcDiffUS(mImageDataPrev->timestamp, mImageDataCur->timestamp)/1.0e6;
+			mImageDataPrev->unlock(); 
 			mMutex_imageSensorData.unlock();
 
 			mCurImage = *(mImageDataCur->img);
 			mCurImageGray.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
 			mCurImageAnnotated.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
+			mImageDataCur->unlock();
 
 			Time procStart;
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
@@ -112,7 +114,7 @@ void VisionProcessor::run()
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t-600\t" + mImgProcTimeUS;
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME + "\t" + mImgProcTimeUS;
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 			}
 
@@ -139,6 +141,7 @@ void VisionProcessor::run()
 
 vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &img)
 {
+	mMutex_matcher.lock();
 	int result = mFeatureMatcher.Track(img, false);
 	vector<vector<cv::Point2f> > points(2);
 
@@ -148,6 +151,7 @@ vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &i
 		points[0].push_back(cv::Point2f(match.u1p, match.v1p));
 		points[1].push_back(cv::Point2f(match.u1c, match.v1c));
 	}
+	mMutex_matcher.unlock();
 
 	return points;
 }
@@ -270,7 +274,7 @@ void VisionProcessor::enableIbvs(bool enable)
 	if(mUseIbvs)
 	{
 		Log::alert("Turning IBVS on");
-		String str = String()+ mStartTime.getElapsedTimeMS() + "\t-605\t";
+		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 		mLastImgFoundTime.setTime();
 		mFirstImageProcessed = false;
@@ -278,7 +282,7 @@ void VisionProcessor::enableIbvs(bool enable)
 	else
 	{
 		Log::alert("Turning IBVS off");
-		String str = String() + mStartTime.getElapsedTimeMS() + "\t-606\t";
+		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 		mFirstImageProcessed = false;
 	}
@@ -322,6 +326,22 @@ void VisionProcessor::onNewCommImgBufferSize(int size)
 	mMutex_imgBuffer.lock();
 	mImgBufferMaxSize = size;
 	mMutex_imgBuffer.unlock();
+}
+
+void VisionProcessor::onNewCommVisionRatioThreshold(float h)
+{
+	mMutex_matcher.lock();
+	mFeatureMatcher.params.ratio_threshold = h;
+	mMutex_matcher.unlock();
+	Log::alert(String()+"Matcher ratio threshold set to "+h);
+}
+
+void VisionProcessor::onNewCommVisionMatchRadius(float r)
+{
+	mMutex_matcher.lock();
+	mFeatureMatcher.params.match_radius = r;
+	mMutex_matcher.unlock();
+	Log::alert(String()+"Matcher match radius set to "+r);
 }
 
 } // namespace Quadrotor

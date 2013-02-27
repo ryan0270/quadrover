@@ -160,7 +160,9 @@ namespace Quadrotor{
 
 			if(mNewImageResultsReady)
 			{
+				mImageMatchData->lock();
 				calcOpticalFlow(mImageMatchData);
+				mImageMatchData->unlock();
 				mNewImageResultsReady = false;
 			}
 
@@ -183,6 +185,7 @@ namespace Quadrotor{
 	// See eqn 98 in the Feb 25, 2013 notes
 	Array2D<double> Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
 	{
+Time start;
 		if(matchData->featurePoints[0].size() < 5)
 			return Array2D<double>(3,1,0.0);
 		double dt = matchData->dt;
@@ -258,11 +261,12 @@ namespace Quadrotor{
 //printArray("vel3: \t", transpose(vel3));
 //Log::alert("////////////////////////////////////////////////////////////////////////////////////////////////////");
 
-		String str = String()+mStartTime.getElapsedTimeMS() + "\t12345\t";
+		String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW+"\t";
 		for(int i=0; i<vel.dim1(); i++)
 			str = str+vel[i][0]+"\t";
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 
+Log::alert(String()+"Flow calc time: "+start.getElapsedTimeMS());
 		return vel;
 	}
 
@@ -334,12 +338,12 @@ namespace Quadrotor{
 		mLastMeasUpdateTime.setTime();
 
 		{
-			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t-710\t";
+			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
 			for(int i=0; i<mAttBias.dim1(); i++)
 				str1 = str1+mAttBias[i][0]+"\t";
 			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
 
-			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t-711\t";
+			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
 			str2 = str2+mForceGain+"\t";
 			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
 		}
@@ -589,7 +593,9 @@ namespace Quadrotor{
 				mMutex_phoneTempData.lock();
 				if(mPhoneTempData == NULL) 
 					return;
+				mPhoneTempData->lock();
 				float tmuTemp = mPhoneTempData->tmuTemp;
+				mPhoneTempData->unlock();
 				mMutex_phoneTempData.unlock();
 				double k = (999.5-1000.0)/(45.0-37.0); // taken from experimental data
 				double pressComp = pressure-k*(tmuTemp-37.0);
@@ -614,7 +620,7 @@ namespace Quadrotor{
 				mDoMeasUpdate_zOnly = true;
 				if(mQuadLogger != NULL)
 				{
-					String s = String() + mStartTime.getElapsedTimeMS() + "\t1234\t" + h + "\t" + hComp;
+					String s = String() + mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_BAROMETER_HEIGHT+"\t" + h + "\t" + hComp;
 					mQuadLogger->addLine(s,LOG_FLAG_PC_UPDATES);
 				}
 			}

@@ -111,7 +111,9 @@ void Observer_Angular::run()
 		{
 			mMutex_data.lock();
 			mMutex_cache.lock();
+			mGyroData->lock();
 			mGyro.inject(mGyroData->data);
+			mGyroData->unlock();
 			mMutex_cache.unlock();
 			if(mDoingBurnIn && mBurnCount < 2000)
 			{
@@ -127,7 +129,9 @@ void Observer_Angular::run()
 					printArray("\tGyro bias: \t",transpose(mGyroBias));
 
 					mMutex_cache.lock();
+					mGyroData->lock();
 					lastGyroUpdateTime.setTime(mGyroData->timestamp);
+					mGyroData->unlock();
 					mMutex_cache.unlock();
 				}
 			}
@@ -139,7 +143,9 @@ void Observer_Angular::run()
 		{
 			mMutex_data.lock();
 			mMutex_cache.lock();
+			mAccelData->lock();
 			mAccel.inject(mAccelData->data);
+			mAccelData->unlock();
 			mMutex_cache.unlock();
 			mNewAccelReady = false;
 			mMutex_data.unlock();
@@ -149,7 +155,9 @@ void Observer_Angular::run()
 		{
 			mMutex_data.lock();
 			mMutex_cache.lock();
+			mMagData->lock();
 			mMagnometer.inject(mMagData->data);
+			mMagData->unlock();
 			mMutex_cache.unlock();
 			mNewMagReady = false;
 			mMutex_data.unlock();
@@ -218,7 +226,7 @@ void Observer_Angular::doInnovationUpdate(double dt)
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
 
-	String s1=String() + mStartTime.getElapsedTimeMS() + "\t" + "-1003" +"\t";
+	String s1=String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_GYRO_BIAS +"\t";
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		s1 = s1+mGyroBias[i][0] + "\t";
 	mMutex_data.unlock();
@@ -371,7 +379,7 @@ void Observer_Angular::setYawZero()
 	temp = mMagDirNom.copy();
 	mMutex_data.unlock();
 
-	String str1 = String()+mStartTime.getElapsedTimeMS()+"\t-805\t";
+	String str1 = String()+mStartTime.getElapsedTimeMS()+"\t" + LOG_ID_SET_YAW_ZERO + "\t";
 	for(int i=0; i<temp.dim1(); i++)
 		str1 = str1+temp[i][0]+"\t";
 	mQuadLogger->addLine(str1,LOG_FLAG_PC_UPDATES);
@@ -381,7 +389,7 @@ void Observer_Angular::onNewCommObserverReset()
 {
 	reset();
 	Log::alert("Observer reset");
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t-200\t";
+	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OBSV_ANG_RESET + "\t";
 	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 }
 
@@ -399,7 +407,7 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 		s = s+magWeight+"\t";
 		Log::alert(s);
 	}
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t-210\t";
+	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OBSV_ANG_GAINS_UPDATED + "\t";
 	str = str+gainP+"\t"+gainI+"\t";
 	str = str+accelWeight+"\t"+magWeight;
 	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);

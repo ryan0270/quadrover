@@ -35,6 +35,12 @@ class ImageMatchData
 	vector<vector<cv::Point2f> > featurePoints;
 	shared_ptr<SensorDataImage> imgData0, imgData1;
 	double dt;
+
+	void lock(){mMutex.lock(); if(imgData0 != NULL) imgData0->lock(); if(imgData1 != NULL) imgData1->lock();}
+	void unlock(){mMutex.unlock(); if(imgData0 != NULL) imgData0->unlock(); if(imgData1 != NULL) imgData1->unlock();}
+
+	protected:
+	toadlet::egg::Mutex mMutex;
 };
 
 class VisionProcessorListener
@@ -75,6 +81,8 @@ class VisionProcessor : public toadlet::egg::Thread,
 		// CommManagerListener functions
 		void onNewCommLogMask(uint32 mask);
 		void onNewCommImgBufferSize(int size);
+		void onNewCommVisionRatioThreshold(float h);
+		void onNewCommVisionMatchRadius(float r);
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<SensorData> const data);
@@ -97,7 +105,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		QuadLogger *mQuadLogger;
 
-		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData, mMutex_imgBuffer;
+		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData, mMutex_imgBuffer, mMutex_matcher;
 
 		Collection<VisionProcessorListener*> mListeners;
 

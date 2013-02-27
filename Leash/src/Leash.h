@@ -189,6 +189,11 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		void populateDataLoggingUI();
 		void applyDataLoggingConfig();
 
+		void populateVisionUI();
+		void loadVisionConfig(mxml_node_t *hdwRoot);
+		void saveVisionConfig(mxml_node_t *hdwRoot);
+		void applyVisionConfig();
+
 		int mImgBufferSize;
 
 		static void resizeTableWidget(QTableWidget *tbl); // make the table widget match the cell size (not the same as having cells match their contents)
@@ -203,6 +208,11 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		QShortcut *mScStartMotors, *mScStopMotors, *mScQuit;
 		QShortcut *mScIncreaseHeight, *mScDecreaseHeight, *mScMoveLeft, *mScMoveRight, *mScMoveForward, *mScMoveBackward;
 		QShortcut *mScToggleIbvs;
+
+		// For Hyon's featrure tracker
+		double mRatioThreshold, mMatchRadius;
+
+		list<float> mImgProcTimeBuffer;
 };
 }
 }
