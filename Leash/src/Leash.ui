@@ -2534,7 +2534,7 @@
           <item row="2" column="0">
            <widget class="QLabel" name="label_16">
             <property name="text">
-             <string>Last 20 avg</string>
+             <string>Last 100 avg</string>
             </property>
            </widget>
           </item>
