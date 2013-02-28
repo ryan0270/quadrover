@@ -257,10 +257,8 @@ namespace Quadrotor{
 			Log::alert("Successfully opened the camera");
 			mRunning = true;
 
-//			int width = 640;
-//			int height = 480;
-			int width = 960;
-			int height = 720;
+			int width = 640; int height = 480;
+//			int width = 960; int height = 720;
 			cap->set(CV_CAP_PROP_FRAME_WIDTH, width);
 			cap->set(CV_CAP_PROP_FRAME_HEIGHT, height);
 			//		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_TORCH); // for now just leave this on the whole time

@@ -68,30 +68,18 @@ namespace Quadrotor{
 			sys.msleep(50);
 		}
 
-Log::alert("1");
 		Collection<uint8> cmds(4,0);
-Log::alert("2");
 		sendCommandForced(cmds);
-Log::alert("3");
 		mMutex_socket.lock();
-Log::alert("4");
 		if(mSocket != NULL && mSocket->connected())
 		{
-Log::alert("5");
 			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
-Log::alert("6");
 			mSocket->close();
-Log::alert("7");
 			mSocket = NULL;
-Log::alert("8");
 		}
-Log::alert("9");
 		mServerSocket->close();
-Log::alert("10");
 		mServerSocket = NULL;
-Log::alert("11");
 		mMutex_socket.unlock();
-Log::alert("12");
 
 		mShutdown = true;
 	}
