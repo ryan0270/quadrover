@@ -169,17 +169,29 @@ void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 num
 //	if(connected)
 //		return;
 
+Log::alert("1");
 	uint32 code = COMM_IMG_DATA;
+Log::alert("2");
 	uint32 size = buff.size()*sizeof(unsigned char);
+Log::alert("3");
 	mMutex_socketTCP.lock();
+Log::alert("4");
 	mSocketTCP->send((tbyte*)&code, sizeof(code));
+Log::alert("5");
 	mSocketTCP->send((tbyte*)&numRows, sizeof(numRows));
+Log::alert("6");
 	mSocketTCP->send((tbyte*)&numCols, sizeof(numCols));
+Log::alert("7");
 	mSocketTCP->send((tbyte*)&numChannels, sizeof(numChannels));
+Log::alert("8");
 	mSocketTCP->send((tbyte*)&type, sizeof(type));
+Log::alert("9");
 	mSocketTCP->send((tbyte*)&size, sizeof(size));
+Log::alert("10");
 	mSocketTCP->send((tbyte*)&buff.front(), size);
+Log::alert("11");
 	mMutex_socketTCP.unlock();
+Log::alert("12");
 }
 
 void CommManager::pollUDP()
