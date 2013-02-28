@@ -30,8 +30,6 @@ void Feature::ResetScore(void)
 Matcher::Matcher(const std::string& detectorType,
 			const std::string& extractorType): keyFrameId(0)
 {
-	timeSum1 = timeSum2 = 0;
-	frames.resize(9);
 	bUseHammingDistance = false;
 	strMatcherName = detectorType;
 	strDescriptorName = extractorType;
@@ -168,45 +166,8 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 		inputImg.copyTo(frame);
 	}
 
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//	cv::Size sz = frame.size();
-//	vector<cv::Rect> masks;
-//	vector<cv::Point2f> maskOffset;
-//	float nGrid = 3;
-// 	for(int i=0; i<nGrid; i++)
-// 	{
-// 		for(int j=0; j<nGrid; j++)
-// 		{
-// 			cv::Rect mask((int)(i*sz.width/nGrid+0.5), (int)(j*sz.height/nGrid+0.5), (int)(sz.width/nGrid+0.5), (int)(sz.height/nGrid+0.5));
-//			cv::Point2f offset((int)(i*sz.width/nGrid+0.5), (int)(j*sz.height/nGrid+0.5));
-// 			masks.push_back(mask);
-//			frame(mask).copyTo(frames[i*nGrid+j]);
-//			maskOffset.push_back(offset);
-// 		}
-// 	}
-//
-//	vector<vector<cv::KeyPoint> > kptsList(masks.size());
-////	for(int i=0; i<masks.size(); i++)
-//	tbb::parallel_for(size_t(0), size_t(masks.size()), [&](size_t i){
-////		detector->detect(frame(masks[i]), kptsList[i]);
-//		detector->detect(frames[i], kptsList[i]);
-//	});
-//	kpts.clear();
-//	int kptCnt = 0;
-//	for(int i=0; i<kptsList.size(); i++)
-//		for(int j=0; j<kptsList[i].size(); j++)
-//		{
-//			kptCnt++;
-//			kptsList[i][j].pt = kptsList[i][j].pt+maskOffset[i];
-//			kpts.push_back(kptsList[i][j]);
-//		}
-
 	detector->detect(frame, kpts);
-Log::alert("----");
-Time start;
-	int kptCnt = kpts.size();
-	if(kptCnt < 10)
+	if(kpts.size() < 10)
 		return -3;
 
 	// TRR
@@ -221,8 +182,6 @@ Time start;
 	vector<cv::Mat> frames(nGrid*nGrid);
 	vector<cv::Point2f> maskOffset(nGrid*nGrid);
 	vector<vector<cv::KeyPoint> > kptsList(nGrid*nGrid);
-	int kptsRemainCnt;
-// 	for(int i=0; i<nGrid; i++)
 	tbb::parallel_for(size_t(0), size_t(nGrid), [&](size_t i)
 	{
 		int left = max(0,(int)(i*sz.width/nGrid+0.5-borderWidth));
@@ -238,6 +197,7 @@ Time start;
 			maskOffset[i*nGrid+j] = offset;
 
 			// find out which keypoints belong to the original mask (without borders added)
+			// This should be a unique and exclusive assignemnt (contains is closed on the left and open on the right)
  			cv::Rect mask2((int)(i*sz.width/nGrid+0.5), (int)(j*sz.height/nGrid+0.5), (int)(sz.width/nGrid+0.5), (int)(sz.height/nGrid+0.5));
 			for(int k=0; k<kpts.size(); k++)
 			{
@@ -245,7 +205,7 @@ Time start;
 				{
 					cv::KeyPoint kp = kpts[k];
 					kp.pt = kp.pt-offset;
-					kptsList[i].push_back(kp);
+					kptsList[i*nGrid+j].push_back(kp);
 				}
 			}
 		}
@@ -254,14 +214,9 @@ Time start;
 
 	//! detect keypoints and extract descriptors.
 	vector<cv::Mat> descList(kptsList.size());
-	// pass the full image in for descriptors since they might use
-	// data from across mask boundaries
 	tbb::parallel_for(size_t(0), size_t(kptsList.size()), [&](size_t i){
-//		extractor->compute(frame, kptsList[i], descList[i]);
 		extractor->compute(frames[i], kptsList[i], descList[i]);
-//		extractor->compute(frame(masks2[i]), kptsList[i], descList[i]);
 	});
-Log::alert(String()+"kpts1a: "+kpts.size());
 	kpts.clear();
 	for(int i=0; i<kptsList.size(); i++)
 		for(int j=0; j<kptsList[i].size(); j++)
@@ -272,21 +227,9 @@ Log::alert(String()+"kpts1a: "+kpts.size());
 	descs = descList[0];
 	for(int i=1; i<descList.size(); i++)
 		descs.push_back(descList[i]); 
-timeSum1 += start.getElapsedTimeMS();
-Log::alert(String()+"1: "+timeSum1);
-Log::alert(String()+"kpts1: "+kpts.size());
-////////////////////////////////////////////////////////////////////////////////////////////////////
-	kpts.clear();
-	detector->detect(frame,kpts);
-	if(kpts.size() < 10)
-		return -3;
-Log::alert(String()+"kpts2a: "+kpts.size());
-Time start2;
-	extractor->compute(frame,kpts,descs);
-timeSum2 += start2.getElapsedTimeMS();
-Log::alert(String()+"2: "+timeSum2);
-Log::alert(String()+"kpts2: "+kpts.size());
-////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//	extractor->compute(frame, kpts, descs);
+
 	//! In case of good tracking condition
 	if(!vCurrentFeatures.empty() && !replace)	//! in case of no replace, we track prev-prev-frame.
 		vPrevFeatures = vCurrentFeatures;	/// Make it previous

@@ -54,8 +54,6 @@ public:
 class Matcher
 {
 	public:
-	int timeSum1, timeSum2;
-	vector<cv::Mat> frames;
 	cv::Ptr<cv::FeatureDetector> detector;
 	cv::Ptr<cv::DescriptorExtractor> extractor;
 
