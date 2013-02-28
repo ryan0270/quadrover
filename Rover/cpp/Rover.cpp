@@ -116,6 +116,7 @@ void Rover::initialize()
 
 void Rover::shutdown()
 {
+	stopLogging();
 	mRunCommPC = false;
 	mMutex_cntl.lock();
 	mAttitudeThrustController.enableMotors(false);
@@ -128,18 +129,17 @@ void Rover::shutdown()
 		sys.msleep(10);
 	}
 
-	mSensorManager.shutdown();
-	mMutex_cntl.lock();
 	mAttitudeThrustController.shutdown();
 	mTranslationController.shutdown();
-	mMutex_cntl.unlock();
 
 	mCommManager.shutdown(); // mCommManager is only ever accessed via the run thread or via functions returning bools so doesn't have a mutex
 
-	mMutex_vision.lock(); mVisionProcessor.shutdown(); mMutex_vision.unlock();
-	mMutex_observer.lock(); mObsvAngular.shutdown(); mObsvTranslational.shutdown(); mMutex_observer.unlock();
+	mVisionProcessor.shutdown();
+	mObsvAngular.shutdown(); 
+	mObsvTranslational.shutdown(); 
 
-	stopLogging();
+	mSensorManager.shutdown();
+
 
 	Log::alert(String("----------------- really dead -------------"));
 }
