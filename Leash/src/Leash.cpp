@@ -75,6 +75,8 @@ Leash::Leash(QWidget *parent) :
 	mRotQuadToVicon = transpose(mRotViconToQuad);
 	mRotPhoneToQuad = transpose(mRotQuadToPhone);
 	mRotPhoneToVicon = transpose(mRotViconToPhone);
+	
+	mLastTelemSendTime = 0;
 }
 
 Leash::~Leash()
@@ -1941,15 +1943,20 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
 		mMutex_logBuffer.unlock();
 
-		Packet pState;
-		pState.type = COMM_STATE_VICON;
-		pState.time = mSys.mtime()-mStartTimeUniverseMS;
-		pState.dataFloat.resize(mViconState.dim1());
-		for(int i=0; i<mViconState.dim1(); i++)
-			pState.dataFloat[i] = mViconState[i][0];
-		Collection<tbyte> buff;
-		pState.serialize(buff);
-		sendUDP(buff.begin(), buff.size());
+		if(mSys.mtime() - mLastTelemSendTime > 95)
+		{
+			mLastTelemSendTime = mSys.mtime();
+			
+			Packet pState;
+			pState.type = COMM_STATE_VICON;
+			pState.time = mSys.mtime()-mStartTimeUniverseMS;
+			pState.dataFloat.resize(mViconState.dim1());
+			for(int i=0; i<mViconState.dim1(); i++)
+				pState.dataFloat[i] = mViconState[i][0];
+			Collection<tbyte> buff;
+			pState.serialize(buff);
+			sendUDP(buff.begin(), buff.size());
+		}
 	}
 }
 

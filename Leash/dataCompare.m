@@ -51,6 +51,10 @@ opticFlowVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 12345);
 opticFlowVelTime = phoneData(opticFlowVelIndices,1)'/1000;
 opticFlowVel = phoneData(opticFlowVelIndices,3:5)';
 
+viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 700);
+viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
+viconReceive = phoneData(viconReceiveIndices,3:14)';
+
 %% rotate from vicon to phone coords
 R1 = diag([1 -1 -1]);
 R2 = 1/2*[sqrt(2)    -sqrt(2)    0;
@@ -59,6 +63,11 @@ R2 = 1/2*[sqrt(2)    -sqrt(2)    0;
 % R = R*diag([1 -1 -1]);
 viconState(1:6,:) = blkdiag(R2,R2)*viconState(1:6,:);
 viconState(7:12,:) = blkdiag(R2*R1, R2*R1)*viconState(7:12,:);
+
+if exist('viconReceive','var') && ~isempty(viconReceive)
+	viconReceive(1:6,:) = blkdiag(R2, R2)*viconReceive(1:6,:);
+	viconReceive(7:12,:) = blkdiag(R2*R1,R2*R1)*viconReceive(7:12,:);
+end
 
 %%
 vicon_dt = mean(diff(viconStateTime));
@@ -117,7 +126,7 @@ end
 
 %%
 if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
-	opticFlowVelLabels = {'x [m/s]','y [m/s]','z [m/s]'};
+	opticFlowVelLabels = {'xDot [m/s]','yDot [m/s]','zDot [m/s]'};
 	figure(12345); clf
 	for i=1:3
 		subplot(3,1,i);
@@ -130,4 +139,20 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 		xlabel('Time [s]');
 		ylabel(opticFlowVelLabels{i});
 	end
+end
+
+%%
+if exist('viconReceive','var') && ~isempty(viconReceive)
+	figure(700);
+	stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
+				  'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
+	for i=7:9
+		subplot(3,1,i-6)
+		plot(viconStateTime, viconState(i,:),'o'); hold all
+		plot(viconReceiveTime, viconReceive(i,:),'.'); hold all;
+		hold off
+		xlabel('Time [s]');
+		ylabel(stateLabels{i});
+	end
+	legend('Vicon Meas','Vicon Corrupted');
 end

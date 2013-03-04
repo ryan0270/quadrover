@@ -241,10 +241,10 @@ public class Rover extends Activity implements Runnable
 		{
 			if(!pcIsConnected())
 			{
-				getImage(mImage.getNativeObjAddr());
 
 				Mat img = new Mat();
 				try{
+					getImage(mImage.getNativeObjAddr());
 					Imgproc.cvtColor(mImage,img,Imgproc.COLOR_BGR2RGB);
 					if(mBitmap.getWidth() != mImage.width() || mBitmap.getHeight() != mImage.height())
 					{

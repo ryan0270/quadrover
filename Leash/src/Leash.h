@@ -218,6 +218,8 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		TNT::Array2D<float> mRotViconToQuad, mRotQuadToVicon;
 		TNT::Array2D<float> mRotQuadToPhone, mRotPhoneToQuad;
 		TNT::Array2D<float> mRotViconToPhone, mRotPhoneToVicon;
+
+		uint64 mLastTelemSendTime;
 };
 }
 }

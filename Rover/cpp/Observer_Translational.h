@@ -108,17 +108,20 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void doMeasUpdateKF(TNT::Array2D<double> const &meas);
 	void doMeasUpdateKF_xyOnly(TNT::Array2D<double> const &meas);
 	void doMeasUpdateKF_zOnly(TNT::Array2D<double> const &meas);
+	void doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas);
 
 	shared_ptr<SensorDataPhoneTemp> mPhoneTempData;
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
 
-	bool mNewImageResultsReady, mFlowCalcDone;
+	bool mNewImageResultsReady, mNewOpticFlowReady, mFlowCalcDone;
 	toadlet::egg::Mutex mMutex_imageData;
 	shared_ptr<ImageMatchData> mImageMatchData; 
-	TNT::Array2D<double> calcOpticalFlow(shared_ptr<ImageMatchData> const img);
+	void calcOpticalFlow(shared_ptr<ImageMatchData> const img);
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
+
+	TNT::Array2D<double> mOpticFlowVel;
 };
 
 } // namespace Quadrotor
