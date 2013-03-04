@@ -324,7 +324,7 @@ void VisionProcessor::onNewCommLogMask(uint32 mask)
 		mLogImages = true;
 	else
 	{
-		mLogImages = false;
+		mLogImages = false; 
 		mImgDataBuffer.clear();
 	}
 }

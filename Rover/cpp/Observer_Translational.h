@@ -117,6 +117,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 	toadlet::egg::Mutex mMutex_imageData;
 	shared_ptr<ImageMatchData> mImageMatchData; 
 	TNT::Array2D<double> calcOpticalFlow(shared_ptr<ImageMatchData> const img);
+
+	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 };
 
 } // namespace Quadrotor

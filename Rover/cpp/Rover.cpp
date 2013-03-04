@@ -434,17 +434,11 @@ void Rover::transmitImage()
 
 	cv::Mat img;
 	mMutex_vision.lock();
-//	if(mImageMatchData == NULL)
-//	{
-//		mMutex_vision.unlock();
-//		mImageIsSending = false;
-//		return;
-//	}
-//	mImageMatchData->lock();
-//	mImageMatchData->imgData1->img->copyTo(img);
-//	mImageMatchData->unlock();
 	mVisionProcessor.getLastImageAnnotated(&img);
 	mMutex_vision.unlock();
+
+	// save on transmitted data
+	cv::resize(img, img, cv::Size(320,240));
 
 	int code, numRows, numCols, numChannels, type, size;
 	vector<int> params;
@@ -454,7 +448,6 @@ void Rover::transmitImage()
 //	params.push_back(3);
 
 	// now send it
-//	code = 2000;
 	numRows = img.rows;
 	numCols = img.cols;
 	numChannels = img.channels();
