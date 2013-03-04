@@ -41,7 +41,7 @@ namespace Quadrotor{
 		mMeasCov[0][0] = mMeasCov[1][1] = mMeasCov[2][2] = 0.01*0.01;
 		mMeasCov[3][3] = mMeasCov[4][4] = mMeasCov[5][5] = 0.3*0.3;
 		mMeasCov[2][2] = 0.05*0.05;
-		mMeasCov[5][5] = 0.1*0.1;
+		mMeasCov[5][5] = 0.5*0.5;
 		mDynCov.inject(0.02*0.02*createIdentity(6));
 		mDynCov[5][5] *= 10;
 		mErrCovKF.inject(1e-4*createIdentity(6));
@@ -61,6 +61,10 @@ namespace Quadrotor{
 
 		mPhoneTempData = NULL;
 		mImageMatchData = NULL;
+
+		mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
+								 createRotMat(0,(double)PI));
+		mRotPhoneToCam = transpose(mRotCamToPhone);
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -198,11 +202,15 @@ namespace Quadrotor{
 	{
 		if(matchData->featurePoints[0].size() < 5)
 			return Array2D<double>(3,1,0.0);
+
+
+		mMutex_data.lock();
 		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
 		Array2D<double> Sn = 1*1*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
+
 		Array2D<double> Sv = submat(mErrCovKF,3,5,3,5);
 //Array2D<double> Sv = 1e6*createIdentity(3);
 		JAMA::LU<double> SvLU(Sv);
@@ -211,18 +219,25 @@ namespace Quadrotor{
 		z = 0.010;
 		z = 0.5;
 
+		// Rotate prior velocity information to camera coords
+		mu_v = matmult(mRotPhoneToCam, mu_v);
+		SvInv = matmult(mRotPhoneToCam, matmult(SvInv, mRotCamToPhone));
+		mMutex_data.unlock();
+
 		double cx = matchData->imgData1->img->cols/2.0;
 		double cy = matchData->imgData1->img->rows/2.0;
 		Array2D<double> A(1,3,0.0);
 		Array2D<double> B(3,3,0.0);
+		// These rotation matrices are actually in phone coords rather than camera coords
+		// but the transform to camera coords will get cancelled out because we 
+		// unrotate and then rotate about by the same transform (in addition to the
+		// attitude difference)
 		Array2D<double> R1 = createRotMat_ZYX(matchData->imgData0->att[2][0], matchData->imgData0->att[1][0], matchData->imgData0->att[0][0]);
 		Array2D<double> R2 = createRotMat_ZYX(matchData->imgData1->att[2][0], matchData->imgData1->att[1][0], matchData->imgData1->att[0][0]);
 		Array2D<double> R = matmult(R1, transpose(R2));
 		Array2D<double> q1a(3,1), q2a(3,1);
 		Array2D<double> q1(2,1), q2(2,1);
 		Array2D<double> Lv(2,3);
-//		Array2D<double> LvStack(0,3);
-//		Array2D<double> qDotStack(0,1);
 		for(int i=0; i<matchData->featurePoints[0].size(); i++)
 		{
 			q1a[0][0] = matchData->featurePoints[0][i].x-cx;
@@ -245,37 +260,22 @@ namespace Quadrotor{
 
 			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
 			B += matmult(transpose(Lv), matmult(SnInv, Lv));
-
-//			LvStack = stackVertical(LvStack, 1/z*Lv);
-//			qDotStack = stackVertical(qDotStack, 1.0/dt*(q2-q1));
 		}
 		Array2D<double> temp1 = (dt/z)*A+matmult(transpose(mu_v), SvInv);
 		Array2D<double> temp2 = ((dt*dt)/(z*z))*B+SvInv;
 		JAMA::LU<double> temp2_TQR(transpose(temp2));
 		Array2D<double> vel = temp2_TQR.solve(transpose(temp1));
 
-		JAMA::LU<double> B_TLU(transpose(B));
-		Array2D<double> vel2 = z/dt*B_TLU.solve(transpose(A));
-
-//		Array2D<double> chad = matmult(transpose(LvStack),LvStack);
-//		JAMA::LU<double> chadLU(chad);
-//		Array2D<double> vel3 = chadLU.solve(matmult(transpose(LvStack), qDotStack));
-
-//Log::alert("----------------------------------------------------------------------------------------------------");
-//printArray("SvInv: \n", SvInv);
-//printArray("B: \n", B);
-//printArray("temp1: \t", temp1);
-//printArray("temp2: \n", temp2);
-//printArray("vel: \t", transpose(vel));
-//printArray("vel2: \t", transpose(vel2));
-//printArray("vel3: \t", transpose(vel3));
-//Log::alert("////////////////////////////////////////////////////////////////////////////////////////////////////");
+//		JAMA::LU<double> B_TLU(transpose(B));
+//		Array2D<double> vel2 = z/dt*B_TLU.solve(transpose(A));
 
 		String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW+"\t";
 		for(int i=0; i<vel.dim1(); i++)
 			str = str+vel[i][0]+"\t";
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 
+		// Finally, convert the velocity from camera to phone coords
+		vel = matmult(mRotCamToPhone, vel);
 		mFlowCalcDone = true;
 		return vel;
 	}

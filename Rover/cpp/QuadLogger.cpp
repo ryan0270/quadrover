@@ -35,6 +35,7 @@ void QuadLogger::addLine(String const &str, uint16 type)
 {
 	if(mPaused)
 		return;
+
 	mMutex.lock();
 	if(mTypeMask & type)
 	{
