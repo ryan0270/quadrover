@@ -98,6 +98,10 @@ velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 12345);
 velEstTime = phoneData(velEstIndices,1)'/1000;
 velEst = phoneData(velEstIndices,3:5)';
 
+viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 700);
+viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
+viconReceive = phoneData(viconReceiveIndices,3:14)';
+
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
 	figure(2000); set(gcf,'Name','CPU Usage')

@@ -2,23 +2,23 @@
 <Controller>
    <Translation>
       <P>
-         <x>4.000000</x>
-         <y>4.000000</y>
-         <z>10.000000</z>
+         <x>2.000000</x>
+         <y>2.000000</y>
+         <z>5.000000</z>
       </P>
       <D>
-         <x>7.000000</x>
-         <y>7.000000</y>
-         <z>7.000000</z>
+         <x>5.000000</x>
+         <y>5.000000</y>
+         <z>3.000000</z>
       </D>
       <I>
-         <x>0.000000</x>
-         <y>0.000000</y>
+         <x>1.000000</x>
+         <y>1.000000</y>
          <z>2.000000</z>
       </I>
       <ILimit>
-         <x>0.000000</x>
-         <y>0.000000</y>
+         <x>1.000000</x>
+         <y>1.000000</y>
          <z>5.000000</z>
       </ILimit>
    </Translation>
@@ -95,10 +95,10 @@
    </MotorTrim>
 </Hardware>
 <Vision>
-   <RatioThreshold>0.650000</RatioThreshold>
-   <MatchRadius>60.000000</MatchRadius>
+   <RatioThreshold>0.200000</RatioThreshold>
+   <MatchRadius>30.000000</MatchRadius>
 </Vision>
-<LogMask>1560</LogMask>
+<LogMask>1625</LogMask>
 <ImgBufferSize>20</ImgBufferSize>
 <IP>192.168.43.1</IP>
 <Port>13120</Port>

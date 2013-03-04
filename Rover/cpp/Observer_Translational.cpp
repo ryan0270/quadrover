@@ -23,7 +23,8 @@ namespace Quadrotor{
 		mAttBiasAdaptRate(3,0.0),
 		mAttitude(3,1,0.0),
 		mLastMeas(6,1,0.0),
-		mBarometerHeightState(2,1,0.0)
+		mBarometerHeightState(2,1,0.0),
+		mOpticFlowVel(3,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -65,6 +66,9 @@ namespace Quadrotor{
 		mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
 								 createRotMat(0,(double)PI));
 		mRotPhoneToCam = transpose(mRotCamToPhone);
+
+		mFlowCalcDone = true;
+		mNewOpticFlowReady = false;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -110,6 +114,7 @@ namespace Quadrotor{
 		double s1, s2, s3, c1, c2, c3;
 		double dt;
 		Time lastBattTempTime;
+		Array2D<double> flowVel(3,1,0.0);
 		while(mRunning)
 		{
 			double thrust = 0;
@@ -155,6 +160,14 @@ namespace Quadrotor{
 				mMutex_meas.lock(); measTemp.inject(mLastMeas); mMutex_meas.unlock();
 				doMeasUpdateKF(measTemp);
 			}
+			if(mNewOpticFlowReady)
+			{
+				mMutex_meas.lock();
+				Array2D<double> vel = mOpticFlowVel.copy();
+				mMutex_meas.unlock();
+
+				doMeasUpdateKF_velOnly(vel);
+			}
 //			if(mDoMeasUpdate_xyOnly)
 //			{
 //				Array2D<double> xyTemp(4,1,0.0);
@@ -177,6 +190,7 @@ namespace Quadrotor{
 			{
 				// if we're here then the previous thread should already be finished
 				flowCalcThread.imageMatchData = mImageMatchData;
+				mFlowCalcDone = false;
 				flowCalcThread.start();
 				mNewImageResultsReady = false;
 			}
@@ -198,29 +212,28 @@ namespace Quadrotor{
 	}
 
 	// See eqn 98 in the Feb 25, 2013 notes
-	Array2D<double> Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
+	void  Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
 	{
 		if(matchData->featurePoints[0].size() < 5)
 		{
 			String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW_INSUFFICIENT_POINTS+"\t";
 			mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
-			return Array2D<double>(3,1,0.0);
+			mFlowCalcDone = true;
+			return;
 		}
 
 		mMutex_data.lock();
 		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
-		Array2D<double> Sn = 1*1*createIdentity(2);
+		Array2D<double> Sn = 3*3*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
 
 		Array2D<double> Sv = submat(mErrCovKF,3,5,3,5);
-//Array2D<double> Sv = 1e6*createIdentity(3);
 		JAMA::LU<double> SvLU(Sv);
 		Array2D<double> SvInv = SvLU.solve(createIdentity(3));
 		double z = mStateKF[2][0];
-		z = 0.010;
-		z = 0.5;
+		z -= 0.060; // offset between markers and camera
 
 		// Rotate prior velocity information to camera coords
 		mu_v = matmult(mRotPhoneToCam, mu_v);
@@ -281,7 +294,11 @@ namespace Quadrotor{
 		mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 
 		mFlowCalcDone = true;
-		return vel;
+		mNewOpticFlowReady = true;
+
+		mMutex_meas.lock();
+		mOpticFlowVel.inject(vel);
+		mMutex_meas.unlock();
 	}
 
 	void Observer_Translational::setMotorCmds(double const cmds[4])
@@ -342,12 +359,8 @@ namespace Quadrotor{
 		if(mLastMeasUpdateTime.getMS() == 0)
 			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
 		double dt = mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6;
-		mMutex_att.lock();
-		double c = cos(mAttitude[2][0]);
-		double s = sin(mAttitude[2][0]);
-		mMutex_att.unlock();
-		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*(c*err[1][0]-s*err[0][0]);
-		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-s*err[1][0]-c*err[0][0]);
+		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
 		mForceGain += mForceGainAdaptRate*err[2][0];
 		mLastMeasUpdateTime.setTime();
 
@@ -459,6 +472,52 @@ namespace Quadrotor{
 		mDoMeasUpdate_zOnly = false;
 	}
 
+	void Observer_Translational::doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas)
+	{
+		mNewOpticFlowReady = false;
+		mMutex_data.lock();
+		Array2D<double> measCov(3,3);
+		measCov[0][0] = mMeasCov[3][3];
+		measCov[0][1] = measCov[1][0] = mMeasCov[3][4];
+		measCov[0][2] = measCov[2][0] = mMeasCov[3][5];
+		measCov[1][1] = mMeasCov[4][4];
+		measCov[1][2] = measCov[2][1] = mMeasCov[4][5];
+		measCov[2][2] = 10*mMeasCov[5][5]; // optical flow is especially bad in z
+		Array2D<double> C(3,6,0.0);
+		C[0][3] = C[1][4] = C[2][5] = 1;
+		Array2D<double> C_T = transpose(C);
+		Array2D<double> m1_T = transpose(matmult(mErrCovKF, C_T));
+		Array2D<double> m2_T = transpose(matmult(C, matmult(mErrCovKF, C_T)) + measCov);
+
+		// I need to solve K = m1*inv(m2) which is the wrong order
+		// so solve K^T = inv(m2^T)*m1^T
+// The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
+// of this function was no longer symmetric
+//		JAMA::QR<double> m2QR(m2_T); 
+//	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
+		JAMA::LU<double> m2LU(m2_T);
+		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
+
+		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
+		{
+			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
+			mMutex_data.unlock();
+			return;
+		}
+
+		// \hat{x} = \hat{x} + K (meas - C \hat{x})
+		Array2D<double> err = meas-matmult(C, mStateKF);
+		mStateKF += matmult(gainKF, err);
+
+		// S = (I-KC) S
+		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, C), mErrCovKF));
+
+		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
+		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
+
+		mMutex_data.unlock();
+	}
+
 	void Observer_Translational::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
 	{
 		mMutex_att.lock();
@@ -493,6 +552,13 @@ namespace Quadrotor{
 			mLastMeas[i][0] = vel[i-3][0];
 		mMutex_meas.unlock();
 		mLastPosReceiveTime.setTime();
+
+		{
+			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_RECEIVE_VICON+"\t";
+			for(int i=0; i<data.size(); i++)
+				s = s+data[i]+"\t";
+			mQuadLogger->addLine(s, LOG_FLAG_STATE);
+		}
 
 		mDoMeasUpdate = true;
 //		mDoMeasUpdate_xyOnly = true;
