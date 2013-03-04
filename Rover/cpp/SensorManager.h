@@ -153,8 +153,7 @@ using namespace std;
 class SensorManagerListener
 {
 	public:
-//	virtual void onNewSensorUpdate(SensorData const *data)=0;
-	virtual void onNewSensorUpdate(shared_ptr<SensorData> const data)=0;
+	virtual void onNewSensorUpdate(shared_ptr<SensorData> const &data)=0;
 };
 
 class SensorManager : public toadlet::egg::Thread, public Observer_AngularListener

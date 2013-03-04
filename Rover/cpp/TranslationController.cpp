@@ -178,6 +178,15 @@ namespace Quadrotor {
 		mMutex_state.unlock();
 	}
 
+	void TranslationController::onNewCommSetDesiredPos()
+	{
+		mMutex_state.lock();
+		for(int i=0; i<3; i++)
+			mDesState[i][0] = mCurState[i][0];
+		mMutex_state.unlock();
+		Log::alert("Desired position set.");
+	}
+
 	void TranslationController::onNewCommMotorOn()
 	{
 		reset();

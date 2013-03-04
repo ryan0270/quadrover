@@ -138,6 +138,7 @@ void Rover::shutdown()
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
+	mImageMatchData = NULL;
 	mSensorManager.shutdown();
 
 
@@ -536,7 +537,7 @@ void Rover::onNewCommLogClear()
 	Log::alert(String()+"Log cleared");
 }
 
-void Rover::onNewSensorUpdate(shared_ptr<SensorData> const data)
+void Rover::onNewSensorUpdate(shared_ptr<SensorData> const &data)
 {
 	switch(data->type)
 	{

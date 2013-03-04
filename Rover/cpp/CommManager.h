@@ -48,7 +48,7 @@ class CommManagerListener
 	virtual void onNewCommBarometerZeroHeight(float h){};
 	virtual void onNewCommVisionRatioThreshold(float h){};
 	virtual void onNewCommVisionMatchRadius(float r){};
-
+	virtual void onNewCommSetDesiredPos(){};
 }; // class CommManagerListener
 
 class CommManager : public toadlet::egg::Thread

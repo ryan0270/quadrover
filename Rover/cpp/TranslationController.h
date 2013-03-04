@@ -54,6 +54,7 @@ class TranslationController : 	public toadlet::egg::Thread,
 	void onNewCommTransGains(toadlet::egg::Collection<float> const &gains);
 	void onNewCommMass(float m){mMass = m;}
 	void onNewCommDesState(toadlet::egg::Collection<float> const &data);
+	void onNewCommSetDesiredPos();
 	void onNewCommMotorOn();
 
 	// for Observer_TranslationalListener

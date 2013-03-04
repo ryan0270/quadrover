@@ -33,6 +33,7 @@ VisionProcessor::VisionProcessor() :
 	mImgBufferMaxSize = 10;
 	
 	mLogImages = false;
+mLogImages = true;
 
 	mImageDataPrev = mImageDataCur = mImageDataNext = NULL;
 }
@@ -47,6 +48,10 @@ void VisionProcessor::shutdown()
 		Log::alert("VisionProcessor waiting");
 		sys.msleep(100); // this can take a while if we are saving a lot of images
 	}
+
+	mImageDataCur = NULL;
+	mImageDataPrev = NULL;
+	mImageDataNext = NULL;
 
 	mMutex_image.lock();
 	mCurImage.release();
@@ -111,6 +116,7 @@ void VisionProcessor::run()
 			data->imgData1 = mImageDataCur;
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onImageProcessed(data);
+			data = NULL;
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			{
@@ -135,6 +141,8 @@ void VisionProcessor::run()
 
 	if(mLogImages)
 		mQuadLogger->saveImageBuffer(mImgDataBuffer);
+
+	mImgDataBuffer.clear();
 
 	mFinished = true;
 }
@@ -299,7 +307,7 @@ void VisionProcessor::setVisionParams(Collection<int> const &p)
 {
 }
 
-void VisionProcessor::onNewSensorUpdate(shared_ptr<SensorData> const data)
+void VisionProcessor::onNewSensorUpdate(shared_ptr<SensorData> const &data)
 {
 	if(data->type == SENSOR_DATA_TYPE_IMAGE)
 	{

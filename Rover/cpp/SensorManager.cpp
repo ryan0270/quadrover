@@ -259,6 +259,7 @@ namespace Quadrotor{
 
 			int width = 640; int height = 480;
 //			int width = 960; int height = 720;
+//			int width = 1280; int height = 720;
 			cap->set(CV_CAP_PROP_FRAME_WIDTH, width);
 			cap->set(CV_CAP_PROP_FRAME_HEIGHT, height);
 			//		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_TORCH); // for now just leave this on the whole time
@@ -292,8 +293,8 @@ namespace Quadrotor{
 			cap->grab();
 			shared_ptr<cv::Mat> img(new cv::Mat);
 			cap->retrieve(*img);
-//			static_pointer_cast<SensorDataImage>(data)->img = img;
-			img->copyTo(*static_pointer_cast<SensorDataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
+			static_pointer_cast<SensorDataImage>(data)->img = img;
+//			img->copyTo(*static_pointer_cast<SensorDataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
 			static_pointer_cast<SensorDataImage>(data)->cap = cap;
 			static_pointer_cast<SensorDataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 
@@ -307,14 +308,16 @@ namespace Quadrotor{
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onNewSensorUpdate(data);
 			mMutex_listeners.unlock();
+
+			data = NULL;
 		}
-//		delete data;
 
 		if(cap->isOpened())
 		{
 			cap->set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF);
 			cap->release();
 		}
+		cap == NULL;
 
 //		delete cap;
 	}

@@ -70,7 +70,7 @@ public:
 	void onNewCommLogClear();
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<SensorData> const data);
+	void onNewSensorUpdate(shared_ptr<SensorData> const &data);
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);

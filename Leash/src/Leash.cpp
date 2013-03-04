@@ -114,6 +114,7 @@ void Leash::initialize()
 	connect(ui->btnGetPhoneLog,SIGNAL(clicked()),this,SLOT(onBtnGetPhoneLog_clicked()));
 	connect(ui->btnSendParams,SIGNAL(clicked()),this,SLOT(onBtnSendParams_clicked()));
 	connect(ui->btnSyncTime,SIGNAL(clicked()),this,SLOT(onBtnSyncTime_clicked()));
+	connect(ui->btnSetDesiredPos,SIGNAL(clicked()),this,SLOT(onBtnSetDesiredPos_clicked()));
 
 	mScStartMotors = new QShortcut(Qt::Key_W, this);
 	mScStopMotors = new QShortcut(Qt::Key_Space, this);
@@ -1548,6 +1549,21 @@ void Leash::onChkUseIbvsController_clicked()
 	cout << "Setting IBVS usage to " << useIbvs << endl;
 	sendTCP((tbyte*)&code, sizeof(code));
 	sendTCP((tbyte*)&useIbvs, sizeof(useIbvs));
+}
+
+void Leash::onBtnSetDesiredPos_clicked()
+{
+	if(mSocketTCP == NULL)
+	{
+		QMessageBox box(QMessageBox::Warning, "Connection Error", "Can't set desired position because I'm currently not connected to the phone.");
+		box.exec();
+		return;
+	}
+
+	int code = COMM_SET_DESIRED_POS;
+
+	cout << "Setting desired position" << endl;
+	sendTCP((tbyte*)&code, sizeof(code));
 }
 
 void Leash::onBtnStartMotors_clicked()

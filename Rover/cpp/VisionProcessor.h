@@ -85,7 +85,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void onNewCommVisionMatchRadius(float r);
 		
 		// SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<SensorData> const data);
+		void onNewSensorUpdate(shared_ptr<SensorData> const &data);
 
 	protected:
 		bool mUseIbvs;

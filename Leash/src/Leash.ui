@@ -189,7 +189,7 @@
     <item row="0" column="1" rowspan="2">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>6</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tabController">
        <attribute name="title">
@@ -1303,6 +1303,26 @@
              </size>
             </property>
            </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnSetDesiredPos">
+            <property name="text">
+             <string>Set Desired Pos</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_13">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
           </item>
          </layout>
         </item>

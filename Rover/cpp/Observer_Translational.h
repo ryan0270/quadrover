@@ -72,7 +72,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<SensorData> const data);
+	void onNewSensorUpdate(shared_ptr<SensorData> const &data);
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);
@@ -89,9 +89,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 	Collection<Observer_TranslationalListener*> mListeners;
 
 	// for the translational Kalman Filter
-	Array2D<double> mAkf, mAkf_T, mBkf, mCkf, mCkf_T;
-	Array2D<double> mMeasCov, mDynCov, mErrCovKF;
-	Array2D<double> mStateKF, mAttitude;
+	TNT::Array2D<double> mAkf, mAkf_T, mBkf, mCkf, mCkf_T;
+	TNT::Array2D<double> mMeasCov, mDynCov, mErrCovKF;
+	TNT::Array2D<double> mStateKF, mAttitude;
 	TNT::Array2D<double> mAttBias, mAttBiasReset;
 	TNT::Array2D<double> mLastMeas;
 	double mMass, mForceGainReset, mForceGain;
