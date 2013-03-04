@@ -82,7 +82,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
 		
 		// for SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<SensorData> const data);
+		void onNewSensorUpdate(shared_ptr<SensorData> const &data);
 
 	protected:
 		bool mRunning, mDone;

@@ -20,7 +20,7 @@ QuadLogger::QuadLogger()
 //	mTypeMask |= LOG_FLAG_ACCEL;
 //	mTypeMask |= LOG_FLAG_GYRO;
 //	mTypeMask |= LOG_FLAG_PRESSURE;
-//	mTypeMask |= LOG_FLAG_CAM_RESULTS;
+	mTypeMask |= LOG_FLAG_CAM_RESULTS;
 //	mTypeMask |= LOG_FLAG_CAM_IMAGES;
 	mTypeMask |= LOG_FLAG_PHONE_TEMP;
 	mPaused = false;

@@ -582,6 +582,10 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
+				case COMM_SET_DESIRED_POS:
+					for(int i=0; i<mListeners.size(); i++)
+						mListeners[i]->onNewCommSetDesiredPos();
+					break;
 				default:
 					Log::alert(String()+"Unknown code: " + code);
 			}

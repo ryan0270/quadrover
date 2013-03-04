@@ -72,6 +72,10 @@ void Observer_Angular::shutdown()
 	while(!mDone) // since join doesn't seem to work correctly in NDK
 		sys.msleep(10);
 
+
+	mAccelData = NULL;
+	mGyroData = NULL;
+	mMagData = NULL;
 	Log::alert("------------------------- Observer_Angular is donified --------------------------------------------------");
 }
 
@@ -441,7 +445,7 @@ void Observer_Angular::onNewCommStateVicon(Collection<float> const &data)
 	mMutex_data.unlock();
 }
 
-void Observer_Angular::onNewSensorUpdate(shared_ptr<SensorData> const data)
+void Observer_Angular::onNewSensorUpdate(shared_ptr<SensorData> const &data)
 {
 	switch(data->type)
 	{

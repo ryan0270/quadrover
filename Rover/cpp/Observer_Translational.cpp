@@ -75,6 +75,8 @@ namespace Quadrotor{
 		while(!mDone)
 			sys.msleep(10);
 
+		mPhoneTempData = NULL;
+		mImageMatchData = NULL;
 		Log::alert("------------------------- Observer_Translational shutdown done");
 	}
 
@@ -149,31 +151,31 @@ namespace Quadrotor{
 				mMutex_meas.lock(); measTemp.inject(mLastMeas); mMutex_meas.unlock();
 				doMeasUpdateKF(measTemp);
 			}
-			if(mDoMeasUpdate_xyOnly)
-			{
-				Array2D<double> xyTemp(4,1,0.0);
-				mMutex_meas.lock(); 
-				xyTemp[0][0] = mLastMeas[0][0];
-				xyTemp[1][0] = mLastMeas[1][0];
-				xyTemp[2][0] = mLastMeas[3][0];
-				xyTemp[3][0] = mLastMeas[4][0];
-				mMutex_meas.unlock();
-				doMeasUpdateKF_xyOnly(xyTemp);
-			}
-			if(mDoMeasUpdate_zOnly)
-			{
-				Array2D<double> zTemp(2,1,0.0);
-				mMutex_meas.lock(); zTemp.inject(mBarometerHeightState); mMutex_meas.unlock();
-				doMeasUpdateKF_zOnly(zTemp);
-			}
-
-//			if(mNewImageResultsReady && mFlowCalcDone)
+//			if(mDoMeasUpdate_xyOnly)
 //			{
-//				// if we're here then the previous thread should already be finished
-//				flowCalcThread.imageMatchData = mImageMatchData;
-//				flowCalcThread.start();
-//				mNewImageResultsReady = false;
+//				Array2D<double> xyTemp(4,1,0.0);
+//				mMutex_meas.lock(); 
+//				xyTemp[0][0] = mLastMeas[0][0];
+//				xyTemp[1][0] = mLastMeas[1][0];
+//				xyTemp[2][0] = mLastMeas[3][0];
+//				xyTemp[3][0] = mLastMeas[4][0];
+//				mMutex_meas.unlock();
+//				doMeasUpdateKF_xyOnly(xyTemp);
 //			}
+//			if(mDoMeasUpdate_zOnly)
+//			{
+//				Array2D<double> zTemp(2,1,0.0);
+//				mMutex_meas.lock(); zTemp.inject(mBarometerHeightState); mMutex_meas.unlock();
+//				doMeasUpdateKF_zOnly(zTemp);
+//			}
+
+			if(mNewImageResultsReady && mFlowCalcDone)
+			{
+				// if we're here then the previous thread should already be finished
+				flowCalcThread.imageMatchData = mImageMatchData;
+				flowCalcThread.start();
+				mNewImageResultsReady = false;
+			}
 
 			mMutex_data.lock();
 			for(int i=0; i<3; i++)
@@ -488,10 +490,8 @@ namespace Quadrotor{
 		mMutex_meas.unlock();
 		mLastPosReceiveTime.setTime();
 
-		// use this to signal the run() thread to avoid tying up the 
-		// CommManager thread calling this function
-//		mDoMeasUpdate = true;
-		mDoMeasUpdate_xyOnly = true;
+		mDoMeasUpdate = true;
+//		mDoMeasUpdate_xyOnly = true;
 	}
 
 	void Observer_Translational::onNewCommMass(float m)
@@ -584,7 +584,7 @@ namespace Quadrotor{
 		mMutex_cmds.unlock();
 	}
 
-	void Observer_Translational::onNewSensorUpdate(shared_ptr<SensorData> const data)
+	void Observer_Translational::onNewSensorUpdate(shared_ptr<SensorData> const &data)
 	{
 		switch(data->type)
 		{

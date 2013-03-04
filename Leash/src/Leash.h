@@ -103,6 +103,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		void onBtnClearLocalLog_clicked(){clearLogBuffer();}
 		void onChkViewBinarizedImage_clicked();
 		void onChkUseIbvsController_clicked();
+		void onBtnSetDesiredPos_clicked();
 
 		void updateDisplay();
 		void onBtnStartMotors_clicked();
