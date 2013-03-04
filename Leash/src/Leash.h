@@ -211,9 +211,13 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		QShortcut *mScToggleIbvs;
 
 		// For Hyon's featrure tracker
-		double mRatioThreshold, mMatchRadius;
+		float mRatioThreshold, mMatchRadius;
 
 		list<float> mImgProcTimeBuffer;
+
+		TNT::Array2D<float> mRotViconToQuad, mRotQuadToVicon;
+		TNT::Array2D<float> mRotQuadToPhone, mRotPhoneToQuad;
+		TNT::Array2D<float> mRotViconToPhone, mRotPhoneToVicon;
 };
 }
 }

@@ -66,6 +66,15 @@ Leash::Leash(QWidget *parent) :
 
 	mRatioThreshold = 0.65;
 	mMatchRadius = 60;
+
+	mRotViconToQuad = createRotMat(0, (float)PI);
+	mRotQuadToPhone = matmult(createRotMat(2,(float)(-0.25*PI)),
+				  			  createRotMat(0,(float)PI));
+	mRotViconToPhone = matmult(mRotQuadToPhone, mRotViconToQuad);
+
+	mRotQuadToVicon = transpose(mRotViconToQuad);
+	mRotPhoneToQuad = transpose(mRotQuadToPhone);
+	mRotPhoneToVicon = transpose(mRotViconToPhone);
 }
 
 Leash::~Leash()
@@ -146,8 +155,8 @@ void Leash::initialize()
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
 //		mTelemVicon.connect("147.46.243.133");
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -387,17 +396,55 @@ void Leash::pollUDP()
 							ui->lblMotorStatus->setText("Off");
 						break;
 					case COMM_STATE_PHONE:
-						for(int i=0; i<pck.dataFloat.size(); i++)
 						{
-							mStateData[i]->setData(QString::number(pck.dataFloat[i],'f',3), Qt::DisplayRole);
-							mState[i][0] = pck.dataFloat[i];
+							TNT::Array2D<float> att(3,1), angVel(3,1), pos(3,1), vel(3,1);
+							att[0][0] = pck.dataFloat[0];
+							att[1][0] = pck.dataFloat[1];
+							att[2][0] = pck.dataFloat[2];
+							angVel[0][0] = pck.dataFloat[3];
+							angVel[1][0] = pck.dataFloat[4];
+							angVel[2][0] = pck.dataFloat[5];
+							pos[0][0] = pck.dataFloat[6];
+							pos[1][0] = pck.dataFloat[7];
+							pos[2][0] = pck.dataFloat[8];
+							vel[0][0] = pck.dataFloat[9];
+							vel[1][0] = pck.dataFloat[10];
+							vel[2][0] = pck.dataFloat[11];
+							att = matmult(mRotPhoneToQuad, att);
+							angVel = matmult(mRotPhoneToQuad, angVel);
+							pos = matmult(mRotPhoneToVicon, pos);
+							vel = matmult(mRotPhoneToVicon, vel);
+							mState = stackVertical(att, angVel);
+							mState = stackVertical(mState, pos);
+							mState = stackVertical(mState, vel);
+							for(int i=0; i<mState.dim1(); i++)
+								mStateData[i]->setData(QString::number(mState[i][0],'f',3), Qt::DisplayRole);
 						}
 						break;
 					case COMM_DESIRED_STATE:
-						for(int i=0; i<12; i++)
 						{
-							mDesStateData[i]->setData(QString::number(pck.dataFloat[i],'f',3), Qt::DisplayRole);
-							mDesState[i][0] = pck.dataFloat[i];
+							TNT::Array2D<float> att(3,1), angVel(3,1), pos(3,1), vel(3,1);
+							att[0][0] = pck.dataFloat[0];
+							att[1][0] = pck.dataFloat[1];
+							att[2][0] = pck.dataFloat[2];
+							angVel[0][0] = pck.dataFloat[3];
+							angVel[1][0] = pck.dataFloat[4];
+							angVel[2][0] = pck.dataFloat[5];
+							pos[0][0] = pck.dataFloat[6];
+							pos[1][0] = pck.dataFloat[7];
+							pos[2][0] = pck.dataFloat[8];
+							vel[0][0] = pck.dataFloat[9];
+							vel[1][0] = pck.dataFloat[10];
+							vel[2][0] = pck.dataFloat[11];
+							att = matmult(mRotPhoneToQuad, att);
+							angVel = matmult(mRotPhoneToQuad, angVel);
+							pos = matmult(mRotPhoneToVicon, pos);
+							vel = matmult(mRotPhoneToVicon, vel);
+							mDesState = stackVertical(att, angVel);
+							mDesState = stackVertical(mDesState, pos);
+							mDesState = stackVertical(mDesState, vel);
+							for(int i=0; i<mDesState.dim1(); i++)
+								mDesStateData[i]->setData(QString::number(mDesState[i][0],'f',3), Qt::DisplayRole);
 						}
 						break;
 					case COMM_GYRO:
@@ -434,7 +481,7 @@ void Leash::pollUDP()
 						mImgProcTimeBuffer.push_back(pck.dataInt32[0]);
 						while(mImgProcTimeBuffer.size() > 100)
 							mImgProcTimeBuffer.pop_front();
-						double avg = 0;
+						float avg = 0;
 						list<float>::iterator iter = mImgProcTimeBuffer.begin();
 						while(iter != mImgProcTimeBuffer.end())
 							avg += *(iter++);
@@ -550,7 +597,7 @@ void Leash::pollTCP()
 
 void Leash::updateDisplay()
 {
-	double time = (mSys.mtime() - mStartTimeUniverseMS)/1.0e3;
+	float time = (mSys.mtime() - mStartTimeUniverseMS)/1.0e3;
 	ui->lblRunTime->setText(QString::number(time,'f',0));
 
 	if(mFirstDraw)
@@ -1586,7 +1633,7 @@ void Leash::onBtnQuit_clicked()
 void Leash::onIncreaseHeight()
 {
 	mDesState[8][0] = min(1.0, mDesState[8][0]+0.050);
-	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
+//	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
 }
@@ -1594,7 +1641,7 @@ void Leash::onIncreaseHeight()
 void Leash::onDecreaseHeight()
 {
 	mDesState[8][0] = mDesState[8][0]-0.050;
-	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
+//	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
 }
@@ -1602,7 +1649,7 @@ void Leash::onDecreaseHeight()
 void Leash::onMoveLeft()
 {
 	mDesState[6][0] = mDesState[6][0]-0.200;
-	mDesStateData[6]->setData(QString::number(mDesState[6][0],'f',3), Qt::DisplayRole);
+//	mDesStateData[6]->setData(QString::number(mDesState[6][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
 }
@@ -1610,7 +1657,7 @@ void Leash::onMoveLeft()
 void Leash::onMoveRight()
 {
 	mDesState[6][0] = mDesState[6][0]+0.200;
-	mDesStateData[6]->setData(QString::number(mDesState[6][0],'f',3), Qt::DisplayRole);
+//	mDesStateData[6]->setData(QString::number(mDesState[6][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
 }
@@ -1618,7 +1665,7 @@ void Leash::onMoveRight()
 void Leash::onMoveForward()
 {
 	mDesState[7][0] = mDesState[7][0]+0.200;
-	mDesStateData[7]->setData(QString::number(mDesState[7][0],'f',3), Qt::DisplayRole);
+//	mDesStateData[7]->setData(QString::number(mDesState[7][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
 }
@@ -1626,7 +1673,7 @@ void Leash::onMoveForward()
 void Leash::onMoveBackward()
 {
 	mDesState[7][0] = mDesState[7][0]-0.200;
-	mDesStateData[7]->setData(QString::number(mDesState[7][0],'f',3), Qt::DisplayRole);
+//	mDesStateData[7]->setData(QString::number(mDesState[7][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
 }
