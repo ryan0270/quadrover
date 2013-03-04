@@ -201,8 +201,11 @@ namespace Quadrotor{
 	Array2D<double> Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
 	{
 		if(matchData->featurePoints[0].size() < 5)
+		{
+			String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW_INSUFFICIENT_POINTS+"\t";
+			mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 			return Array2D<double>(3,1,0.0);
-
+		}
 
 		mMutex_data.lock();
 		double dt = matchData->dt;
@@ -269,13 +272,14 @@ namespace Quadrotor{
 //		JAMA::LU<double> B_TLU(transpose(B));
 //		Array2D<double> vel2 = z/dt*B_TLU.solve(transpose(A));
 
+		// Finally, convert the velocity from camera to phone coords
+		vel = matmult(mRotCamToPhone, vel);
+
 		String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW+"\t";
 		for(int i=0; i<vel.dim1(); i++)
 			str = str+vel[i][0]+"\t";
-		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+		mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 
-		// Finally, convert the velocity from camera to phone coords
-		vel = matmult(mRotCamToPhone, vel);
 		mFlowCalcDone = true;
 		return vel;
 	}

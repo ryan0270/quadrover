@@ -98,7 +98,7 @@
    <RatioThreshold>0.650000</RatioThreshold>
    <MatchRadius>60.000000</MatchRadius>
 </Vision>
-<LogMask>1048</LogMask>
+<LogMask>1560</LogMask>
 <ImgBufferSize>20</ImgBufferSize>
 <IP>192.168.43.1</IP>
 <Port>13120</Port>

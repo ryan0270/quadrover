@@ -31,19 +31,25 @@ tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1012);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
 
-tranStateInterp = interp1(tranStateTime,tranState',angleStateTime)';
-stateTime = angleStateTime;
-state = [angleState; tranStateInterp];
-state_dt = mean(diff(stateTime));
+if ~isempty(tranState)
+	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime)';
+	stateTime = angleStateTime;
+	state = [angleState; tranStateInterp];
+	state_dt = mean(diff(stateTime));
+end
 
 gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1003);
 gyroBiasTime = phoneData(gyroBiasIndices,1)'/1000;
 gyroBias = phoneData(gyroBiasIndices,3:5)';
 gyroBias_dt = mean(diff(gyroBiasTime));
 
-pressureHeightIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 1234);
-pressureHeightTime = phoneData(pressureHeightIndices,1)'/1000;
-pressureHeight = phoneData(pressureHeightIndices,3:4)';
+% pressureHeightIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 1234);
+% pressureHeightTime = phoneData(pressureHeightIndices,1)'/1000;
+% pressureHeight = phoneData(pressureHeightIndices,3:4)';
+
+opticFlowVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 12345);
+opticFlowVelTime = phoneData(opticFlowVelIndices,1)'/1000;
+opticFlowVel = phoneData(opticFlowVelIndices,3:5)';
 
 %% rotate from vicon to phone coords
 R1 = diag([1 -1 -1]);
@@ -64,23 +70,25 @@ for st=10:12
 end
 
 %%
-figure(1);
-stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
-              'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
-for i=1:12
-    subplot(4,3,i)
-	mask = viconStateTime <= stateTime(end);
-    plot(viconStateTime(mask), viconState(i,mask)); hold all
-	plot(stateTime, state(i,:)); hold all
-	hold off
-	ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)]);
-    
-%     line([ax(1) ax(2)],[max(state(i,:)) max(state(i,:))],'Color',0.5*[1 1 1],'LineStyle','--');
-%     line([ax(1) ax(2)],[max(viconState(i,:)) max(viconState(i,:))],'Color',0.5*[1 1 1],'LineStyle','--');
-    xlabel('Time [s]')
-    ylabel(stateLabels(i));
+if exist('state','var') && ~isempty(state)
+	figure(1);
+	stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
+				  'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
+	for i=1:12
+		subplot(4,3,i)
+		mask = viconStateTime <= stateTime(end);
+		plot(viconStateTime(mask), viconState(i,mask)); hold all
+		plot(stateTime, state(i,:)); hold all
+		hold off
+		ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)]);
+
+	%     line([ax(1) ax(2)],[max(state(i,:)) max(state(i,:))],'Color',0.5*[1 1 1],'LineStyle','--');
+	%     line([ax(1) ax(2)],[max(viconState(i,:)) max(viconState(i,:))],'Color',0.5*[1 1 1],'LineStyle','--');
+		xlabel('Time [s]')
+		ylabel(stateLabels(i));
+	end
+	% legend('Vicon','Phone');
 end
-% legend('Vicon','Phone');
 
 %%
 if ~isempty(gyroBias)
@@ -95,7 +103,7 @@ if ~isempty(gyroBias)
 end
 
 %%
-if ~isempty(pressureHeight)
+if exist('pressureHeight','var') && ~isempty(pressureHeight)
 	figure(1234);
 	mask = viconStateTime <= pressureHeightTime(end);
 	plot(viconStateTime(mask), viconState(9,mask)); hold all
@@ -105,4 +113,21 @@ if ~isempty(pressureHeight)
 	xlabel('Time [s]');
 	ylabel('Height [m]');
 	legend('Vicon','Press','Press Comp');
+end
+
+%%
+if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
+	opticFlowVelLabels = {'x [m/s]','y [m/s]','z [m/s]'};
+	figure(12345); clf
+	for i=1:3
+		subplot(3,1,i);
+		mask  = (viconStateTime >= opticFlowVelTime(1)) .* ...
+				(viconStateTime <= opticFlowVelTime(end));
+		mask = find(mask);
+		plot(viconStateTime(mask), viconState(i+9,mask)); hold all
+		plot(opticFlowVelTime, opticFlowVel(i,:)); hold all
+		hold off
+		xlabel('Time [s]');
+		ylabel(opticFlowVelLabels{i});
+	end
 end
