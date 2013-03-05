@@ -139,8 +139,7 @@ void VisionProcessor::run()
 		sys.msleep(1);
 	}
 
-	if(mLogImages)
-		mQuadLogger->saveImageBuffer(mImgDataBuffer);
+	mQuadLogger->saveImageBuffer(mImgDataBuffer);
 
 	mImgDataBuffer.clear();
 
@@ -350,6 +349,12 @@ void VisionProcessor::onNewCommVisionMatchRadius(float r)
 	mFeatureMatcher.params.match_radius = r;
 	mMutex_matcher.unlock();
 	Log::alert(String()+"Matcher match radius set to "+r);
+}
+
+void VisionProcessor::onCommConnectionLost()
+{
+	// stop logging images so I don't loose the ones from the flight
+	mLogImages = false;
 }
 
 } // namespace Quadrotor

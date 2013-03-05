@@ -79,6 +79,7 @@ void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataB
 	list<shared_ptr<SensorDataImage> >::const_iterator iter = dataBuffer.begin();
 	int id = 0;
 	mxml_node_t *xml = mxmlNewXML("1.0");
+	mxml_node_t *root = mxmlNewElement(xml,"root");
 	while(iter != dataBuffer.end())
 	{
 		shared_ptr<SensorDataImage> data = static_pointer_cast<SensorDataImage>(*iter);
@@ -88,7 +89,7 @@ void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataB
 		cv::imwrite(filename.c_str(), *mat);
 
 		stringstream ss; ss << "img_" << id;
-		mxml_node_t *imgNode = mxmlNewElement(xml,ss.str().c_str());
+		mxml_node_t *imgNode = mxmlNewElement(root,ss.str().c_str());
 			mxmlNewInteger(mxmlNewElement(imgNode,"time"),Time::calcDiffMS(mStartTime, data->timestamp));
 			mxml_node_t *attNode = mxmlNewElement(imgNode,"att");
 				mxmlNewReal(mxmlNewElement(attNode,"roll"),data->att[0][0]);
@@ -104,7 +105,7 @@ void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataB
 		iter++;
 	}
 
-	mxmlNewInteger(mxmlNewElement(xml,"NumImages"),id);
+	mxmlNewInteger(mxmlNewElement(root,"NumImages"),id);
 
 	FILE *fp = fopen((mDir+"/images/data.xml").c_str(),"w");
 	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
