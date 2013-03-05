@@ -83,6 +83,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void onNewCommImgBufferSize(int size);
 		void onNewCommVisionRatioThreshold(float h);
 		void onNewCommVisionMatchRadius(float r);
+		void onCommConnectionLost();
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<SensorData> const &data);

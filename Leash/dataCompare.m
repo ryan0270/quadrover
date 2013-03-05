@@ -146,9 +146,10 @@ if exist('viconReceive','var') && ~isempty(viconReceive)
 	figure(700);
 	stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
 				  'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
+	mask = find(viconStateTime <= viconReceiveTime(end));
 	for i=7:9
 		subplot(3,1,i-6)
-		plot(viconStateTime, viconState(i,:),'o'); hold all
+		plot(viconStateTime(mask), viconState(i,mask),'o'); hold all
 		plot(viconReceiveTime, viconReceive(i,:),'.'); hold all;
 		hold off
 		xlabel('Time [s]');

@@ -81,6 +81,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	protected:
 	bool mRunning, mDone;
 	bool mDoMeasUpdate, mDoMeasUpdate_xyOnly, mDoMeasUpdate_zOnly;
+	bool mDoMeasUpdate_posOnly;
 	Time mStartTime;
 
 	Array2D<double> mRotViconToPhone;
@@ -109,6 +110,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void doMeasUpdateKF_xyOnly(TNT::Array2D<double> const &meas);
 	void doMeasUpdateKF_zOnly(TNT::Array2D<double> const &meas);
 	void doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas);
+	void doMeasUpdateKF_posOnly(TNT::Array2D<double> const &meas);
 
 	shared_ptr<SensorDataPhoneTemp> mPhoneTempData;
 	double mZeroHeight;

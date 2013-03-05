@@ -14,7 +14,7 @@ CommManager::CommManager()
 	mAddrPC = 0;
 	mPortPC = 0;
 
-	mDone = true; // need this to be true in case the run thread never gets started
+	mDone = true;
 
 	mConnected = false;
 
@@ -91,13 +91,10 @@ void CommManager::run()
 
 		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 500)
 		{
+			Log::alert("Lost connection");
 			mConnected = false;
 			for(int i=0; i<mListeners.size(); i++)
-			{
-				if(mLastCmdRcvTime.getElapsedTimeMS() > 50)
-					Log::alert("Where'd you go?");
 				mListeners[i]->onCommConnectionLost();
-			}
 			mMutex_socketTCP.lock();
 			mSocketTCP->close();
 			mSocketTCP = NULL;

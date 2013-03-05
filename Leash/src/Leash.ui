@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>970</width>
-    <height>696</height>
+    <width>972</width>
+    <height>736</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -576,13 +576,13 @@
            <widget class="QLineEdit" name="txtIP">
             <property name="minimumSize">
              <size>
-              <width>101</width>
+              <width>121</width>
               <height>20</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>101</width>
+              <width>121</width>
               <height>20</height>
              </size>
             </property>
@@ -629,13 +629,13 @@
            <widget class="QLineEdit" name="txtPort">
             <property name="minimumSize">
              <size>
-              <width>41</width>
+              <width>51</width>
               <height>20</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
-              <width>41</width>
+              <width>51</width>
               <height>20</height>
              </size>
             </property>
@@ -656,7 +656,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="2" rowspan="2">
+        <item row="1" column="2">
          <spacer name="horizontalSpacer_2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -689,7 +689,7 @@
           </property>
          </spacer>
         </item>
-        <item row="4" column="0">
+        <item row="3" column="0">
          <spacer name="verticalSpacer_2">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -2528,7 +2528,7 @@
           <item row="4" column="0">
            <widget class="QLabel" name="label_15">
             <property name="text">
-             <string># Matches;</string>
+             <string># Matches:</string>
             </property>
            </widget>
           </item>
@@ -2554,7 +2554,7 @@
           <item row="2" column="0">
            <widget class="QLabel" name="label_16">
             <property name="text">
-             <string>Last 100 avg</string>
+             <string>Last 100 avg:</string>
             </property>
            </widget>
           </item>
@@ -2617,8 +2617,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>970</width>
-     <height>19</height>
+     <width>972</width>
+     <height>20</height>
     </rect>
    </property>
   </widget>

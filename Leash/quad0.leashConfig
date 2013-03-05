@@ -76,9 +76,9 @@
          <Mag>0.000000</Mag>
       </DirWeight>
       <NomMag>
-         <x>-8.000000</x>
-         <y>25.000000</y>
-         <z>-41.000000</z>
+         <x>-16.200001</x>
+         <y>3.700000</y>
+         <z>15.900000</z>
       </NomMag>
    </Attitude>
 </Observer>
@@ -95,10 +95,10 @@
    </MotorTrim>
 </Hardware>
 <Vision>
-   <RatioThreshold>0.200000</RatioThreshold>
+   <RatioThreshold>0.500000</RatioThreshold>
    <MatchRadius>30.000000</MatchRadius>
 </Vision>
-<LogMask>1625</LogMask>
-<ImgBufferSize>20</ImgBufferSize>
-<IP>192.168.43.1</IP>
+<LogMask>7769</LogMask>
+<ImgBufferSize>200</ImgBufferSize>
+<IP>192.168.100.107</IP>
 <Port>13120</Port>

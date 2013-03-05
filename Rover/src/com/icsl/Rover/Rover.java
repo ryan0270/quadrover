@@ -239,7 +239,7 @@ public class Rover extends Activity implements Runnable
 		mThreadRun = true;
 		while(mThreadRun)
 		{
-			if(!pcIsConnected())
+			if(!pcIsConnected() && false)
 			{
 
 				Mat img = new Mat();
