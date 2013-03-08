@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical"
+	>
+	<ImageView android:id="@+id/ivImageDisplay"
+		android:layout_width="320dp"
+		android:layout_height="240dp"
+		/>
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		>
+		<Button android:id="@+id/btnToggleImageProcessing"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Toggle Image Processing"
+			android:onClick="onBtnToggleImageProcessing_clicked"
+			/>
+		<Button android:id="@+id/btnToggleGray"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Toggle Grayscale"
+			android:onClick="onBtnToggleGray_clicked"
+			/>
+	</LinearLayout>
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:orientation="vertical"
+		>
+		<TextView android:id="@+id/tvImgProcTime"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:hint="Proc Time: 000ms"
+			/>
+	</LinearLayout>
+
+	<!-- Divider bar -->
+	<View
+		android:layout_width="fill_parent"
+		android:layout_height="1dp"
+		android:background="@android:color/white"
+		/>
+
+	<!-- Sensor readings -->
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		>
+		<RelativeLayout
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			>
+			<TextView android:id="@+id/tvGyroValue"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:hint="0.000"
+				/>
+			<TextView android:id="@+id/tvAccelValue"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:hint="0.000"
+				android:layout_below="@id/tvGyroValue"
+				/>
+			<TextView android:id="@+id/tvMagValue"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:hint="0.000"
+				android:layout_below="@id/tvAccelValue"
+				/>
+			<TextView android:id="@+id/tvRollAngle"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:hint="0.000"
+				android:layout_alignParentRight="true"
+				/>
+			<TextView android:id="@+id/tvPitchAngle"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:hint="0.000"
+				android:layout_alignParentRight="true"
+				android:layout_below="@id/tvRollAngle"
+				/>
+			<TextView android:id="@+id/tvYawAngle"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:hint="0.000"
+				android:layout_alignParentRight="true"
+				android:layout_below="@id/tvPitchAngle"
+				/>
+		</RelativeLayout>
+	</LinearLayout>
+
+	<!-- Divider bar -->
+	<View
+		android:layout_width="fill_parent"
+		android:layout_height="1dp"
+		android:background="@android:color/white"
+		/>
+
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="fill_parent"
+		android:orientation="horizontal"
+		>
+		<Button android:id="@+id/btnStartService"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:text="Start Rover"
+			android:onClick="onBtnStartService_clicked"
+			android:layout_weight="1"
+			/>
+		<Button android:id="@+id/btnStopService"
+			android:layout_width="fill_parent"
+			android:layout_height="fill_parent"
+			android:text="Stop Rover"
+			android:onClick="onBtnStopService_clicked"
+			android:layout_weight="1"
+			/>
+	</LinearLayout>
+</LinearLayout>
