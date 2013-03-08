@@ -46,6 +46,8 @@ public:
 	void setLogDir(String dir);
 	void startLogging();
 	void stopLogging();
+
+	void run();
 	
 	// these functions are primarily for the jni interface
 	void copyImageData(cv::Mat *m);
@@ -94,7 +96,6 @@ protected:
 
 	Mutex mMutex_cntl, mMutex_observer, mMutex_vision, mMutex_vicon, mMutex_data;
 	
-	void run();
 	void transmitDataUDP();
 	void transmitImage();
 
