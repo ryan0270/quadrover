@@ -31,7 +31,7 @@ public class RoverService extends Service {
 	public Timer mTimer;
 	public Notification.Builder mNotificationBuilder;
 
-//	private PowerManager.WakeLock mWakeLock;
+	private PowerManager.WakeLock mWakeLock;
 
 	@Override
 	public void onCreate()
@@ -73,9 +73,9 @@ public class RoverService extends Service {
 		startForeground(1, noti);
 
 		// taken from http://developer.android.com/guide/topics/ui/notifiers/notifications.html
-		Intent mainActivityIntent = new Intent(this, MainActivity.class);
+		Intent mainActivityIntent = new Intent(this, Rover.class);
 		TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
-		stackBuilder.addParentStack(MainActivity.class);
+		stackBuilder.addParentStack(Rover.class);
 		stackBuilder.addNextIntent(mainActivityIntent);
 		PendingIntent mainActivityPendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
 		mNotificationBuilder.setContentIntent(mainActivityPendingIntent);
@@ -95,7 +95,7 @@ public class RoverService extends Service {
 //		};
 
 		PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
-		mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKELOCK, ME);
+		mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, ME);
 
 //		mTimer = new Timer();
 //		mTimer.schedule(task, 100, 500);
@@ -113,20 +113,25 @@ public class RoverService extends Service {
 	}
 
 	@Override
+	public void onDestroy()
+	{
+		Log.i(ME,"Rover service stop started");
+//		mTimer.cancel();
+//		mTimer.purge();
+		onJNIStop();
+		mWakeLock.release();
+		Toast.makeText(this, "Rover sleeping", Toast.LENGTH_SHORT).show();
+		stopForeground(true);
+		Log.i(ME,"Rover service stopped");
+		
+		super.onDestroy();
+	}
+
+	@Override
 	public IBinder onBind(Intent intent)
 	{
 		// No binding
 		return null;
-	}
-
-	@Override
-	public void onDestroy()
-	{
-		mTimer.cancel();
-		mTimer.purge();
-		onJNIStop();
-//		mWakeLock.release();
-		Toast.makeText(this, "Rover sleeping", Toast.LENGTH_SHORT).show();
 	}
 
 	// taken from 

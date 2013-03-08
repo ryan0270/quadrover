@@ -143,11 +143,14 @@ public class Rover extends Activity implements Runnable
 
 	public void onBtnStartService_clicked(View v)
 	{
-//		toggleUseIbvs();
+		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
+		startService(roverServiceIntent);
 	}
 
 	public void onBtnStopService_clicked(View v)
 	{
+		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
+		stopService(roverServiceIntent);
 //		toggleViewType();
 	}
 
@@ -208,46 +211,6 @@ public class Rover extends Activity implements Runnable
 
 		Log.i(ME,"Java Runner dead *************************");
 		mThreadIsDone = true;
-	}
-
-//	public native String nativeTest();
-//	public native void onJNIStart();
-//	public native void onJNIStop();
-//	public native void setNumCpuCores(int numCores);
-//	public native void setLogDir(String jdir);
-//	public native void startLogging();
-//	public native void getImage(long addr);
-//	public native float[] getGyroValue();
-//	public native float[] getAccelValue();
-//	public native float[] getMagValue();
-//	public native float[] getAttitude();
-//	public native int getImageProcTimeMS();
-//	public native void toggleViewType();
-//	public native void toggleUseIbvs();
-//	public native int[] getVisionParams();
-//	public native void setVisionParams(int[] p);
-//	public native boolean pcIsConnected();
-
-	static {
-//		System.loadLibrary("opencv_core");
-//		System.loadLibrary("opencv_imgproc");
-//		System.loadLibrary("opencv_flann");
-//		System.loadLibrary("opencv_highgui");
-//		System.loadLibrary("opencv_features2d");
-//		System.loadLibrary("opencv_calib3d");
-//		System.loadLibrary("opencv_ml");
-//		System.loadLibrary("opencv_video");
-//		System.loadLibrary("opencv_objdetect");
-//		System.loadLibrary("opencv_contrib");
-//		System.loadLibrary("opencv_legacy");
-//		System.loadLibrary("opencv_nonfree");
-//		System.loadLibrary("opencv_photo");
-//		System.loadLibrary("opencv_stitching");
-//		System.loadLibrary("opencv_ts");
-//		System.loadLibrary("opencv_videostab");
-		System.loadLibrary("opencv_java");
-		System.loadLibrary("toadlet_egg");
-		System.loadLibrary("Rover");
 	}
 }
 
