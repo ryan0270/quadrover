@@ -30,188 +30,12 @@
 	<LinearLayout
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"
-		android:orientation="horizontal"
+		android:orientation="vertical"
 		>
-		<Button android:id="@+id/btnApplyVisionParams"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:text="Apply"
-			android:onClick="onBtnApplyVisionParams_clicked"
-			/>
-		<Button android:id="@+id/btnResetVisionParams"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:text="Reset Params"
-			android:onClick="onBtnResetVisionParams_clicked"
-			/>
 		<TextView android:id="@+id/tvImgProcTime"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:hint="Proc Time: 000ms"
-			/>
-	</LinearLayout>
-
-	<LinearLayout
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:orientation="horizontal"
-		>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Box 1"
-			/>
-		<EditText android:id="@+id/editBox1Min"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editBox1Max"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Box 2"
-			/>
-		<EditText android:id="@+id/editBox2Min"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editBox2Max"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-	</LinearLayout>
-
-	<LinearLayout
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:orientation="horizontal"
-		>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Box 3"
-			/>
-		<EditText android:id="@+id/editBox3Min"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editBox3Max"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Box 4"
-			/>
-		<EditText android:id="@+id/editBox4Min"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editBox4Max"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-	</LinearLayout>
-
-	<LinearLayout
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:orientation="horizontal"
-		>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Sat"
-			/>
-		<EditText android:id="@+id/editSatMin"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editSatMax"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Val"
-			/>
-		<EditText android:id="@+id/editValMin"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editValMax"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-	</LinearLayout>
-
-	<LinearLayout
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:orientation="horizontal"
-		>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Circ"
-			/>
-		<EditText android:id="@+id/editCircMin"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editCircMax"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<TextView
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:hint="Conv"
-			/>
-		<EditText android:id="@+id/editConvMin"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
-			/>
-		<EditText android:id="@+id/editConvMax"
-			android:layout_width="50dp"
-			android:layout_height="wrap_content"
-			android:numeric="integer"
-			android:singleLine="true"
 			/>
 	</LinearLayout>
 
@@ -271,5 +95,31 @@
 				android:layout_below="@id/tvPitchAngle"
 				/>
 		</RelativeLayout>
+	</LinearLayout>
+
+	<!-- Divider bar -->
+	<View
+		android:layout_width="fill_parent"
+		android:layout_height="1dp"
+		android:background="@android:color/white"
+		/>
+
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		>
+		<Button android:id="@+id/btnStartService"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Start Rover"
+			android:onClick="onBtnStartService_clicked"
+			/>
+		<Button android:id="@+id/btnStopService"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="Stop Rover"
+			android:onClick="onBtnStopService_clicked"
+			/>
 	</LinearLayout>
 </LinearLayout>

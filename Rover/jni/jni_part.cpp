@@ -15,7 +15,7 @@ static ICSL::Quadrotor::Rover *rover = NULL;
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_onJNIStart(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_onJNIStart(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
 		rover = new ICSL::Quadrotor::Rover();
@@ -30,7 +30,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_onJNIStart(JNIEnv* env, jobject
 	rover->initialize();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setLogDir(JNIEnv* env, jobject thiz, jstring jdir)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_setLogDir(JNIEnv* env, jobject thiz, jstring jdir)
 {
 	if(rover == NULL)
 		return;
@@ -41,7 +41,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setLogDir(JNIEnv* env, jobject 
 	env->ReleaseStringUTFChars(jdir, str);
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_startLogging(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_startLogging(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
 		return;
@@ -49,7 +49,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_startLogging(JNIEnv* env, jobje
 	rover->startLogging();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_getImage(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_getImage(JNIEnv* env, jobject thiz, jlong addr)
 {
 	if(rover == NULL)
 		return;
@@ -57,7 +57,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_getImage(JNIEnv* env, jobject t
 	rover->copyImageData((cv::Mat*)addr);
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getGyroValue(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getGyroValue(JNIEnv* env, jobject thiz, jlong addr)
 {
 	if(rover == NULL)
 		return env->NewFloatArray(0);
@@ -73,7 +73,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getGyroValue(JNIEnv* env
 	return jval;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getAccelValue(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getAccelValue(JNIEnv* env, jobject thiz, jlong addr)
 {
 	if(rover == NULL)
 		return env->NewFloatArray(0);
@@ -89,7 +89,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getAccelValue(JNIEnv* en
 	return jval;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getMagValue(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getMagValue(JNIEnv* env, jobject thiz, jlong addr)
 {
 	if(rover == NULL)
 		return env->NewFloatArray(0);
@@ -105,7 +105,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getMagValue(JNIEnv* env,
 	return jval;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getAttitude(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getAttitude(JNIEnv* env, jobject thiz, jlong addr)
 {
 	if(rover == NULL)
 		return env->NewFloatArray(0);
@@ -121,7 +121,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_Rover_getAttitude(JNIEnv* env,
 	return jval;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_toggleViewType(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleViewType(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
 		return;
@@ -129,7 +129,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_toggleViewType(JNIEnv* env, job
 	rover->toggleViewType();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_toggleUseIbvs(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleUseIbvs(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
 		return;
@@ -137,7 +137,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_toggleUseIbvs(JNIEnv* env, jobj
 	rover->toggleUseIbvs();
 }
 
-JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_Rover_getVisionParams(JNIEnv* env, jobject thiz)
+JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getVisionParams(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
 		return NULL;
@@ -155,7 +155,7 @@ JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_Rover_getVisionParams(JNIEnv* en
 }
 
 
-JNIEXPORT jint JNICALL Java_com_icsl_Rover_Rover_getImageProcTimeMS(JNIEnv* env, jobject thiz)
+JNIEXPORT jint JNICALL Java_com_icsl_Rover_RoverService_getImageProcTimeMS(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
 		return -1;
@@ -163,7 +163,7 @@ JNIEXPORT jint JNICALL Java_com_icsl_Rover_Rover_getImageProcTimeMS(JNIEnv* env,
 	return rover->getImageProcTimeMS();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setVisionParams(JNIEnv* env, jobject thiz, jintArray jval)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_setVisionParams(JNIEnv* env, jobject thiz, jintArray jval)
 {
 	if(rover == NULL)
 		return;
@@ -178,7 +178,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_setVisionParams(JNIEnv* env, jo
 	rover->setVisionParams(vals);
 }
 
-JNIEXPORT bool JNICALL Java_com_icsl_Rover_Rover_pcIsConnected(JNIEnv* env, jobject thiz)
+JNIEXPORT bool JNICALL Java_com_icsl_Rover_RoverService_pcIsConnected(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
 		return false;
@@ -186,7 +186,7 @@ JNIEXPORT bool JNICALL Java_com_icsl_Rover_Rover_pcIsConnected(JNIEnv* env, jobj
 	return rover->pcIsConnected();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_Rover_onJNIStop(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_onJNIStop(JNIEnv* env, jobject thiz)
 {
 	if(rover != NULL)
 	{

@@ -292,15 +292,21 @@ namespace Quadrotor{
 		JAMA::LU<double> temp2_TQR(transpose(temp2));
 		Array2D<double> vel = temp2_TQR.solve(transpose(temp1));
 
-//		JAMA::LU<double> B_TLU(transpose(B));
-//		Array2D<double> vel2 = z/dt*B_TLU.solve(transpose(A));
+		JAMA::LU<double> B_TLU(transpose(B));
+		Array2D<double> velLS = z/dt*B_TLU.solve(transpose(A)); // least squares
 
 		// Finally, convert the velocity from camera to phone coords
 		vel = matmult(mRotCamToPhone, vel);
+		velLS = matmult(mRotCamToPhone, velLS);
 
 		String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW+"\t";
 		for(int i=0; i<vel.dim1(); i++)
 			str = str+vel[i][0]+"\t";
+		mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+	
+		String str2 = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW_LS+"\t";
+		for(int i=0; i<velLS.dim1(); i++)
+			str2 = str2+velLS[i][0]+"\t";
 		mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 
 		mFlowCalcDone = true;

@@ -4,3 +4,4 @@ adb pull /mnt/sdcard/Rover/log.txt
 adb pull /mnt/sdcard/Rover/log.txt.bak
 adb pull /mnt/sdcard/Rover/images/data.xml
 adb pull /mnt/sdcard/Rover/images_bak/data.xml data.xml.bak
+adb pull /mnt/sdcard/Rover/log_ids.m

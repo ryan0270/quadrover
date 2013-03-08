@@ -1,5 +1,8 @@
 clear
 
+%% script defining phone log ids
+log_ids; 
+
 %% Get vicon data
 pcFile = 'runData/pcData.txt';
 pcData = importdata(pcFile,'\t');
@@ -23,11 +26,11 @@ phoneData = phoneData(1:end-1,:);
 
 syncIndex = find(phoneData(:,2) == -500,1,'last');
 
-angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1002);
+angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
 angleStateTime = phoneData(angleStateIndices,1)'/1000;
 angleState = phoneData(angleStateIndices,3:8)';
 
-tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1012);
+tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
 
@@ -38,7 +41,7 @@ if ~isempty(tranState)
 	state_dt = mean(diff(stateTime));
 end
 
-gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1003);
+gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO_BIAS);
 gyroBiasTime = phoneData(gyroBiasIndices,1)'/1000;
 gyroBias = phoneData(gyroBiasIndices,3:5)';
 gyroBias_dt = mean(diff(gyroBiasTime));
@@ -47,11 +50,11 @@ gyroBias_dt = mean(diff(gyroBiasTime));
 % pressureHeightTime = phoneData(pressureHeightIndices,1)'/1000;
 % pressureHeight = phoneData(pressureHeightIndices,3:4)';
 
-opticFlowVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 12345);
+opticFlowVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 opticFlowVelTime = phoneData(opticFlowVelIndices,1)'/1000;
 opticFlowVel = phoneData(opticFlowVelIndices,3:5)';
 
-viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 700);
+viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
 viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
 viconReceive = phoneData(viconReceiveIndices,3:14)';
 
@@ -127,14 +130,14 @@ end
 %%
 if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 	opticFlowVelLabels = {'xDot [m/s]','yDot [m/s]','zDot [m/s]'};
-	figure(12345); clf
+	figure(12345); clf; set(gcf,'Name','Bayesian Optical Flow');
 	for i=1:3
 		subplot(3,1,i);
 		mask  = (viconStateTime >= opticFlowVelTime(1)) .* ...
 				(viconStateTime <= opticFlowVelTime(end));
 		mask = find(mask);
 		plot(viconStateTime(mask), viconState(i+9,mask)); hold all
-		plot(opticFlowVelTime, opticFlowVel(i,:)); hold all
+		plot(opticFlowVelTime, opticFlowVel(i,:),'.'); hold all
 		hold off
 		xlabel('Time [s]');
 		ylabel(opticFlowVelLabels{i});
