@@ -142,7 +142,7 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 		mask = find(mask);
 		plot(viconStateTime(mask), viconState(i+9,mask)); hold all
 		plot(opticFlowVelTime, opticFlowVel(i,:),'.'); hold all
-		plot(opticFlowVelLSTime, opticFlowVelLS(i,:)/1e5,'.'); hold all
+% 		plot(opticFlowVelLSTime, opticFlowVelLS(i,:)/1e5,'.'); hold all
 		hold off
 		xlabel('Time [s]');
 		ylabel(opticFlowVelLabels{i});
