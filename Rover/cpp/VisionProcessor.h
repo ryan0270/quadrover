@@ -15,7 +15,7 @@ using toadlet::egg::String;
 #include <opencv2/video/tracking.hpp>
 
 #include "ferns/mcv.h"
-//#include "ferns/template_matching_based_tracker.h"
+#include "ferns/template_matching_based_tracker.h"
 
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
@@ -64,6 +64,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		virtual ~VisionProcessor(){};
 
 		void shutdown();
+		void initialize();
 
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
@@ -119,6 +120,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		list<shared_ptr<SensorDataImage> > mImgDataBuffer;
 
 		Matcher mFeatureMatcher;
+		template_matching_based_tracker *mFernsTracker;
 
 		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
 		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);

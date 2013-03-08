@@ -174,7 +174,6 @@ public class RoverService extends Service {
 	{
 		System.loadLibrary("opencv_java");
 		System.loadLibrary("toadlet_egg");
-		System.loadLibrary("ferns");
 		System.loadLibrary("Rover");
 	}
 }
