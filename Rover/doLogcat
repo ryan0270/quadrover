@@ -2,5 +2,5 @@
 
 adb logcat -c
 # adb logcat | grep -e toadlet -e OpenCV -e E/ -e Rover -e GC_CONCURRENT
-adb logcat | grep -e toadlet -e OpenCV -e Rover -e DEBUG
+adb logcat | grep -e toadlet -e OpenCV -e Rover -e DEBUG -e RoverService
 # adb logcat | grep -e toadlet -e OpenCV -e Rover 
