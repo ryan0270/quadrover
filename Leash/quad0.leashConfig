@@ -41,9 +41,9 @@
          <x>0.001000</x>
          <y>0.001000</y>
          <z>0.001000</z>
-         <xVel>0.010000</xVel>
-         <yVel>0.010000</yVel>
-         <zVel>0.010000</zVel>
+         <xVel>1.000000</xVel>
+         <yVel>1.000000</yVel>
+         <zVel>1.000000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.010000</x>
@@ -95,10 +95,10 @@
    </MotorTrim>
 </Hardware>
 <Vision>
-   <RatioThreshold>0.500000</RatioThreshold>
-   <MatchRadius>30.000000</MatchRadius>
+   <RatioThreshold>0.650000</RatioThreshold>
+   <MatchRadius>60.000000</MatchRadius>
 </Vision>
 <LogMask>7769</LogMask>
-<ImgBufferSize>200</ImgBufferSize>
+<ImgBufferSize>10</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

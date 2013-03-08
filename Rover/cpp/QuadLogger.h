@@ -53,6 +53,8 @@ class QuadLogger
 		Mutex mMutex;
 		bool mPaused;
 		Time mStartTime;
+
+		void generateMatlabHeader();
 };
 
 }

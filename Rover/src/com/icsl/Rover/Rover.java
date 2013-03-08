@@ -33,14 +33,6 @@ public class Rover extends Activity implements Runnable
 	private boolean mThreadRun, mThreadIsDone, mOpenCVManagerConnected;
 
 	private ImageView mIvImageDisplay;
-	private EditText mEditBox1Min, mEditBox1Max;
-	private EditText mEditBox2Min, mEditBox2Max;
-	private EditText mEditBox3Min, mEditBox3Max;
-	private EditText mEditBox4Min, mEditBox4Max;
-	private EditText mEditSatMin, mEditSatMax;
-	private EditText mEditValMin, mEditValMax;
-	private EditText mEditCircMin, mEditCircMax;
-	private EditText mEditConvMin, mEditConvMax;
 	private TextView mTvGyro, mTvAccel, mTvMag, mTvImgProcTime;
 	private TextView mTvRoll, mTvPitch, mTvYaw;
 
@@ -54,22 +46,6 @@ public class Rover extends Activity implements Runnable
 		mOpenCVManagerConnected = false;
 
 		mIvImageDisplay = (ImageView)findViewById(R.id.ivImageDisplay);
-		mEditBox1Min = (EditText)findViewById(R.id.editBox1Min);
-        mEditBox1Max = (EditText)findViewById(R.id.editBox1Max);
-        mEditBox2Min = (EditText)findViewById(R.id.editBox2Min);
-        mEditBox2Max = (EditText)findViewById(R.id.editBox2Max);
-        mEditBox3Min = (EditText)findViewById(R.id.editBox3Min);
-        mEditBox3Max = (EditText)findViewById(R.id.editBox3Max);
-        mEditBox4Min = (EditText)findViewById(R.id.editBox4Min);
-        mEditBox4Max = (EditText)findViewById(R.id.editBox4Max);
-        mEditSatMin  = (EditText)findViewById(R.id.editSatMin);
-        mEditSatMax  = (EditText)findViewById(R.id.editSatMax);
-        mEditValMin  = (EditText)findViewById(R.id.editValMin);
-        mEditValMax  = (EditText)findViewById(R.id.editValMax);
-        mEditCircMin = (EditText)findViewById(R.id.editCircMin);
-        mEditCircMax = (EditText)findViewById(R.id.editCircMax);
-        mEditConvMin = (EditText)findViewById(R.id.editConvMin);
-        mEditConvMax = (EditText)findViewById(R.id.editConvMax);
 
 		mTvGyro = (TextView)findViewById(R.id.tvGyroValue);
 		mTvAccel= (TextView)findViewById(R.id.tvAccelValue);
@@ -89,36 +65,36 @@ public class Rover extends Activity implements Runnable
 		mBitmap = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
 		mIvImageDisplay.setImageBitmap(mBitmap);
 
-		onJNIStart();
-
-		mImage = new Mat(240,320,CvType.CV_8UC3,new Scalar(127));
-		File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
-		if(!logDir.exists())
-		{
-			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
-			logDir.mkdir();
-		}
-		else
-			Log.i(ME,"Log dir: "+logDir.toString()+" already exists.");
-		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
-		if(imgLogDir.exists())
-		{
-			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
-			if(bakDir.exists())
-				deleteDir(bakDir);
-			imgLogDir.renameTo(bakDir);
-		}
-		imgLogDir.mkdir();
-		setLogDir(logDir.toString());
-		File logFile = new File(logDir.getAbsolutePath()+"/log.txt");
-		if(logFile.exists())
-		{
-			File bakFile = new File(logFile.getAbsolutePath()+".bak");
-			if(bakFile.exists())
-				bakFile.delete();
-			logFile.renameTo(bakFile);
-		}
-		startLogging();
+//		onJNIStart();
+//
+//		mImage = new Mat(240,320,CvType.CV_8UC3,new Scalar(127));
+//		File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
+//		if(!logDir.exists())
+//		{
+//			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
+//			logDir.mkdir();
+//		}
+//		else
+//			Log.i(ME,"Log dir: "+logDir.toString()+" already exists.");
+//		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
+//		if(imgLogDir.exists())
+//		{
+//			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
+//			if(bakDir.exists())
+//				deleteDir(bakDir);
+//			imgLogDir.renameTo(bakDir);
+//		}
+//		imgLogDir.mkdir();
+//		setLogDir(logDir.toString());
+//		File logFile = new File(logDir.getAbsolutePath()+"/log.txt");
+//		if(logFile.exists())
+//		{
+//			File bakFile = new File(logFile.getAbsolutePath()+".bak");
+//			if(bakFile.exists())
+//				bakFile.delete();
+//			logFile.renameTo(bakFile);
+//		}
+//		startLogging();
 
 //		populateVisionParams();
 
@@ -143,7 +119,7 @@ public class Rover extends Activity implements Runnable
 		mImage = null;
 
 //		if (mOpenCVManagerConnected)
-			onJNIStop();
+//			onJNIStop();
 
 
 		// There seems be a thread issue where android is still trying to draw the bitmap during
@@ -165,70 +141,14 @@ public class Rover extends Activity implements Runnable
 		super.onStop();
 	}
 
-	public void onBtnToggleImageProcessing_clicked(View v)
+	public void onBtnStartService_clicked(View v)
 	{
-		toggleUseIbvs();
+//		toggleUseIbvs();
 	}
 
-	public void onBtnToggleGray_clicked(View v)
+	public void onBtnStopService_clicked(View v)
 	{
-		toggleViewType();
-	}
-
-	public void onBtnApplyVisionParams_clicked(View v)
-	{
-		int[] p = new int[16];
-		try{
-			p[0]  = Integer.decode(mEditBox1Min.getText().toString());
-			p[1]  = Integer.decode(mEditBox1Max.getText().toString());
-			p[2]  = Integer.decode(mEditBox2Min.getText().toString());
-			p[3]  = Integer.decode(mEditBox2Max.getText().toString());
-			p[4]  = Integer.decode(mEditBox3Min.getText().toString());
-			p[5]  = Integer.decode(mEditBox3Max.getText().toString());
-			p[6]  = Integer.decode(mEditBox4Min.getText().toString());
-			p[7]  = Integer.decode(mEditBox4Max.getText().toString());
-			p[8]  = Integer.decode(mEditSatMin.getText().toString());
-			p[9]  = Integer.decode(mEditSatMax.getText().toString());
-			p[10] = Integer.decode(mEditValMin.getText().toString());
-			p[11] = Integer.decode(mEditValMax.getText().toString());
-			p[12] = Integer.decode(mEditCircMin.getText().toString());
-			p[13] = Integer.decode(mEditCircMax.getText().toString());
-			p[14] = Integer.decode(mEditConvMin.getText().toString());
-			p[15] = Integer.decode(mEditConvMax.getText().toString());
-
-			setVisionParams(p);
-		} catch(Exception e){
-			Log.i(ME,"Couldn't convert a vision parameter so I'm ignoring them all");
-		}
-
-	}
-
-	public void onBtnResetVisionParams_clicked(View v)
-	{
-		populateVisionParams();
-	}
-
-	public void populateVisionParams()
-	{
-		runOnUiThread(new Runnable(){ public void run(){
-			int[] p = getVisionParams();
-			mEditBox1Min.setText(String.valueOf(p[0]));
-			mEditBox1Max.setText(String.valueOf(p[1]));
-			mEditBox2Min.setText(String.valueOf(p[2]));
-			mEditBox2Max.setText(String.valueOf(p[3]));
-			mEditBox3Min.setText(String.valueOf(p[4]));
-			mEditBox3Max.setText(String.valueOf(p[5]));
-			mEditBox4Min.setText(String.valueOf(p[6]));
-			mEditBox4Max.setText(String.valueOf(p[7]));
-			mEditSatMin.setText(String.valueOf(p[8]));
-			mEditSatMax.setText(String.valueOf(p[9]));
-			mEditValMin.setText(String.valueOf(p[10]));
-			mEditValMax.setText(String.valueOf(p[11]));
-			mEditCircMin.setText(String.valueOf(p[12]));
-			mEditCircMax.setText(String.valueOf(p[13]));
-			mEditConvMin.setText(String.valueOf(p[14]));
-			mEditConvMax.setText(String.valueOf(p[15]));
-		}});
+//		toggleViewType();
 	}
 
 	public void run()
@@ -239,45 +159,45 @@ public class Rover extends Activity implements Runnable
 		mThreadRun = true;
 		while(mThreadRun)
 		{
-			if(!pcIsConnected() && false)
-			{
-
-				Mat img = new Mat();
-				try{
-					getImage(mImage.getNativeObjAddr());
-					Imgproc.cvtColor(mImage,img,Imgproc.COLOR_BGR2RGB);
-					if(mBitmap.getWidth() != mImage.width() || mBitmap.getHeight() != mImage.height())
-					{
-						mBitmap.recycle();
-						mBitmap = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
-					}
-					Utils.matToBitmap(img, mBitmap);
-				} catch(Exception e){
-					img = null;
-					//				mBitmap.recycle();
-					//				mBitmap= null;
-				}
-				if(img != null)
-					img.release();
-
-				final float gyro[] = getGyroValue();
-				final float accel[] = getAccelValue();
-				final float mag[] = getMagValue();
-				final float att[] = getAttitude();
-				runOnUiThread(new Runnable(){
-					public void run(){ 
-						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
-						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
-						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
-						mTvImgProcTime.setText("Proc Time: "+String.valueOf(getImageProcTimeMS())+"ms");
-						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
-						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
-						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
-
-						mIvImageDisplay.setImageBitmap(mBitmap); 
-					}
-				});
-			}
+//			if(!pcIsConnected() && false)
+//			{
+//
+//				Mat img = new Mat();
+//				try{
+//					getImage(mImage.getNativeObjAddr());
+//					Imgproc.cvtColor(mImage,img,Imgproc.COLOR_BGR2RGB);
+//					if(mBitmap.getWidth() != mImage.width() || mBitmap.getHeight() != mImage.height())
+//					{
+//						mBitmap.recycle();
+//						mBitmap = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
+//					}
+//					Utils.matToBitmap(img, mBitmap);
+//				} catch(Exception e){
+//					img = null;
+//					//				mBitmap.recycle();
+//					//				mBitmap= null;
+//				}
+//				if(img != null)
+//					img.release();
+//
+//				final float gyro[] = getGyroValue();
+//				final float accel[] = getAccelValue();
+//				final float mag[] = getMagValue();
+//				final float att[] = getAttitude();
+//				runOnUiThread(new Runnable(){
+//					public void run(){ 
+//						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
+//						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
+//						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
+//						mTvImgProcTime.setText("Proc Time: "+String.valueOf(getImageProcTimeMS())+"ms");
+//						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
+//						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
+//						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
+//
+//						mIvImageDisplay.setImageBitmap(mBitmap); 
+//					}
+//				});
+//			}
 
 			try{
 				Thread.sleep(100);
@@ -290,41 +210,23 @@ public class Rover extends Activity implements Runnable
 		mThreadIsDone = true;
 	}
 
-	// taken from 
-	// http://www.rgagnon.com/javadetails/java-0483.html
-	static private boolean deleteDir(File path)
-	{
-		if( path.exists() ) {
-			File[] files = path.listFiles();
-			for(int i=0; i<files.length; i++) {
-				if(files[i].isDirectory()) {
-					deleteDir(files[i]);
-				}
-				else {
-					files[i].delete();
-				}
-			}
-		}
-		return( path.delete() );
-	}
-
-	public native String nativeTest();
-	public native void onJNIStart();
-	public native void onJNIStop();
-	public native void setNumCpuCores(int numCores);
-	public native void setLogDir(String jdir);
-	public native void startLogging();
-	public native void getImage(long addr);
-	public native float[] getGyroValue();
-	public native float[] getAccelValue();
-	public native float[] getMagValue();
-	public native float[] getAttitude();
-	public native int getImageProcTimeMS();
-	public native void toggleViewType();
-	public native void toggleUseIbvs();
-	public native int[] getVisionParams();
-	public native void setVisionParams(int[] p);
-	public native boolean pcIsConnected();
+//	public native String nativeTest();
+//	public native void onJNIStart();
+//	public native void onJNIStop();
+//	public native void setNumCpuCores(int numCores);
+//	public native void setLogDir(String jdir);
+//	public native void startLogging();
+//	public native void getImage(long addr);
+//	public native float[] getGyroValue();
+//	public native float[] getAccelValue();
+//	public native float[] getMagValue();
+//	public native float[] getAttitude();
+//	public native int getImageProcTimeMS();
+//	public native void toggleViewType();
+//	public native void toggleUseIbvs();
+//	public native int[] getVisionParams();
+//	public native void setVisionParams(int[] p);
+//	public native boolean pcIsConnected();
 
 	static {
 //		System.loadLibrary("opencv_core");

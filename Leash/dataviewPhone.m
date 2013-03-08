@@ -1,6 +1,9 @@
 clear
 disp('start chadding')
 
+%% script defining phone log ids
+log_ids; 
+
 %%
 phoneFile = 'runData/phoneLog.txt';
 phoneData = importdata(phoneFile,'\t');
@@ -8,19 +11,19 @@ phoneData = phoneData(1:end-1,:);
 
 syncIndex = find(phoneData(:,2) == -500,1,'last');
 
-angleStateRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1001);
+angleStateRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_DES_ATT);
 angleStateRefTime = phoneData(angleStateRefIndices,1)'/1000;
 angleStateRef = phoneData(angleStateRefIndices,3:8)';
 
-angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1002);
+angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
 angleStateTime = phoneData(angleStateIndices,1)'/1000;
 angleState = phoneData(angleStateIndices,3:8)';
 
-tranStateRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1011);
+tranStateRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_DES_TRANS_STATE);
 tranStateRefTime = phoneData(tranStateRefIndices,1)'/1000;
 tranStateRef = phoneData(tranStateRefIndices,3:8)';
 
-tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1012);
+tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
 
@@ -37,68 +40,68 @@ stateTime = angleStateTime;
 state = [angleState; tranStateInterp];
 state_dt = mean(diff(stateTime));
 
-gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 2);
+gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
 gyroTime = phoneData(gyroIndices,1)'/1000;
 gyro = phoneData(gyroIndices,3:end)';
 gyro_dt = mean(diff(gyroTime));
 
-magIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 3);
+magIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAGNOMETER);
 magTime = phoneData(magIndices,1)'/1000;
 mag = phoneData(magIndices,3:end)';
 mag_dt = mean(diff(magTime));
 
-accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 1);
+accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
 accelTime = phoneData(accelIndices,1)'/1000;
 accel = phoneData(accelIndices,3:end)';
 accel_dt = mean(diff(accelTime));
 
-pressureIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 4);
+pressureIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PRESSURE);
 pressureTime = phoneData(pressureIndices,1)'/1000;
 pressure = phoneData(pressureIndices,3:6)';
 
-motorIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -1000);
+motorIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MOTOR_CMDS);
 motorTime = phoneData(motorIndices,1)'/1000;
 motorCmd = phoneData(motorIndices,3:6)';
 cntlCalcTime = phoneData(motorIndices,8)'/1000;
 motor_dt = mean(diff(motorTime));
 
-mainRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -400);
-mainRunTimeTime = phoneData(mainRunTimeIndices,1)'/1000;
-mainRunTime = phoneData(mainRunTimeIndices,3:6)';
+% mainRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -400);
+% mainRunTimeTime = phoneData(mainRunTimeIndices,1)'/1000;
+% mainRunTime = phoneData(mainRunTimeIndices,3:6)';
 
-featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -600);
+featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME);
 featureMatchTimeTime = phoneData(featureMatchTimeIndices,1)'/1000;
 featureMatchTime = phoneData(featureMatchTimeIndices,3)';
 
-imageGrabberRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -402);
-imageGrabberRunTimeTime = phoneData(imageGrabberRunTimeIndices,1)'/1000;
-imageGrabberRunTime = phoneData(imageGrabberRunTimeIndices,3:8)';
+% imageGrabberRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -402);
+% imageGrabberRunTimeTime = phoneData(imageGrabberRunTimeIndices,1)'/1000;
+% imageGrabberRunTime = phoneData(imageGrabberRunTimeIndices,3:8)';
 
-throttleIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
-throttleTime = phoneData(throttleIndices,1)'/1000;
-throttle = phoneData(throttleIndices,3)';
+% throttleIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
+% throttleTime = phoneData(throttleIndices,1)'/1000;
+% throttle = phoneData(throttleIndices,3)';
 
-attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -710);
+attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
 attBiasTime = phoneData(attBiasIndices,1)'/1000;
 attBias = phoneData(attBiasIndices,3:5)';
 
-forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -711);
+forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_FORCE_GAIN);
 forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
 forceScaling = phoneData(forceScalingIndices,3)';
 
-cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
+cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
 cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
 cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
-phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 500);
+phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
 phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
 phoneTemp = phoneData(phoneTempIndices,3:6)';
 
-velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 12345);
+velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 velEstTime = phoneData(velEstIndices,1)'/1000;
 velEst = phoneData(velEstIndices,3:5)';
 
-viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == 700);
+viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
 viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
 viconReceive = phoneData(viconReceiveIndices,3:14)';
 
