@@ -29,6 +29,7 @@ set (INC ${INC}
 	${OpenCV_INCLUDE_DIRS}
 	${MXML_DIR}/include
 	${TBB_DIR}/include # note that the TBB lib comes in with OpenCV libs
+	${FERNS_DIR}/include
 	${CPUFEATURES_PATH}
 	)
 include_directories (${INC})
@@ -92,7 +93,8 @@ set (H ${H}
 	${CPUFEATURES_PATH}/cpu-features.h
 )
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 # Why doesn't this work?

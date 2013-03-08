@@ -14,6 +14,9 @@ using toadlet::egg::String;
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/video/tracking.hpp>
 
+#include "ferns/mcv.h"
+//#include "ferns/template_matching_based_tracker.h"
+
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
 
