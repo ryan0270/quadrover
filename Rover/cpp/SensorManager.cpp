@@ -3,6 +3,7 @@
 using namespace std;
 using namespace toadlet::egg;
 using namespace TNT;
+using namespace ICSL::Constants;
 
 namespace ICSL{
 namespace Quadrotor{
@@ -16,6 +17,10 @@ namespace Quadrotor{
 	{
 		mRunning = false;
 		mDone = true;
+
+		mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
+								 createRotMat(0,(double)PI));
+		mRotPhoneToCam = transpose(mRotCamToPhone);
 	}
 
 	SensorManager::~SensorManager()
@@ -290,7 +295,16 @@ namespace Quadrotor{
 			shared_ptr<SensorData> data = shared_ptr<SensorData>(new SensorDataImage());
 			data->type = SENSOR_DATA_TYPE_IMAGE;
 			data->timestamp.setTime();
+
+			mMutex_attData.lock();
+			static_pointer_cast<SensorDataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
+			mMutex_attData.unlock();
 			cap->grab();
+			mMutex_attData.lock();
+			static_pointer_cast<SensorDataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
+			static_pointer_cast<SensorDataImage>(data)->att.inject(mCurAtt);
+			mMutex_attData.unlock();
+
 			shared_ptr<cv::Mat> img(new cv::Mat);
 			cap->retrieve(*img);
 			static_pointer_cast<SensorDataImage>(data)->img = img;
@@ -298,10 +312,6 @@ namespace Quadrotor{
 			static_pointer_cast<SensorDataImage>(data)->cap = cap;
 			static_pointer_cast<SensorDataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 
-			mMutex_attData.lock();
-			static_pointer_cast<SensorDataImage>(data)->att.inject(mCurAtt);
-			static_pointer_cast<SensorDataImage>(data)->angularVel.inject(mCurAngularVel);
-			mMutex_attData.unlock();
 			static_pointer_cast<SensorDataImage>(data)->imgFormat = IMG_FORMAT_BGR;
 
 			mMutex_listeners.lock();

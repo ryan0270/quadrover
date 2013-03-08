@@ -98,10 +98,14 @@ void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataB
 				mxmlNewReal(mxmlNewElement(attNode,"roll"),data->att[0][0]);
 				mxmlNewReal(mxmlNewElement(attNode,"pitch"),data->att[1][0]);
 				mxmlNewReal(mxmlNewElement(attNode,"yaw"),data->att[2][0]);
-			mxml_node_t *angularVelNode = mxmlNewElement(imgNode,"angularVel");
-				mxmlNewReal(mxmlNewElement(angularVelNode,"x"),data->angularVel[0][0]);
-				mxmlNewReal(mxmlNewElement(angularVelNode,"y"),data->angularVel[1][0]);
-				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
+			mxml_node_t *startAngularVelNode = mxmlNewElement(imgNode,"startAngularVel");
+				mxmlNewReal(mxmlNewElement(startAngularVelNode,"x"),data->startAngularVel[0][0]);
+				mxmlNewReal(mxmlNewElement(startAngularVelNode,"y"),data->startAngularVel[1][0]);
+				mxmlNewReal(mxmlNewElement(startAngularVelNode,"z"),data->startAngularVel[2][0]);
+			mxml_node_t *endAngularVelNode = mxmlNewElement(imgNode,"endAngularVel");
+				mxmlNewReal(mxmlNewElement(endAngularVelNode,"x"),data->endAngularVel[0][0]);
+				mxmlNewReal(mxmlNewElement(endAngularVelNode,"y"),data->endAngularVel[1][0]);
+				mxmlNewReal(mxmlNewElement(endAngularVelNode,"z"),data->endAngularVel[2][0]);
 		data->unlock();
 
 		id++;

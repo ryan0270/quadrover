@@ -50,6 +50,10 @@ gyroBias_dt = mean(diff(gyroBiasTime));
 % pressureHeightTime = phoneData(pressureHeightIndices,1)'/1000;
 % pressureHeight = phoneData(pressureHeightIndices,3:4)';
 
+opticFlowVelLSIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW_LS);
+opticFlowVelLSTime = phoneData(opticFlowVelLSIndices,1)'/1000;
+opticFlowVelLS = phoneData(opticFlowVelLSIndices,3:5)';
+
 opticFlowVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 opticFlowVelTime = phoneData(opticFlowVelIndices,1)'/1000;
 opticFlowVel = phoneData(opticFlowVelIndices,3:5)';
@@ -138,10 +142,12 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 		mask = find(mask);
 		plot(viconStateTime(mask), viconState(i+9,mask)); hold all
 		plot(opticFlowVelTime, opticFlowVel(i,:),'.'); hold all
+		plot(opticFlowVelLSTime, opticFlowVelLS(i,:)/1e5,'.'); hold all
 		hold off
 		xlabel('Time [s]');
 		ylabel(opticFlowVelLabels{i});
 	end
+	legend('Vicon','BOF','OF LS');
 end
 
 %%

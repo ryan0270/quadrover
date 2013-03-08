@@ -59,9 +59,9 @@
          <yaw>0.000000</yaw>
       </AttBias>
       <AttBiasAdaptRate>
-         <roll>0.005000</roll>
-         <pitch>0.005000</pitch>
-         <yaw>0.005000</yaw>
+         <roll>0.010000</roll>
+         <pitch>0.010000</pitch>
+         <yaw>0.010000</yaw>
       </AttBiasAdaptRate>
       <ForceGainAdaptRate>0.005000</ForceGainAdaptRate>
       <BarometerZeroHeight>76.000000</BarometerZeroHeight>
@@ -98,7 +98,7 @@
    <RatioThreshold>0.650000</RatioThreshold>
    <MatchRadius>60.000000</MatchRadius>
 </Vision>
-<LogMask>7769</LogMask>
+<LogMask>1561</LogMask>
 <ImgBufferSize>10</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

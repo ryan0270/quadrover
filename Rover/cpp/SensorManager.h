@@ -66,7 +66,7 @@ class SensorDataVector : public SensorData
 class SensorDataImage : public SensorData
 {
 	public:
-	SensorDataImage() : att(3,1,0.0), angularVel(3,1,0.0) {
+	SensorDataImage() : att(3,1,0.0), startAngularVel(3,1,0.0), endAngularVel(3,1,0.)  {
 		type = SENSOR_DATA_TYPE_IMAGE; 
 		imgFormat = IMG_FORMAT_BGR; 
 		img = shared_ptr<cv::Mat>(new cv::Mat());
@@ -75,7 +75,8 @@ class SensorDataImage : public SensorData
 	SensorDataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
 		img1.copyTo(*img);
 		att = att1.copy();
-		angularVel = angularVel.copy();
+		startAngularVel = startAngularVel.copy();
+		endAngularVel = endAngularVel.copy();
 		imgFormat = fmt;
 	}
 
@@ -87,14 +88,15 @@ class SensorDataImage : public SensorData
 		d.timestamp.setTime(timestamp); 
 		img->copyTo(*(d.img)); 
 		d.att.inject(att);
-		d.angularVel.inject(angularVel);
+		d.startAngularVel.inject(startAngularVel);
+		d.endAngularVel.inject(endAngularVel);
 		d.focalLength = focalLength;
 		d.unlock();
 		unlock();
 	}
 	shared_ptr<cv::Mat> img;
 	TNT::Array2D<double> att;
-	TNT::Array2D<double> angularVel;
+	TNT::Array2D<double> startAngularVel, endAngularVel;
 	ImageFormat imgFormat;
 	double focalLength;
 	shared_ptr<cv::VideoCapture> cap;
@@ -137,6 +139,8 @@ class SensorDataPhoneTemp : public SensorData
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/video/tracking.hpp>
+
+#include "ICSL/constants.h"
 
 #include "Common.h"
 #include "QuadLogger.h"
@@ -198,6 +202,8 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	shared_ptr<cv::VideoCapture> initCamera();
 	void runImgAcq(shared_ptr<cv::VideoCapture> cap);
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
+
+	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 };
 
 

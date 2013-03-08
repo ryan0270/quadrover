@@ -260,10 +260,16 @@ namespace Quadrotor{
 		// attitude difference)
 		Array2D<double> R1 = createRotMat_ZYX(matchData->imgData0->att[2][0], matchData->imgData0->att[1][0], matchData->imgData0->att[0][0]);
 		Array2D<double> R2 = createRotMat_ZYX(matchData->imgData1->att[2][0], matchData->imgData1->att[1][0], matchData->imgData1->att[0][0]);
+		R1 = matmult(mRotPhoneToCam,R1);
+		R2 = matmult(mRotPhoneToCam,R2);
+		Array2D<double> R1_T = transpose(R1);
+		Array2D<double> R2_T = transpose(R2);
 		Array2D<double> R = matmult(R1, transpose(R2));
 		Array2D<double> q1a(3,1), q2a(3,1);
 		Array2D<double> q1(2,1), q2(2,1);
-		Array2D<double> Lv(2,3);
+		Array2D<double> Lv(2,3), Lv1(2,3), Lv2(2,3);
+		Array2D<double> Lw(2,3), Lw1(2,3), Lw2(2,3);
+		Array2D<double> angularVel(3,1);
 		for(int i=0; i<matchData->featurePoints[0].size(); i++)
 		{
 			q1a[0][0] = matchData->featurePoints[0][i].x-cx;
@@ -272,19 +278,40 @@ namespace Quadrotor{
 			q2a[0][0] = matchData->featurePoints[1][i].x-cx;
 			q2a[1][0] = matchData->featurePoints[1][i].y-cy;
 			q2a[2][0] = matchData->imgData1->focalLength;
-			// change q2 points to q1 attitude
-			q2a = matmult(R, q2a); 
+//			// change q2 points to q1 attitude
+//			q2a = matmult(R, q2a); 
+//			q1a = matmult(R1_T, q1a);
+//			q2a = matmult(R2_T, q2a);
 
 			// back to 2d points
 			q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
 			q2[0][0] = q2a[0][0]; q2[1][0] = q2a[1][0];
 
 			// Velocity jacobian
-			Lv[0][0] = -1; Lv[0][1] = 0; Lv[0][2] = q1[0][0];
-			Lv[1][0] = 0; Lv[1][1] = -1; Lv[1][2] = q1[1][0];
-			Lv = 1.0/matchData->imgData0->focalLength*Lv;
+			Lv1[0][0] = -1; Lv1[0][1] = 0; Lv1[0][2] = q1[0][0];
+			Lv1[1][0] = 0; Lv1[1][1] = -1; Lv1[1][2] = q1[1][0];
+			Lv1 = 1.0/matchData->imgData0->focalLength*Lv1;
 
-			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
+			Lv2[0][0] = -1; Lv2[0][1] = 0; Lv2[0][2] = q2[0][0];
+			Lv2[1][0] = 0; Lv2[1][1] = -1; Lv2[1][2] = q2[1][0];
+			Lv2 = 1.0/matchData->imgData1->focalLength*Lv2;
+
+			Lv = Lv1.copy();
+
+			Lw1[0][0] = q1[0][0]*q1[1][0]; Lw1[0][1] = -(1+pow(q1[0][0],2)); Lw1[0][2] = q1[1][0];
+			Lw1[1][0] = 1+pow(q1[1][0],2); Lw1[1][1] = -Lw1[0][0];			 Lw1[1][2] = -q1[0][0];
+			Lw1 = 1.0/pow(matchData->imgData0->focalLength,2)*Lw1;
+
+			Lw2[0][0] = q2[0][0]*q2[1][0]; Lw2[0][1] = -(1+pow(q2[0][0],2)); Lw2[0][2] = q2[1][0];
+			Lw2[1][0] = 1+pow(q2[1][0],2); Lw2[1][1] = -Lw2[0][0];			 Lw2[1][2] = -q2[0][0];
+			Lw2 = 1.0/pow(matchData->imgData1->focalLength,2)*Lw2;
+
+			Lw = Lw1.copy();
+
+			angularVel.inject(0.5*(matchData->imgData0->startAngularVel+matchData->imgData1->endAngularVel));
+
+			A += matmult(transpose(q2-q1-matmult(Lw,matmult(mRotPhoneToCam,angularVel))),matmult(SnInv, Lv));
+//			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
 			B += matmult(transpose(Lv), matmult(SnInv, Lv));
 		}
 		Array2D<double> temp1 = (dt/z)*A+matmult(transpose(mu_v), SvInv);
@@ -307,7 +334,7 @@ namespace Quadrotor{
 		String str2 = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW_LS+"\t";
 		for(int i=0; i<velLS.dim1(); i++)
 			str2 = str2+velLS[i][0]+"\t";
-		mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+		mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
 
 		mFlowCalcDone = true;
 		mNewOpticFlowReady = true;
