@@ -86,7 +86,7 @@ void CommManager::run()
 	while(mRun)
 	{
 		mMutex_socketTCP.lock();
-		mConnected = mSocketTCP != NULL && mSocketTCP->connected();
+		mConnected = mSocketTCP != NULL;
 		mMutex_socketTCP.unlock();
 
 		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 500)
@@ -116,7 +116,7 @@ void CommManager::run()
 			// mServerSocketTCP->setBlocking(true);
 //			Socket *sock = mServerSocketTCP->accept();
 			mSocketTCP = Socket::ptr(mServerSocketTCP->accept());
-			if(mSocketTCP != NULL && mSocketTCP->connected())
+			if(mSocketTCP != NULL)
 			{
 				Log::alert(String("Connected to PC"));
 				mAddrPC = mSocketTCP->getHostIPAddress();
@@ -161,7 +161,7 @@ void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 num
 	if(!mConnected)
 		return;
 //	mMutex_socketTCP.lock();
-//	bool connected = mSocketTCP == NULL || mSocketTCP->connected() == false;
+//	bool connected = mSocketTCP == NULL
 //	mMutex_socketTCP.unlock();
 //	if(connected)
 //		return;
@@ -231,7 +231,7 @@ void CommManager::pollTCP()
 	if(!mConnected)
 		return;
 	mMutex_socketTCP.lock();
-	bool newPacketReady = mSocketTCP != NULL && mSocketTCP->connected() && mSocketTCP->pollRead(0);
+	bool newPacketReady = mSocketTCP != NULL && mSocketTCP->pollRead(0);
 	mMutex_socketTCP.unlock();
 	while(newPacketReady)
 	{
@@ -605,7 +605,7 @@ void CommManager::pollTCP()
 		}
 
 		mMutex_socketTCP.lock();
-		newPacketReady = mSocketTCP != NULL && mSocketTCP->connected() && mSocketTCP->pollRead(0);
+		newPacketReady = mSocketTCP != NULL && mSocketTCP->pollRead(0);
 		mMutex_socketTCP.unlock();
 	}
 }
@@ -665,7 +665,7 @@ bool CommManager::receivePacket(Packet &pck, int size)
 
 bool CommManager::sendLogFile(const char* filename)
 {
-	if(mSocketTCP==NULL || mSocketTCP->connected()==false)
+	if(mSocketTCP==NULL)
 		return false;
 
 	Log::alert(String("Sending log file"));

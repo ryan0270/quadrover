@@ -90,6 +90,7 @@ void Rover::initialize()
 
 	mVisionProcessor.setStartTime(mStartTime);
 	mVisionProcessor.setQuadLogger(&mQuadLogger);
+	mVisionProcessor.initialize();
 	mVisionProcessor.start();
 	mCommManager.addListener(&mVisionProcessor);
 	mVisionProcessor.addListener(&mObsvTranslational);

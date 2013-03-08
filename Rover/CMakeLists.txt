@@ -48,6 +48,7 @@ endforeach()
 set (LIBS 
 	${TOADLET_EGG_LIB} 
 	${OpenCV_LIBS_OPT} 
+	${FERNS_DIR}/libs/libferns.a
 	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
 	-lgnustl_static # this i already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
 	-lz -llog -ldl EGL android
@@ -94,7 +95,7 @@ set (H ${H}
 )
 
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti  -std=c++0x")
 
 set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 # Why doesn't this work?

@@ -36,6 +36,8 @@ VisionProcessor::VisionProcessor() :
 mLogImages = true;
 
 	mImageDataPrev = mImageDataCur = mImageDataNext = NULL;
+
+	mFernsTracker = NULL;
 }
 
 void VisionProcessor::shutdown()
@@ -58,7 +60,29 @@ void VisionProcessor::shutdown()
 	mCurImageGray.release();
 	mMutex_image.unlock();
 
+	if(mFernsTracker != NULL)
+	{
+		delete mFernsTracker;
+	}
+
 	Log::alert("-------------------------- Vision processor done ----------------------");
+}
+
+void VisionProcessor::initialize()
+{
+	mFernsTracker = new template_matching_based_tracker();
+	String filename = "/sdcard/RoverService/book.jpg.tracker_data";
+	if(mFernsTracker->load(filename.c_str()))
+	{
+		Log::alert("Ferns tracker loaded");
+		mFernsTracker->initialize();
+	}
+	else
+	{
+		Log::alert("Ferns tracker failed to load");
+		delete mFernsTracker;
+		mFernsTracker = NULL;
+	}
 }
 
 void VisionProcessor::getLastImage(cv::Mat *outImage)
@@ -104,6 +128,17 @@ void VisionProcessor::run()
 			Time procStart;
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
+			// right now the ferns tracker is crashing
+			// I think I need to go through and update their code to 
+			// use cv::Mat's
+//			bool result = mFernsTracker->track((IplImage*)(&mCurImageGray));
+//			if(result)
+//				Log::alert("Found it");
+//			else
+//			{
+//				Log::alert("Can't find it");
+//				mFernsTracker->initialize();
+//			}
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
 			mCurImage.copyTo(mCurImageAnnotated);
 			drawMatches(points, mCurImageAnnotated);

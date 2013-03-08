@@ -71,7 +71,7 @@ namespace Quadrotor{
 		Collection<uint8> cmds(4,0);
 		sendCommandForced(cmds);
 		mMutex_socket.lock();
-		if(mSocket != NULL && mSocket->connected())
+		if(mSocket != NULL)
 		{
 			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
 			mSocket->close();
@@ -98,7 +98,7 @@ namespace Quadrotor{
 
 		if(result != 4*sizeof(uint8))
 		{
-			if(mSocket != NULL && mSocket->connected())
+			if(mSocket != NULL)
 				mSocket->close();
 
 			mSocket = NULL;
@@ -121,7 +121,7 @@ namespace Quadrotor{
 
 		if(result != 4*sizeof(uint8))
 		{
-			if(mSocket != NULL && mSocket->connected())
+			if(mSocket != NULL)
 				mSocket->close();
 
 			mSocket = NULL;
@@ -150,7 +150,7 @@ namespace Quadrotor{
 			return false;
 
 		mMutex_socket.lock(); 
-		bool temp = (mSocket != NULL && mSocket->connected()); 
+		bool temp = (mSocket != NULL); 
 		mMutex_socket.unlock(); 
 		return temp;
 	}
