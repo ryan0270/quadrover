@@ -15,6 +15,7 @@ using toadlet::egg::String;
 #include <opencv2/video/tracking.hpp>
 
 #include "ferns/mcv.h"
+#include "ferns/planar_pattern_detector_builder.h"
 #include "ferns/template_matching_based_tracker.h"
 
 #include "TNT/tnt.h"
@@ -121,6 +122,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		Matcher mFeatureMatcher;
 		template_matching_based_tracker *mFernsTracker;
+		planar_pattern_detector *mFernsDetector;
 
 		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
 		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);

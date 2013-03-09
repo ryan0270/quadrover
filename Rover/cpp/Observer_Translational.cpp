@@ -561,7 +561,7 @@ namespace Quadrotor{
 		// update bias and force scaling estimates
 		if(mLastMeasUpdateTime.getMS() == 0)
 			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6;
+		double dt = min(0.05,mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6);
 		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
 		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
 		mForceGain += mForceGainAdaptRate*err[2][0];
@@ -617,6 +617,25 @@ namespace Quadrotor{
 
 		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
+
+		// update bias and force scaling estimates
+		if(mLastMeasUpdateTime.getMS() == 0)
+			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
+		double dt = min(0.05,mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6);
+		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+		mForceGain += mForceGainAdaptRate*err[2][0];
+		mLastMeasUpdateTime.setTime();
+		{
+			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
+			for(int i=0; i<mAttBias.dim1(); i++)
+				str1 = str1+mAttBias[i][0]+"\t";
+			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+
+			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
+			str2 = str2+mForceGain+"\t";
+			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+		}
 
 		mMutex_data.unlock();
 	}

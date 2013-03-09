@@ -38,6 +38,7 @@ mLogImages = true;
 	mImageDataPrev = mImageDataCur = mImageDataNext = NULL;
 
 	mFernsTracker = NULL;
+	mFernsDetector = NULL;
 }
 
 void VisionProcessor::shutdown()
@@ -61,9 +62,9 @@ void VisionProcessor::shutdown()
 	mMutex_image.unlock();
 
 	if(mFernsTracker != NULL)
-	{
 		delete mFernsTracker;
-	}
+	if(mFernsDetector != NULL)
+		delete mFernsDetector;
 
 	Log::alert("-------------------------- Vision processor done ----------------------");
 }
@@ -71,8 +72,12 @@ void VisionProcessor::shutdown()
 void VisionProcessor::initialize()
 {
 	mFernsTracker = new template_matching_based_tracker();
-	String filename = "/sdcard/RoverService/book.jpg.tracker_data";
-	if(mFernsTracker->load(filename.c_str()))
+//	String filename = "/sdcard/RoverService/book.jpg.tracker_data";
+//	String filename = "/sdcard/RoverService/Keyboard.jpg.tracker_data";
+//	String filename = "/sdcard/RoverService/lunch.jpg.tracker_data";
+	String filename = "/sdcard/RoverService/lappy.jpg";
+//	String filename = "/sdcard/RoverService/model.bmp.tracker_data";
+	if(mFernsTracker->load((filename+".tracker_data").c_str()))
 	{
 		Log::alert("Ferns tracker loaded");
 		mFernsTracker->initialize();
@@ -82,6 +87,24 @@ void VisionProcessor::initialize()
 		Log::alert("Ferns tracker failed to load");
 		delete mFernsTracker;
 		mFernsTracker = NULL;
+	}
+
+	affine_transformation_range range;
+	Log::alert("Loading ferns detector ...");
+	mFernsDetector = planar_pattern_detector_builder::build_with_cache(filename.c_str(),
+												&range,
+												400,
+												5000,
+												0.0,
+												32, 7, 4,
+												30, 12,
+												10e3, 200);
+	if(mFernsDetector == NULL)
+		Log::alert("Failed to load detector");
+	else
+	{
+		Log::alert("success!");
+		mFernsDetector->set_maximum_number_of_points_to_detect(1000);
 	}
 }
 
@@ -131,7 +154,41 @@ void VisionProcessor::run()
 			// right now the ferns tracker is crashing
 			// I think I need to go through and update their code to 
 			// use cv::Mat's
-//			bool result = mFernsTracker->track((IplImage*)(&mCurImageGray));
+			IplImage chad = (IplImage)mCurImageGray;
+Log::alert("Before");
+			if(mFernsDetector!= NULL  && mFernsDetector->detect(&chad))
+			{
+Log::alert("After");
+				if(mFernsDetector->pattern_is_detected)
+				{
+					mFernsTracker->initialize(
+							mFernsDetector->detected_u_corner[0], mFernsDetector->detected_v_corner[0],
+							mFernsDetector->detected_u_corner[1], mFernsDetector->detected_v_corner[1],
+							mFernsDetector->detected_u_corner[2], mFernsDetector->detected_v_corner[2],
+							mFernsDetector->detected_u_corner[3], mFernsDetector->detected_v_corner[3]);
+
+					bool found = mFernsTracker->track(&chad);
+					if(found)
+					{
+						cv::Point p1(mFernsTracker->u0[0], mFernsTracker->u0[1]);
+						cv::Point p2(mFernsTracker->u0[2], mFernsTracker->u0[3]);
+						cv::Point p3(mFernsTracker->u0[4], mFernsTracker->u0[5]);
+						cv::Point p4(mFernsTracker->u0[6], mFernsTracker->u0[7]);
+
+						line(mCurImageAnnotated,p1,p2,cv::Scalar(0,0,255),3);
+						line(mCurImageAnnotated,p2,p3,cv::Scalar(0,0,255),3);
+						line(mCurImageAnnotated,p3,p4,cv::Scalar(0,0,255),3);
+						line(mCurImageAnnotated,p4,p1,cv::Scalar(0,0,255),3);
+
+						//					for(int i=0; i<mFernsTracker->nx*mFernsTracker->ny; i++)
+						//					{
+						//						int x1, y1;
+						//						mFernsTracker->f.transform_point(mFernsTracker->m[2*i], mFernsTracker->m[2*i+1], x1, y1);
+						//						circle(mCurImageAnnotated,cv::Point(x1, y1),2,cv::Scalar(125,0,125),-1);
+						//					}
+					}
+				}
+			}
 //			if(result)
 //				Log::alert("Found it");
 //			else
@@ -142,7 +199,6 @@ void VisionProcessor::run()
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
 			mCurImage.copyTo(mCurImageAnnotated);
 			drawMatches(points, mCurImageAnnotated);
-//Log::alert(String()+"Found " + points[0].size() + " matches");
 
 			shared_ptr<ImageMatchData> data(new ImageMatchData());
 			data->dt = dt;

@@ -1,8 +1,11 @@
 package com.icsl.Rover;
 
 import android.app.Activity;
+import android.content.ServiceConnection;
+import android.content.ComponentName;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
 import android.view.View;
 import android.widget.ImageView;
 import android.content.Intent;
@@ -35,6 +38,9 @@ public class Rover extends Activity implements Runnable
 	private ImageView mIvImageDisplay;
 	private TextView mTvGyro, mTvAccel, mTvMag, mTvImgProcTime;
 	private TextView mTvRoll, mTvPitch, mTvYaw;
+
+	RoverService mService;
+	boolean mBound = false;
 
     /** Called when the activity is first created. */
     @Override
@@ -137,18 +143,29 @@ public class Rover extends Activity implements Runnable
 	@Override
 	public void onStop()
 	{
-		Log.i(ME,"Java stopped");
 		super.onStop();
+		if(mBound)
+		{
+			unbindService(mConnection);
+			mBound = false;
+		}
+		Log.i(ME,"Java stopped");
 	}
 
 	public void onBtnStartService_clicked(View v)
 	{
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		startService(roverServiceIntent);
+		bindService(roverServiceIntent, mConnection, BIND_AUTO_CREATE);
 	}
 
 	public void onBtnStopService_clicked(View v)
 	{
+		if(mBound)
+		{
+			unbindService(mConnection);
+			mBound = false;
+		}
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		stopService(roverServiceIntent);
 //		toggleViewType();
@@ -162,45 +179,30 @@ public class Rover extends Activity implements Runnable
 		mThreadRun = true;
 		while(mThreadRun)
 		{
-//			if(!pcIsConnected() && false)
-//			{
-//
-//				Mat img = new Mat();
-//				try{
-//					getImage(mImage.getNativeObjAddr());
-//					Imgproc.cvtColor(mImage,img,Imgproc.COLOR_BGR2RGB);
-//					if(mBitmap.getWidth() != mImage.width() || mBitmap.getHeight() != mImage.height())
-//					{
-//						mBitmap.recycle();
-//						mBitmap = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
-//					}
-//					Utils.matToBitmap(img, mBitmap);
-//				} catch(Exception e){
-//					img = null;
-//					//				mBitmap.recycle();
-//					//				mBitmap= null;
-//				}
-//				if(img != null)
-//					img.release();
-//
-//				final float gyro[] = getGyroValue();
-//				final float accel[] = getAccelValue();
-//				final float mag[] = getMagValue();
-//				final float att[] = getAttitude();
-//				runOnUiThread(new Runnable(){
-//					public void run(){ 
-//						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
-//						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
-//						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
-//						mTvImgProcTime.setText("Proc Time: "+String.valueOf(getImageProcTimeMS())+"ms");
-//						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
-//						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
-//						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
-//
-//						mIvImageDisplay.setImageBitmap(mBitmap); 
-//					}
-//				});
-//			}
+			if(mBound)
+			{
+				mBitmap = mService.getImage();
+
+				final float gyro[] = mService.getRoverGyroValue();
+				final float accel[] = mService.getRoverAccelValue();
+				final float mag[] = mService.getRoverMagValue();
+				final float att[] = mService.getRoverAttitude();
+				final int imgProcTimeMS = mService.getRoverImageProcTimeMS();
+				runOnUiThread(new Runnable(){
+					public void run(){ 
+						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
+						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
+						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
+						mTvImgProcTime.setText("Proc Time: "+String.valueOf(imgProcTimeMS)+"ms");
+						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
+						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
+						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
+
+						if(mBitmap != null)
+							mIvImageDisplay.setImageBitmap(mBitmap); 
+					}
+				});
+			}
 
 			try{
 				Thread.sleep(100);
@@ -212,5 +214,25 @@ public class Rover extends Activity implements Runnable
 		Log.i(ME,"Java Runner dead *************************");
 		mThreadIsDone = true;
 	}
+
+	private ServiceConnection mConnection = new ServiceConnection() {
+		@Override
+		public void onServiceConnected(ComponentName className, IBinder service) {
+			RoverService.RoverBinder binder = (RoverService.RoverBinder) service;
+			mService = binder.getService();
+			mBound = true;
+			Log.i(ME, "Bound to Rover service");
+		}
+
+//		@Override
+//		public void onServiceDisconnected(ComponentName arg0)
+//		{ mBound = false; Log.i(ME, "Unbound from Rover service"); }
+		
+		@Override
+		public void onServiceDisconnected(ComponentName arg0) {
+			mBound = false;
+			Log.i(ME, "Unbound from Rover service");
+		}
+	};
 }
 

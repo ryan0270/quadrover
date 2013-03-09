@@ -530,13 +530,13 @@ void Leash::pollUDP()
 
 void Leash::pollTCP()
 {
-	if(mSocketTCP == NULL || !mSocketTCP->connected())
+	if(mSocketTCP == NULL)
 		return;
 
 	// need blocking on to avoid conflicts with sending data ... I think
 	mMutex_socketTCP.lock();
 	mSocketTCP->setBlocking(true);
-	while(mSocketTCP != NULL && mSocketTCP->pollRead(0) && mSocketTCP->connected())
+	while(mSocketTCP != NULL && mSocketTCP->pollRead(0))
 	{
 		int code;
 		if( receiveTCP(mSocketTCP,(tbyte*)&code, sizeof(code)) == sizeof(code))
@@ -683,7 +683,7 @@ bool Leash::sendUDP(tbyte* data, int size)
 
 bool Leash::sendTCP(tbyte* data, int size)
 {
-	if(mSocketTCP == NULL || mSocketTCP->connected() == false)
+	if(mSocketTCP == NULL)
 		return false;
 
 //	mMutex_socketTCP.lock();
