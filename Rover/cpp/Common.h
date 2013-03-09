@@ -1,7 +1,7 @@
 #ifndef QUAD_CONSTANTS
 #define QUAD_CONSTANTS
 
-#include <toadlet/toadlet.h>
+#include <toadlet/egg.h>
 
 
 namespace ICSL {

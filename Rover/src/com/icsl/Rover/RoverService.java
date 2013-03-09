@@ -8,6 +8,8 @@ import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Intent;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.os.Binder;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,6 +26,12 @@ import java.io.File;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+
 public class RoverService extends Service {
 //	private ServiceHandler mServiceHandler;
 	private final static String ME = "RoverService";
@@ -32,6 +40,11 @@ public class RoverService extends Service {
 	public Notification.Builder mNotificationBuilder;
 
 	private PowerManager.WakeLock mWakeLock;
+
+	private final IBinder mBinder = new RoverBinder();
+
+	public class RoverBinder extends Binder 
+	{ RoverService getService(){ return RoverService.this; } }
 
 	@Override
 	public void onCreate()
@@ -130,8 +143,7 @@ public class RoverService extends Service {
 	@Override
 	public IBinder onBind(Intent intent)
 	{
-		// No binding
-		return null;
+		return mBinder;
 	}
 
 	// taken from 
@@ -151,6 +163,33 @@ public class RoverService extends Service {
 		}
 		return( path.delete() );
 	}
+
+	public Bitmap getImage()
+	{
+		if(pcIsConnected())
+			return null;
+
+		Mat img = new Mat();
+		Bitmap bmp;
+		try{
+			getImage(img.getNativeObjAddr());
+			Imgproc.cvtColor(img,img,Imgproc.COLOR_BGR2RGB);
+			bmp = Bitmap.createBitmap(img.width(), img.height(), Bitmap.Config.ARGB_8888);
+			Utils.matToBitmap(img, bmp);
+		} catch(Exception e){
+			img = null;
+			bmp = null;
+		}
+		if(img != null)
+			img.release();
+		return bmp;
+	}
+
+	float[] getRoverGyroValue(){ return getGyroValue(); }
+	float[] getRoverAccelValue(){ return getAccelValue(); }
+	float[] getRoverMagValue(){ return getMagValue(); }
+	float[] getRoverAttitude(){ return getAttitude(); }
+	int getRoverImageProcTimeMS(){ return getImageProcTimeMS(); }
 
 	public native String nativeTest();
 	public native void onJNIStart();

@@ -77,7 +77,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 
 		void toggleIbvs();
 
-		void syncStartTime(unsigned long start){mStartTimeUniverseMS = start; if(mSocketTCP!=NULL && mSocketTCP->connected()) onBtnSyncTime_clicked();};
+		void syncStartTime(unsigned long start){mStartTimeUniverseMS = start; if(mSocketTCP!=NULL) onBtnSyncTime_clicked();};
 		bool loadConfigFromFile(string filename);
 		void saveConfigToFile(string filename);
 
