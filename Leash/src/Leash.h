@@ -16,6 +16,7 @@ using ::uint64;
 #include <iostream>
 #include <list>
 #include <vector>
+#include <random>
 
 #include <QObject>
 #include <QWidget>
@@ -220,6 +221,9 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		TNT::Array2D<float> mRotViconToPhone, mRotPhoneToVicon;
 
 		uint64 mLastTelemSendTime;
+
+		default_random_engine mRandGenerator;
+		normal_distribution<float> mGaussDist;
 };
 }
 }

@@ -111,6 +111,7 @@ SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.cpp)
 SOURCE_GROUP(TelemetryVicon ${ICSL_QUADROVER_DIR}/TelemetryVicon/.*)
 SOURCE_GROUP(QuadRover\\Moc ../.*moc.*)
 
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -std=c++11)
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 #	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wreorder -Wunused-but-set-variable -Wunused-variable -Wsign-compare")
 #	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")

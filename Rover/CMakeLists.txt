@@ -29,7 +29,6 @@ set (INC ${INC}
 	${OpenCV_INCLUDE_DIRS}
 	${MXML_DIR}/include
 	${TBB_DIR}/include # note that the TBB lib comes in with OpenCV libs
-	#	${FERNS_DIR}/include
 	${CPUFEATURES_PATH}
 	)
 include_directories (${INC})
@@ -48,7 +47,6 @@ endforeach()
 set (LIBS 
 	${TOADLET_EGG_LIB} 
 	${OpenCV_LIBS_OPT} 
-	#	${FERNS_DIR}/libs/libferns.a
 	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
 	-lgnustl_static # this i already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
 	-lz -llog -ldl EGL android
@@ -70,21 +68,6 @@ set (SRC ${SRC}
 	./cpp/Matcher.cpp
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
-	./cpp/ferns/mcv.cc
-	./cpp/ferns/planar_pattern_detector.cc
-	./cpp/ferns/planar_pattern_detector_builder.cc
-	./cpp/ferns/affine_transformation_range.cc
-	./cpp/ferns/buffer_management.cc
-	./cpp/ferns/pyr_yape06.cc
-	./cpp/ferns/homography06.cc
-	./cpp/ferns/homography_estimator.cc
-	./cpp/ferns/fine_gaussian_pyramid.cc
-	./cpp/ferns/mcvGaussianSmoothing.cc
-	./cpp/ferns/affine_image_generator06.cc
-	./cpp/ferns/fern_based_point_classifier.cc
-	./cpp/ferns/ferns.cc
-	./cpp/ferns/template_matching_based_tracker.cc
-	./cpp/ferns/cmphomo.cc
 )
 
 # Headers
@@ -107,23 +90,6 @@ set (H ${H}
 	./cpp/ICSL/SystemModel/ISystemModelAffine.h
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
 	${CPUFEATURES_PATH}/cpu-features.h
-	./cpp/ferns/affine_image_generator06.h
-	./cpp/ferns/affine_transformation_range.h
-	./cpp/ferns/buffer_management.h
-	./cpp/ferns/cmphomo.h
-	./cpp/ferns/fern_based_point_classifier.h
-	./cpp/ferns/ferns.h
-	./cpp/ferns/fine_gaussian_pyramid.h
-	./cpp/ferns/general.h
-	./cpp/ferns/homography06.h
-	./cpp/ferns/homography_estimator.h
-	./cpp/ferns/keypoint.h
-	./cpp/ferns/mcvGaussianSmoothing.h
-	./cpp/ferns/mcv.h
-	./cpp/ferns/planar_pattern_detector_builder.h
-	./cpp/ferns/planar_pattern_detector.h
-	./cpp/ferns/pyr_yape06.h
-	./cpp/ferns/template_matching_based_tracker.h
 )
 
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")

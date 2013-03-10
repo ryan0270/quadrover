@@ -12,9 +12,12 @@
 #include <toadlet/toadlet.h>
 #include "Common.h"
 #include "Time.h"
-#define ICSL_SENSOR_DATA_ONLY
-#include "SensorManager.h"
+#define ICSL_SENSOR_DATA_ONLY 
+#include "SensorManager.h" 
 #undef ICSL_SENSOR_DATA_ONLY
+#define ICSL_IMAGEMATCHDATA_ONLY
+#include "VisionProcessor.h"
+#undef ICSL_IMAGEMATCHDATA_ONLY
 
 using namespace std;
 
@@ -43,9 +46,11 @@ class QuadLogger
 		void pause(){mPaused = true;}
 		void unpause(){mPaused = false;}
 
-		void saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer);
+		void saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer,
+							 list<shared_ptr<ImageMatchData> > const &matchDataBuffer);
 
 		void setStartTime(Time time){mStartTime.setTime(time);}
+
 	protected:
 		String mDir, mFilename;
 		uint32 mTypeMask;

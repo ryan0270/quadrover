@@ -14,7 +14,6 @@
 
 #include "Leash.h"
 
-using namespace std;
 using namespace ICSL;
 using namespace ICSL::Quadrotor;
 
