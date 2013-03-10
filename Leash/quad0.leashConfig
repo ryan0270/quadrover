@@ -4,11 +4,11 @@
       <P>
          <x>2.000000</x>
          <y>2.000000</y>
-         <z>5.000000</z>
+         <z>4.000000</z>
       </P>
       <D>
-         <x>5.000000</x>
-         <y>5.000000</y>
+         <x>4.000000</x>
+         <y>4.000000</y>
          <z>3.000000</z>
       </D>
       <I>
@@ -38,32 +38,32 @@
 <Observer>
    <Translation>
       <MeasVar>
-         <x>0.010000</x>
-         <y>0.010000</y>
-         <z>0.001000</z>
-         <xVel>1.000000</xVel>
-         <yVel>1.000000</yVel>
-         <zVel>1.000000</zVel>
+         <x>0.002000</x>
+         <y>0.002000</y>
+         <z>0.002000</z>
+         <xVel>0.010000</xVel>
+         <yVel>0.010000</yVel>
+         <zVel>0.010000</zVel>
       </MeasVar>
       <DynVar>
-         <x>0.100000</x>
-         <y>0.100000</y>
-         <z>0.010000</z>
-         <xVel>0.100000</xVel>
-         <yVel>0.100000</yVel>
-         <zVel>0.500000</zVel>
+         <x>0.000100</x>
+         <y>0.000100</y>
+         <z>0.001000</z>
+         <xVel>0.010000</xVel>
+         <yVel>0.010000</yVel>
+         <zVel>0.100000</zVel>
       </DynVar>
       <AttBias>
-         <roll>-0.001500</roll>
-         <pitch>0.010500</pitch>
+         <roll>-0.003000</roll>
+         <pitch>0.012000</pitch>
          <yaw>0.000000</yaw>
       </AttBias>
       <AttBiasAdaptRate>
-         <roll>0.005000</roll>
-         <pitch>0.005000</pitch>
+         <roll>0.001000</roll>
+         <pitch>0.001000</pitch>
          <yaw>0.010000</yaw>
       </AttBiasAdaptRate>
-      <ForceGainAdaptRate>0.001000</ForceGainAdaptRate>
+      <ForceGainAdaptRate>0.002000</ForceGainAdaptRate>
       <BarometerZeroHeight>76.000000</BarometerZeroHeight>
    </Translation>
    <Attitude>
@@ -95,10 +95,10 @@
    </MotorTrim>
 </Hardware>
 <Vision>
-   <RatioThreshold>0.650000</RatioThreshold>
-   <MatchRadius>60.000000</MatchRadius>
+   <RatioThreshold>0.500000</RatioThreshold>
+   <MatchRadius>50.000000</MatchRadius>
 </Vision>
-<LogMask>1561</LogMask>
-<ImgBufferSize>10</ImgBufferSize>
+<LogMask>1565</LogMask>
+<ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

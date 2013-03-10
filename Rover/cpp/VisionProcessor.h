@@ -1,35 +1,17 @@
-#ifndef VISIONPROCESSOR_H
-#define VISIONPROCESSOR_H
-#include <memory>
-#include <sched.h>
-#include <math.h>
-#include <list>
-
+#ifndef ICSL_IMAGEMATCHDATA
+#define ICSL_IMAGEMATCHDATA
 #include <toadlet/egg.h>
-using toadlet::egg::String;
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/video/tracking.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
 
-#include "ferns/mcv.h"
-#include "ferns/planar_pattern_detector_builder.h"
-#include "ferns/template_matching_based_tracker.h"
-
-#include "TNT/tnt.h"
-#include "TNT_Utils.h"
-
-#include "ICSL/constants.h"
-#include "QuadLogger.h"
-#include "Common.h"
-#include "Observer_Angular.h"
-#include "Time.h"
-#include "CommManager.h"
+#define ICSL_SENSOR_DATA_ONLY
 #include "SensorManager.h"
-#include "Matcher.h"
-
+#undef ICSL_SENSOR_DATA_ONLY
 namespace ICSL {
 namespace Quadrotor {
 
@@ -46,7 +28,43 @@ class ImageMatchData
 	protected:
 	toadlet::egg::Mutex mMutex;
 };
+} // namespace Quadrotor
+} // namespace ICSL
+#endif // ICSL_IMAGEMATCHDATA
 
+#ifndef ICSL_IMAGEMATCHDATA_ONLY
+#ifndef VISIONPROCESSOR_H
+#define VISIONPROCESSOR_H
+#include <memory>
+#include <sched.h>
+#include <math.h>
+#include <list>
+
+#include <toadlet/egg.h>
+using toadlet::egg::String;
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/video/tracking.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
+
+#include "TNT/tnt.h"
+#include "TNT_Utils.h"
+
+#include "ICSL/constants.h"
+#include "QuadLogger.h"
+#include "Common.h"
+#include "Observer_Angular.h"
+#include "Time.h"
+#include "CommManager.h"
+#include "SensorManager.h"
+
+#include "Matcher.h"
+
+namespace ICSL {
+namespace Quadrotor {
 class VisionProcessorListener
 {
 	public:
@@ -89,6 +107,8 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void onNewCommVisionRatioThreshold(float h);
 		void onNewCommVisionMatchRadius(float r);
 		void onCommConnectionLost();
+		void onNewCommMotorOn(){mMotorOn = true;}
+		void onNewCommMotorOff(){mMotorOn = false;}
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<SensorData> const &data);
@@ -119,16 +139,19 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		int mImgBufferMaxSize;
 		list<shared_ptr<SensorDataImage> > mImgDataBuffer;
+		list<shared_ptr<ImageMatchData> > mImgMatchDataBuffer;
 
 		Matcher mFeatureMatcher;
-		template_matching_based_tracker *mFernsTracker;
-		planar_pattern_detector *mFernsDetector;
+		cv::CascadeClassifier mCascadeClassifier;
 
 		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
 		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);
+
+		bool mMotorOn;
 };
 
 } // namespace Quadrotor
 } // namespace ICSL
 
-#endif
+#endif // VISIONPROCESSOR_H
+#endif // ICSL_IMAGEMATCHDATA_ONLY

@@ -505,6 +505,9 @@ void Rover::onNewCommTimeSync(int time)
 	mTranslationController.setStartTime(mStartTime);
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mMutex_cntl.unlock();
+	
+	mQuadLogger.setStartTime(mStartTime);
+
 	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_TIME_SYNC + "\t" + delta;
 	mMutex_cntl.unlock();
 	mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);

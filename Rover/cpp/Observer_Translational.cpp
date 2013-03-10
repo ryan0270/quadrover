@@ -70,6 +70,8 @@ namespace Quadrotor{
 
 		mFlowCalcDone = true;
 		mNewOpticFlowReady = false;
+
+		mMotorOn = false;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -124,7 +126,7 @@ namespace Quadrotor{
 				thrust += mForceGain*mMotorCmds[i];
 			mMutex_cmds.unlock();
 
-			if(abs(thrust) >= 1e-6) 
+			if(mMotorOn)
 			{
 				// third column of orientation matrix, i.e. R*e3
 				mMutex_att.lock();
@@ -141,7 +143,7 @@ namespace Quadrotor{
 				mMutex_data.unlock();
 				accel[2][0] -= GRAVITY;
 			}
-			else // assume thrust = 0 means the motors are off and we're sitting still on the ground
+			else 
 			{
 				for(int i=0; i<accel.dim1(); i++)
 					accel[i][0] = 0;
@@ -165,7 +167,7 @@ namespace Quadrotor{
 			{
 				mMutex_meas.lock();
 				Array2D<double> vel = mOpticFlowVel.copy();
-				vel[2][0] = mLastMeas[5][0];
+//vel[2][0] = mLastMeas[5][0];
 				mMutex_meas.unlock();
 
 				doMeasUpdateKF_velOnly(vel);
@@ -196,7 +198,8 @@ namespace Quadrotor{
 //				doMeasUpdateKF_zOnly(zTemp);
 //			}
 
-			if(mNewImageResultsReady && mFlowCalcDone)
+			if(mNewImageResultsReady && mFlowCalcDone
+					&& mMotorOn)
 			{
 				// if we're here then the previous thread should already be finished
 				flowCalcThread.imageMatchData = mImageMatchData;
@@ -235,7 +238,8 @@ namespace Quadrotor{
 		mMutex_data.lock();
 		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
-		Array2D<double> Sn = 3*3*createIdentity(2);
+//		Array2D<double> Sn = 30*30*createIdentity(2);
+		Array2D<double> Sn = 1e3*1e3*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
 
@@ -245,6 +249,8 @@ namespace Quadrotor{
 		double z = mStateKF[2][0];
 		z -= 0.060; // offset between markers and camera
 
+Log::alert("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+printArray("mErrCovKF: \n", mErrCovKF);
 		// Rotate prior velocity information to camera coords
 		mu_v = matmult(mRotPhoneToCam, mu_v);
 		SvInv = matmult(mRotPhoneToCam, matmult(SvInv, mRotCamToPhone));
@@ -269,7 +275,7 @@ namespace Quadrotor{
 		Array2D<double> q1(2,1), q2(2,1);
 		Array2D<double> Lv(2,3), Lv1(2,3), Lv2(2,3);
 		Array2D<double> Lw(2,3), Lw1(2,3), Lw2(2,3);
-		Array2D<double> angularVel(3,1);
+		Array2D<double> angularVel(3,1,0.0);
 		for(int i=0; i<matchData->featurePoints[0].size(); i++)
 		{
 			q1a[0][0] = matchData->featurePoints[0][i].x-cx;
@@ -280,38 +286,42 @@ namespace Quadrotor{
 			q2a[2][0] = matchData->imgData1->focalLength;
 //			// change q2 points to q1 attitude
 //			q2a = matmult(R, q2a); 
-//			q1a = matmult(R1_T, q1a);
-//			q2a = matmult(R2_T, q2a);
+			q1a = matmult(R1_T, q1a);
+			q2a = matmult(R2_T, q2a);
+
+			// project back onto the focal plane
+			q1a = matchData->imgData0->focalLength/q1a[2][0]*q1a;
+			q2a = matchData->imgData1->focalLength/q2a[2][0]*q2a;
 
 			// back to 2d points
 			q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
 			q2[0][0] = q2a[0][0]; q2[1][0] = q2a[1][0];
 
 			// Velocity jacobian
-			Lv1[0][0] = -1; Lv1[0][1] = 0; Lv1[0][2] = q1[0][0];
-			Lv1[1][0] = 0; Lv1[1][1] = -1; Lv1[1][2] = q1[1][0];
-			Lv1 = 1.0/matchData->imgData0->focalLength*Lv1;
+			double f1= matchData->imgData0->focalLength;
+			Lv1[0][0] = -f1; Lv1[0][1] = 0; Lv1[0][2] = q1[0][0];
+			Lv1[1][0] = 0; Lv1[1][1] = -f1; Lv1[1][2] = q1[1][0];
 
-			Lv2[0][0] = -1; Lv2[0][1] = 0; Lv2[0][2] = q2[0][0];
-			Lv2[1][0] = 0; Lv2[1][1] = -1; Lv2[1][2] = q2[1][0];
-			Lv2 = 1.0/matchData->imgData1->focalLength*Lv2;
+			double f2 = matchData->imgData1->focalLength;
+			Lv2[0][0] = -f2; Lv2[0][1] = 0; Lv2[0][2] = q2[0][0];
+			Lv2[1][0] = 0; Lv2[1][1] = -f2; Lv2[1][2] = q2[1][0];
 
 			Lv = Lv1.copy();
 
 			Lw1[0][0] = q1[0][0]*q1[1][0]; Lw1[0][1] = -(1+pow(q1[0][0],2)); Lw1[0][2] = q1[1][0];
 			Lw1[1][0] = 1+pow(q1[1][0],2); Lw1[1][1] = -Lw1[0][0];			 Lw1[1][2] = -q1[0][0];
-			Lw1 = 1.0/pow(matchData->imgData0->focalLength,2)*Lw1;
+			Lw1 = 1.0/matchData->imgData0->focalLength*Lw1;
 
 			Lw2[0][0] = q2[0][0]*q2[1][0]; Lw2[0][1] = -(1+pow(q2[0][0],2)); Lw2[0][2] = q2[1][0];
 			Lw2[1][0] = 1+pow(q2[1][0],2); Lw2[1][1] = -Lw2[0][0];			 Lw2[1][2] = -q2[0][0];
-			Lw2 = 1.0/pow(matchData->imgData1->focalLength,2)*Lw2;
+			Lw2 = 1.0/matchData->imgData1->focalLength*Lw2;
 
 			Lw = Lw1.copy();
 
 			angularVel.inject(0.5*(matchData->imgData0->startAngularVel+matchData->imgData1->endAngularVel));
 
-			A += matmult(transpose(q2-q1-matmult(Lw,matmult(mRotPhoneToCam,angularVel))),matmult(SnInv, Lv));
-//			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
+//			A += matmult(transpose(q2-q1-matmult(Lw,matmult(mRotPhoneToCam,angularVel))),matmult(SnInv, Lv));
+			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
 			B += matmult(transpose(Lv), matmult(SnInv, Lv));
 		}
 		Array2D<double> temp1 = (dt/z)*A+matmult(transpose(mu_v), SvInv);
@@ -618,24 +628,24 @@ namespace Quadrotor{
 		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
 
-		// update bias and force scaling estimates
-		if(mLastMeasUpdateTime.getMS() == 0)
-			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = min(0.05,mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6);
-		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-		mForceGain += mForceGainAdaptRate*err[2][0];
-		mLastMeasUpdateTime.setTime();
-		{
-			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-			for(int i=0; i<mAttBias.dim1(); i++)
-				str1 = str1+mAttBias[i][0]+"\t";
-			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
-
-			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
-			str2 = str2+mForceGain+"\t";
-			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
-		}
+//		// update bias and force scaling estimates
+//		if(mLastMeasUpdateTime.getMS() == 0)
+//			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
+//		double dt = min(0.05,mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6);
+//		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+//		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+//		mForceGain += mForceGainAdaptRate*err[2][0];
+//		mLastMeasUpdateTime.setTime();
+//		{
+//			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
+//			for(int i=0; i<mAttBias.dim1(); i++)
+//				str1 = str1+mAttBias[i][0]+"\t";
+//			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+//
+//			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
+//			str2 = str2+mForceGain+"\t";
+//			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+//		}
 
 		mMutex_data.unlock();
 	}

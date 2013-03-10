@@ -19,7 +19,8 @@ Leash::Leash(QWidget *parent) :
 	mKalmanAttBiasAdaptRate(3,0),
 	mState(12,1,0.0),
 	mDesState(12,1,0.0),
-	mViconState(12,1,0.0)
+	mViconState(12,1,0.0),
+	mGaussDist(0,0.01)
 {
 	ui->setupUi(this);
 	mTmrGui = new QTimer(this);
@@ -1943,7 +1944,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
 		mMutex_logBuffer.unlock();
 
-		if(mSys.mtime() - mLastTelemSendTime > 95)
+		if(mSys.mtime() - mLastTelemSendTime > 115)
 		{
 			mLastTelemSendTime = mSys.mtime();
 			
@@ -1952,7 +1953,12 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 			pState.time = mSys.mtime()-mStartTimeUniverseMS;
 			pState.dataFloat.resize(mViconState.dim1());
 			for(int i=0; i<mViconState.dim1(); i++)
-				pState.dataFloat[i] = mViconState[i][0];
+			{
+				float noise = 0;
+				if(i >= 6 && i<9)
+					noise = mGaussDist(mRandGenerator);
+				pState.dataFloat[i] = mViconState[i][0]+noise;
+			}
 			Collection<tbyte> buff;
 			pState.serialize(buff);
 			sendUDP(buff.begin(), buff.size());

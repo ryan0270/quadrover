@@ -67,6 +67,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommBarometerZeroHeight(float h);
+	void onNewCommMotorOn(){mMotorOn = true;}
+	void onNewCommMotorOff(){mMotorOn = false;}
 
 	// from MotorInterfaceListener
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
@@ -124,6 +126,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
 	TNT::Array2D<double> mOpticFlowVel;
+
+	bool mMotorOn;
 };
 
 } // namespace Quadrotor
