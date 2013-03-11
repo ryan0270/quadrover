@@ -75,10 +75,19 @@ motorTime = phoneData(motorIndices,1)'/1000;
 motorCmd = phoneData(motorIndices,3:6)';
 
 %% rotate from vicon to phone coords
+RotViconToQuad = createRotMat(1, pi);
+RotQuadToPhone = createRotMat(3,-pi/4)*...
+			  	 createRotMat(1,pi);
+RotCamToPhone = createRotMat(3,-pi/2)*...
+				createRotMat(1,pi);
+RotPhoneToCam = RotCamToPhone';
+RotViconToPhone = RotQuadToPhone*RotViconToQuad;
 R1 = diag([1 -1 -1]);
 R2 = 1/2*[sqrt(2)    -sqrt(2)    0;
      -sqrt(2)   -sqrt(2)    0;
      0          0           -2];
+R1 = RotViconToQuad;
+R2 = RotQuadToPhone;
 % R = R*diag([1 -1 -1]);
 viconState(1:6,:) = blkdiag(R2,R2)*viconState(1:6,:);
 viconState(7:12,:) = blkdiag(R2*R1, R2*R1)*viconState(7:12,:);
@@ -90,15 +99,21 @@ end
 
 %%
 vicon_dt = mean(diff(viconStateTime));
+nyq = 1/2/vicon_dt;
+[b, a] = butter(5,20/nyq);
 for st=4:6
 	viconState(st,:) = [0 1/vicon_dt*diff(viconState(st-3,:))];
-	badMask = abs(viconState(st,:))>100;
-	viconState(st,badMask) = 0;
+	viconState(st,:) = filtfilt(b,a,viconState(st,:));
+% 	badMask = abs(viconState(st,:))>100;
+% 	viconState(st,badMask) = 0;
 end
+
+[b, a] = butter(5,5/nyq);
 for st=10:12
 	viconState(st,:) = [0 1/vicon_dt*diff(viconState(st-3,:))];
-	badMask = abs(viconState(st,:))>5;
-	viconState(st,badMask) = 0;
+	viconState(st,:) = filtfilt(b,a,viconState(st,:));
+% 	badMask = abs(viconState(st,:))>5;
+% 	viconState(st,badMask) = 0;
 end
 
 %%
@@ -149,8 +164,8 @@ end
 
 %%
 if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
-	opticFlowVelLS = opticFlowVelLS([2 1 3],:);
-	opticFlowVel = opticFlowVel([2 1 3],:);
+% 	opticFlowVelLS = opticFlowVelLS([2 1 3],:);
+% 	opticFlowVel = opticFlowVel([2 1 3],:);
 	opticFlowVelLabels = {'xDot [m/s]','yDot [m/s]','zDot [m/s]'};
 	figure(12345); clf; set(gcf,'Name','Bayesian Optical Flow');
 	for i=1:3
@@ -191,12 +206,12 @@ if exist('viconReceive','var') && ~isempty(viconReceive)
 	for i=7:9
 		subplot(3,1,i-6)
 		plot(viconStateTime(mask), viconState(i,mask),'o'); hold all
-		plot(viconReceiveTime, viconReceive(i,:),'.'); hold all;
+		plot(viconReceiveTime, viconReceive(i,:),'.'); hold all
 		hold off
 		xlabel('Time [s]');
 		ylabel(stateLabels{i});
 	end
-	legend('Vicon Meas','Vicon Corrupted');
+	legend('Vicon Meas','Phoen Received');
 end
 
 %%

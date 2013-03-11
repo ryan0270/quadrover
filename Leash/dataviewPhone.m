@@ -105,6 +105,10 @@ viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECE
 viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
 viconReceive = phoneData(viconReceiveIndices,3:14)';
 
+kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
+kfCovTime = phoneData(kfCovIndices,1)'/1000;
+kfCov = phoneData(kfCovIndices,3:11)';
+
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
 	figure(2000); set(gcf,'Name','CPU Usage')
@@ -129,10 +133,10 @@ if exist('phoneTemp','var') && ~isempty(phoneTemp)
 end
 
 %%
+stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
+              'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
 if ~isempty(state)
     baseFigState = 10;
-    labels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
-              'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
     % figure(3); set(gcf,'Units','Inches');
     % curPos = get(gcf,'Position'); figSize = [5 5];
     % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
@@ -144,7 +148,7 @@ if ~isempty(state)
 		end
         plot(stateTime,state(i,:)); hold off
         xlabel('Time [s]');
-        ylabel(labels(i));
+        ylabel(stateLabels(i));
 
     	ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)])
     % 	if i == 4 || i == 5
@@ -292,4 +296,20 @@ if exist('velEst','var') && ~isempty(velEst)
 	xlabel('Time [s]');
 	ylabel('Vel [m/s]');
 	legend('x', 'y', 'z');
+end
+
+%%
+if exist('kfCov','var') && ~isempty(kfCov)
+	figure(720); clf; set(gcf,'Name','KF Err Cov')
+	for i=1:6
+		subplot(2,3,i)
+		if i <= 3
+			index = i;
+		else
+			index = i+3;
+		end
+		plot(kfCovTime, kfCov(i,:));
+		xlabel('Time [s]');
+		ylabel(stateLabels{i+6});
+	end
 end

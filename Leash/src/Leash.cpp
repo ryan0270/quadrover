@@ -1944,7 +1944,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
 		mMutex_logBuffer.unlock();
 
-		if(mSys.mtime() - mLastTelemSendTime > 115)
+		if(mSys.mtime() - mLastTelemSendTime > 550-5)
 		{
 			mLastTelemSendTime = mSys.mtime();
 			
@@ -1955,8 +1955,8 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 			for(int i=0; i<mViconState.dim1(); i++)
 			{
 				float noise = 0;
-				if(i >= 6 && i<9)
-					noise = mGaussDist(mRandGenerator);
+//				if(i >= 6 && i<9)
+//					noise = mGaussDist(mRandGenerator);
 				pState.dataFloat[i] = mViconState[i][0]+noise;
 			}
 			Collection<tbyte> buff;

@@ -1,16 +1,14 @@
 /// This file is for useful matrix operations not included in the
 // base TNT Array classes
+#ifndef TNT_UTILS_h
+#define TNT_UTILS_h
 
 #include "TNT/tnt.h"
 #include <math.h>
 #include <toadlet/egg.h>
 
-using namespace toadlet::egg;
-
-#ifndef TNT_UTILS_h
-#define TNT_UTILS_h
-
 namespace TNT{
+using namespace toadlet::egg;
 //	template <class T>
 //	inline void printTNTArray(Array2D<T> array) 
 //	{ 
