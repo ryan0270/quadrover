@@ -12,4 +12,3 @@ cmake .. \
 -DCMAKE_PREFIX_PATH=/home/ryantr/toadlet/android14 \
 -DOpenCV_DIR=/home/ryantr/OpenCV-2.4.3.2-android-sdk/sdk/native/jni \
 -DTBB_DIR=/home/ryantr/tbb/tbb41_20130116oss \
--DFERNS_DIR=/home/ryantr/FernTracker/android

@@ -31,7 +31,6 @@ CommManager::~CommManager()
 
 void CommManager::initialize()
 {
-
 	mServerSocketTCP = Socket::ptr(Socket::createTCPSocket());
 	mServerSocketTCP->bind(13120);
 	mServerSocketTCP->listen(1);
@@ -46,7 +45,7 @@ void CommManager::initialize()
 		Log::alert(String("Not connected to PC"));
 	mSocketUDP = Socket::ptr(Socket::createUDPSocket());
 	mSocketUDP->bind(13120);
-	mSocketUDP->listen(1);
+//	mSocketUDP->listen(1);
 	mSocketUDP->setBlocking(false);
 }
 

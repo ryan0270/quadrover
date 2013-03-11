@@ -96,6 +96,10 @@ void Rover::initialize()
 	mVisionProcessor.addListener(&mObsvTranslational);
 	mVisionProcessor.addListener(this);
 
+	mVideoMaker.initialize();
+	mVideoMaker.start();
+	mVisionProcessor.addListener(&mVideoMaker);
+
 	mSensorManager.initialize();
 	mSensorManager.setStartTime(mStartTime);
 	mSensorManager.setQuadLogger(&mQuadLogger);
@@ -136,6 +140,7 @@ void Rover::shutdown()
 	mCommManager.shutdown(); // mCommManager is only ever accessed via the run thread or via functions returning bools so doesn't have a mutex
 
 	mVisionProcessor.shutdown();
+	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
