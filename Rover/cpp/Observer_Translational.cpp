@@ -118,6 +118,7 @@ namespace Quadrotor{
 		double dt;
 		Time lastBattTempTime;
 		Array2D<double> flowVel(3,1,0.0);
+		Array2D<double> errCov(12,1,0.0);
 		while(mRunning)
 		{
 			double thrust = 0;
@@ -213,7 +214,20 @@ namespace Quadrotor{
 				pos[i][0] = mStateKF[i][0];
 			for(int i=0; i<3; i++)
 				vel[i][0] = mStateKF[i+3][0];
+			for(int i=0; i<3; i++)
+			{
+				errCov[i][0] = mErrCovKF[i][i];
+				errCov[i+3][0] = mErrCovKF[i][i+3];
+				errCov[i+6][0] = mErrCovKF[i+3][i+3];
+			}
 			mMutex_data.unlock();
+
+			{
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
+				for(int i=0; i<errCov.dim1(); i++)
+					str = str+errCov[i][0]+"\t";
+				mQuadLogger->addLine(str,LOG_FLAG_STATE);
+			}
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
@@ -239,7 +253,7 @@ namespace Quadrotor{
 		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
 //		Array2D<double> Sn = 30*30*createIdentity(2);
-		Array2D<double> Sn = 1e3*1e3*createIdentity(2);
+		Array2D<double> Sn = 3e2*3e2*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
 
@@ -249,8 +263,8 @@ namespace Quadrotor{
 		double z = mStateKF[2][0];
 		z -= 0.060; // offset between markers and camera
 
-Log::alert("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-printArray("mErrCovKF: \n", mErrCovKF);
+//Log::alert("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+//printArray("mErrCovKF: \n", mErrCovKF);
 		// Rotate prior velocity information to camera coords
 		mu_v = matmult(mRotPhoneToCam, mu_v);
 		SvInv = matmult(mRotPhoneToCam, matmult(SvInv, mRotCamToPhone));
@@ -266,8 +280,8 @@ printArray("mErrCovKF: \n", mErrCovKF);
 		// attitude difference)
 		Array2D<double> R1 = createRotMat_ZYX(matchData->imgData0->att[2][0], matchData->imgData0->att[1][0], matchData->imgData0->att[0][0]);
 		Array2D<double> R2 = createRotMat_ZYX(matchData->imgData1->att[2][0], matchData->imgData1->att[1][0], matchData->imgData1->att[0][0]);
-		R1 = matmult(mRotPhoneToCam,R1);
-		R2 = matmult(mRotPhoneToCam,R2);
+//		R1 = matmult(mRotPhoneToCam,R1);
+//		R2 = matmult(mRotPhoneToCam,R2);
 		Array2D<double> R1_T = transpose(R1);
 		Array2D<double> R2_T = transpose(R2);
 		Array2D<double> R = matmult(R1, transpose(R2));
