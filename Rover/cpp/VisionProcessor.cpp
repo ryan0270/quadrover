@@ -21,8 +21,8 @@ VisionProcessor::VisionProcessor() :
 	int width = 640;
 	int height = 480;
 	mCurImage.create(height, width, CV_8UC3); mCurImage = cv::Scalar(0);
-	mCurImageAnnotated.create(height, width, CV_8UC3); mCurImageAnnotated = cv::Scalar(0);
 	mCurImageGray.create(height, width, CV_8UC1); mCurImageGray = cv::Scalar(0);
+	mCurImageAnnotated = NULL;
 
 	mImgProcTimeUS = 0;
 
@@ -33,7 +33,6 @@ VisionProcessor::VisionProcessor() :
 	mImgBufferMaxSize = 10;
 	
 	mLogImages = false;
-mLogImages = true;
 
 	mImageDataPrev = mImageDataCur = mImageDataNext = NULL;
 
@@ -83,7 +82,10 @@ void VisionProcessor::getLastImageAnnotated(cv::Mat *outImage)
 {
 	mMutex_image.lock();
 	outImage->create(mCurImage.rows,mCurImage.cols,mCurImage.type());
-	mCurImageAnnotated.copyTo(*outImage);
+	if(mCurImageAnnotated != NULL)
+		mCurImageAnnotated->copyTo(*outImage);
+	else
+		(*outImage) = cv::Scalar(0);
 	mMutex_image.unlock();
 }
 
@@ -108,7 +110,6 @@ void VisionProcessor::run()
 
 			mCurImage = *(mImageDataCur->img);
 			mCurImageGray.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
-			mCurImageAnnotated.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
 			mImageDataCur->unlock();
 
 			Time procStart;
@@ -123,14 +124,18 @@ void VisionProcessor::run()
 //			}
 
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
-			mCurImage.copyTo(mCurImageAnnotated);
-			drawMatches(points, mCurImageAnnotated);
+
+			shared_ptr<cv::Mat> imgAnnotated(new cv::Mat());
+			mCurImage.copyTo(*imgAnnotated);
+			drawMatches(points, *imgAnnotated);
+			mCurImageAnnotated = imgAnnotated;
 
 			shared_ptr<ImageMatchData> data(new ImageMatchData());
 			data->dt = dt;
 			data->featurePoints = points;
 			data->imgData0 = mImageDataPrev;
 			data->imgData1 = mImageDataCur;
+			data->imgAnnotated = imgAnnotated;
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onImageProcessed(data);
 

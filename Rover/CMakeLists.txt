@@ -66,6 +66,7 @@ set (SRC ${SRC}
 	./cpp/MotorInterface.cpp
 	./cpp/SensorManager.cpp
 	./cpp/Matcher.cpp
+	./cpp/VideoMaker.cpp
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 )
@@ -86,6 +87,7 @@ set (H ${H}
 	./cpp/MotorInterface.h
 	./cpp/SensorManager.h
 	./cpp/Matcher.h
+	./cpp/VideoMaker.h
 	./cpp/ICSL/SystemModel/ISystemModel.h
 	./cpp/ICSL/SystemModel/ISystemModelAffine.h
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h

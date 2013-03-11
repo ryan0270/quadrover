@@ -25,6 +25,8 @@ class ImageMatchData
 	void lock(){mMutex.lock(); if(imgData0 != NULL) imgData0->lock(); if(imgData1 != NULL) imgData1->lock();}
 	void unlock(){mMutex.unlock(); if(imgData0 != NULL) imgData0->unlock(); if(imgData1 != NULL) imgData1->unlock();}
 
+	shared_ptr<cv::Mat> imgAnnotated;
+
 	protected:
 	toadlet::egg::Mutex mMutex;
 };
@@ -119,7 +121,8 @@ class VisionProcessor : public toadlet::egg::Thread,
 		bool mRunning, mFinished;
 		bool mNewImageReady;
 		bool mLogImages;
-		cv::Mat	mCurImage, mCurImageGray, mCurImageAnnotated;
+		cv::Mat	mCurImage, mCurImageGray;
+		shared_ptr<cv::Mat> mCurImageAnnotated;
 		vector<vector<double> > mMSERHuMoments;
 		vector<cv::Point2f> mMSERCentroids;
 

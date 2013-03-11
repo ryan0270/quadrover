@@ -49,16 +49,12 @@ public class RoverService extends Service {
 	@Override
 	public void onCreate()
 	{
-		onJNIStart();
-
 		File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
 		if(!logDir.exists())
 		{
 			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
 			logDir.mkdir();
 		}
-		else
-			Log.i(ME,"Log dir: "+logDir.toString()+" already exists.");
 		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
 		if(imgLogDir.exists())
 		{
@@ -68,7 +64,16 @@ public class RoverService extends Service {
 			imgLogDir.renameTo(bakDir);
 		}
 		imgLogDir.mkdir();
-		setLogDir(logDir.toString());
+		File videoDir = new File(logDir.getAbsolutePath()+"/video");
+		Log.i(ME,"Video dir = "+videoDir.getAbsolutePath());
+		if(videoDir.exists())
+		{
+			File bakDir = new File(videoDir.getAbsolutePath()+"_bak");
+			if(bakDir.exists())
+				deleteDir(bakDir);
+			videoDir.renameTo(bakDir);
+		}
+		videoDir.mkdir();
 		File logFile = new File(logDir.getAbsolutePath()+"/log.txt");
 		if(logFile.exists())
 		{
@@ -77,6 +82,9 @@ public class RoverService extends Service {
 				bakFile.delete();
 			logFile.renameTo(bakFile);
 		}
+
+		onJNIStart();
+		setLogDir(logDir.toString());
 		startLogging();
 
 		mNotificationBuilder = new Notification.Builder(this);

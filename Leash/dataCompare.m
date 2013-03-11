@@ -121,9 +121,10 @@ if exist('state','var') && ~isempty(state)
 	figure(1);
 	stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
 				  'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
+  mask = viconStateTime <= stateTime(end);
 	for i=1:12
 		subplot(4,3,i)
-		mask = viconStateTime <= stateTime(end);
+		
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
 		plot(stateTime, state(i,:)); hold all
 		hold off
@@ -135,6 +136,16 @@ if exist('state','var') && ~isempty(state)
 		ylabel(stateLabels(i));
 	end
 	% legend('Vicon','Phone');
+	
+	figure(2);
+	for i=10:12
+		subplot(3,1,i-9)
+		plot(viconStateTime(mask), viconState(i,mask)); hold all
+		plot(stateTime, state(i,:)); hold all
+		hold off
+		xlabel('Time [s]');
+		ylabel(stateLabels{i});
+	end
 end
 
 %%
@@ -167,7 +178,7 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 % 	opticFlowVelLS = opticFlowVelLS([2 1 3],:);
 % 	opticFlowVel = opticFlowVel([2 1 3],:);
 	opticFlowVelLabels = {'xDot [m/s]','yDot [m/s]','zDot [m/s]'};
-	figure(12345); clf; set(gcf,'Name','Bayesian Optical Flow');
+	figure(123450); clf; set(gcf,'Name','Bayesian Optical Flow');
 	for i=1:3
 		subplot(3,1,i);
 		mask  = (viconStateTime >= opticFlowVelTime(1)) .* ...
