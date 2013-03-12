@@ -235,7 +235,13 @@ void Observer_Angular::doInnovationUpdate(double dt)
 		s1 = s1+mGyroBias[i][0] + "\t";
 	mMutex_data.unlock();
 
+	String s2=String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OBSV_ANG_INNOVATION +"\t";
+	for(int i=0; i<mInnovation.dim1(); i++)
+		s2 = s2+mInnovation[i][0] + "\t";
+	mMutex_data.unlock();
+
 	mQuadLogger->addLine(s1,LOG_FLAG_OBSV_BIAS);
+	mQuadLogger->addLine(s2,LOG_FLAG_OBSV_BIAS);
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer

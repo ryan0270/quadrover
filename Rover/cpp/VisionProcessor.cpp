@@ -143,19 +143,22 @@ void VisionProcessor::run()
 			{
 				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME + "\t" + mImgProcTimeUS;
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+
+				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t"+points[0].size();
+				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
 			}
 
 			if(mLogImages && mMotorOn)
 			{
-				mMutex_imgBuffer.lock();
-				mImgDataBuffer.push_back(shared_ptr<SensorDataImage>(mImageDataCur));
-				while(mImgDataBuffer.size() > mImgBufferMaxSize)
-					mImgDataBuffer.pop_front();
-
-				mImgMatchDataBuffer.push_back(shared_ptr<ImageMatchData>(data));
-				while(mImgMatchDataBuffer.size() > mImgBufferMaxSize)
-					mImgMatchDataBuffer.pop_front();
-				mMutex_imgBuffer.unlock();
+//				mMutex_imgBuffer.lock();
+//				mImgDataBuffer.push_back(shared_ptr<SensorDataImage>(mImageDataCur));
+//				while(mImgDataBuffer.size() > mImgBufferMaxSize)
+//					mImgDataBuffer.pop_front();
+//
+//				mImgMatchDataBuffer.push_back(shared_ptr<ImageMatchData>(data));
+//				while(mImgMatchDataBuffer.size() > mImgBufferMaxSize)
+//					mImgMatchDataBuffer.pop_front();
+//				mMutex_imgBuffer.unlock();
 			}
 
 			mNewImageReady = false;
@@ -164,9 +167,10 @@ void VisionProcessor::run()
 		sys.msleep(1);
 	}
 
-	mQuadLogger->saveImageBuffer(mImgDataBuffer, mImgMatchDataBuffer);
+//	mQuadLogger->saveImageBuffer(mImgDataBuffer, mImgMatchDataBuffer);
 
 	mImgDataBuffer.clear();
+	mImgMatchDataBuffer.clear();
 
 	mFinished = true;
 }
