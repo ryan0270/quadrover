@@ -45,13 +45,13 @@ namespace Quadrotor {
 				Log::alert(String()+"Backlog: "+mImgQueue.size());
 			while(!mImgQueue.empty())
 			{
-				String filename = String()+"/sdcard/RoverService/video/img_"+id+".bmp";
-				cv::Mat img = *(mImgQueue.front());
-				mImgQueue.pop();
+//				String filename = String()+"/sdcard/RoverService/video/img_"+id+".bmp";
+//				cv::Mat img = *(mImgQueue.front());
+//				mImgQueue.pop();
 				mMutex_imgQueue.unlock();
-				cv::imwrite(filename.c_str(), img);
-				mMutex_imgQueue.lock();
-				id++;
+//				cv::imwrite(filename.c_str(), img);
+//				mMutex_imgQueue.lock();
+//				id++;
 			}
 			mMutex_imgQueue.unlock();
 			sys.msleep(10);

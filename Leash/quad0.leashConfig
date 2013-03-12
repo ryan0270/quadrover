@@ -2,14 +2,14 @@
 <Controller>
    <Translation>
       <P>
-         <x>1.000000</x>
-         <y>1.000000</y>
-         <z>1.000000</z>
+         <x>2.000000</x>
+         <y>2.000000</y>
+         <z>3.000000</z>
       </P>
       <D>
-         <x>3.000000</x>
-         <y>3.000000</y>
-         <z>3.000000</z>
+         <x>2.000000</x>
+         <y>2.000000</y>
+         <z>4.000000</z>
       </D>
       <I>
          <x>0.000000</x>
@@ -41,9 +41,9 @@
          <x>0.002000</x>
          <y>0.002000</y>
          <z>0.002000</z>
-         <xVel>0.005000</xVel>
-         <yVel>0.005000</yVel>
-         <zVel>0.005000</zVel>
+         <xVel>0.100000</xVel>
+         <yVel>0.100000</yVel>
+         <zVel>0.100000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.000100</x>
@@ -54,8 +54,8 @@
          <zVel>0.040000</zVel>
       </DynVar>
       <AttBias>
-         <roll>-0.004000</roll>
-         <pitch>0.012000</pitch>
+         <roll>-0.001000</roll>
+         <pitch>0.007000</pitch>
          <yaw>0.000000</yaw>
       </AttBias>
       <AttBiasAdaptRate>
@@ -68,7 +68,7 @@
    </Translation>
    <Attitude>
       <Gain>
-         <P>1.000000</P>
+         <P>1.200000</P>
          <I>0.002000</I>
       </Gain>
       <DirWeight>
@@ -95,10 +95,10 @@
    </MotorTrim>
 </Hardware>
 <Vision>
-   <RatioThreshold>0.300000</RatioThreshold>
+   <RatioThreshold>0.500000</RatioThreshold>
    <MatchRadius>100.000000</MatchRadius>
 </Vision>
-<LogMask>7709</LogMask>
+<LogMask>6713</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

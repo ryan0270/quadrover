@@ -105,9 +105,17 @@ viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECE
 viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
 viconReceive = phoneData(viconReceiveIndices,3:14)';
 
+numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
+numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
+numFeatures = phoneData(numFeaturesIndices,3)';
+
 kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
 kfCovTime = phoneData(kfCovIndices,1)'/1000;
 kfCov = phoneData(kfCovIndices,3:11)';
+
+attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+attInnovation = phoneData(attInnovationIndices,3:5)';
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
@@ -311,5 +319,24 @@ if exist('kfCov','var') && ~isempty(kfCov)
 		plot(kfCovTime, kfCov(i,:));
 		xlabel('Time [s]');
 		ylabel(stateLabels{i+6});
+	end
+end
+
+%%
+if exist('numFeatures','var') && ~isempty(numFeatures)
+	figure(1300); clf;
+	plot(numFeaturesTime, numFeatures,'x');
+	xlabel('Time [s]');
+	ylabel('Num Features Matched [cnt]');
+end
+
+%%
+if exist('attInnovation','var') && ~isempty(attInnovation)
+	figure(1012); clf; set(gcf,'Name','Att Innovation');
+	for i=1:3
+		subplot(3,1,i)
+		plot(attInnovationTime, attInnovation(i,:));
+		xlabel('Time [s]');
+		ylabel(stateLabels{i});
 	end
 end

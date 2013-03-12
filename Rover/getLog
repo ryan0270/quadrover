@@ -2,6 +2,6 @@
 
 adb pull /mnt/sdcard/RoverService/log.txt
 adb pull /mnt/sdcard/RoverService/log.txt.bak
-adb pull /mnt/sdcard/RoverService/images/data.xml
-adb pull /mnt/sdcard/RoverService/images_bak/data.xml data.xml.bak
+# adb pull /mnt/sdcard/RoverService/images/data.xml
+# adb pull /mnt/sdcard/RoverService/images_bak/data.xml data.xml.bak
 adb pull /mnt/sdcard/RoverService/log_ids.m
