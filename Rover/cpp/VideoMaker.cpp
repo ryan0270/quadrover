@@ -1,4 +1,5 @@
 #include "VideoMaker.h"
+#include "sched.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -36,6 +37,10 @@ namespace Quadrotor {
 		mRunning = true;
 		System sys;
 
+		sched_param schedParam;
+		schedParam.sched_priority = sched_get_priority_min(SCHED_NORMAL);;
+		sched_setscheduler(0,SCHED_NORMAL,&schedParam);
+
 		bool firstImage = true;
 		int id = 0;
 		while(mRunning)
@@ -62,13 +67,13 @@ namespace Quadrotor {
 
 	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const data)
 	{
-//		if(mLastImgTime.getElapsedTimeMS() > 90)
-//		{
-//			mLastImgTime.setTime();
-//			mMutex_imgQueue.lock();
-//			mImgQueue.push(data->imgAnnotated);
-//			mMutex_imgQueue.unlock();
-//		}
+		if(mLastImgTime.getElapsedTimeMS() > 90)
+		{
+			mLastImgTime.setTime();
+			mMutex_imgQueue.lock();
+			mImgQueue.push(data->imgAnnotated);
+			mMutex_imgQueue.unlock();
+		}
 	}
 
 } // namespace Quadrotor

@@ -103,7 +103,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	toadlet::egg::Mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
 
-	Time mLastMeasUpdateTime, mLastPosReceiveTime, mLastBarometerMeasTime;
+	Time mLastPosReceiveTime, mLastBarometerMeasTime;
+	Time mLastForceGainUpdateTime, mLastAttBiasUpdateTime;
 
 	double mMotorCmds[4];
 

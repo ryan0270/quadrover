@@ -33,7 +33,8 @@ namespace Quadrotor{
 		mForceGainReset = 0.0040;
 		mForceGain = mForceGainReset;
 		
-		mLastMeasUpdateTime.setTimeMS(0);
+		mLastForceGainUpdateTime.setTimeMS(0);
+		mLastAttBiasUpdateTime.setTimeMS(0);
 		mLastPosReceiveTime.setTimeMS(0);
 		mLastBarometerMeasTime.setTimeMS(0);
 		
@@ -405,13 +406,18 @@ namespace Quadrotor{
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
 
 		// update bias and force scaling estimates
-		if(mLastMeasUpdateTime.getMS() == 0)
-			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6;
+		if(mLastAttBiasUpdateTime.getMS() == 0)
+			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
+		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
 		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
 		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-		mForceGain += mForceGainAdaptRate*err[2][0];
-		mLastMeasUpdateTime.setTime();
+		if(mLastForceGainUpdateTime.getMS() == 0)
+			mLastForceGainUpdateTime.setTime();
+		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
+		if(meas[2][0] > 0.2) // doing this too low runs into problems with ground effect
+			mForceGain += mForceGainAdaptRate*dt*err[2][0];
+		mLastAttBiasUpdateTime.setTime();
+		mLastForceGainUpdateTime.setTime();
 
 		{
 			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
@@ -472,23 +478,18 @@ namespace Quadrotor{
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
 
 		// update bias and force scaling estimates
-		if(mLastMeasUpdateTime.getMS() == 0)
-			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = min(0.05,mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6);
+		if(mLastAttBiasUpdateTime.getMS() == 0)
+			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
+		double dt = min(0.05,mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6);
 		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
 		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-		mForceGain += mForceGainAdaptRate*err[2][0];
-		mLastMeasUpdateTime.setTime();
+		mLastAttBiasUpdateTime.setTime();
 
 		{
 			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
 			for(int i=0; i<mAttBias.dim1(); i++)
 				str1 = str1+mAttBias[i][0]+"\t";
 			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
-
-			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
-			str2 = str2+mForceGain+"\t";
-			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
 		}
 
 		mMutex_data.unlock();
@@ -532,19 +533,12 @@ namespace Quadrotor{
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
 
 		// update bias and force scaling estimates
-		if(mLastMeasUpdateTime.getMS() == 0)
-			mLastMeasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = min(0.05,mLastMeasUpdateTime.getElapsedTimeUS()/1.0e6);
-		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+		if(mLastForceGainUpdateTime.getMS() == 0)
+			mLastForceGainUpdateTime.setTime(); // this will effectively cause dt=0
+		double dt = min(0.40,mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6);
 		mForceGain += mForceGainAdaptRate*err[2][0];
-		mLastMeasUpdateTime.setTime();
+		mLastForceGainUpdateTime.setTime();
 		{
-			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-			for(int i=0; i<mAttBias.dim1(); i++)
-				str1 = str1+mAttBias[i][0]+"\t";
-			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
-
 			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
 			str2 = str2+mForceGain+"\t";
 			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
