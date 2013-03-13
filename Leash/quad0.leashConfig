@@ -61,7 +61,7 @@
       <AttBiasAdaptRate>
          <roll>0.010000</roll>
          <pitch>0.010000</pitch>
-         <yaw>0.010000</yaw>
+         <yaw>0.000000</yaw>
       </AttBiasAdaptRate>
       <ForceGainAdaptRate>0.000500</ForceGainAdaptRate>
       <BarometerZeroHeight>76.000000</BarometerZeroHeight>
@@ -83,7 +83,7 @@
    </Attitude>
 </Observer>
 <Hardware>
-   <MotorForceGain>0.018000</MotorForceGain>
+   <MotorForceGain>0.020000</MotorForceGain>
    <MotorTorqueGain>0.010000</MotorTorqueGain>
    <MotorArmLength>0.200000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
@@ -98,7 +98,7 @@
    <RatioThreshold>0.300000</RatioThreshold>
    <MatchRadius>40.000000</MatchRadius>
 </Vision>
-<LogMask>537</LogMask>
+<LogMask>793</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>
