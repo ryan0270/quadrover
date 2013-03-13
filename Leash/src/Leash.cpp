@@ -1944,7 +1944,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
 		mMutex_logBuffer.unlock();
 
-		if(mSys.mtime() - mLastTelemSendTime > 10-5)
+		if(mSys.mtime() - mLastTelemSendTime > 350-5)
 		{
 			mLastTelemSendTime = mSys.mtime();
 			

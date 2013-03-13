@@ -145,6 +145,7 @@ namespace Quadrotor{
 			ASensorEvent event;
 			while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
 			{
+// TODO: Set the event time to match the timestamp in the ASensor struct
 				int logFlag = -1;
 				int logID = -1;
 				uint64 curTimeMS;

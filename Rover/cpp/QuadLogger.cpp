@@ -54,6 +54,7 @@ void QuadLogger::start()
 
 	generateMatlabHeader();
 
+	mMutex.lock();
 	mLogStream = FileStream::ptr(new FileStream(mDir+"/"+mFilename, FileStream::Open_BIT_WRITE));
 
 //	String str = "1\t2\t3\t4\t5\t6\t7\t8\t9\t10\n";
@@ -66,13 +67,16 @@ void QuadLogger::start()
 	// for easy indexing while post processing
 	str = String() + "0\t-500\n";
 	mLogStream->write((tbyte*)str.c_str(),str.length());
+	mMutex.unlock();
 }
 
 void QuadLogger::close()
 {
 	if(mLogStream != NULL)
 	{
+		mMutex.lock();
 		mLogStream->close();
+		mMutex.unlock();
 		mLogStream = NULL;
 	}
 }

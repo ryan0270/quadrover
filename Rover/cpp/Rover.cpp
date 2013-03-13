@@ -511,6 +511,7 @@ void Rover::onNewCommTimeSync(int time)
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mMutex_cntl.unlock();
 	
+	mSensorManager.setStartTime(mStartTime);
 	mQuadLogger.setStartTime(mStartTime);
 
 	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_TIME_SYNC + "\t" + delta;

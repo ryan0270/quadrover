@@ -34,14 +34,14 @@ else
 	tranStateRefInterp = zeros(size(angleStateRef));
 	tranStateInterp = zeros(size(angleState));
 end
-stateRefTime = angleStateRefTime;
-stateRef = [angleStateRef; tranStateRefInterp];
-stateTime = angleStateTime;
-state = [angleState; tranStateInterp];
-state_dt = mean(diff(stateTime));
+% stateRefTime = angleStateRefTime;
+% stateRef = [angleStateRef; tranStateRefInterp];
+% stateTime = angleStateTime;
+% state = [angleState; tranStateInterp];
+% state_dt = mean(diff(stateTime));
 
 gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
-gyroTime = phoneData(gyroIndices,1)'/1000;
+gyroTime = phoneData(gyroIndices,1)'/1000-13;
 gyro = phoneData(gyroIndices,3:end)';
 gyro_dt = mean(diff(gyroTime));
 
@@ -52,7 +52,7 @@ mag_dt = mean(diff(magTime));
 
 accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
 accelTime = phoneData(accelIndices,1)'/1000;
-accel = phoneData(accelIndices,3:end)';
+accel = phoneData(accelIndices,3:5)';
 accel_dt = mean(diff(accelTime));
 
 pressureIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PRESSURE);
@@ -65,21 +65,9 @@ motorCmd = phoneData(motorIndices,3:6)';
 cntlCalcTime = phoneData(motorIndices,8)'/1000;
 motor_dt = mean(diff(motorTime));
 
-% mainRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -400);
-% mainRunTimeTime = phoneData(mainRunTimeIndices,1)'/1000;
-% mainRunTime = phoneData(mainRunTimeIndices,3:6)';
-
 featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME);
 featureMatchTimeTime = phoneData(featureMatchTimeIndices,1)'/1000;
 featureMatchTime = phoneData(featureMatchTimeIndices,3)';
-
-% imageGrabberRunTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -402);
-% imageGrabberRunTimeTime = phoneData(imageGrabberRunTimeIndices,1)'/1000;
-% imageGrabberRunTime = phoneData(imageGrabberRunTimeIndices,3:8)';
-
-% throttleIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == -2000);
-% throttleTime = phoneData(throttleIndices,1)'/1000;
-% throttle = phoneData(throttleIndices,3)';
 
 attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
 attBiasTime = phoneData(attBiasIndices,1)'/1000;
@@ -109,9 +97,9 @@ numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_F
 numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
 numFeatures = phoneData(numFeaturesIndices,3)';
 
-kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
-kfCovTime = phoneData(kfCovIndices,1)'/1000;
-kfCov = phoneData(kfCovIndices,3:11)';
+% kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
+% kfCovTime = phoneData(kfCovIndices,1)'/1000;
+% kfCov = phoneData(kfCovIndices,3:11)';
 
 attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
 attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
@@ -143,7 +131,7 @@ end
 %%
 stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
               'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
-if ~isempty(state)
+if exist('state','var') && ~isempty(state)
     baseFigState = 10;
     % figure(3); set(gcf,'Units','Inches');
     % curPos = get(gcf,'Position'); figSize = [5 5];
@@ -208,7 +196,7 @@ if ~isempty(mag)
 
 end
 %%
-if ~isempty(gyro)
+if exist('gyro','var') && ~isempty(gyro)
     labelsGyro = {'Gyro x [rad/s]' 'Gyro y [rad/s]' 'Gyro z [rad/s]'};
     baseFig = 20;
 
