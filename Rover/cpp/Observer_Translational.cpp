@@ -164,14 +164,14 @@ namespace Quadrotor{
 //				mMutex_meas.lock(); measTemp.inject(mLastMeas); mMutex_meas.unlock();
 //				doMeasUpdateKF(measTemp);
 //			}
-//			if(mNewOpticFlowReady)
-//			{
-//				mMutex_meas.lock();
-//				Array2D<double> vel = mOpticFlowVel.copy();
-//				mMutex_meas.unlock();
-//
-//				doMeasUpdateKF_velOnly(vel);
-//			}
+			if(mNewOpticFlowReady)
+			{
+				mMutex_meas.lock();
+				Array2D<double> vel = mOpticFlowVel.copy();
+				mMutex_meas.unlock();
+
+				doMeasUpdateKF_velOnly(vel);
+			}
 			if(mDoMeasUpdate_posOnly)
 			{
 				mMutex_meas.lock();
@@ -181,15 +181,15 @@ namespace Quadrotor{
 				doMeasUpdateKF_posOnly(pos);
 			}
 
-//			if(mNewImageResultsReady && mFlowCalcDone
-//					&& mMotorOn)
-//			{
-//				// if we're here then the previous thread should already be finished
-//				flowCalcThread.imageMatchData = mImageMatchData;
-//				mFlowCalcDone = false;
-//				flowCalcThread.start();
-//				mNewImageResultsReady = false;
-//			}
+			if(mNewImageResultsReady && mFlowCalcDone
+					&& mMotorOn)
+			{
+				// if we're here then the previous thread should already be finished
+				flowCalcThread.imageMatchData = mImageMatchData;
+				mFlowCalcDone = false;
+				flowCalcThread.start();
+				mNewImageResultsReady = false;
+			}
 
 			mMutex_data.lock();
 			for(int i=0; i<3; i++)
@@ -430,7 +430,6 @@ namespace Quadrotor{
 
 	void Observer_Translational::doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas)
 	{
-Log::alert("doing vel opdate");
 		mNewOpticFlowReady = false;
 		mMutex_data.lock();
 		Array2D<double> measCov(3,3);
@@ -439,7 +438,7 @@ Log::alert("doing vel opdate");
 		measCov[0][2] = measCov[2][0] = mMeasCov[3][5];
 		measCov[1][1] = mMeasCov[4][4];
 		measCov[1][2] = measCov[2][1] = mMeasCov[4][5];
-		measCov[2][2] = 10*mMeasCov[5][5]; // optical flow is especially bad in z
+//		measCov[2][2] = 10*mMeasCov[5][5]; // optical flow is especially bad in z
 		Array2D<double> C(3,6,0.0);
 		C[0][3] = C[1][4] = C[2][5] = 1;
 		Array2D<double> C_T = transpose(C);

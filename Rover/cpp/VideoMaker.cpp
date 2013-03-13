@@ -45,13 +45,13 @@ namespace Quadrotor {
 				Log::alert(String()+"Backlog: "+mImgQueue.size());
 			while(!mImgQueue.empty())
 			{
-//				String filename = String()+"/sdcard/RoverService/video/img_"+id+".bmp";
-//				cv::Mat img = *(mImgQueue.front());
-//				mImgQueue.pop();
-				mMutex_imgQueue.unlock();
-//				cv::imwrite(filename.c_str(), img);
-//				mMutex_imgQueue.lock();
-//				id++;
+				String filename = String()+"/sdcard/RoverService/video/img_"+id+".bmp";
+				cv::Mat img = *(mImgQueue.front());
+				mImgQueue.pop();
+  				mMutex_imgQueue.unlock();
+				cv::imwrite(filename.c_str(), img);
+				mMutex_imgQueue.lock();
+				id++;
 			}
 			mMutex_imgQueue.unlock();
 			sys.msleep(10);
@@ -62,9 +62,13 @@ namespace Quadrotor {
 
 	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const data)
 	{
-		mMutex_imgQueue.lock();
-		mImgQueue.push(data->imgAnnotated);
-		mMutex_imgQueue.unlock();
+//		if(mLastImgTime.getElapsedTimeMS() > 90)
+//		{
+//			mLastImgTime.setTime();
+//			mMutex_imgQueue.lock();
+//			mImgQueue.push(data->imgAnnotated);
+//			mMutex_imgQueue.unlock();
+//		}
 	}
 
 } // namespace Quadrotor

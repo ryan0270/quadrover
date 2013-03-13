@@ -7,6 +7,7 @@
 #include "toadlet/egg.h"
 
 #include "VisionProcessor.h"
+#include "Time.h"
 
 namespace ICSL{
 namespace Quadrotor{
@@ -30,6 +31,7 @@ class VideoMaker : public VisionProcessorListener,
 		bool mRunning, mDone;
 		std::queue<shared_ptr<cv::Mat> > mImgQueue;
 
+		Time mLastImgTime;
 		toadlet::egg::Mutex mMutex_imgQueue;
 };
 } // namespace Quadrotor

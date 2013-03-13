@@ -109,6 +109,19 @@ void Observer_Angular::run()
 	bool accelProcessed = true; // "processed" means used to calculate the innovation term
 	bool magProcessed = true;
 	bool gyroProcessed = true;
+	double calMinX = -9.7;
+	double calMaxX = 9.65;
+	double calMinY = -10.2;
+	double calMaxY = 10.05;
+	double calMinZ = -10.05;
+	double calMaxZ = 9.5;
+
+	double offsetX = 0.5*(calMaxX+calMinX);
+	double offsetY = 0.5*(calMaxY+calMinY);
+	double offsetZ = 0.5*(calMaxZ+calMinZ);
+	double scaleX = 0.5*(calMaxX-calMinX)/GRAVITY;
+	double scaleY = 0.5*(calMaxY-calMinY)/GRAVITY;
+	double scaleZ = 0.5*(calMaxZ-calMinZ)/GRAVITY;
 	while(mRunning)
 	{
 		if(mNewGyroReady)
@@ -175,6 +188,12 @@ void Observer_Angular::run()
 			accelProcessed = true;
 			magProcessed = true;
 		}
+		else
+		{
+			// this is to cover the case when we don't get an update for a long time
+			double dt = lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6;
+			mInnovation = exp(-70.0*dt)*mInnovation;
+		}
 
 		if(!mDoingBurnIn && !gyroProcessed)
 		{
@@ -186,7 +205,7 @@ void Observer_Angular::run()
 			gyroProcessed = true;
 		}
 
-		sys.msleep(1);
+		sys.usleep(500);
 	}
 
 	mDone = true;
@@ -205,7 +224,8 @@ void Observer_Angular::doInnovationUpdate(double dt)
 	vI = 1.0/norm2(vI)*vI;
 
 	Array2D<double> transR = transpose(mCurRotMat);
-	if(norm2(mAccel-mAccelDirNom*GRAVITY) < 3)
+	if(norm2(mAccel-mAccelDirNom*GRAVITY) < 2)
+//	if( (norm2(mAccel)-GRAVITY) < 2)
 	{
 		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));
 		mInnovation += mMagWeight*cross(vB, matmult(transR, vI));
@@ -226,9 +246,9 @@ void Observer_Angular::doInnovationUpdate(double dt)
 		mExtraDirsInertial.pop_back();
 	}
 
-	Time now;
-	for(int i=0; i<mGyroBias.dim1(); i++)
-		mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
+	if(dt < 0.02)
+		for(int i=0; i<mGyroBias.dim1(); i++)
+			mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
 
 	String s1=String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_GYRO_BIAS +"\t";
 	for(int i=0; i<mGyroBias.dim1(); i++)
