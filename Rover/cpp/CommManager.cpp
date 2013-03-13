@@ -88,7 +88,8 @@ void CommManager::run()
 		mConnected = mSocketTCP != NULL;
 		mMutex_socketTCP.unlock();
 
-		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 500)
+//		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 500)
+		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 1000)
 		{
 			Log::alert("Lost connection");
 			mConnected = false;
