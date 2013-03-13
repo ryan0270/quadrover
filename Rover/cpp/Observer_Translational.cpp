@@ -414,7 +414,7 @@ namespace Quadrotor{
 		if(mLastForceGainUpdateTime.getMS() == 0)
 			mLastForceGainUpdateTime.setTime();
 		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
-		if(meas[2][0] > 0.2) // doing this too low runs into problems with ground effect
+		if(meas[2][0] > 0.4) // doing this too low runs into problems with ground effect
 			mForceGain += mForceGainAdaptRate*dt*err[2][0];
 		mLastAttBiasUpdateTime.setTime();
 		mLastForceGainUpdateTime.setTime();
