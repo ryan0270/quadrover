@@ -195,7 +195,7 @@ void Rover::run()
 
 		if(mLastCpuUsageTime.getElapsedTimeMS() > 500)
 		{
-			cpuUsageCur = getCpuUsage();
+			cpuUsageCur = getCpuUsage(mNumCpuCores);
 			mLastCpuUsageTime.setTime();
 			if(cpuUsagePrev.dim1() != cpuUsageCur.dim1())
 				cpuUsagePrev = Array2D<int>(cpuUsageCur.dim1(), cpuUsageCur.dim2(),0.0);
@@ -645,7 +645,7 @@ Array2D<double> Rover::getAttitude()
 // cpu0	user0	nice0	system0	idle0	iowait0	irq0	softirq0
 // cpu1	user1	nice1	system1	idle1	iowait1	irq1	softirq1
 // ...
-Array2D<int> Rover::getCpuUsage()
+Array2D<int> Rover::getCpuUsage(int numCpuCores)
 {
 	Collection<String> lines;
 	string line;
@@ -670,7 +670,7 @@ Array2D<int> Rover::getCpuUsage()
 
 	// Note that since mobile phones tend to turn cores off for power, the number of 
 	// cpu lines found may not actually match the number of cores on the device
-	Array2D<int> data(mNumCpuCores+1, 7,0.0);
+	Array2D<int> data(numCpuCores+1, 7,0.0);
 	for(int i=0; i<lines.size(); i++)
 	{
 		String tok;

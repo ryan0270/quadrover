@@ -69,10 +69,10 @@ namespace Quadrotor {
 	{
 		if(mLastImgTime.getElapsedTimeMS() > 90)
 		{
-			mLastImgTime.setTime();
-			mMutex_imgQueue.lock();
-			mImgQueue.push(data->imgAnnotated);
-			mMutex_imgQueue.unlock();
+//			mLastImgTime.setTime();
+//			mMutex_imgQueue.lock();
+//			mImgQueue.push(data->imgAnnotated);
+//			mMutex_imgQueue.unlock();
 		}
 	}
 

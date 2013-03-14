@@ -41,7 +41,7 @@ end
 % state_dt = mean(diff(stateTime));
 
 gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
-gyroTime = phoneData(gyroIndices,1)'/1000-13;
+gyroTime = phoneData(gyroIndices,1)'/1000;
 gyro = phoneData(gyroIndices,3:end)';
 gyro_dt = mean(diff(gyroTime));
 
