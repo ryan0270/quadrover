@@ -122,6 +122,7 @@ class SensorDataPhoneTemp : public SensorData
 #ifndef ICSL_SENSOR_DATA_ONLY
 #ifndef ICSL_SENSOR_MANAGER
 #define ICSL_SENSOR_MANAGER
+#include <sched.h>
 
 #include <memory>
 #include <string>
@@ -169,6 +170,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	void run();
 	void initialize();
 	void shutdown();
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime = time; mTimestampOffsetNS = 0; mMutex_startTime.unlock();}
@@ -184,10 +186,11 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	ASensorEventQueue* mSensorEventQueue;
 	const ASensor *mAccelSensor, *mGyroSensor, *mMagSensor, *mPressureSensor;
 
-	int getBatteryTemp();
-	int getSecTemp();
-	int getFuelgaugeTemp();
-	int getTmuTemp();
+	static int getBatteryTemp();
+	static int getSecTemp();
+	static int getFuelgaugeTemp();
+	static int getTmuTemp();
+	void runTemperatureMonitor();
 
 	QuadLogger *mQuadLogger;
 
@@ -206,6 +209,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
 	int64_t mTimestampOffsetNS;
+	int mThreadPriority, mScheduler;
 };
 
 

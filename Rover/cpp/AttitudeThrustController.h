@@ -1,5 +1,6 @@
 #ifndef ICSL_ATITTUDETHRUSTCONTROLLER
 #define ICSL_ATITTUDETHRUSTCONTROLLER
+#include <sched.h>
 
 #include "toadlet/egg.h"
 
@@ -38,15 +39,17 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 	void run();
 	void shutdown();
 
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 	void setStartTime(Time t){mStartTime = t;}
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setMotorInterface(MotorInterface *mi){mMotorInterface = mi;}
 
 	void calcControl();
 
 	void enableMotors(bool enabled);
 //	bool isMotorInterfaceConnected();
 	// TODO: Need to adjust MotorInterface class so this can be a const pointer
-	MotorInterface* getMotorInterface(){return &mMotorInterface;}
+	MotorInterface* getMotorInterface(){return mMotorInterface;}
 
 	Collection<uint8> getLastMotorCmds(){mMutex_motorInterface.lock(); Collection<uint8> temp(mLastMotorCmds); mMutex_motorInterface.unlock(); return temp;}
 	TNT::Array2D<double> getDesAttitude(){mMutex_data.lock(); TNT::Array2D<double> temp = mDesAtt.copy(); mMutex_data.unlock(); return temp;}
@@ -80,7 +83,7 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 	int mMotorTrim[4];
 	Collection<uint8> mLastMotorCmds;
 
-	MotorInterface mMotorInterface;
+	MotorInterface *mMotorInterface;
 
 	double mThrust, mMass, mMotorArmLength;;
 	TNT::Array2D<double> mCurAngularVel;
@@ -90,6 +93,8 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 	Collection<AttitudeThrustControllerListener*> mListeners;
 
 	toadlet::egg::Mutex mMutex_data, mMutex_motorInterface;
+
+	int mThreadPriority, mScheduler;
 };
 
 } // namespace Quadrotor

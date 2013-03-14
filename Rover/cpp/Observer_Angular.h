@@ -17,6 +17,8 @@ class Observer_AngularListener
 #ifndef ICSL_OBSERVER_ANGULAR 
 #define ICSL_OBSERVER_ANGULAR 
 #include <memory>
+#include <sched.h>
+
 #include <toadlet/egg.h>
 
 #include "ICSL/constants.h"
@@ -75,6 +77,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 		void run();
 		void shutdown();
 
+		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+
 		// CommManagerListener functions
 		void onNewCommObserverReset();
 		void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight);
@@ -115,6 +119,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 		QuadLogger *mQuadLogger;
 
 		double mYawVicon;
+
+		int mThreadPriority, mScheduler;
 };
 
 }

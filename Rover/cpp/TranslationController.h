@@ -1,5 +1,6 @@
 #ifndef ICSL_TRANSLATIONALCONTROLLER
 #define ICSL_TRANSLATIONALCONTROLLER
+#include <sched.h>
 
 #include "toadlet/egg.h"
 
@@ -35,6 +36,7 @@ class TranslationController : 	public toadlet::egg::Thread,
 	void initialize();
 	void run();
 	void shutdown();
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	TNT::Array2D<double> const getDesiredState(){mMutex_data.lock(); Array2D<double> tempState = mDesState.copy(); mMutex_data.unlock(); return tempState;}
 	TNT::Array2D<double> const getCurState(){mMutex_data.lock(); Array2D<double> tempState = mCurState.copy(); mMutex_data.unlock(); return tempState;}
@@ -82,6 +84,8 @@ class TranslationController : 	public toadlet::egg::Thread,
 	{ return min(maxVal, max(minVal, val)); }
 
 	TNT::Array2D<double> calcControlPID(TNT::Array2D<double> const &error, double dt);
+
+	int mThreadPriority, mScheduler;
 };
 
 } // namespace Quadrotor

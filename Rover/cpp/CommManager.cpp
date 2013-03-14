@@ -21,6 +21,9 @@ CommManager::CommManager()
 	mSocketUDP = NULL;
 	mSocketTCP = NULL;
 	mServerSocketTCP = NULL;
+
+	mScheduler = SCHED_NORMAL;
+	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 }
 
 CommManager::~CommManager()
@@ -82,6 +85,9 @@ void CommManager::run()
 	mDone = false;
 	mRun = true;
 	System sys;
+	sched_param sp;
+	sp.sched_priority = mThreadPriority;
+	sched_setscheduler(0, mScheduler, &sp);
 	while(mRun)
 	{
 		mMutex_socketTCP.lock();
@@ -89,7 +95,7 @@ void CommManager::run()
 		mMutex_socketTCP.unlock();
 
 //		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 500)
-		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 1000)
+		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 100)
 		{
 			Log::alert("Lost connection");
 			mConnected = false;
@@ -130,7 +136,7 @@ mPortPC = 13120;
 				}
 				mSocketUDP = Socket::ptr(Socket::createUDPSocket());
 				mSocketUDP->bind(mPortPC);
-				mSocketUDP->listen(1);
+//				mSocketUDP->listen(1);
 				mSocketUDP->setBlocking(false);
 			}
 			mMutex_socketTCP.unlock();
@@ -208,6 +214,9 @@ void CommManager::pollUDP()
 
 			switch(pck.type)
 			{
+				case COMM_PING:
+					mLastCmdRcvTime.setTime();
+					break;
 				case COMM_STATE_VICON:
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommStateVicon(pck.dataFloat);

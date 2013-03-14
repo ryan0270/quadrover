@@ -37,6 +37,9 @@ VisionProcessor::VisionProcessor() :
 	mImageDataPrev = mImageDataCur = mImageDataNext = NULL;
 
 	mMotorOn = false;
+
+	mScheduler = SCHED_NORMAL;
+	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 }
 
 void VisionProcessor::shutdown()
@@ -94,6 +97,9 @@ void VisionProcessor::run()
 	System sys;
 	mFinished = false;
 	mRunning = true;
+	sched_param sp;
+	sp.sched_priority = mThreadPriority;
+	sched_setscheduler(0, mScheduler, &sp);
 	while(mRunning)
 	{
 		if(mNewImageReady && mImageDataCur == NULL)

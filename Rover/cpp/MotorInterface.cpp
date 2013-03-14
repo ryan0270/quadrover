@@ -13,6 +13,9 @@ namespace Quadrotor{
 		mMotorCmds[0] = mMotorCmds[1] = mMotorCmds[2] = mMotorCmds[3] = 0;
 
 		mWaitingForConnection = true;
+
+		mScheduler = SCHED_NORMAL;
+		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 	}
 
 	MotorInterface::~MotorInterface()
@@ -47,6 +50,9 @@ namespace Quadrotor{
 
 		// this just monitors the connection
 		System sys;
+		sched_param sp;
+		sp.sched_priority = mThreadPriority;
+		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			if(!isConnected())

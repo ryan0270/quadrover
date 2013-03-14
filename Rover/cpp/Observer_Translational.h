@@ -2,6 +2,7 @@
 #define ICSL_OBSERVER_TRANSLATIONAL
 #include <memory>
 #include <fstream>
+#include <sched.h>
 
 #include "toadlet/egg.h"
 
@@ -44,6 +45,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void initialize();
 	void run();
 	void shutdown();
+
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	void setStartTime(Time t){mStartTime = t;}
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
@@ -127,6 +130,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 	TNT::Array2D<double> mOpticFlowVel;
 
 	bool mMotorOn;
+
+	int mThreadPriority, mScheduler;
 };
 
 } // namespace Quadrotor

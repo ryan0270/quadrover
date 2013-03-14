@@ -70,7 +70,8 @@ enum SensorDataType
 
 enum CommID
 {
-	COMM_MOTOR_ON = 1,
+	COMM_PING = 0,
+	COMM_MOTOR_ON,
 	COMM_MOTOR_OFF,
 	COMM_MOTOR_TRIM,
 	COMM_OBSV_RESET,

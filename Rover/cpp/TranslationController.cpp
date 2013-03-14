@@ -29,6 +29,9 @@ namespace Quadrotor {
 		mQuadLogger = NULL;
 		
 		mMass = 0.850;
+
+		mScheduler = SCHED_NORMAL;
+		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 	}
 
 	TranslationController::~TranslationController()
@@ -54,6 +57,9 @@ namespace Quadrotor {
 		mDone = false;
 		mRunning = true;
 		System sys;
+		sched_param sp;
+		sp.sched_priority = mThreadPriority;
+		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			if(mNewMeasAvailable)

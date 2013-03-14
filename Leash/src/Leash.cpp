@@ -157,9 +157,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-//		mTelemVicon.connect("147.46.243.133");
-		mTelemVicon.connect("192.168.100.108");
-//		mTelemVicon.connect("localhost");
+//		mTelemVicon.connect("192.168.100.108");
+		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -348,7 +347,7 @@ void Leash::run()
 {
 	mTelemVicon.startMonitor();
 	mStartTimeUniverseMS = mSys.mtime();
-	mTmrGui->start(50);
+	mTmrGui->start(20);
 }
 
 void Leash::pollUDP()
@@ -628,6 +627,8 @@ void Leash::updateDisplay()
 		pollUDP();
 		pollTCP();
 	}
+
+	pingRover();
 }
 
 QImage Leash::cvMat2QImage(const cv::Mat &mat)
@@ -1996,6 +1997,19 @@ void Leash::saveLogData(string dir, string filename)
 		}
 		dataStream.close();
 		mMutex_logBuffer.unlock();
+	}
+}
+
+void Leash::pingRover()
+{
+	if(mSocketUDP != NULL)
+	{
+		Packet p;
+		p.type = COMM_PING;
+		p.time = mSys.mtime()-mStartTimeUniverseMS;
+		Collection<tbyte> buff;
+		p.serialize(buff);
+		sendUDP(buff.begin(), buff.size());
 	}
 }
 

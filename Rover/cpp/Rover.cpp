@@ -42,6 +42,7 @@ Rover::Rover() :
 	mPhoneTemp = 0;
 
 	mImageMatchData = NULL;
+
 }
 
 Rover::~Rover()
@@ -50,6 +51,21 @@ Rover::~Rover()
 
 void Rover::initialize()
 {
+	int sched = SCHED_NORMAL;
+	int maxPriority = sched_get_priority_max(sched);
+	int minPriority = sched_get_priority_min(sched);
+
+	mMotorInterface.setThreadPriority(sched,maxPriority);
+	mSensorManager.setThreadPriority(sched,maxPriority);
+	mObsvAngular.setThreadPriority(sched,maxPriority);
+	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
+	mTranslationController.setThreadPriority(sched,maxPriority-2);
+	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
+	mVisionProcessor.setThreadPriority(sched,maxPriority-3);
+	mCommManager.setThreadPriority(sched,minPriority);
+	mQuadLogger.setThreadPriority(sched,minPriority);
+	mVideoMaker.setThreadPriority(sched,minPriority);
+
 	mCommManager.initialize();
 	mCommManager.addListener(this);
 	mCommManager.start();
@@ -64,6 +80,7 @@ void Rover::initialize()
 
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
+	mAttitudeThrustController.setMotorInterface(&mMotorInterface);
 	mAttitudeThrustController.initialize();
 	mAttitudeThrustController.start();
 	mCommManager.addListener(&mAttitudeThrustController);

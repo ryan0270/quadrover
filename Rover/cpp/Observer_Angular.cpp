@@ -52,6 +52,9 @@ Observer_Angular::Observer_Angular() :
 	mYawVicon = 0;
 
 	mAccelData = mGyroData = mMagData = NULL;
+
+	mScheduler = SCHED_NORMAL;
+	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 }
 
 Observer_Angular::~Observer_Angular()
@@ -122,6 +125,10 @@ void Observer_Angular::run()
 	double scaleX = 0.5*(calMaxX-calMinX)/GRAVITY;
 	double scaleY = 0.5*(calMaxY-calMinY)/GRAVITY;
 	double scaleZ = 0.5*(calMaxZ-calMinZ)/GRAVITY;
+
+	sched_param sp;
+	sp.sched_priority = mThreadPriority;
+	sched_setscheduler(0, mScheduler, &sp);
 	while(mRunning)
 	{
 		if(mNewGyroReady)

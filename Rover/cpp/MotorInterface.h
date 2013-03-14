@@ -1,5 +1,6 @@
 #ifndef MOTORINTERFACE
 #define MOTORINTERFACE
+#include <sched.h>
 
 #include <toadlet/egg.h>
 
@@ -13,6 +14,7 @@ class MotorInterface : public toadlet::egg::Thread
 
 	void shutdown();
 	void initialize();
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	//TODO: Need to make this function const
 	bool isConnected();
@@ -36,6 +38,8 @@ class MotorInterface : public toadlet::egg::Thread
 
 	// skips enabled/disabled checks
 	void sendCommandForced(toadlet::egg::Collection<uint8> const &cmds);
+
+	int mThreadPriority, mScheduler;
 };
 
 } // namespace Quadrotor
