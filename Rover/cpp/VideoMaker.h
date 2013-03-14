@@ -1,5 +1,6 @@
 #ifndef ICSL_VIDEOMAKER_H
 #define ICSL_VIDEOMAKER_H
+#include <sched.h>
 #include <queue>
 
 #include "opencv2/highgui/highgui.hpp"
@@ -22,6 +23,7 @@ class VideoMaker : public VisionProcessorListener,
 		void initialize();
 		void run();
 		void shutdown();
+		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 		// for VisionProcessorListener
 		void onImageProcessed(shared_ptr<ImageMatchData> const data);
@@ -33,6 +35,7 @@ class VideoMaker : public VisionProcessorListener,
 
 		Time mLastImgTime;
 		toadlet::egg::Mutex mMutex_imgQueue;
+		int mThreadPriority, mScheduler;
 };
 } // namespace Quadrotor
 } // namespace ICSL

@@ -1,6 +1,7 @@
 #ifndef QUADLOGGER
 #define QUADLOGGER
 #include <list>
+#include <queue>
 #include <sstream>
 #include <memory>
 
@@ -19,11 +20,11 @@
 #include "VisionProcessor.h"
 #undef ICSL_IMAGEMATCHDATA_ONLY
 
-using namespace std;
 
 namespace ICSL {
 namespace Quadrotor {
-class QuadLogger
+using namespace std;
+class QuadLogger : public toadlet::egg::Thread
 {
 	public:
 		explicit QuadLogger();
@@ -39,12 +40,11 @@ class QuadLogger
 		void setMask(uint32 mask){mTypeMask = mask;}
 		void addLine(String const &str, uint16 type);
 
-		void start();
+		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+//		void start();
+		void run();
 		void close();
 		void clearLog(){close(); start();}
-
-		void pause(){mPaused = true;}
-		void unpause(){mPaused = false;}
 
 		void saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer,
 							 list<shared_ptr<ImageMatchData> > const &matchDataBuffer);
@@ -55,11 +55,16 @@ class QuadLogger
 		String mDir, mFilename;
 		uint32 mTypeMask;
 		FileStream::ptr mLogStream;
-		Mutex mMutex;
-		bool mPaused;
+		Mutex mMutex_file, mMutex_logQueue;
 		Time mStartTime;
 
 		void generateMatlabHeader();
+
+		int mThreadPriority, mScheduler;
+
+		queue<String> mLogQueue;
+
+		bool mRunning;
 };
 
 }

@@ -224,6 +224,8 @@ class Leash : public QMainWindow, public TelemetryViconListener
 
 		default_random_engine mRandGenerator;
 		normal_distribution<float> mGaussDist;
+
+		void pingRover();
 };
 }
 }

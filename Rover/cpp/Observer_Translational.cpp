@@ -73,6 +73,9 @@ namespace Quadrotor{
 		mNewOpticFlowReady = false;
 
 		mMotorOn = false;
+
+		mScheduler = SCHED_NORMAL;
+		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -120,6 +123,10 @@ namespace Quadrotor{
 		Time lastBattTempTime;
 		Array2D<double> flowVel(3,1,0.0);
 		Array2D<double> errCov(12,1,0.0);
+
+		sched_param sp;
+		sp.sched_priority = mThreadPriority;
+		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			double thrust = 0;
@@ -699,7 +706,10 @@ namespace Quadrotor{
 
 				mMutex_phoneTempData.lock();
 				if(mPhoneTempData == NULL) 
+				{
+					mMutex_phoneTempData.unlock();
 					return;
+				}
 				mPhoneTempData->lock();
 				float tmuTemp = mPhoneTempData->tmuTemp;
 				mPhoneTempData->unlock();

@@ -1,5 +1,6 @@
 #ifndef ICSL_COMM_MANAGER
 #define ICSL_COMM_MANAGER
+#include <sched.h>
 
 #include <vector>
 #include <toadlet/toadlet.h>
@@ -59,11 +60,13 @@ class CommManager : public toadlet::egg::Thread
 
 	void initialize();
 	void shutdown();
+	void run();
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+
 	void addListener(CommManagerListener* listener){mListeners.push_back(listener);}
 	void transmitUDP(Packet &pck);
 	void transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 numChannels, uint32 type, vector<unsigned char> const &buff);
 	bool sendLogFile(const char* filename);
-	void run();
 	bool pcIsConnected(){return mConnected;}
 
 	protected:
@@ -83,6 +86,7 @@ class CommManager : public toadlet::egg::Thread
 	int receiveTCP(tbyte* data, int size);
 	bool receivePacket(Packet &pck, int size);
 
+	int mThreadPriority, mScheduler;
 }; // class CommManager
 } // namespace Quadrotor
 } // namespace ICSL

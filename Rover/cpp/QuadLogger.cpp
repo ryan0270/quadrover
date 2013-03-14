@@ -23,7 +23,11 @@ QuadLogger::QuadLogger()
 	mTypeMask |= LOG_FLAG_CAM_RESULTS;
 //	mTypeMask |= LOG_FLAG_CAM_IMAGES;
 	mTypeMask |= LOG_FLAG_PHONE_TEMP;
-	mPaused = false;
+
+	mScheduler = SCHED_NORMAL;
+	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+	mRunning = false;;
 }
 
 QuadLogger::~QuadLogger()
@@ -33,20 +37,26 @@ QuadLogger::~QuadLogger()
 
 void QuadLogger::addLine(String const &str, uint16 type)
 {
-	if(mPaused)
-		return;
-
-	mMutex.lock();
 	if(mTypeMask & type)
 	{
-		String str2= str + "\n";
-		if(mLogStream != NULL)
-			mLogStream->write((tbyte*)str2.c_str(), str2.length());
+		mMutex_logQueue.lock();
+		mLogQueue.push(str);
+		mMutex_logQueue.unlock();
 	}
-	mMutex.unlock();
+
+//	mMutex_file.lock();
+//	if(mTypeMask & type)
+//	{
+//		String str2= str + "\n";
+//		if(mLogStream != NULL)
+//			mLogStream->write((tbyte*)str2.c_str(), str2.length());
+//	}
+//	mMutex_file.unlock();
 }
-void QuadLogger::start()
+
+void QuadLogger::run()
 {
+	mRunning = true;
 	{
 		String s = String() +"Starting logs at " + mDir+"/"+mFilename;
 		Log::alert(s);
@@ -54,7 +64,7 @@ void QuadLogger::start()
 
 	generateMatlabHeader();
 
-	mMutex.lock();
+	mMutex_file.lock();
 	mLogStream = FileStream::ptr(new FileStream(mDir+"/"+mFilename, FileStream::Open_BIT_WRITE));
 
 //	String str = "1\t2\t3\t4\t5\t6\t7\t8\t9\t10\n";
@@ -67,18 +77,44 @@ void QuadLogger::start()
 	// for easy indexing while post processing
 	str = String() + "0\t-500\n";
 	mLogStream->write((tbyte*)str.c_str(),str.length());
-	mMutex.unlock();
+	mMutex_file.unlock();
+
+	System sys;
+	String line;
+	while(mRunning)
+	{
+		mMutex_logQueue.lock(); int size = mLogQueue.size(); mMutex_logQueue.unlock();
+		while(size > 0)
+		{
+			mMutex_logQueue.lock();
+			line = mLogQueue.front();
+			mLogQueue.pop();
+			size = mLogQueue.size();
+			mMutex_logQueue.unlock();
+
+			mMutex_file.lock();
+			line = line+"\n";
+			if(mLogStream != NULL)
+				mLogStream->write((tbyte*)line.c_str(), line.length());
+			mMutex_file.unlock();
+		}
+
+		sys.msleep(1);
+	}
+
+	if(mLogStream != NULL)
+	{
+		mMutex_file.lock();
+		mLogStream->close();
+		mMutex_file.unlock();
+		mLogStream = NULL;
+	}
 }
 
 void QuadLogger::close()
 {
-	if(mLogStream != NULL)
-	{
-		mMutex.lock();
-		mLogStream->close();
-		mMutex.unlock();
-		mLogStream = NULL;
-	}
+	mRunning = false;
+	this->join();
 }
 
 void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer,

@@ -86,6 +86,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		void shutdown();
 		void initialize();
+		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
@@ -151,6 +152,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);
 
 		bool mMotorOn;
+		int mThreadPriority, mScheduler;
 };
 
 } // namespace Quadrotor

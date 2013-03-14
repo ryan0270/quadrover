@@ -27,6 +27,7 @@ using toadlet::egg::String;
 #include "AttitudeThrustController.h"
 #include "SensorManager.h"
 #include "VideoMaker.h"
+#include "MotorInterface.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -117,6 +118,8 @@ protected:
 	shared_ptr<ImageMatchData> mImageMatchData;
 
 	VideoMaker mVideoMaker;
+	
+	MotorInterface mMotorInterface;
 }; // class Rover
 
 } // namespace Quadrotor

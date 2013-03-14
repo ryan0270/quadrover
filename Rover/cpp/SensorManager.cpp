@@ -23,6 +23,9 @@ namespace Quadrotor{
 		mRotPhoneToCam = transpose(mRotCamToPhone);
 
 		mTimestampOffsetNS = 0;
+
+		mScheduler = SCHED_NORMAL;
+		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 	}
 
 	SensorManager::~SensorManager()
@@ -139,10 +142,19 @@ namespace Quadrotor{
 		imgAcqThread.cap = cap;
 		imgAcqThread.start();
 
+		class : public Thread{
+			public:
+			void run(){parent->runTemperatureMonitor();}
+			SensorManager *parent;
+		} tempMonitorThread;
+		tempMonitorThread.parent = this;
+		tempMonitorThread.start();
+
 		System sys;
 		mDone = false;
-		Time lastTempMeasureTime;
-		int64_t lastTime = 0;
+		sched_param sp;
+		sp.sched_priority = mThreadPriority;
+		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			ASensorEvent event;
@@ -162,7 +174,6 @@ namespace Quadrotor{
 							logID = LOG_ID_PRESSURE;
 							data = shared_ptr<SensorData>(new SensorData(event.pressure, SENSOR_DATA_TYPE_PRESSURE));
 							mLastPressure = event.pressure;
-							lastTime = event.timestamp;
 						}
 						break;
 					case ASENSOR_TYPE_ACCELEROMETER:
@@ -225,37 +236,12 @@ namespace Quadrotor{
 				}
 			}
 
-			if(lastTempMeasureTime.getElapsedTimeMS() > 1e3)
-			{
-				lastTempMeasureTime.setTime();
-				float battTemp = getBatteryTemp()/10.0;
-				float secTemp = getSecTemp()/10.0;
-				float fgTemp= getFuelgaugeTemp()/10.0;
-				float tmuTemp = getTmuTemp()/10.0;
 
-				shared_ptr<SensorData> data = shared_ptr<SensorData>(new SensorDataPhoneTemp());
-				static_pointer_cast<SensorDataPhoneTemp>(data)->battTemp = battTemp;
-				static_pointer_cast<SensorDataPhoneTemp>(data)->secTemp = secTemp;
-				static_pointer_cast<SensorDataPhoneTemp>(data)->fgTemp = fgTemp;
-				static_pointer_cast<SensorDataPhoneTemp>(data)->tmuTemp = tmuTemp;
-				mMutex_listeners.lock();
-				for(int i=0; i<mListeners.size(); i++)
-					mListeners[i]->onNewSensorUpdate(data);
-				mMutex_listeners.unlock();
-//				delete data;
-
-				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
-				s = s+battTemp+"\t";
-				s = s+secTemp+"\t";
-				s = s+fgTemp+"\t";
-				s = s+tmuTemp+"\t";
-				mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
-			}
-
-			sys.msleep(1);
+			sys.usleep(500);
 		}
 
 		imgAcqThread.join();
+		tempMonitorThread.join();
 
 		mDone = true;
 	}
@@ -298,6 +284,9 @@ namespace Quadrotor{
 			return;
 
 		cv::Mat img;
+		sched_param sp;
+		sp.sched_priority = mThreadPriority-1;
+		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			shared_ptr<SensorData> data = shared_ptr<SensorData>(new SensorDataImage());
@@ -338,6 +327,40 @@ namespace Quadrotor{
 		cap == NULL;
 
 //		delete cap;
+	}
+
+	void SensorManager::runTemperatureMonitor()
+	{
+		System sys;
+		sched_param sp;
+		sp.sched_priority = mThreadPriority-1;
+		sched_setscheduler(0, mScheduler, &sp);
+		while(mRunning)
+		{
+			float battTemp = getBatteryTemp()/10.0;
+			float secTemp = getSecTemp()/10.0;
+			float fgTemp= getFuelgaugeTemp()/10.0;
+			float tmuTemp = getTmuTemp()/10.0;
+
+			shared_ptr<SensorDataPhoneTemp> data = shared_ptr<SensorDataPhoneTemp>(new SensorDataPhoneTemp());
+			data->battTemp = battTemp;
+			data->secTemp = secTemp;
+			data->fgTemp = fgTemp;
+			data->tmuTemp = tmuTemp;
+			mMutex_listeners.lock();
+			for(int i=0; i<mListeners.size(); i++)
+				mListeners[i]->onNewSensorUpdate(data);
+			mMutex_listeners.unlock();
+
+			String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
+			s = s+battTemp+"\t";
+			s = s+secTemp+"\t";
+			s = s+fgTemp+"\t";
+			s = s+tmuTemp+"\t";
+			mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
+
+			sys.msleep(500);
+		}
 	}
 
 	int SensorManager::getBatteryTemp()

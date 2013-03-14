@@ -39,6 +39,9 @@ namespace Quadrotor {
 		mLastMotorCmds.push_back(0);
 		mLastMotorCmds.push_back(0);
 		mLastMotorCmds.push_back(0);
+
+		mScheduler = SCHED_NORMAL;
+		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
@@ -49,23 +52,23 @@ namespace Quadrotor {
 	{
 		Log::alert("------------------------- AttitudeThrustController shutdown started  --------------------------------------------------");
 		mMutex_motorInterface.lock();
-		mMotorInterface.enableMotors(false);
+		mMotorInterface->enableMotors(false);
 		mMutex_motorInterface.unlock();
 		mRunning = false;
 		System sys;
 		while(!mDone)
 			sys.msleep(10);
 	
-		mMotorInterface.shutdown();
+		mMotorInterface->shutdown();
 	
 		Log::alert("------------------------- AttitudeThrustController shutdown done");
 	}
 	
 	void AttitudeThrustController::initialize()
 	{
-		mMotorInterface.initialize();
-		mMotorInterface.enableMotors(false);
-		mMotorInterface.start();
+		mMotorInterface->initialize();
+		mMotorInterface->enableMotors(false);
+		mMotorInterface->start();
 	}
 	
 	void AttitudeThrustController::run()
@@ -73,6 +76,9 @@ namespace Quadrotor {
 		mDone = false;
 		mRunning = true;
 		System sys;
+		sched_param sp;
+		sp.sched_priority = mThreadPriority;
+		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			if(mDoControl)
@@ -130,13 +136,13 @@ namespace Quadrotor {
 			for(int i=0; i<4;i++)
 				motorCmds[i] = 0;
 		mMutex_motorInterface.lock();
-		mMotorInterface.sendCommand(motorCmds);
+		mMotorInterface->sendCommand(motorCmds);
 		mLastMotorCmds = motorCmds; // should copy all the data
 		mMutex_motorInterface.unlock();
 	
 		mDoControl = false;
 
-		if(!mMotorInterface.isMotorsEnabled())
+		if(!mMotorInterface->isMotorsEnabled())
 			for(int i=0; i<4; i++)
 				cmds[i] = 0;
 		for(int i=0; i<mListeners.size(); i++)
@@ -219,7 +225,7 @@ namespace Quadrotor {
 		mPcIsConnected = true;
 		Log::alert(String("Turning motors off"));
 		mMutex_motorInterface.lock();
-		mMotorInterface.enableMotors(false);
+		mMotorInterface->enableMotors(false);
 		mMutex_motorInterface.unlock();
 	}
 	
@@ -227,7 +233,7 @@ namespace Quadrotor {
 	{
 		mPcIsConnected = true;
 		mMutex_motorInterface.lock();
-		mMotorInterface.enableMotors(true);
+		mMotorInterface->enableMotors(true);
 		mMutex_motorInterface.unlock();
 	}
 	
@@ -235,7 +241,7 @@ namespace Quadrotor {
 	{
 		mPcIsConnected = false;
 		mMutex_motorInterface.lock();
-		mMotorInterface.enableMotors(false);
+		mMotorInterface->enableMotors(false);
 		mMutex_motorInterface.unlock();
 	}
 	
@@ -310,7 +316,7 @@ namespace Quadrotor {
 	void AttitudeThrustController::enableMotors(bool enabled)
 	{
 		mMutex_motorInterface.lock();
-		mMotorInterface.enableMotors(enabled);
+		mMotorInterface->enableMotors(enabled);
 		mMutex_motorInterface.unlock();
 	}
 
@@ -318,7 +324,7 @@ namespace Quadrotor {
 //	{
 //		bool temp;
 //		mMutex_motorInterface.lock();
-//		temp = mMotorInterface.isConnected();
+//		temp = mMotorInterface->isConnected();
 //		mMutex_motorInterface.unlock();
 //		return temp;
 //	}
