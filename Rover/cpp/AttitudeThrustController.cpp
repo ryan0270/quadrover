@@ -1,10 +1,10 @@
 #include "AttitudeThrustController.h"
 #include "AttitudeThrustControllerListener.h"
 
-using namespace toadlet;
-
 namespace ICSL {
 namespace Quadrotor {
+using namespace toadlet::egg;
+using namespace TNT;
 	AttitudeThrustController::AttitudeThrustController() :
 		mCurAtt(3,1,0.0),
 		mCurAngularVel(3,1,0.0),

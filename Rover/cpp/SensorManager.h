@@ -141,7 +141,7 @@ class SensorDataPhoneTemp : public SensorData
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/video/tracking.hpp>
 
-#include "ICSL/constants.h"
+#include "constants.h"
 
 #include "Common.h"
 #include "QuadLogger.h"
@@ -152,8 +152,8 @@ class SensorDataPhoneTemp : public SensorData
 
 namespace ICSL{
 namespace Quadrotor{
-static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 using namespace std;
+static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
 class SensorManagerListener
 {

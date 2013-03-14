@@ -13,10 +13,10 @@
 #include "Observer_Angular.h"
 #include "MotorInterface.h"
 
-using namespace toadlet::egg;
-
 namespace ICSL {
 namespace Quadrotor{
+using namespace toadlet::egg;
+
 class AttitudeThrustControllerListener;
 //class AttitudeThrustControllerListener
 //{

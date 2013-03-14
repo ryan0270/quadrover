@@ -1,11 +1,11 @@
 #include "TranslationController.h"
 #include "TNT_Utils.h"
 
-using namespace toadlet;
-using namespace ICSL::Constants;
-
 namespace ICSL {
 namespace Quadrotor {
+using namespace toadlet;
+using namespace ICSL::Constants;
+using namespace TNT;
 	TranslationController::TranslationController() :
 		mCurState(6,1,0.0),
 		mDesState(6,1,0.0),

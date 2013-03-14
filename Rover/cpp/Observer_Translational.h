@@ -8,9 +8,7 @@
 
 #include "TNT/tnt.h"
 
-#include "ICSL/constants.h"
-#include "ICSL/SystemModel/ISystemModelAffine.h"
-#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
+#include "constants.h"
 
 #include "Time.h"
 #include "CommManager.h"
@@ -89,7 +87,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	bool mDoMeasUpdate_posOnly;
 	Time mStartTime;
 
-	Array2D<double> mRotViconToPhone;
+	TNT::Array2D<double> mRotViconToPhone;
 	QuadLogger *mQuadLogger;
 
 	Collection<Observer_TranslationalListener*> mListeners;

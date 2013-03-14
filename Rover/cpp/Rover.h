@@ -7,16 +7,16 @@
 #include <cpu-features.h>
 
 #include <toadlet/egg.h>
-using toadlet::int64;
-using toadlet::uint64;
-using toadlet::egg::String;
+//using toadlet::int64;
+//using toadlet::uint64;
+//using toadlet::egg::String;
 
 #include <opencv2/core/core.hpp>
 
 #include "Observer_Translational.h"
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
-#include "ICSL/constants.h"
+#include "constants.h"
 #include "Observer_Angular.h"
 #include "QuadLogger.h"
 #include "CommManager.h"

@@ -279,7 +279,7 @@ end
 
 %%
 if exist('featureMatchTime','var') && ~isempty(featureMatchTime)
-	figure(600);
+	figure(601);
 	plot(featureMatchTimeTime, featureMatchTime/1000);
 	xlabel('Time [s]');
 	ylabel('Feature match time [ms]');
@@ -312,7 +312,7 @@ end
 
 %%
 if exist('numFeatures','var') && ~isempty(numFeatures)
-	figure(1300); clf;
+	figure(1301); clf;
 	plot(numFeaturesTime, numFeatures,'x');
 	xlabel('Time [s]');
 	ylabel('Num Features Matched [cnt]');
