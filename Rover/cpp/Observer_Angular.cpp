@@ -198,7 +198,7 @@ void Observer_Angular::run()
 		if(!mDoingBurnIn && !gyroProcessed)
 		{
 			mMutex_cache.lock();
-			double dt = Time::calcDiffUS(lastGyroUpdateTime, mGyroData->timestamp)/1.0e6;
+			double dt = Time::calcDiffNS(lastGyroUpdateTime, mGyroData->timestamp)/1.0e9;
 			lastGyroUpdateTime.setTime(mGyroData->timestamp);
 			mMutex_cache.unlock();
 			doGyroUpdate(dt);
@@ -267,6 +267,9 @@ void Observer_Angular::doInnovationUpdate(double dt)
 // Based on Hamel and Mahoney's nonlinear SO3 observer
 void Observer_Angular::doGyroUpdate(double dt)
 {
+	if(dt > 0.05)
+		return; // too long of a period to integrate over
+
 	mMutex_data.lock();
 	Array2D<double> gyro;
 	mCurVel = mGyro - mGyroBias;

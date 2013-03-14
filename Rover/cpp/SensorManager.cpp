@@ -21,6 +21,8 @@ namespace Quadrotor{
 		mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
 								 createRotMat(0,(double)PI));
 		mRotPhoneToCam = transpose(mRotCamToPhone);
+
+		mTimestampOffsetNS = 0;
 	}
 
 	SensorManager::~SensorManager()
@@ -140,15 +142,17 @@ namespace Quadrotor{
 		System sys;
 		mDone = false;
 		Time lastTempMeasureTime;
+		int64_t lastTime = 0;
 		while(mRunning)
 		{
 			ASensorEvent event;
 			while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
 			{
+				if(mTimestampOffsetNS == 0)
+					mTimestampOffsetNS = mStartTime.getNS()-event.timestamp;
 // TODO: Set the event time to match the timestamp in the ASensor struct
 				int logFlag = -1;
 				int logID = -1;
-				uint64 curTimeMS;
 				shared_ptr<SensorData> data = NULL;
 				switch(event.type)
 				{
@@ -158,6 +162,7 @@ namespace Quadrotor{
 							logID = LOG_ID_PRESSURE;
 							data = shared_ptr<SensorData>(new SensorData(event.pressure, SENSOR_DATA_TYPE_PRESSURE));
 							mLastPressure = event.pressure;
+							lastTime = event.timestamp;
 						}
 						break;
 					case ASENSOR_TYPE_ACCELEROMETER:
@@ -201,10 +206,12 @@ namespace Quadrotor{
 					default:
 						Log::alert(String()+"Unknown sensor event: "+event.type);
 				}
+				data->timestamp.setTimeNS(event.timestamp+mTimestampOffsetNS);
 
-				if(mQuadLogger != NULL && logFlag != -1)
+				if(mQuadLogger != NULL && logFlag != -1 && data != NULL)
 				{
-					String s=String()+ mStartTime.getElapsedTimeMS() + "\t" + logID +"\t"+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
+					String s=String()+(data->timestamp.getMS()-mStartTime.getMS())+"\t"+logID+"\t";
+					s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
 					mQuadLogger->addLine(s,logFlag);
 				}
 

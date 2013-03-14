@@ -25,3 +25,6 @@ image*/*
 data.csv
 
 *.orig
+
+Leash/runData/*
+

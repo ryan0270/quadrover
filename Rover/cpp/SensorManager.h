@@ -171,7 +171,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	void shutdown();
 
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
-	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime = time; mMutex_startTime.unlock();}
+	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime = time; mTimestampOffsetNS = 0; mMutex_startTime.unlock();}
 
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
@@ -204,6 +204,8 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
+
+	int64_t mTimestampOffsetNS;
 };
 
 

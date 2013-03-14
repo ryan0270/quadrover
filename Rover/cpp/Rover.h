@@ -108,7 +108,7 @@ protected:
 
 	bool mUseIbvs;
 
-	TNT::Array2D<int> getCpuUsage();
+	static TNT::Array2D<int> getCpuUsage(int numCpuCores);
 
 	int mNumCpuCores;
 
