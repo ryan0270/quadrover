@@ -6,7 +6,7 @@
 
 #include "TNT/tnt.h"
 
-#include "ICSL/constants.h"
+#include "constants.h"
 
 #include "Time.h"
 #include "CommManager.h"
@@ -38,9 +38,9 @@ class TranslationController : 	public toadlet::egg::Thread,
 	void shutdown();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	TNT::Array2D<double> const getDesiredState(){mMutex_data.lock(); Array2D<double> tempState = mDesState.copy(); mMutex_data.unlock(); return tempState;}
-	TNT::Array2D<double> const getCurState(){mMutex_data.lock(); Array2D<double> tempState = mCurState.copy(); mMutex_data.unlock(); return tempState;}
-	TNT::Array2D<double> const getErrorMemory(){mMutex_data.lock(); Array2D<double> tempInt = mErrInt.copy(); mMutex_data.unlock(); return tempInt;}
+	TNT::Array2D<double> const getDesiredState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mDesState.copy(); mMutex_data.unlock(); return tempState;}
+	TNT::Array2D<double> const getCurState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mCurState.copy(); mMutex_data.unlock(); return tempState;}
+	TNT::Array2D<double> const getErrorMemory(){mMutex_data.lock(); TNT::Array2D<double> tempInt = mErrInt.copy(); mMutex_data.unlock(); return tempInt;}
 
 	void calcControl();
 	void reset();

@@ -21,7 +21,7 @@ class Observer_AngularListener
 
 #include <toadlet/egg.h>
 
-#include "ICSL/constants.h"
+#include "constants.h"
 #include "TNT/tnt.h"
 #include "QuadLogger.h"
 #include "Common.h"
@@ -29,7 +29,7 @@ class Observer_AngularListener
 #include "CommManager.h"
 #include "SensorManager.h"
 
-using toadlet::uint64;
+//using toadlet::uint64;
 
 namespace ICSL{
 namespace Quadrotor{

@@ -48,6 +48,7 @@ set (LIBS
 	${TOADLET_EGG_LIB} 
 	${OpenCV_LIBS_OPT} 
 	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
+	${TBB_DIR}/libs/${NDK_NAME_ARCH}/libtbb.a
 	-lgnustl_static # this i already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
 	-lz -llog -ldl EGL android
 )
@@ -67,7 +68,6 @@ set (SRC ${SRC}
 	./cpp/SensorManager.cpp
 	./cpp/Matcher.cpp
 	./cpp/VideoMaker.cpp
-	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 )
 
@@ -88,9 +88,7 @@ set (H ${H}
 	./cpp/SensorManager.h
 	./cpp/Matcher.h
 	./cpp/VideoMaker.h
-	./cpp/ICSL/SystemModel/ISystemModel.h
-	./cpp/ICSL/SystemModel/ISystemModelAffine.h
-	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
+	./cpp/constants.h
 	${CPUFEATURES_PATH}/cpu-features.h
 )
 

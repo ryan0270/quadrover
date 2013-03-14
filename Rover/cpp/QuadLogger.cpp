@@ -1,9 +1,8 @@
 #include "QuadLogger.h"
 
-using namespace std;
-
 namespace ICSL{
 namespace Quadrotor{
+using namespace std;
 QuadLogger::QuadLogger()
 {
 	mDir = ".";

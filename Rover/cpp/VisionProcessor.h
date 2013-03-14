@@ -43,7 +43,7 @@ class ImageMatchData
 #include <list>
 
 #include <toadlet/egg.h>
-using toadlet::egg::String;
+//using toadlet::egg::String;
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -55,7 +55,7 @@ using toadlet::egg::String;
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
 
-#include "ICSL/constants.h"
+#include "constants.h"
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Observer_Angular.h"
