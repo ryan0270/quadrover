@@ -190,7 +190,8 @@ namespace Quadrotor{
 			}
 
 			if(mNewImageResultsReady && mFlowCalcDone
-					&& mMotorOn)
+					&& mMotorOn
+					)
 			{
 				// if we're here then the previous thread should already be finished
 				flowCalcThread.imageMatchData = mImageMatchData;
@@ -239,6 +240,13 @@ namespace Quadrotor{
 			return;
 		}
 
+		// camera distortion coeffs
+		double k1 = 0.057821692482247215;
+		double k2 = -0.30298698825546139;
+		double p1 = -0.0049942077937641669;
+		double p2 = 0.0013584538237561394;
+		double k3 = 0.32018957065239517;
+
 		mMutex_data.lock();
 		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
@@ -260,18 +268,15 @@ namespace Quadrotor{
 		SvInv = matmult(mRotPhoneToCam, matmult(SvInv, mRotCamToPhone));
 		mMutex_data.unlock();
 
-		double cx = matchData->imgData1->img->cols/2.0;
-		double cy = matchData->imgData1->img->rows/2.0;
+//		double cx = matchData->imgData1->img->cols/2.0;
+//		double cy = matchData->imgData1->img->rows/2.0;
+		// from calibration data
+		double cx = 318.2;
+		double cy = 249.0;
 		Array2D<double> A(1,3,0.0);
 		Array2D<double> B(3,3,0.0);
-		// These rotation matrices are actually in phone coords rather than camera coords
-		// but the transform to camera coords will get cancelled out because we 
-		// unrotate and then rotate about by the same transform (in addition to the
-		// attitude difference)
 		Array2D<double> R1 = createRotMat_ZYX(matchData->imgData0->att[2][0], matchData->imgData0->att[1][0], matchData->imgData0->att[0][0]);
 		Array2D<double> R2 = createRotMat_ZYX(matchData->imgData1->att[2][0], matchData->imgData1->att[1][0], matchData->imgData1->att[0][0]);
-//		R1 = matmult(mRotPhoneToCam,R1);
-//		R2 = matmult(mRotPhoneToCam,R2);
 		Array2D<double> R1_T = transpose(R1);
 		Array2D<double> R2_T = transpose(R2);
 		Array2D<double> R = matmult(R1, transpose(R2));
@@ -280,49 +285,72 @@ namespace Quadrotor{
 		Array2D<double> Lv(2,3), Lv1(2,3), Lv2(2,3);
 		Array2D<double> Lw(2,3), Lw1(2,3), Lw2(2,3);
 		Array2D<double> angularVel(3,1,0.0);
+		double f1= matchData->imgData0->focalLength;
+		double f2 = matchData->imgData1->focalLength;
 		for(int i=0; i<matchData->featurePoints[0].size(); i++)
 		{
-			q1a[0][0] = matchData->featurePoints[0][i].x-cx;
-			q1a[1][0] = matchData->featurePoints[0][i].y-cy;
-			q1a[2][0] = matchData->imgData0->focalLength;
-			q2a[0][0] = matchData->featurePoints[1][i].x-cx;
-			q2a[1][0] = matchData->featurePoints[1][i].y-cy;
-			q2a[2][0] = matchData->imgData1->focalLength;
+			q1[0][0] = matchData->featurePoints[0][i].x-cx;
+			q1[1][0] = matchData->featurePoints[0][i].y-cy;
+			q2[0][0] = matchData->featurePoints[1][i].x-cx;
+			q2[1][0] = matchData->featurePoints[1][i].y-cy;
+
+			// remove distortion
+			q1 = 1.0/f1*q1;
+			q2 = 1.0/f2*q2;
+
+			double r1sq = pow(q1[0][0],2)+pow(q1[1][0],2);
+			q1 = (1+k1*r1sq+k2*pow(r1sq,2)+k3*pow(r1sq,3))*q1;
+			q1[0][0] += 2*p1*q1[0][0]*q1[1][0]+p2*(r1sq+2*pow(q1[0][0],2));
+			q1[1][0] += 2*p2*q1[0][0]*q1[1][0]+p1*(r1sq+2*pow(q1[1][0],2));
+			
+			double r2sq = pow(q2[0][0],2)+pow(q2[1][0],2);
+			q2 = (1+k1*r2sq+k2*pow(r2sq,2)+k3*pow(r2sq,3))*q2;
+			q2[0][0] += 2*p1*q2[0][0]*q2[1][0]+p2*(r2sq+2*pow(q2[0][0],2));
+			q2[1][0] += 2*p2*q2[0][0]*q2[1][0]+p1*(r2sq+2*pow(q2[1][0],2));
+
+			q1 = f1*q1;
+			q2 = f2*q2;
+
+			// Unrotate
+			q1a[0][0] = q1[0][0];
+			q1a[1][0] = q1[1][0];
+			q1a[2][0] = f1;
+			q2a[0][0] = q2[0][0];
+			q2a[1][0] = q2[1][0];
+			q2a[2][0] = f2;
 //			// change q2 points to q1 attitude
 //			q2a = matmult(R, q2a); 
 			q1a = matmult(R1_T, q1a);
 			q2a = matmult(R2_T, q2a);
 
 			// project back onto the focal plane
-			q1a = matchData->imgData0->focalLength/q1a[2][0]*q1a;
-			q2a = matchData->imgData1->focalLength/q2a[2][0]*q2a;
+			q1a = f1/q1a[2][0]*q1a;
+			q2a = f2/q2a[2][0]*q2a;
 
 			// back to 2d points
 			q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
 			q2[0][0] = q2a[0][0]; q2[1][0] = q2a[1][0];
 
 			// Velocity jacobian
-			double f1= matchData->imgData0->focalLength;
 			Lv1[0][0] = -f1; Lv1[0][1] = 0; Lv1[0][2] = q1[0][0];
 			Lv1[1][0] = 0; Lv1[1][1] = -f1; Lv1[1][2] = q1[1][0];
 
-			double f2 = matchData->imgData1->focalLength;
 			Lv2[0][0] = -f2; Lv2[0][1] = 0; Lv2[0][2] = q2[0][0];
 			Lv2[1][0] = 0; Lv2[1][1] = -f2; Lv2[1][2] = q2[1][0];
 
 			Lv = Lv1.copy();
 
-			Lw1[0][0] = q1[0][0]*q1[1][0]; Lw1[0][1] = -(1+pow(q1[0][0],2)); Lw1[0][2] = q1[1][0];
-			Lw1[1][0] = 1+pow(q1[1][0],2); Lw1[1][1] = -Lw1[0][0];			 Lw1[1][2] = -q1[0][0];
-			Lw1 = 1.0/matchData->imgData0->focalLength*Lw1;
+//			Lw1[0][0] = q1[0][0]*q1[1][0]; Lw1[0][1] = -(1+pow(q1[0][0],2)); Lw1[0][2] = q1[1][0];
+//			Lw1[1][0] = 1+pow(q1[1][0],2); Lw1[1][1] = -Lw1[0][0];			 Lw1[1][2] = -q1[0][0];
+//			Lw1 = 1.0/matchData->imgData0->focalLength*Lw1;
+//
+//			Lw2[0][0] = q2[0][0]*q2[1][0]; Lw2[0][1] = -(1+pow(q2[0][0],2)); Lw2[0][2] = q2[1][0];
+//			Lw2[1][0] = 1+pow(q2[1][0],2); Lw2[1][1] = -Lw2[0][0];			 Lw2[1][2] = -q2[0][0];
+//			Lw2 = 1.0/matchData->imgData1->focalLength*Lw2;
+//
+//			Lw = Lw1.copy();
 
-			Lw2[0][0] = q2[0][0]*q2[1][0]; Lw2[0][1] = -(1+pow(q2[0][0],2)); Lw2[0][2] = q2[1][0];
-			Lw2[1][0] = 1+pow(q2[1][0],2); Lw2[1][1] = -Lw2[0][0];			 Lw2[1][2] = -q2[0][0];
-			Lw2 = 1.0/matchData->imgData1->focalLength*Lw2;
-
-			Lw = Lw1.copy();
-
-			angularVel.inject(0.5*(matchData->imgData0->startAngularVel+matchData->imgData1->endAngularVel));
+//			angularVel.inject(0.5*(matchData->imgData0->startAngularVel+matchData->imgData1->endAngularVel));
 
 //			A += matmult(transpose(q2-q1-matmult(Lw,matmult(mRotPhoneToCam,angularVel))),matmult(SnInv, Lv));
 			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
