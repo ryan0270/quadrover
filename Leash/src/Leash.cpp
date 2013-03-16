@@ -347,7 +347,7 @@ void Leash::run()
 {
 	mTelemVicon.startMonitor();
 	mStartTimeUniverseMS = mSys.mtime();
-	mTmrGui->start(20);
+	mTmrGui->start(50);
 }
 
 void Leash::pollUDP()

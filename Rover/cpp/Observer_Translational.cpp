@@ -250,8 +250,7 @@ namespace Quadrotor{
 		mMutex_data.lock();
 		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
-//		Array2D<double> Sn = 30*30*createIdentity(2);
-		Array2D<double> Sn = 3e2*3e2*createIdentity(2);
+		Array2D<double> Sn = 50*50*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
 
@@ -261,12 +260,11 @@ namespace Quadrotor{
 		double z = mStateKF[2][0];
 		z -= 0.060; // offset between markers and camera
 
-//Log::alert("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-//printArray("mErrCovKF: \n", mErrCovKF);
 		// Rotate prior velocity information to camera coords
 		mu_v = matmult(mRotPhoneToCam, mu_v);
 		SvInv = matmult(mRotPhoneToCam, matmult(SvInv, mRotCamToPhone));
 		mMutex_data.unlock();
+//Log::alert("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
 //		double cx = matchData->imgData1->img->cols/2.0;
 //		double cy = matchData->imgData1->img->rows/2.0;
@@ -356,6 +354,11 @@ namespace Quadrotor{
 			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
 			B += matmult(transpose(Lv), matmult(SnInv, Lv));
 		}
+		int maxPoints = 5;
+		int numPoints = matchData->featurePoints[0].size();
+		double scale = min((double)maxPoints, (double)numPoints)/numPoints;
+		A = scale*A;
+		B = scale*B;
 		Array2D<double> temp1 = (dt/z)*A+matmult(transpose(mu_v), SvInv);
 		Array2D<double> temp2 = ((dt*dt)/(z*z))*B+SvInv;
 		JAMA::LU<double> temp2_TQR(transpose(temp2));

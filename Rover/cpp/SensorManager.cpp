@@ -326,12 +326,12 @@ namespace Quadrotor{
 		{
 			shared_ptr<SensorData> data = shared_ptr<SensorData>(new SensorDataImage());
 			data->type = SENSOR_DATA_TYPE_IMAGE;
-			data->timestamp.setTime();
 
 			mMutex_attData.lock();
 			static_pointer_cast<SensorDataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
 			mMutex_attData.unlock();
 			cap->grab();
+			data->timestamp.setTime();
 			mMutex_attData.lock();
 			static_pointer_cast<SensorDataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
 			static_pointer_cast<SensorDataImage>(data)->att.inject(mCurAtt);
