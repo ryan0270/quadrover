@@ -136,7 +136,7 @@ void Observer_Angular::run()
 			mMutex_data.lock();
 			mMutex_cache.lock();
 			mGyroData->lock();
-			mGyro.inject(mGyroData->data);
+			mGyro.inject(mGyroData->dataCalibrated);
 			mGyroData->unlock();
 			mMutex_cache.unlock();
 			if(mDoingBurnIn && mBurnCount < 2000)
@@ -168,7 +168,7 @@ void Observer_Angular::run()
 			mMutex_data.lock();
 			mMutex_cache.lock();
 			mAccelData->lock();
-			mAccel.inject(mAccelData->data);
+			mAccel.inject(mAccelData->dataCalibrated);
 			mAccelData->unlock();
 			mMutex_cache.unlock();
 			mNewAccelReady = false;
@@ -180,7 +180,7 @@ void Observer_Angular::run()
 			mMutex_data.lock();
 			mMutex_cache.lock();
 			mMagData->lock();
-			mMagnometer.inject(mMagData->data);
+			mMagnometer.inject(mMagData->dataCalibrated);
 			mMagData->unlock();
 			mMutex_cache.unlock();
 			mNewMagReady = false;

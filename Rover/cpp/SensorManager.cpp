@@ -150,6 +150,24 @@ namespace Quadrotor{
 		tempMonitorThread.parent = this;
 		tempMonitorThread.start();
 
+		double accelCal1X = -0.0002;
+		double accelCal1Y = 0.1116;
+		double accelCal1Z = 9.4939;
+		double accelCal2X = -0.0568;
+		double accelCal2Y = -0.0564;
+		double accelCal2Z = -10.0235;
+
+		double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
+		// double have information on these so assume they are the same
+		double accelScaleX = accelScaleZ;
+		double accelScaleY = accelScaleZ;
+
+		double accelOffX = 0.5*(accelCal1X+accelCal2X);
+		double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
+		double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
+
+		Array2D<double> accelCalibrated(3,1), gyroCalibrated(3,1), magCalibrated(3,1);
+
 		System sys;
 		mDone = false;
 		sched_param sp;
@@ -173,6 +191,10 @@ namespace Quadrotor{
 							logFlag= LOG_FLAG_PRESSURE;
 							logID = LOG_ID_PRESSURE;
 							data = shared_ptr<SensorData>(new SensorData(event.pressure, SENSOR_DATA_TYPE_PRESSURE));
+							data = shared_ptr<SensorData>(new SensorData());
+							data->type = SENSOR_DATA_TYPE_PRESSURE;
+							data->data = event.pressure;
+							data->dataCalibrated = event.pressure;
 							mLastPressure = event.pressure;
 						}
 						break;
@@ -185,7 +207,13 @@ namespace Quadrotor{
 							mLastAccel[0][0] = event.data[0];
 							mLastAccel[1][0] = event.data[1];
 							mLastAccel[2][0] = event.data[2];
-							data = shared_ptr<SensorData>(new SensorDataVector(mLastAccel, SENSOR_DATA_TYPE_ACCEL));
+							accelCalibrated[0][0] = (event.data[0]-accelOffX)/accelScaleX;
+							accelCalibrated[1][0] = (event.data[1]-accelOffY)/accelScaleY;
+							accelCalibrated[2][0] = (event.data[2]-accelOffZ)/accelScaleZ;
+							data = shared_ptr<SensorData>(new SensorDataVector());
+							data->type = SENSOR_DATA_TYPE_ACCEL;
+							static_pointer_cast<SensorDataVector>(data)->data = mLastAccel.copy();
+							static_pointer_cast<SensorDataVector>(data)->dataCalibrated = accelCalibrated.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -198,7 +226,11 @@ namespace Quadrotor{
 							mLastGyro[0][0] = event.data[0];
 							mLastGyro[1][0] = event.data[1];
 							mLastGyro[2][0] = event.data[2];
-							data = shared_ptr<SensorData>(new SensorDataVector(mLastGyro, SENSOR_DATA_TYPE_GYRO));
+							data = shared_ptr<SensorData>(new SensorDataVector());
+							data->type = SENSOR_DATA_TYPE_GYRO;
+							static_pointer_cast<SensorDataVector>(data)->data = mLastGyro.copy();
+// TODO: Apply gyro bias estimate for the calibrated data
+							static_pointer_cast<SensorDataVector>(data)->dataCalibrated = mLastGyro.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -210,7 +242,10 @@ namespace Quadrotor{
 							mLastMag[0][0] = event.data[0];
 							mLastMag[1][0] = event.data[1];
 							mLastMag[2][0] = event.data[2];
-							data = shared_ptr<SensorData>(new SensorDataVector(mLastMag, SENSOR_DATA_TYPE_MAG));
+							data = shared_ptr<SensorData>(new SensorDataVector());
+							data->type = SENSOR_DATA_TYPE_MAG;
+							static_pointer_cast<SensorDataVector>(data)->data = mLastMag.copy();
+							static_pointer_cast<SensorDataVector>(data)->dataCalibrated = mLastMag.copy();
 							mMutex_data.unlock();
 						}
 						break;
