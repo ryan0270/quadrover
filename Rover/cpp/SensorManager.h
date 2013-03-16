@@ -31,11 +31,13 @@ class SensorData
 		lock();
 		d.lock();
 		d.timestamp.setTime(timestamp); 
-		d.data = data; d.type = type;
+		d.type = type;
+		d.data = data; 
+		d.dataCalibrated = dataCalibrated;
 		d.unlock();
 		unlock();
 	}
-	double data;
+	double data, dataCalibrated;
 	Time timestamp;
 	SensorDataType type;
 
@@ -47,7 +49,7 @@ class SensorDataVector : public SensorData
 {
 	public:
 	SensorDataVector(){type = SENSOR_DATA_TYPE_UNDEFINED;};
-	SensorDataVector(TNT::Array2D<double> const &d, SensorDataType t){data = d.copy(); type = t;}
+//	SensorDataVector(TNT::Array2D<double> const &d, SensorDataType t){data = d.copy(); type = t;}
 
 	void copyTo(SensorDataVector &d) {
 		if(&d == this)
@@ -56,11 +58,12 @@ class SensorDataVector : public SensorData
 		d.lock();
 		d.timestamp.setTime(timestamp); 
 		d.data = data.copy(); 
+		d.dataCalibrated = dataCalibrated.copy();
 		d.type = type;
 		d.unlock();
 		unlock();
 	}
-	TNT::Array2D<double> data;
+	TNT::Array2D<double> data, dataCalibrated;
 };
 
 class SensorDataImage : public SensorData

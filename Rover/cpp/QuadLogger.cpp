@@ -16,8 +16,8 @@ QuadLogger::QuadLogger()
 //	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
 //	mTypeMask |= LOG_FLAG_OBSV_BIAS;
 //	mTypeMask |= LOG_FLAG_MAGNOMETER;
-//	mTypeMask |= LOG_FLAG_ACCEL;
-	mTypeMask |= LOG_FLAG_GYRO;
+	mTypeMask |= LOG_FLAG_ACCEL;
+//	mTypeMask |= LOG_FLAG_GYRO;
 //	mTypeMask |= LOG_FLAG_PRESSURE;
 	mTypeMask |= LOG_FLAG_CAM_RESULTS;
 //	mTypeMask |= LOG_FLAG_CAM_IMAGES;
