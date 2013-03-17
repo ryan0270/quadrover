@@ -126,6 +126,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void onCommConnectionLost();
 		void onNewCommMotorOn(){mMotorOn = true;}
 		void onNewCommMotorOff(){mMotorOn = false;}
+		void onNewCommLogClear();
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<SensorData> const &data);
@@ -149,7 +150,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		QuadLogger *mQuadLogger;
 
-		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData, mMutex_imgBuffer, mMutex_matcher;
+		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData, mMutex_buffers, mMutex_matcher;
 		toadlet::egg::Mutex mMutex_logger;
 
 		Collection<VisionProcessorListener*> mListeners;
@@ -159,6 +160,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		int mImgBufferMaxSize;
 		list<shared_ptr<SensorDataImage> > mImgDataBuffer;
 		list<shared_ptr<ImageMatchData> > mImgMatchDataBuffer;
+		list<vector<vector<cv::Point2f> > > mFeatureMatchBuffer;
 
 		Matcher mFeatureMatcher;
 		cv::CascadeClassifier mCascadeClassifier;
