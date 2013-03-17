@@ -234,6 +234,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_NUM_FEATURE_POINTS="+LOG_ID_NUM_FEATURE_POINTS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_OBSV_ANG_INNOVATION="+LOG_ID_OBSV_ANG_INNOVATION+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_IMG_TARGET_POINTS="+LOG_ID_IMG_TARGET_POINTS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_CAMERA_POS="+LOG_ID_CAMERA_POS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}

@@ -27,6 +27,7 @@ class VideoMaker : public VisionProcessorListener,
 
 		// for VisionProcessorListener
 		void onImageProcessed(shared_ptr<ImageMatchData> const data);
+		void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
 		void onImageLost(){};
 
 	protected:

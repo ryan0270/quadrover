@@ -105,6 +105,10 @@ numFeatures = phoneData(numFeaturesIndices,3)';
 % kfCovTime = phoneData(kfCovIndices,1)'/1000;
 % kfCov = phoneData(kfCovIndices,3:11)';
 
+cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CAMERA_POS);
+cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
+cameraPos = phoneData(cameraPosIndices,3:5)';
+
 attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
 attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
 attInnovation = phoneData(attInnovationIndices,3:5)';
@@ -340,3 +344,5 @@ if exist('attInnovation','var') && ~isempty(attInnovation)
 		ylabel(stateLabels{i});
 	end
 end
+
+%%

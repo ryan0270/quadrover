@@ -113,9 +113,13 @@ void VisionProcessor::run()
 	while(mRunning)
 	{
 		if(mNewImageReady_featureMatch && mImageDataCur == NULL)
+		{
+			mNewImageReady_featureMatch = false;
 			mImageDataCur = mImageDataNext;
+		}
 		else if(mNewImageReady_featureMatch)
 		{
+			mNewImageReady_featureMatch = false;
 			mMutex_imageSensorData.lock();
 			mImageDataPrev = mImageDataCur;
 			mImageDataCur = mImageDataNext;
@@ -179,7 +183,6 @@ void VisionProcessor::run()
 //				mMutex_imgBuffer.unlock();
 			}
 
-			mNewImageReady_featureMatch = false;
 		}
 
 		System::msleep(1);
@@ -209,6 +212,7 @@ void VisionProcessor::runTargetFinder()
 	{
 		if(mNewImageReady_targetFind)
 		{
+			mNewImageReady_targetFind = false;
 			curImageData = mImageDataNext;
 
 			curImageData->lock();
@@ -225,13 +229,13 @@ void VisionProcessor::runTargetFinder()
 			mLastCircles = circles;
 			mMutex_data.unlock();
 
-			if(circles.size() == 4)
+			if(circles.size() > 0)
 			{
 				shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
 				data->circleLocs = circles;
 				data->imgData = curImageData;
-//				for(int i=0; i<mListeners.size(); i++)
-//					mListeners[i]->onImageTargetFound(data);
+				for(int i=0; i<mListeners.size(); i++)
+					mListeners[i]->onImageTargetFound(data);
 			}
 
 			imgProcTimeUS = procStart.getElapsedTimeUS();
@@ -241,7 +245,7 @@ void VisionProcessor::runTargetFinder()
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
-				if(circles.size() == 4)
+				if(circles.size() > 0)
 				{
 					String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IMG_TARGET_POINTS+"\t";
 					for(int i=0; i<circles.size(); i++)
@@ -252,7 +256,6 @@ void VisionProcessor::runTargetFinder()
 				}
 			}
 
-			mNewImageReady_targetFind = false;
 		}
 
 		System::msleep(1);
@@ -285,118 +288,135 @@ vector<cv::KeyPoint> VisionProcessor::findCircles(cv::Mat const &img)
  	double scale = (double)pyrImg.rows/img.rows;
 
 	cv::SimpleBlobDetector::Params params;
+	params.minThreshold = 150;
+	params.maxThreshold = 220;
+	params.thresholdStep = 10;
 	params.minRepeatability = 1;
-	params.minDistBetweenBlobs = 10;
+	params.minDistBetweenBlobs = 20;
 	params.filterByColor = true;
 	params.blobColor = 0;
 	params.filterByArea = true;
-	params.minArea = 1;
-	params.maxArea = pyrImg.rows*pyrImg.cols/4;
+	params.minArea = 100;
+	params.maxArea = pyrImg.rows*pyrImg.cols;
 	params.filterByCircularity = true;
-	params.minCircularity = 0.2;
+	params.minCircularity = 0.7;
 	params.maxCircularity = 1.1;
 	params.filterByInertia = false;
 	params.filterByConvexity = true;
-	params.minConvexity = 0.5;
+	params.minConvexity = 0.9;
 	params.maxConvexity = 1.1;
 
 	cv::SimpleBlobDetector blobby(params);
 	vector<cv::KeyPoint> keypoints;
 	blobby.detect(pyrImg, keypoints);
 
-	// Try to get the 4 circles of interest
+	// just grab the biggest one
 	sort(keypoints.begin(), keypoints.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
-	list<cv::KeyPoint> circleKeypoints;
-	vector<cv::KeyPoint>::const_iterator kpIter = keypoints.begin();
-	double expectedSize = -1;;
-	while(circleKeypoints.size() < 4 && kpIter != keypoints.end())
-	{
-		cv::KeyPoint kp = *kpIter;
-		if(circleKeypoints.size() == 0)
-		{
-			expectedSize = kp.size;
-			circleKeypoints.push_back(kp);
-		}
-		else
-		{
-			if(abs( (double)(kp.size-expectedSize)/expectedSize ) < 0.3)
-				circleKeypoints.push_back(kp);
-			else
-			{
-				circleKeypoints.push_back(kp);
-				circleKeypoints.pop_front();
-				expectedSize = kp.size;
-			}
-		}
-		kpIter++;
-	}
 
-	if(circleKeypoints.size() < 4)
+	vector<cv::KeyPoint> circs;
+	if(keypoints.size() > 0)
 	{
-		circleKeypoints.clear();
-		return vector<cv::KeyPoint>();
-	}
-
-	// scale results back to original image size and refine the location
-	list<cv::KeyPoint>::iterator circIter = circleKeypoints.begin();
-	vector<cv::KeyPoint> localCircles, circs;
-	while(circIter != circleKeypoints.end())
-	{
-		cv::KeyPoint kp = *circIter;
+		cv::KeyPoint kp = keypoints[0];
 		kp.pt = 1.0/scale*kp.pt;
 		kp.size /= scale;
-
-// This stuff takes too long
-//		float x = max((double)0,kp.pt.x-2.0*kp.size);
-//		float y = max((double)0,kp.pt.y-2.0*kp.size);
-//		float width = min((double)img.cols-x-1, 4.0*kp.size);
-//		float height = min((double)img.rows-y-1, 4.0*kp.size);
-//		cv::Rect mask(x, y, width, height);
-//		params.minArea = PI*kp.size*kp.size/2;
-//		params.maxArea = width*height;
-//		params.filterByCircularity = false;
-//		localCircles.clear();
-//		cv::SimpleBlobDetector(params).detect(img(mask), localCircles);
-//		if(localCircles.size() > 0)
-//		{
-//			sort(localCircles.begin(), localCircles.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
-//			int j=0;
-//			bool found = false;
-//			while(!found && j < localCircles.size())
-//			{
-//				if( (localCircles[j].size - kp.size)/kp.size < 0.2 )
-//				{
-//					kp = localCircles[j];
-//					kp.pt = kp.pt+cv::Point2f(x, y);
-//					found = true;
-//				}
-//				j++;
-//			}
-//		}
-
 		circs.push_back(kp);
-		circIter++;
 	}
 
-	// need to get points ordered to calculated square sides
-//	sort(circs.begin(), circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt) < norm(kp2.pt);});
-	cv::Point2f p0 = circs[0].pt;
-	sort(circs.begin()+1, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p0) < norm(kp2.pt-p0);});
-	cv::Point2f p1 = circs[1].pt;
-	sort(circs.begin()+2, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p1) < norm(kp2.pt-p1);});
-
-	double l1 = norm(circs[0].pt-circs[1].pt);
-	double l2 = norm(circs[1].pt-circs[2].pt);
-	double l3 = norm(circs[2].pt-circs[3].pt);
-	double l4 = norm(circs[3].pt-circs[0].pt);
-	double mean = 0.25*(l1+l2+l3+l4);
-	if( abs(l1-mean)/mean > 0.1 ||
-		abs(l2-mean)/mean > 0.1 ||
-		abs(l3-mean)/mean > 0.1 ||
-		abs(l4-mean)/mean > 0.1)
-			circs.clear(); // too much variation so something must have been wrong
-
 	return circs;
+
+	// Try to get the 4 circles of interest
+// 	sort(keypoints.begin(), keypoints.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
+// 	list<cv::KeyPoint> circleKeypoints;
+// 	vector<cv::KeyPoint>::const_iterator kpIter = keypoints.begin();
+// 	double expectedSize = -1;;
+// 	while(circleKeypoints.size() < 4 && kpIter != keypoints.end())
+// 	{
+// 		cv::KeyPoint kp = *kpIter;
+// 		if(circleKeypoints.size() == 0)
+// 		{
+// 			expectedSize = kp.size;
+// 			circleKeypoints.push_back(kp);
+// 		}
+// 		else
+// 		{
+// 			if(abs( (double)(kp.size-expectedSize)/expectedSize ) < 0.3)
+// 				circleKeypoints.push_back(kp);
+// 			else
+// 			{
+// 				circleKeypoints.push_back(kp);
+// 				circleKeypoints.pop_front();
+// 				expectedSize = kp.size;
+// 			}
+// 		}
+// 		kpIter++;
+// 	}
+// 
+// 	if(circleKeypoints.size() < 4)
+// 	{
+// 		circleKeypoints.clear();
+// 		return vector<cv::KeyPoint>();
+// 	}
+// 
+// 	// scale results back to original image size and refine the location
+// 	list<cv::KeyPoint>::iterator circIter = circleKeypoints.begin();
+// 	vector<cv::KeyPoint> localCircles, circs;
+// 	while(circIter != circleKeypoints.end())
+// 	{
+// 		cv::KeyPoint kp = *circIter;
+// 		kp.pt = 1.0/scale*kp.pt;
+// 		kp.size /= scale;
+// 
+// // This stuff takes too long
+// //		float x = max((double)0,kp.pt.x-2.0*kp.size);
+// //		float y = max((double)0,kp.pt.y-2.0*kp.size);
+// //		float width = min((double)img.cols-x-1, 4.0*kp.size);
+// //		float height = min((double)img.rows-y-1, 4.0*kp.size);
+// //		cv::Rect mask(x, y, width, height);
+// //		params.minArea = PI*kp.size*kp.size/2;
+// //		params.maxArea = width*height;
+// //		params.filterByCircularity = false;
+// //		localCircles.clear();
+// //		cv::SimpleBlobDetector(params).detect(img(mask), localCircles);
+// //		if(localCircles.size() > 0)
+// //		{
+// //			sort(localCircles.begin(), localCircles.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
+// //			int j=0;
+// //			bool found = false;
+// //			while(!found && j < localCircles.size())
+// //			{
+// //				if( (localCircles[j].size - kp.size)/kp.size < 0.2 )
+// //				{
+// //					kp = localCircles[j];
+// //					kp.pt = kp.pt+cv::Point2f(x, y);
+// //					found = true;
+// //				}
+// //				j++;
+// //			}
+// //		}
+// 
+// 		circs.push_back(kp);
+// 		circIter++;
+// 	}
+// 
+// 	// need to get points ordered to calculated square sides
+// //	sort(circs.begin(), circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt) < norm(kp2.pt);});
+// 	cv::Point2f p0 = circs[0].pt;
+// 	sort(circs.begin()+1, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p0) < norm(kp2.pt-p0);});
+// 	cv::Point2f p1 = circs[1].pt;
+// 	sort(circs.begin()+2, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p1) < norm(kp2.pt-p1);});
+// 
+// 	double l1 = norm(circs[0].pt-circs[1].pt);
+// 	double l2 = norm(circs[1].pt-circs[2].pt);
+// 	double l3 = norm(circs[2].pt-circs[3].pt);
+// 	double l4 = norm(circs[3].pt-circs[0].pt);
+// 	double mean = 0.25*(l1+l2+l3+l4);
+// 	if( abs(l1-mean)/mean > 0.1 ||
+// 		abs(l2-mean)/mean > 0.1 ||
+// 		abs(l3-mean)/mean > 0.1 ||
+// 		abs(l4-mean)/mean > 0.1)
+// 			circs.clear(); // too much variation so something must have been wrong
+// 
+// 	return circs;
 }
 
 void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img)

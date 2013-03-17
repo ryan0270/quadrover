@@ -79,12 +79,14 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);
+	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data);
 	void onImageLost(){};
 
 	protected:
 	bool mRunning, mDone;
 	bool mDoMeasUpdate;
-	bool mDoMeasUpdate_posOnly;
+	bool mNewViconPosAvailable, mNewCameraPosAvailable;
+	bool mUseViconPos, mUseCameraPos;
 	Time mStartTime;
 
 	TNT::Array2D<double> mRotViconToPhone;
@@ -98,6 +100,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	TNT::Array2D<double> mStateKF, mAttitude;
 	TNT::Array2D<double> mAttBias, mAttBiasReset;
 	TNT::Array2D<double> mLastMeas;
+	TNT::Array2D<double> mLastViconPos, mLastCamPos;
 	double mMass, mForceGainReset, mForceGain;
 	Collection<double> mAttBiasAdaptRate;
 	double mForceGainAdaptRate;

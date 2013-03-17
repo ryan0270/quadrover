@@ -86,6 +86,7 @@ class VisionProcessorListener
 		virtual ~VisionProcessorListener(){};
 
 		virtual void onImageProcessed(shared_ptr<ImageMatchData> const data)=0;
+		virtual void onImageTargetFound(shared_ptr<ImageTargetFindData> const data)=0;
 		virtual void onImageLost()=0;
 };
 
