@@ -30,6 +30,19 @@ class ImageMatchData
 	protected:
 	toadlet::egg::Mutex mMutex;
 };
+
+class ImageTargetFindData
+{
+	public:
+	vector<cv::KeyPoint> circleLocs;
+	shared_ptr<SensorDataImage> imgData;
+
+	void lock(){mMutex.lock(); if(imgData != NULL) imgData->lock();}
+	void unlock(){mMutex.unlock(); if(imgData != NULL) imgData->unlock();}
+
+	protected:
+	toadlet::egg::Mutex mMutex;
+};
 } // namespace Quadrotor
 } // namespace ICSL
 #endif // ICSL_IMAGEMATCHDATA
@@ -120,7 +133,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		bool mUseIbvs;
 		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
-		bool mNewImageReady;
+		bool mNewImageReady_featureMatch, mNewImageReady_targetFind;
 		bool mLogImages;
 		cv::Mat	mCurImage, mCurImageGray;
 		shared_ptr<cv::Mat> mCurImageAnnotated;
@@ -136,6 +149,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		QuadLogger *mQuadLogger;
 
 		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData, mMutex_imgBuffer, mMutex_matcher;
+		toadlet::egg::Mutex mMutex_logger;
 
 		Collection<VisionProcessorListener*> mListeners;
 
@@ -149,10 +163,16 @@ class VisionProcessor : public toadlet::egg::Thread,
 		cv::CascadeClassifier mCascadeClassifier;
 
 		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
+		vector<cv::KeyPoint> findCircles(cv::Mat const &img);
 		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);
+		static void drawTarget(vector<cv::KeyPoint> const &circles, cv::Mat &img);
+
+		void runTargetFinder();
 
 		bool mMotorOn;
 		int mThreadPriority, mScheduler;
+
+		vector<cv::KeyPoint> mLastCircles;
 };
 
 } // namespace Quadrotor

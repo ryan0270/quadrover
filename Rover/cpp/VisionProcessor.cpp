@@ -28,7 +28,7 @@ VisionProcessor::VisionProcessor() :
 
 	mLastProcessTime.setTimeMS(0);
 
-	mNewImageReady = false;
+	mNewImageReady_featureMatch = mNewImageReady_targetFind = false;
 
 	mImgBufferMaxSize = 10;
 	
@@ -94,17 +94,27 @@ void VisionProcessor::getLastImageAnnotated(cv::Mat *outImage)
 
 void VisionProcessor::run()
 {
-	System sys;
 	mFinished = false;
 	mRunning = true;
+
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+
+	class : public Thread{
+		public:
+		void run(){parent->runTargetFinder();}
+		VisionProcessor *parent;
+	} targetFinderThread;
+	targetFinderThread.parent = this;
+	targetFinderThread.start();
+
+	vector<cv::KeyPoint> circles;
 	while(mRunning)
 	{
-		if(mNewImageReady && mImageDataCur == NULL)
+		if(mNewImageReady_featureMatch && mImageDataCur == NULL)
 			mImageDataCur = mImageDataNext;
-		else if(mNewImageReady)
+		else if(mNewImageReady_featureMatch)
 		{
 			mMutex_imageSensorData.lock();
 			mImageDataPrev = mImageDataCur;
@@ -121,19 +131,17 @@ void VisionProcessor::run()
 			Time procStart;
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
-//			cv::equalizeHist(mCurImageGray, mCurImageGray);
-//			if(!mCascadeClassifier.empty())
-//			{
-//				vector<cv::Rect> lappies;
-//				mCascadeClassifier.detectMultiScale(mCurImageGray, lappies, 1.1, 3, 0, cv::Size(50,50)); 
-//				Log::alert(String()+"found "+lappies.size()+" laptops");
-//			}
-
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
 
 			shared_ptr<cv::Mat> imgAnnotated(new cv::Mat());
 			mCurImage.copyTo(*imgAnnotated);
-			drawMatches(points, *imgAnnotated);
+//			drawMatches(points, *imgAnnotated);
+
+			mMutex_data.lock();
+			circles = mLastCircles;
+			mMutex_data.unlock();
+			drawTarget(circles, *imgAnnotated);
+
 			mCurImageAnnotated = imgAnnotated;
 
 			shared_ptr<ImageMatchData> data(new ImageMatchData());
@@ -147,11 +155,15 @@ void VisionProcessor::run()
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME + "\t" + mImgProcTimeUS;
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImgProcTimeUS;
+				mMutex_logger.lock();
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+				mMutex_logger.unlock();
 
 				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t"+points[0].size();
+				mMutex_logger.lock();
 				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
+				mMutex_logger.unlock();
 			}
 
 			if(mLogImages && mMotorOn)
@@ -167,11 +179,13 @@ void VisionProcessor::run()
 //				mMutex_imgBuffer.unlock();
 			}
 
-			mNewImageReady = false;
+			mNewImageReady_featureMatch = false;
 		}
 
-		sys.msleep(1);
+		System::msleep(1);
 	}
+
+	targetFinderThread.join();
 
 //	mQuadLogger->saveImageBuffer(mImgDataBuffer, mImgMatchDataBuffer);
 
@@ -179,6 +193,70 @@ void VisionProcessor::run()
 	mImgMatchDataBuffer.clear();
 
 	mFinished = true;
+}
+
+void VisionProcessor::runTargetFinder()
+{
+	sched_param sp;
+	sp.sched_priority = mThreadPriority;
+	sched_setscheduler(0, mScheduler, &sp);
+
+	cv::Mat curImage, curImageGray;
+	shared_ptr<SensorDataImage> curImageData;
+	vector<cv::KeyPoint> circles;
+	uint32 imgProcTimeUS;
+	while(mRunning)
+	{
+		if(mNewImageReady_targetFind)
+		{
+			curImageData = mImageDataNext;
+
+			curImageData->lock();
+			curImage = *(curImageData->img);
+			curImageData->unlock();
+			curImageGray.create(curImage.rows, curImage.cols, curImage.type());
+
+			Time procStart;
+			cvtColor(curImage, curImageGray, CV_BGR2GRAY);
+
+			circles = findCircles(curImageGray);
+
+			mMutex_data.lock();
+			mLastCircles = circles;
+			mMutex_data.unlock();
+
+			if(circles.size() == 4)
+			{
+				shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
+				data->circleLocs = circles;
+				data->imgData = curImageData;
+//				for(int i=0; i<mListeners.size(); i++)
+//					mListeners[i]->onImageTargetFound(data);
+			}
+
+			imgProcTimeUS = procStart.getElapsedTimeUS();
+			{
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_TARGET_FIND + "\t" + imgProcTimeUS;
+				mMutex_logger.lock();
+				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+				mMutex_logger.unlock();
+
+				if(circles.size() == 4)
+				{
+					String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IMG_TARGET_POINTS+"\t";
+					for(int i=0; i<circles.size(); i++)
+						str2 = str2+circles[i].pt.x+"\t"+circles[i].pt.y+"\t";
+					mMutex_logger.lock();
+					mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
+					mMutex_logger.unlock();
+				}
+			}
+
+			mNewImageReady_targetFind = false;
+		}
+
+		System::msleep(1);
+	}
 }
 
 vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &img)
@@ -198,6 +276,129 @@ vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &i
 	return points;
 }
 
+vector<cv::KeyPoint> VisionProcessor::findCircles(cv::Mat const &img)
+{
+	cv::Mat pyrImg;
+	cv::equalizeHist(img, pyrImg);
+	cv::pyrDown(pyrImg, pyrImg);
+	cv::pyrDown(pyrImg, pyrImg);
+ 	double scale = (double)pyrImg.rows/img.rows;
+
+	cv::SimpleBlobDetector::Params params;
+	params.minRepeatability = 1;
+	params.minDistBetweenBlobs = 10;
+	params.filterByColor = true;
+	params.blobColor = 0;
+	params.filterByArea = true;
+	params.minArea = 1;
+	params.maxArea = pyrImg.rows*pyrImg.cols/4;
+	params.filterByCircularity = true;
+	params.minCircularity = 0.2;
+	params.maxCircularity = 1.1;
+	params.filterByInertia = false;
+	params.filterByConvexity = true;
+	params.minConvexity = 0.5;
+	params.maxConvexity = 1.1;
+
+	cv::SimpleBlobDetector blobby(params);
+	vector<cv::KeyPoint> keypoints;
+	blobby.detect(pyrImg, keypoints);
+
+	// Try to get the 4 circles of interest
+	sort(keypoints.begin(), keypoints.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
+	list<cv::KeyPoint> circleKeypoints;
+	vector<cv::KeyPoint>::const_iterator kpIter = keypoints.begin();
+	double expectedSize = -1;;
+	while(circleKeypoints.size() < 4 && kpIter != keypoints.end())
+	{
+		cv::KeyPoint kp = *kpIter;
+		if(circleKeypoints.size() == 0)
+		{
+			expectedSize = kp.size;
+			circleKeypoints.push_back(kp);
+		}
+		else
+		{
+			if(abs( (double)(kp.size-expectedSize)/expectedSize ) < 0.3)
+				circleKeypoints.push_back(kp);
+			else
+			{
+				circleKeypoints.push_back(kp);
+				circleKeypoints.pop_front();
+				expectedSize = kp.size;
+			}
+		}
+		kpIter++;
+	}
+
+	if(circleKeypoints.size() < 4)
+	{
+		circleKeypoints.clear();
+		return vector<cv::KeyPoint>();
+	}
+
+	// scale results back to original image size and refine the location
+	list<cv::KeyPoint>::iterator circIter = circleKeypoints.begin();
+	vector<cv::KeyPoint> localCircles, circs;
+	while(circIter != circleKeypoints.end())
+	{
+		cv::KeyPoint kp = *circIter;
+		kp.pt = 1.0/scale*kp.pt;
+		kp.size /= scale;
+
+// This stuff takes too long
+//		float x = max((double)0,kp.pt.x-2.0*kp.size);
+//		float y = max((double)0,kp.pt.y-2.0*kp.size);
+//		float width = min((double)img.cols-x-1, 4.0*kp.size);
+//		float height = min((double)img.rows-y-1, 4.0*kp.size);
+//		cv::Rect mask(x, y, width, height);
+//		params.minArea = PI*kp.size*kp.size/2;
+//		params.maxArea = width*height;
+//		params.filterByCircularity = false;
+//		localCircles.clear();
+//		cv::SimpleBlobDetector(params).detect(img(mask), localCircles);
+//		if(localCircles.size() > 0)
+//		{
+//			sort(localCircles.begin(), localCircles.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
+//			int j=0;
+//			bool found = false;
+//			while(!found && j < localCircles.size())
+//			{
+//				if( (localCircles[j].size - kp.size)/kp.size < 0.2 )
+//				{
+//					kp = localCircles[j];
+//					kp.pt = kp.pt+cv::Point2f(x, y);
+//					found = true;
+//				}
+//				j++;
+//			}
+//		}
+
+		circs.push_back(kp);
+		circIter++;
+	}
+
+	// need to get points ordered to calculated square sides
+//	sort(circs.begin(), circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt) < norm(kp2.pt);});
+	cv::Point2f p0 = circs[0].pt;
+	sort(circs.begin()+1, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p0) < norm(kp2.pt-p0);});
+	cv::Point2f p1 = circs[1].pt;
+	sort(circs.begin()+2, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p1) < norm(kp2.pt-p1);});
+
+	double l1 = norm(circs[0].pt-circs[1].pt);
+	double l2 = norm(circs[1].pt-circs[2].pt);
+	double l3 = norm(circs[2].pt-circs[3].pt);
+	double l4 = norm(circs[3].pt-circs[0].pt);
+	double mean = 0.25*(l1+l2+l3+l4);
+	if( abs(l1-mean)/mean > 0.1 ||
+		abs(l2-mean)/mean > 0.1 ||
+		abs(l3-mean)/mean > 0.1 ||
+		abs(l4-mean)/mean > 0.1)
+			circs.clear(); // too much variation so something must have been wrong
+
+	return circs;
+}
+
 void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img)
 {
 	for(int i=0; i<points[0].size(); i++)
@@ -210,105 +411,11 @@ void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv
 	}
 }
 
-// vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints()
-// {
-//  	cv::Mat pyrImg;
-// 	cv::pyrDown(mCurImageGray,pyrImg);
-// 	cv::pyrDown(pyrImg,pyrImg);
-// 	
-// 	// manually setting these parameters doesn't seem to work right
-// 	int delta=5;
-// 	int minArea = 60;
-// 	int maxArea = pyrImg.rows*pyrImg.cols/4.0;
-// 	double maxVariation=0.2; //! prune the area have simliar size to its children -- smaller number means fewer regions found
-// 	double minDiversity=0.1; //! trace back to cut off mser with diversity < min_diversity -- smaller number means more regions found
-// 	cv::MSER regionDetector(delta,minArea,maxArea,maxVariation,minDiversity);
-// 
-// 	vector<vector<cv::Point> > regions;
-// 	regionDetector(pyrImg, regions); // the region is actually a point cloud I think
-// 	
-// 	// get hulls for first image
-// 	double scaleX = (double)pyrImg.size().width/mLastImageGray.size().width;
-// 	double scaleY = (double)pyrImg.size().height/mLastImageGray.size().height;
-// 
-// 	// get hulls for second image
-// 	scaleX = (double)pyrImg.size().width/mCurImageGray.size().width;
-// 	scaleY = (double)pyrImg.size().height/mCurImageGray.size().height;
-// 	vector<vector<cv::Point> > hulls;
-// 	vector<vector<double> > huMoms;
-// 	cv::Moments mom;
-// 	vector<cv::Point2f> centroids;
-// 	for(int i=0; i<regions.size(); i++)
-// 	{
-// 		vector<cv::Point> hull;
-// 		cv::convexHull(regions[i],hull);
-// 		// scale the hull back to the original image size
-// 		for(int j=0; j<hull.size(); j++)
-// 		{
-// 			hull[j].x /= scaleX;
-// 			hull[j].y /= scaleY;
-// 		}
-// 		hulls.push_back(hull);
-// 
-// //		mom = moments(regions[i]); // regions[i] isn't scaled and I don't want to pay the cost to scale every point
-// 		mom = moments(hull);
-// 		cv::Point2f centroid;
-// 		centroid.x = mom.m10/mom.m00;
-// 		centroid.y = mom.m01/mom.m00;
-// 		centroids.push_back(centroid);
-// 		vector<double> huMom;
-// 		cv::HuMoments(mom, huMom);
-// 		huMoms.push_back(huMom);
-// 	}
-// 	
-// 	// find matches
-// 	vector<int> matchIndex0, matchIndex1;
-// 	double matchThreshold = 1;
-// 	for(int index1=0; index1<huMoms.size(); index1++)
-// 	{
-// 		double bestScore = 999999999;
-// 		int bestIndex = -1;
-// 		for(int index0=0; index0<mMSERHuMoments.size(); index0++)
-// 		{
-// 			double score = 0;
-// 			for(int k=0; k<7; k++)
-// 				score += abs(huMoms[index1][k]-mMSERHuMoments[index0][k]);
-// //			score = norm(centroids[index1]-mMSERCentroids[index0]);
-// 			if(score < bestScore || bestIndex == -1)
-// 			{
-// 				bestScore = score;
-// 				bestIndex = index0;
-// 			}
-// 		}
-// 
-// 		if(bestScore < matchThreshold)
-// 		{
-// 			matchIndex0.push_back(bestIndex);
-// 			matchIndex1.push_back(index1);
-// 		}
-// 	}
-// 
-// 	for(int i=0; i<matchIndex1.size(); i++)
-// 		cv::drawContours(mCurImage, hulls, matchIndex1[i], cv::Scalar(0,0,255));
-// 
-// 	Log::alert(String()+"MSER: \t" + regions.size() +" found and " + matchIndex1.size() + " matched.");
-// 
-// 	vector<vector<cv::Point2f> > points(2);
-// 	for(int i=0; i<matchIndex1.size(); i++)
-// 	{
-// 		points[0].push_back(mMSERCentroids[matchIndex0[i]]);
-// 		points[1].push_back(centroids[matchIndex1[i]]);
-// 		circle(mCurImage,points[0].back(),3,cv::Scalar(0,255,0),-1);
-// 		circle(mCurImage,points[1].back(),3,cv::Scalar(255,0,0),-1);
-// 		line(mCurImage,points[0].back(),points[1].back(),cv::Scalar(255,255,255),1);
-// 	}
-// 
-// 	// copy the moments over for the next image
-// 	mMSERHuMoments = huMoms;
-// 	mMSERCentroids = centroids;
-// 
-// 	return points;
-// }
+void VisionProcessor::drawTarget(vector<cv::KeyPoint> const &circles, cv::Mat &img)
+{
+	for(int i=0; i<circles.size(); i++)
+		circle(img, circles[i].pt, circles[i].size, cv::Scalar(0,0,255), 3);
+}
 
 void VisionProcessor::enableIbvs(bool enable)
 {
@@ -317,7 +424,9 @@ void VisionProcessor::enableIbvs(bool enable)
 	{
 		Log::alert("Turning IBVS on");
 		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
+		mMutex_logger.lock();
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+		mMutex_logger.unlock();
 		mLastImgFoundTime.setTime();
 		mFirstImageProcessed = false;
 	}
@@ -325,7 +434,9 @@ void VisionProcessor::enableIbvs(bool enable)
 	{
 		Log::alert("Turning IBVS off");
 		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
+		mMutex_logger.lock();
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+		mMutex_logger.unlock();
 		mFirstImageProcessed = false;
 	}
 }
@@ -348,7 +459,7 @@ void VisionProcessor::onNewSensorUpdate(shared_ptr<SensorData> const &data)
 		mMutex_imageSensorData.lock();
 		mImageDataNext = static_pointer_cast<SensorDataImage>(data);
 		mMutex_imageSensorData.unlock();
-		mNewImageReady = true;
+		mNewImageReady_featureMatch = mNewImageReady_targetFind = true;
 	}
 }
 
