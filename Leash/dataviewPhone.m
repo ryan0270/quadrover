@@ -65,7 +65,11 @@ motorCmd = phoneData(motorIndices,3:6)';
 cntlCalcTime = phoneData(motorIndices,8)'/1000;
 motor_dt = mean(diff(motorTime));
 
-featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME);
+targetFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_TARGET_FIND);
+targetFindTimeTime = phoneData(targetFindTimeIndices,1)'/1000;
+targetFindTime = phoneData(targetFindTimeIndices,3)';
+
+featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_FEATURE_MATCH);
 featureMatchTimeTime = phoneData(featureMatchTimeIndices,1)'/1000;
 featureMatchTime = phoneData(featureMatchTimeIndices,3)';
 
@@ -316,6 +320,14 @@ if exist('numFeatures','var') && ~isempty(numFeatures)
 	plot(numFeaturesTime, numFeatures,'x');
 	xlabel('Time [s]');
 	ylabel('Num Features Matched [cnt]');
+end
+
+%%
+if exist('targetFindTime','var') && ~isempty(targetFindTime)
+	figure(610);
+	plot(targetFindTimeTime, targetFindTime/1000);
+	xlabel('Time [s]');
+	ylabel('Target Find Time [ms]');
 end
 
 %%

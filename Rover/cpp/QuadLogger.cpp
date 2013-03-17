@@ -16,7 +16,7 @@ QuadLogger::QuadLogger()
 //	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
 //	mTypeMask |= LOG_FLAG_OBSV_BIAS;
 //	mTypeMask |= LOG_FLAG_MAGNOMETER;
-	mTypeMask |= LOG_FLAG_ACCEL;
+//	mTypeMask |= LOG_FLAG_ACCEL;
 //	mTypeMask |= LOG_FLAG_GYRO;
 //	mTypeMask |= LOG_FLAG_PRESSURE;
 	mTypeMask |= LOG_FLAG_CAM_RESULTS;
@@ -225,13 +225,15 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_CUR_ATT="+LOG_ID_CUR_ATT+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_DES_TRANS_STATE="+LOG_ID_DES_TRANS_STATE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_CUR_TRANS_STATE="+LOG_ID_CUR_TRANS_STATE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
-		str = String()+"LOG_ID_IMG_PROC_TIME="+LOG_ID_IMG_PROC_TIME+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_IMG_PROC_TIME_FEATURE_MATCH="+LOG_ID_IMG_PROC_TIME_FEATURE_MATCH+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_IMG_PROC_TIME_TARGET_FIND="+LOG_ID_IMG_PROC_TIME_TARGET_FIND+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_IBVS_ENABLED="+LOG_ID_IBVS_ENABLED+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_IBVS_DISABLED="+LOG_ID_IBVS_DISABLED+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_RECEIVE_VICON="+LOG_ID_RECEIVE_VICON+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_KALMAN_ERR_COV="+LOG_ID_KALMAN_ERR_COV+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_NUM_FEATURE_POINTS="+LOG_ID_NUM_FEATURE_POINTS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_OBSV_ANG_INNOVATION="+LOG_ID_OBSV_ANG_INNOVATION+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_IMG_TARGET_POINTS="+LOG_ID_IMG_TARGET_POINTS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}
