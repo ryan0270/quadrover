@@ -82,6 +82,14 @@ public class RoverService extends Service {
 				bakFile.delete();
 			logFile.renameTo(bakFile);
 		}
+		File matchDataFile = new File(logDir.getAbsolutePath()+"/matchData.xml");
+		if(matchDataFile.exists())
+		{
+			File bakFile = new File(matchDataFile.getAbsolutePath()+".bak");
+			if(bakFile.exists())
+				bakFile.delete();
+			matchDataFile.renameTo(bakFile);
+		}
 
 		onJNIStart();
 		setLogDir(logDir.toString());

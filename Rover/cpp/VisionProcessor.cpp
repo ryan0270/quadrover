@@ -136,10 +136,11 @@ void VisionProcessor::run()
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
+			mFeatureMatchBuffer.push_back(points);
 
 			shared_ptr<cv::Mat> imgAnnotated(new cv::Mat());
 			mCurImage.copyTo(*imgAnnotated);
-//			drawMatches(points, *imgAnnotated);
+			drawMatches(points, *imgAnnotated);
 
 			mMutex_data.lock();
 			circles = mLastCircles;
@@ -172,7 +173,7 @@ void VisionProcessor::run()
 
 			if(mLogImages && mMotorOn)
 			{
-//				mMutex_imgBuffer.lock();
+//				mMutex_buffers.lock();
 //				mImgDataBuffer.push_back(shared_ptr<SensorDataImage>(mImageDataCur));
 //				while(mImgDataBuffer.size() > mImgBufferMaxSize)
 //					mImgDataBuffer.pop_front();
@@ -180,7 +181,7 @@ void VisionProcessor::run()
 //				mImgMatchDataBuffer.push_back(shared_ptr<ImageMatchData>(data));
 //				while(mImgMatchDataBuffer.size() > mImgBufferMaxSize)
 //					mImgMatchDataBuffer.pop_front();
-//				mMutex_imgBuffer.unlock();
+//				mMutex_buffers.unlock();
 			}
 
 		}
@@ -191,6 +192,7 @@ void VisionProcessor::run()
 	targetFinderThread.join();
 
 //	mQuadLogger->saveImageBuffer(mImgDataBuffer, mImgMatchDataBuffer);
+	mQuadLogger->saveFeatureMatchBuffer(mFeatureMatchBuffer);
 
 	mImgDataBuffer.clear();
 	mImgMatchDataBuffer.clear();
@@ -496,9 +498,9 @@ void VisionProcessor::onNewCommLogMask(uint32 mask)
 
 void VisionProcessor::onNewCommImgBufferSize(int size)
 {
-	mMutex_imgBuffer.lock();
+	mMutex_buffers.lock();
 	mImgBufferMaxSize = size;
-	mMutex_imgBuffer.unlock();
+	mMutex_buffers.unlock();
 }
 
 void VisionProcessor::onNewCommVisionRatioThreshold(float h)
@@ -515,6 +517,15 @@ void VisionProcessor::onNewCommVisionMatchRadius(float r)
 	mFeatureMatcher.params.match_radius = r;
 	mMutex_matcher.unlock();
 	Log::alert(String()+"Matcher match radius set to "+r);
+}
+
+void VisionProcessor::onNewCommLogClear()
+{
+	mMutex_buffers.lock();
+	mFeatureMatchBuffer.clear();
+	mImgDataBuffer.clear();
+	mImgMatchDataBuffer.clear();
+	mMutex_buffers.unlock();
 }
 
 void VisionProcessor::onCommConnectionLost()

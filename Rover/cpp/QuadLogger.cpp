@@ -196,6 +196,50 @@ void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataB
 	fclose(fp);
 }
 
+void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &featureMatchBuffer)
+{
+	list<vector<vector<cv::Point2f> > >::const_iterator iter = featureMatchBuffer.begin();
+	int id = 0;
+	mxml_node_t *xml = mxmlNewXML("1.0");
+	mxml_node_t *root = mxmlNewElement(xml,"root");
+	while(iter != featureMatchBuffer.end())
+	{
+		stringstream ss; ss << "match_" << id;
+		vector<vector<cv::Point2f> > const *matchData = &(*iter);
+		mxml_node_t *matchNode = mxmlNewElement(root,ss.str().c_str());
+			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
+			if((*matchData)[0].size() == 0)
+				mxmlNewInteger(numPtsNode, 0);
+			else
+			{
+				mxmlNewInteger(numPtsNode, (*matchData)[0].size());
+				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
+				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
+				for(int i=0; i<(*matchData)[0].size(); i++)
+				{
+					cv::Point2f pt0 = (*matchData)[0][i];
+					cv::Point2f pt1 = (*matchData)[1][i];
+	
+					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
+					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");
+					// the data are floats but at this point everything is actually
+					// integer on the OpenCV side
+					mxmlNewInteger(mxmlNewElement(p0Node,"x"),(int)(pt0.x+0.5));
+					mxmlNewInteger(mxmlNewElement(p0Node,"y"),(int)(pt0.y+0.5));
+					mxmlNewInteger(mxmlNewElement(p1Node,"x"),(int)(pt1.x+0.5));
+					mxmlNewInteger(mxmlNewElement(p1Node,"y"),(int)(pt1.y+0.5));
+				}
+			}
+
+		id++;
+		iter++;
+	}
+
+	FILE *fp = fopen((mDir+"/matchData.xml").c_str(),"w");
+	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
+	fclose(fp);
+}
+
 void QuadLogger::generateMatlabHeader()
 {
 	FileStream::ptr logStream = FileStream::ptr(new FileStream(mDir+"/log_ids.m", FileStream::Open_BIT_WRITE));
