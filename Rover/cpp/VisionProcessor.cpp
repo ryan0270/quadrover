@@ -109,7 +109,7 @@ void VisionProcessor::run()
 	targetFinderThread.parent = this;
 	targetFinderThread.start();
 
-	vector<cv::KeyPoint> circles;
+	vector<BlobDetector::Blob> circles;
 	while(mRunning)
 	{
 		if(mNewImageReady_featureMatch && mImageDataCur == NULL)
@@ -208,7 +208,7 @@ void VisionProcessor::runTargetFinder()
 
 	cv::Mat curImage, curImageGray;
 	shared_ptr<SensorDataImage> curImageData;
-	vector<cv::KeyPoint> circles;
+	vector<BlobDetector::Blob> circles;
 	uint32 imgProcTimeUS;
 	while(mRunning)
 	{
@@ -234,7 +234,7 @@ void VisionProcessor::runTargetFinder()
 			if(circles.size() > 0)
 			{
 				shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
-				data->circleLocs = circles;
+				data->circleBlobs = circles;
 				data->imgData = curImageData;
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onImageTargetFound(data);
@@ -251,7 +251,7 @@ void VisionProcessor::runTargetFinder()
 				{
 					String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IMG_TARGET_POINTS+"\t";
 					for(int i=0; i<circles.size(); i++)
-						str2 = str2+circles[i].pt.x+"\t"+circles[i].pt.y+"\t";
+						str2 = str2+circles[i].location.x+"\t"+circles[i].location.y+"\t";
 					mMutex_logger.lock();
 					mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
 					mMutex_logger.unlock();
@@ -281,7 +281,7 @@ vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &i
 	return points;
 }
 
-vector<cv::KeyPoint> VisionProcessor::findCircles(cv::Mat const &img)
+vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 {
 	cv::Mat pyrImg;
 	cv::equalizeHist(img, pyrImg);
@@ -289,136 +289,103 @@ vector<cv::KeyPoint> VisionProcessor::findCircles(cv::Mat const &img)
 	cv::pyrDown(pyrImg, pyrImg);
  	double scale = (double)pyrImg.rows/img.rows;
 
-	cv::SimpleBlobDetector::Params params;
-	params.minThreshold = 150;
-	params.maxThreshold = 220;
-	params.thresholdStep = 10;
-	params.minRepeatability = 1;
-	params.minDistBetweenBlobs = 20;
-	params.filterByColor = true;
-	params.blobColor = 0;
-	params.filterByArea = true;
-	params.minArea = 100;
-	params.maxArea = pyrImg.rows*pyrImg.cols;
-	params.filterByCircularity = true;
-	params.minCircularity = 0.7;
-	params.maxCircularity = 1.1;
-	params.filterByInertia = false;
-	params.filterByConvexity = true;
-	params.minConvexity = 0.9;
-	params.maxConvexity = 1.1;
+	BlobDetector blobby;
+//	blobby.minThreshold = 50;
+	blobby.minThreshold = 150;
+	blobby.maxThreshold = 220;
+	blobby.thresholdStep = 10;
+	blobby.minRepeatability = 1;
+	blobby.minDistBetweenBlobs = 20;
+	blobby.filterByColor = true;
+	blobby.blobColor = 0;
+	blobby.filterByArea = true;
+	blobby.minArea = 50;
+//	blobby.minArea = 500;
+	blobby.maxArea = pyrImg.rows*pyrImg.cols;
+	blobby.filterByCircularity = true;
+	blobby.minCircularity = 0.8;
+//	blobby.maxCircularity = 1.1;
+	blobby.filterByInertia = false;
+	blobby.filterByConvexity = true;
+	blobby.minConvexity = 0.9;
+//	blobby.maxConvexity = 1.1;
 
-	cv::SimpleBlobDetector blobby(params);
-	vector<cv::KeyPoint> keypoints;
-	blobby.detect(pyrImg, keypoints);
+	vector<BlobDetector::Blob> blobs;
+	blobby.detectImpl(pyrImg, blobs);
 
 	// just grab the biggest one
-	sort(keypoints.begin(), keypoints.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
+//	sort(keypoints.begin(), keypoints.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
+	sort(blobs.begin(), blobs.end(), [&](BlobDetector::Blob b1, BlobDetector::Blob b2){return b1.radius > b2.radius;});
 
-	vector<cv::KeyPoint> circs;
-	if(keypoints.size() > 0)
+	vector<BlobDetector::Blob> circs;
+	if(blobs.size() > 0)
 	{
-		cv::KeyPoint kp = keypoints[0];
-		kp.pt = 1.0/scale*kp.pt;
-		kp.size /= scale;
-		circs.push_back(kp);
+		// 		base camera
+//		double k1 = 0.057821692482247215;
+//		double k2 = -0.30298698825546139;
+//		double p1 = -0.0049942077937641669;
+//		double p2 = 0.0013584538237561394;
+//		double k3 = 0.32018957065239517;
+//		double cx = 318.2;
+//		double cy = 249.0;
+//		//		macro lens
+		double k1 = -1.7697194955446380e-01;
+		double k2 = 5.0777952754531890e-02;
+		double p1 = -6.7214151752545736e-03;
+		double p2 = -1.4815669835189845e-03;
+		double k3 = -1.4774537700218960e-02;
+		double cx = 640/2.0;
+		double cy = 480/2.0;
+		cv::Point2f cPt(cx*scale, cy*scale);
+		double f = 3.7*640/5.76*scale;
+
+		BlobDetector::Blob b = blobs[0];
+		cv::Point2f pt;
+		double ptSq;
+		b.contourCorrected.clear();
+		for(int i=0; i<b.contour.size(); i++)
+		{
+			// remove distortion and scale back up
+			pt = b.contour[i];
+			pt = 1.0/f*(pt-cPt);
+			ptSq = pow(pt.x,2)+pow(pt.y,2);
+			pt = (1+k1*ptSq+k2*pow(ptSq,2)+k3*pow(ptSq,3))*pt;
+			ptSq = pow(pt.x,2)+pow(pt.y,2);
+			pt.x += 2*p1*pt.x*pt.y+p2*(ptSq+2*pow(pt.x,2));
+			pt.y += 2*p2*pt.x*pt.y+p1*(ptSq+2*pow(pt.y,2));
+			pt = f*pt+cPt;
+			b.contourCorrected.push_back(1.0/scale*pt);
+
+			b.contour[i] = 1.0/scale*b.contour[i];
+		}
+
+		cv::Moments moms = cv::moments(cv::Mat(b.contour));
+		cv::Moments momsCorrected = cv::moments(cv::Mat(b.contourCorrected));
+
+		b.location = cv::Point2f(moms.m10 / moms.m00, moms.m01 / moms.m00);
+		b.locationCorrected = cv::Point2f(momsCorrected.m10 / momsCorrected.m00, momsCorrected.m01 / momsCorrected.m00);
+
+		b.area = cv::contourArea(b.contour);
+		b.areaCorrected = cv::contourArea(b.contourCorrected);
+
+		vector<double> dists, distsCorrected;
+		for (size_t pointIdx = 0; pointIdx < b.contour.size(); pointIdx++)
+		{
+			cv::Point2f pt = b.contour[pointIdx];
+			dists.push_back(norm(b.location - pt));
+
+			pt = b.contourCorrected[pointIdx];
+			distsCorrected.push_back(norm(b.locationCorrected-pt));
+		}
+		sort(dists.begin(), dists.end());
+		sort(distsCorrected.begin(), distsCorrected.end());
+		b.radius = (dists[(dists.size() - 1) / 2] + dists[dists.size() / 2]) / 2.;
+		b.radiusCorrected = (distsCorrected[(distsCorrected.size() - 1) / 2] + distsCorrected[distsCorrected.size() / 2]) / 2.;
+
+		circs.push_back(b);
 	}
 
 	return circs;
-
-	// Try to get the 4 circles of interest
-// 	sort(keypoints.begin(), keypoints.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
-// 	list<cv::KeyPoint> circleKeypoints;
-// 	vector<cv::KeyPoint>::const_iterator kpIter = keypoints.begin();
-// 	double expectedSize = -1;;
-// 	while(circleKeypoints.size() < 4 && kpIter != keypoints.end())
-// 	{
-// 		cv::KeyPoint kp = *kpIter;
-// 		if(circleKeypoints.size() == 0)
-// 		{
-// 			expectedSize = kp.size;
-// 			circleKeypoints.push_back(kp);
-// 		}
-// 		else
-// 		{
-// 			if(abs( (double)(kp.size-expectedSize)/expectedSize ) < 0.3)
-// 				circleKeypoints.push_back(kp);
-// 			else
-// 			{
-// 				circleKeypoints.push_back(kp);
-// 				circleKeypoints.pop_front();
-// 				expectedSize = kp.size;
-// 			}
-// 		}
-// 		kpIter++;
-// 	}
-// 
-// 	if(circleKeypoints.size() < 4)
-// 	{
-// 		circleKeypoints.clear();
-// 		return vector<cv::KeyPoint>();
-// 	}
-// 
-// 	// scale results back to original image size and refine the location
-// 	list<cv::KeyPoint>::iterator circIter = circleKeypoints.begin();
-// 	vector<cv::KeyPoint> localCircles, circs;
-// 	while(circIter != circleKeypoints.end())
-// 	{
-// 		cv::KeyPoint kp = *circIter;
-// 		kp.pt = 1.0/scale*kp.pt;
-// 		kp.size /= scale;
-// 
-// // This stuff takes too long
-// //		float x = max((double)0,kp.pt.x-2.0*kp.size);
-// //		float y = max((double)0,kp.pt.y-2.0*kp.size);
-// //		float width = min((double)img.cols-x-1, 4.0*kp.size);
-// //		float height = min((double)img.rows-y-1, 4.0*kp.size);
-// //		cv::Rect mask(x, y, width, height);
-// //		params.minArea = PI*kp.size*kp.size/2;
-// //		params.maxArea = width*height;
-// //		params.filterByCircularity = false;
-// //		localCircles.clear();
-// //		cv::SimpleBlobDetector(params).detect(img(mask), localCircles);
-// //		if(localCircles.size() > 0)
-// //		{
-// //			sort(localCircles.begin(), localCircles.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
-// //			int j=0;
-// //			bool found = false;
-// //			while(!found && j < localCircles.size())
-// //			{
-// //				if( (localCircles[j].size - kp.size)/kp.size < 0.2 )
-// //				{
-// //					kp = localCircles[j];
-// //					kp.pt = kp.pt+cv::Point2f(x, y);
-// //					found = true;
-// //				}
-// //				j++;
-// //			}
-// //		}
-// 
-// 		circs.push_back(kp);
-// 		circIter++;
-// 	}
-// 
-// 	// need to get points ordered to calculated square sides
-// //	sort(circs.begin(), circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt) < norm(kp2.pt);});
-// 	cv::Point2f p0 = circs[0].pt;
-// 	sort(circs.begin()+1, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p0) < norm(kp2.pt-p0);});
-// 	cv::Point2f p1 = circs[1].pt;
-// 	sort(circs.begin()+2, circs.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return norm(kp1.pt-p1) < norm(kp2.pt-p1);});
-// 
-// 	double l1 = norm(circs[0].pt-circs[1].pt);
-// 	double l2 = norm(circs[1].pt-circs[2].pt);
-// 	double l3 = norm(circs[2].pt-circs[3].pt);
-// 	double l4 = norm(circs[3].pt-circs[0].pt);
-// 	double mean = 0.25*(l1+l2+l3+l4);
-// 	if( abs(l1-mean)/mean > 0.1 ||
-// 		abs(l2-mean)/mean > 0.1 ||
-// 		abs(l3-mean)/mean > 0.1 ||
-// 		abs(l4-mean)/mean > 0.1)
-// 			circs.clear(); // too much variation so something must have been wrong
-// 
-// 	return circs;
 }
 
 void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img)
@@ -433,10 +400,18 @@ void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv
 	}
 }
 
-void VisionProcessor::drawTarget(vector<cv::KeyPoint> const &circles, cv::Mat &img)
+void VisionProcessor::drawTarget(vector<BlobDetector::Blob> const &circles, cv::Mat &img)
 {
+	vector<vector<cv::Point> > contours;
 	for(int i=0; i<circles.size(); i++)
-		circle(img, circles[i].pt, circles[i].size, cv::Scalar(0,0,255), 3);
+	{
+		contours.push_back(vector<cv::Point>());
+		for(int j=0; j<circles[i].contour.size(); j++)
+			contours[i].push_back(circles[i].contour[j]);
+	}
+	cv::drawContours(img, contours, -1, cv::Scalar(0,0,255), 3);
+//	for(int i=0; i<circles.size(); i++)
+//		circle(img, circles[i].pt, circles[i].size, cv::Scalar(0,0,255), 3);
 }
 
 void VisionProcessor::enableIbvs(bool enable)

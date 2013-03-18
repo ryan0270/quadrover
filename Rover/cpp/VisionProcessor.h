@@ -6,9 +6,10 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/video/tracking.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+//#include <opencv2/video/tracking.hpp>
+//#include <opencv2/objdetect/objdetect.hpp>
 
+#include "BlobDetector.h"
 #define ICSL_SENSOR_DATA_ONLY
 #include "SensorManager.h"
 #undef ICSL_SENSOR_DATA_ONLY
@@ -34,7 +35,7 @@ class ImageMatchData
 class ImageTargetFindData
 {
 	public:
-	vector<cv::KeyPoint> circleLocs;
+	vector<BlobDetector::Blob> circleBlobs;
 	shared_ptr<SensorDataImage> imgData;
 
 	void lock(){mMutex.lock(); if(imgData != NULL) imgData->lock();}
@@ -166,16 +167,16 @@ class VisionProcessor : public toadlet::egg::Thread,
 		cv::CascadeClassifier mCascadeClassifier;
 
 		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
-		vector<cv::KeyPoint> findCircles(cv::Mat const &img);
+		vector<BlobDetector::Blob> findCircles(cv::Mat const &img);
 		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);
-		static void drawTarget(vector<cv::KeyPoint> const &circles, cv::Mat &img);
+		static void drawTarget(vector<BlobDetector::Blob> const &circles, cv::Mat &img);
 
 		void runTargetFinder();
 
 		bool mMotorOn;
 		int mThreadPriority, mScheduler;
 
-		vector<cv::KeyPoint> mLastCircles;
+		vector<BlobDetector::Blob> mLastCircles;
 };
 
 } // namespace Quadrotor

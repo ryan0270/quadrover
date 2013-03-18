@@ -2,18 +2,18 @@
 <Controller>
    <Translation>
       <P>
-         <x>2.000000</x>
-         <y>2.000000</y>
-         <z>2.000000</z>
+         <x>3.000000</x>
+         <y>3.000000</y>
+         <z>3.000000</z>
       </P>
       <D>
-         <x>1.000000</x>
-         <y>1.000000</y>
-         <z>3.000000</z>
+         <x>2.000000</x>
+         <y>2.000000</y>
+         <z>4.000000</z>
       </D>
       <I>
-         <x>0.300000</x>
-         <y>0.300000</y>
+         <x>0.500000</x>
+         <y>0.500000</y>
          <z>2.000000</z>
       </I>
       <ILimit>
@@ -38,24 +38,24 @@
 <Observer>
    <Translation>
       <MeasVar>
-         <x>0.002000</x>
-         <y>0.002000</y>
-         <z>0.002000</z>
-         <xVel>0.003000</xVel>
-         <yVel>0.003000</yVel>
+         <x>0.000500</x>
+         <y>0.000500</y>
+         <z>0.000500</z>
+         <xVel>0.005000</xVel>
+         <yVel>0.005000</yVel>
          <zVel>0.010000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.000100</x>
          <y>0.000100</y>
          <z>0.000100</z>
-         <xVel>0.010000</xVel>
-         <yVel>0.010000</yVel>
-         <zVel>0.025000</zVel>
+         <xVel>0.005000</xVel>
+         <yVel>0.005000</yVel>
+         <zVel>0.010000</zVel>
       </DynVar>
       <AttBias>
-         <roll>0.020000</roll>
-         <pitch>-0.010000</pitch>
+         <roll>0.023000</roll>
+         <pitch>-0.007000</pitch>
          <yaw>0.000000</yaw>
       </AttBias>
       <AttBiasAdaptRate>
@@ -89,9 +89,9 @@
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
       <North>0.000000</North>
-      <East>10.000000</East>
-      <South>10.000000</South>
-      <West>10.000000</West>
+      <East>5.000000</East>
+      <South>0.000000</South>
+      <West>5.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>

@@ -81,9 +81,9 @@ forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV
 forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
 forceScaling = phoneData(forceScalingIndices,3)';
 
-cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
-cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
-cpuUsage = phoneData(cpuUsageIndices,3:end)';
+% cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
+% cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
+% cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
 phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
 phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
@@ -108,6 +108,10 @@ numFeatures = phoneData(numFeaturesIndices,3)';
 cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CAMERA_POS);
 cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
 cameraPos = phoneData(cameraPosIndices,3:5)';
+
+% obsvTransProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_PROC_TIME);
+% obsvTransProcTimeTime = phoneData(obsvTransProcTimeIndices,1)'/1000;
+% obsvTransProcTime = phoneData(obsvTransProcTimeIndices,3:6)';
 
 attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
 attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
@@ -343,6 +347,15 @@ if exist('attInnovation','var') && ~isempty(attInnovation)
 		xlabel('Time [s]');
 		ylabel(stateLabels{i});
 	end
+end
+
+%%
+if exist('obsvTransProcTime','var') && ~isempty(obsvTransProcTime)
+	figure(10000); set(gcf,'Name','Obsv Trans Proc Time');
+	plot(obsvTransProcTimeTime, obsvTransProcTime','.');
+	xlabel('Time [s]');
+	ylabel('Proc time [ms]');
+	legend('1','2','3','4')
 end
 
 %%

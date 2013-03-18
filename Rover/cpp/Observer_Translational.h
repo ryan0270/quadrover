@@ -129,10 +129,14 @@ class Observer_Translational : public toadlet::egg::Thread,
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
 	TNT::Array2D<double> mOpticFlowVel;
+	Time mOpticFlowVelTime;
 
 	bool mMotorOn;
 
 	int mThreadPriority, mScheduler;
+
+	list<TNT::Array2D<double> > mAccelBuffer, mStateBuffer, mErrCovKFBuffer, mPosMeasBuffer;
+	list<Time> mAccelTimeBuffer, mStateTimeBuffer, mErrCovKFTimeBuffer, mPosMeasTimeBuffer;
 };
 
 } // namespace Quadrotor

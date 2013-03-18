@@ -116,7 +116,6 @@ namespace Quadrotor{
 				} flowCalcThread;
 		flowCalcThread.parent = this;
 
-		System sys;
 		Time lastUpdateTime;
 		Array2D<double> measTemp(6,1);
 		Array2D<double> r(3,1);
@@ -131,14 +130,18 @@ namespace Quadrotor{
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
+
+		Time loopTime;
 		while(mRunning)
 		{
+			loopTime.setTime();
 			double thrust = 0;
 			mMutex_cmds.lock();
 			for(int i=0; i<4; i++)
 				thrust += mForceGain*mMotorCmds[i];
 			mMutex_cmds.unlock();
 
+			mMutex_data.lock();
 			if(mMotorOn)
 			{
 				// third column of orientation matrix, i.e. R*e3
@@ -151,20 +154,19 @@ namespace Quadrotor{
 				r[1][0] = c3*s1*s2-c1*s3;
 				r[2][0] = c2*c3;
 
-				mMutex_data.lock();
 				accel.inject(thrust/mMass*r);
-				mMutex_data.unlock();
 				accel[2][0] -= GRAVITY;
 			}
 			else 
 			{
 				for(int i=0; i<accel.dim1(); i++)
 					accel[i][0] = 0;
-				mMutex_data.lock();
 				mAttBias.inject(mAttBiasReset);
 				mForceGain = mForceGainReset;
-				mMutex_data.unlock();
 			}
+			mAccelBuffer.push_back(accel.copy());
+			mAccelTimeBuffer.push_back(Time());
+			mMutex_data.unlock();
 
 			dt = lastUpdateTime.getElapsedTimeUS()/1.0e6;
 			doTimeUpdateKF(accel, dt);
@@ -180,9 +182,92 @@ namespace Quadrotor{
 			{
 				mMutex_meas.lock();
 				Array2D<double> vel = mOpticFlowVel.copy();
+				Time imgTime = mOpticFlowVelTime;
 				mMutex_meas.unlock();
 
+				// unwind the state back to the time when the picture was taken
+				mMutex_data.lock();
+				list<Time>::const_iterator stateTimeIter = mStateTimeBuffer.begin();
+				list<Array2D<double> >::const_iterator stateIter = mStateBuffer.begin();
+				while(stateTimeIter != mStateTimeBuffer.end() && (*stateTimeIter).getUS() < imgTime.getUS())
+				{
+					stateTimeIter++;
+					stateIter++;
+				}
+				if(stateIter != mStateBuffer.end())
+					mStateKF.inject(*stateIter);
+
+				list<Time>::const_iterator errCovTimeIter = mErrCovKFTimeBuffer.begin();
+				list<Array2D<double> >::const_iterator errCovIter = mErrCovKFBuffer.begin();
+				while(errCovTimeIter != mErrCovKFTimeBuffer.end() && (*errCovTimeIter).getUS() < imgTime.getUS())
+				{
+					errCovTimeIter++;
+					errCovIter++;
+				}
+				if(errCovTimeIter != mErrCovKFTimeBuffer.end())
+					mErrCovKF.inject(*errCovIter);
+				mMutex_data.unlock();
+
 				doMeasUpdateKF_velOnly(vel);
+
+				// now apply forward back to present time
+				mMutex_data.lock();
+				while(mPosMeasTimeBuffer.front().getUS() < imgTime.getUS())
+				{
+					mPosMeasTimeBuffer.pop_front();
+					mPosMeasBuffer.pop_front();
+				}
+				while(mAccelTimeBuffer.front().getUS() < imgTime.getUS())
+				{
+					mAccelTimeBuffer.pop_front();
+					mAccelBuffer.pop_front();
+				}
+				
+				mStateBuffer.clear();
+				mStateTimeBuffer.clear();
+				mErrCovKFBuffer.clear();
+				mErrCovKFTimeBuffer.clear();
+				list<Time>::const_iterator accelTimeIter = mAccelTimeBuffer.begin();
+				list<Time>::const_iterator accelTimeIterNext = mAccelTimeBuffer.begin();
+				accelTimeIterNext++;
+				list<Array2D<double> >::const_iterator accelIter = mAccelBuffer.begin();
+				list<Time>::const_iterator posMeasTimeIter = mPosMeasTimeBuffer.begin();
+				list<Array2D<double> >::const_iterator posMeasIter = mPosMeasBuffer.begin();
+				Array2D<double> accel(3,1), pos(3,1);
+				double dt;
+				while(accelTimeIterNext != mAccelTimeBuffer.end())
+				{
+					accel.inject(*accelIter);
+					dt = Time::calcDiffUS(*accelTimeIter, (*accelTimeIterNext))/1.0e6;
+					mMutex_data.unlock();
+
+					doTimeUpdateKF(accel, dt);
+
+					mMutex_data.lock();
+
+					if( posMeasTimeIter != mPosMeasTimeBuffer.end() && (*posMeasTimeIter).getUS() > (*accelTimeIter).getUS())
+					{
+						pos.inject(*posMeasIter);
+						posMeasTimeIter++;
+						posMeasIter++;
+
+						mMutex_data.unlock();
+						doMeasUpdateKF_posOnly(pos);
+						mMutex_data.lock();
+					}
+
+
+					mStateBuffer.push_back(mStateKF.copy());
+					mStateTimeBuffer.push_back(*accelTimeIter);
+					mErrCovKFBuffer.push_back(mErrCovKF.copy());
+					mErrCovKFTimeBuffer.push_back(*accelTimeIter);
+
+					accelTimeIter++;
+					accelTimeIterNext++;
+					accelIter++;
+				}
+
+				mMutex_data.unlock();
 			}
 			if(mNewViconPosAvailable && mUseViconPos)
 			{
@@ -202,7 +287,7 @@ namespace Quadrotor{
 			}
 
 			if(mNewImageResultsReady && mFlowCalcDone
-					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
+//					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
 					)
 			{
 				// if we're here then the previous thread should already be finished
@@ -213,6 +298,32 @@ namespace Quadrotor{
 			}
 
 			mMutex_data.lock();
+			mStateBuffer.push_back(mStateKF.copy());
+			mStateTimeBuffer.push_back(Time());
+			mErrCovKFBuffer.push_back(mErrCovKF.copy());
+			mErrCovKFTimeBuffer.push_back(Time());
+
+			while(mAccelBuffer.size() > 1000)
+			{
+				mAccelBuffer.pop_front();
+				mAccelTimeBuffer.pop_front();
+			}
+			while(mStateBuffer.size() > 1000)
+			{
+				mStateBuffer.pop_front();
+				mStateTimeBuffer.pop_front();
+			}
+			while(mErrCovKFBuffer.size() > 1000)
+			{
+				mErrCovKFBuffer.pop_front();
+				mErrCovKFTimeBuffer.pop_front();
+			}
+			while(mPosMeasBuffer.size() > 1000)
+			{
+				mPosMeasBuffer.pop_front();
+				mPosMeasTimeBuffer.pop_front();
+			}
+
 			for(int i=0; i<3; i++)
 				pos[i][0] = mStateKF[i][0];
 			for(int i=0; i<3; i++)
@@ -235,7 +346,9 @@ namespace Quadrotor{
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
 
-			sys.msleep(5); // maintain a (roughly) 200Hz update rate
+			uint64 t = loopTime.getElapsedTimeUS();
+			if(t < 5e3)
+				System::usleep(5e3-t); // maintain a (roughly) 200Hz update rate
 		}
 
 		mDone = true;
@@ -252,17 +365,31 @@ namespace Quadrotor{
 			return;
 		}
 
+
+//		double cx = matchData->imgData1->img->cols/2.0;
+//		double cy = matchData->imgData1->img->rows/2.0;
 		// camera distortion coeffs
-		double k1 = 0.057821692482247215;
-		double k2 = -0.30298698825546139;
-		double p1 = -0.0049942077937641669;
-		double p2 = 0.0013584538237561394;
-		double k3 = 0.32018957065239517;
+		// 		base camera
+//		double k1 = 0.057821692482247215;
+//		double k2 = -0.30298698825546139;
+//		double p1 = -0.0049942077937641669;
+//		double p2 = 0.0013584538237561394;
+//		double k3 = 0.32018957065239517;
+//		double cx = 318.2;
+//		double cy = 249.0;
+//		//		macro lens
+		double k1 = -1.7697194955446380e-01;
+		double k2 = 5.0777952754531890e-02;
+		double p1 = -6.7214151752545736e-03;
+		double p2 = -1.4815669835189845e-03;
+		double k3 = -1.4774537700218960e-02;
+		double cx = matchData->imgData1->img->cols/2.0;
+		double cy = matchData->imgData1->img->rows/2.0;
 
 		mMutex_data.lock();
 		double dt = matchData->dt;
 		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
-		Array2D<double> Sn = 50*50*createIdentity(2);
+		Array2D<double> Sn = 100*100*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
 
@@ -275,14 +402,11 @@ namespace Quadrotor{
 		// Rotate prior velocity information to camera coords
 		mu_v = matmult(mRotPhoneToCam, mu_v);
 		SvInv = matmult(mRotPhoneToCam, matmult(SvInv, mRotCamToPhone));
+
+		mOpticFlowVelTime = matchData->imgData1->timestamp;
 		mMutex_data.unlock();
 //Log::alert("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-//		double cx = matchData->imgData1->img->cols/2.0;
-//		double cy = matchData->imgData1->img->rows/2.0;
-		// from calibration data
-		double cx = 318.2;
-		double cy = 249.0;
 		Array2D<double> A(1,3,0.0);
 		Array2D<double> B(3,3,0.0);
 		Array2D<double> R1 = createRotMat_ZYX(matchData->imgData0->att[2][0], matchData->imgData0->att[1][0], matchData->imgData0->att[0][0]);
@@ -304,22 +428,22 @@ namespace Quadrotor{
 			q2[0][0] = matchData->featurePoints[1][i].x-cx;
 			q2[1][0] = matchData->featurePoints[1][i].y-cy;
 
-			// remove distortion
-			q1 = 1.0/f1*q1;
-			q2 = 1.0/f2*q2;
-
-			double r1sq = pow(q1[0][0],2)+pow(q1[1][0],2);
-			q1 = (1+k1*r1sq+k2*pow(r1sq,2)+k3*pow(r1sq,3))*q1;
-			q1[0][0] += 2*p1*q1[0][0]*q1[1][0]+p2*(r1sq+2*pow(q1[0][0],2));
-			q1[1][0] += 2*p2*q1[0][0]*q1[1][0]+p1*(r1sq+2*pow(q1[1][0],2));
-			
-			double r2sq = pow(q2[0][0],2)+pow(q2[1][0],2);
-			q2 = (1+k1*r2sq+k2*pow(r2sq,2)+k3*pow(r2sq,3))*q2;
-			q2[0][0] += 2*p1*q2[0][0]*q2[1][0]+p2*(r2sq+2*pow(q2[0][0],2));
-			q2[1][0] += 2*p2*q2[0][0]*q2[1][0]+p1*(r2sq+2*pow(q2[1][0],2));
-
-			q1 = f1*q1;
-			q2 = f2*q2;
+//			// remove distortion
+//			q1 = 1.0/f1*q1;
+//			q2 = 1.0/f2*q2;
+//
+//			double r1sq = pow(q1[0][0],2)+pow(q1[1][0],2);
+//			q1 = (1+k1*r1sq+k2*pow(r1sq,2)+k3*pow(r1sq,3))*q1;
+//			q1[0][0] += 2*p1*q1[0][0]*q1[1][0]+p2*(r1sq+2*pow(q1[0][0],2));
+//			q1[1][0] += 2*p2*q1[0][0]*q1[1][0]+p1*(r1sq+2*pow(q1[1][0],2));
+//			
+//			double r2sq = pow(q2[0][0],2)+pow(q2[1][0],2);
+//			q2 = (1+k1*r2sq+k2*pow(r2sq,2)+k3*pow(r2sq,3))*q2;
+//			q2[0][0] += 2*p1*q2[0][0]*q2[1][0]+p2*(r2sq+2*pow(q2[0][0],2));
+//			q2[1][0] += 2*p2*q2[0][0]*q2[1][0]+p1*(r2sq+2*pow(q2[1][0],2));
+//
+//			q1 = f1*q1;
+//			q2 = f2*q2;
 
 			// Unrotate
 			q1a[0][0] = q1[0][0];
@@ -366,7 +490,7 @@ namespace Quadrotor{
 			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
 			B += matmult(transpose(Lv), matmult(SnInv, Lv));
 		}
-		int maxPoints = 5;
+		int maxPoints = 10;
 		int numPoints = matchData->featurePoints[0].size();
 		double scale = min((double)maxPoints, (double)numPoints)/numPoints;
 		A = scale*A;
@@ -386,6 +510,7 @@ namespace Quadrotor{
 		String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW+"\t";
 		for(int i=0; i<vel.dim1(); i++)
 			str = str+vel[i][0]+"\t";
+		str = str+matchData->imgData0->timestamp.getElapsedTimeMS()+"\t";
 		mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 	
 		String str2 = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW_LS+"\t";
@@ -629,8 +754,16 @@ namespace Quadrotor{
 			mLastViconPos[i][0] = pos[i][0];
 //		for(int i=3; i<6; i++)
 //			mLastMeas[i][0] = vel[i-3][0];
+		if(mUseViconPos)
+		{
+			mMutex_data.lock();
+			mPosMeasBuffer.push_back(mLastViconPos.copy());
+			mPosMeasTimeBuffer.push_back(Time());
+			mMutex_data.unlock();
+		}
 		mMutex_meas.unlock();
 		mLastPosReceiveTime.setTime();
+
 
 		{
 			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_RECEIVE_VICON+"\t";
@@ -817,45 +950,29 @@ namespace Quadrotor{
 		float cx = data->imgData->img->cols/2.0;
 		float cy = data->imgData->img->rows/2.0;
 		Array2D<double> point(3,1);
-		point[0][0] = -(data->circleLocs[0].pt.x-cx);
-		point[1][0] = -(data->circleLocs[0].pt.y-cx);
+		point[0][0] = -(data->circleBlobs[0].locationCorrected.x-cx);
+		point[1][0] = -(data->circleBlobs[0].locationCorrected.y-cx);
 		point[2][0] = -f;
 		point = matmult(R_T, matmult(mRotCamToPhone, point));
 
-//		vector<Array2D<double> > points;
-//		for(int i=0; i<data->circleLocs.size(); i++)
-//		{
-//			Array2D<double> point(3,1);
-//			point[0][0] = -(data->circleLocs[i].pt.x-cx);
-//			point[1][0] = -(data->circleLocs[i].pt.y-cy);
-//			point[2][0] = -f;
-//			points.push_back(matmult(R_T, matmult(mRotCamToPhone, point)).copy());
-//		}
-//		double avgLength = 0;
-//		for(int i=1; i<points.size(); i++)
-//			avgLength += norm2(points[i]-points[i-1]);
-//		avgLength += norm2(points[points.size()-1]-points[0]);
-//		avgLength /= points.size();
-//
-//		Array2D<double> avgLoc(3,1,0.0);
-//		for(int i=0; i<points.size(); i++)
-//			avgLoc += points[i];
-//		avgLoc = 1.0/points.size()*avgLoc;
-
-//		double z = nomLength*f/avgLength;
-//		double x = avgLoc[0][0]/f*abs(z);
-//		double y = avgLoc[1][0]/f*abs(z);
-
-		double radius = data->circleLocs[0].size;
+		double radius = data->circleBlobs[0].radiusCorrected;
 		double z = nomRadius*f/radius;
 		double x = point[0][0]/f*abs(z);
 		double y = point[1][0]/f*abs(z);
 
-		mMutex_data.lock();
+		mMutex_meas.lock();
 		mLastCamPos[0][0] = x; 
 		mLastCamPos[1][0] = y; 
 		mLastCamPos[2][0] = z;
-		mMutex_data.unlock();
+		mLastCamPos[2][0] += 0.030; // offset between camera estimate and Vicon
+		if(mUseCameraPos)
+		{
+			mMutex_data.lock();
+			mPosMeasBuffer.push_back(mLastCamPos.copy());
+			mPosMeasTimeBuffer.push_back(data->imgData->timestamp);
+			mMutex_data.unlock();
+		}
+		mMutex_meas.unlock();
 
 		String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CAMERA_POS+"\t";
 		s = s+x+"\t"+y+"\t"+z;

@@ -68,6 +68,7 @@ set (SRC ${SRC}
 	./cpp/SensorManager.cpp
 	./cpp/Matcher.cpp
 	./cpp/VideoMaker.cpp
+	./cpp/BlobDetector.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 )
 
@@ -89,6 +90,7 @@ set (H ${H}
 	./cpp/Matcher.h
 	./cpp/VideoMaker.h
 	./cpp/constants.h
+	./cpp/BlobDetector.h
 	${CPUFEATURES_PATH}/cpu-features.h
 )
 
