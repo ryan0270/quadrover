@@ -52,6 +52,7 @@ opticFlowVelLS = phoneData(opticFlowVelLSIndices,3:5)';
 opticFlowVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 opticFlowVelTime = phoneData(opticFlowVelIndices,1)'/1000;
 opticFlowVel = phoneData(opticFlowVelIndices,3:5)';
+opticFlowLag = phoneData(opticFlowVelIndices,6)';
 
 viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
 viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
@@ -68,6 +69,10 @@ forceScaling = phoneData(forceScalingIndices,3)';
 motorIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MOTOR_CMDS);
 motorTime = phoneData(motorIndices,1)'/1000;
 motorCmd = phoneData(motorIndices,3:6)';
+
+cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CAMERA_POS);
+cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
+cameraPos = phoneData(cameraPosIndices,3:5)';
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
@@ -196,6 +201,14 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 end
 
 %%
+if exist('opticFlowLag','var') && ~isempty(opticFlowLag)
+	figure(8767);
+	plot(opticFlowVelTime, opticFlowLag);
+	xlabel('Time [s]');
+	ylabel('Optic Flow Lag [ms]');
+end
+
+%%
 if exist('viconReceive','var') && ~isempty(viconReceive)
 	figure(700);
 	stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
@@ -210,6 +223,20 @@ if exist('viconReceive','var') && ~isempty(viconReceive)
 		ylabel(stateLabels{i});
 	end
 	legend('Vicon Meas','Phoen Received');
+end
+
+%%
+if exist('cameraPos','var') && ~isempty(cameraPos)
+	figure(800); set(gcf,'Name','Camera Pos');
+	mask = find(viconStateTime <= cameraPosTime(end));
+	for i=1:3
+		subplot(3,1,i)
+		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
+		plot(cameraPosTime, cameraPos(i,:),'.'); hold all
+		hold off
+		xlabel('Time [s]');
+		ylabel(stateLabels{i+6})
+	end
 end
 
 % %%
