@@ -70,6 +70,14 @@ motorIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MOTOR_CMDS)
 motorTime = phoneData(motorIndices,1)'/1000;
 motorCmd = phoneData(motorIndices,3:6)';
 
+ibvsOffIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IBVS_DISABLED);
+ibvsOffTime = phoneData(ibvsOffIndices,1)'/1000;
+ibvsOff = phoneData(ibvsOffIndices,3:5)';
+
+ibvsOnIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IBVS_ENABLED);
+ibvsOnTime = phoneData(ibvsOnIndices,1)'/1000;
+ibvsOn = phoneData(ibvsOnIndices,3:5)';
+
 cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CAMERA_POS);
 cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
 cameraPos = phoneData(cameraPosIndices,3:5)';
@@ -179,6 +187,14 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 		plot(viconStateTime(mask), viconState(i+9,mask)); hold all
 		plot(opticFlowVelTime, opticFlowVel(i,:),'.'); hold all
 		plot(opticFlowVelLSTime, opticFlowVelLS(i,:),'x'); hold all
+		axis tight
+		ax = axis;
+		for j=1:length(ibvsOnTime)
+			plot([ibvsOnTime(j) ibvsOnTime(j)],[ax(3) ax(4)],'k'); hold all
+		end
+		for j=1:length(ibvsOffTime)
+			plot([ibvsOffTime(j) ibvsOffTime(j)],[ax(3) ax(4)],'k--'); hold all
+		end
 		hold off
 		xlabel('Time [s]');
 		ylabel(opticFlowVelLabels{i});
@@ -222,7 +238,7 @@ if exist('viconReceive','var') && ~isempty(viconReceive)
 		xlabel('Time [s]');
 		ylabel(stateLabels{i});
 	end
-	legend('Vicon Meas','Phoen Received');
+	legend('Vicon Meas','Phone Received');
 end
 
 %%

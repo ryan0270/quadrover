@@ -149,6 +149,7 @@ void Leash::initialize()
 	connect(mScMoveBackward,SIGNAL(activated()), this, SLOT(onMoveBackward()));
 
 	mScToggleIbvs = new QShortcut(Qt::Key_V, this);
+	connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
 
 	loadConfigFromFile("../quad0.leashConfig");
 
@@ -1792,12 +1793,6 @@ void Leash::populateVisionUI()
 	mMutex_data.unlock();
 }
 
-void Leash::toggleIbvs()
-{
-//	chkUseIbvsController->setChecked(!chkUseIbvsController->isChecked());
-//	onChkUseIbvsController_clicked();
-}
-
 int Leash::receiveTCP(Socket::ptr socket, tbyte* data, int size)
 {
 	int received;
@@ -1946,7 +1941,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mMutex_logBuffer.unlock();
 
 //		if(mSys.mtime() - mLastTelemSendTime > 350-5)
-		if(mSys.mtime() - mLastTelemSendTime > 100-5)
+		if(mSys.mtime() - mLastTelemSendTime > 60-5)
 		{
 			mLastTelemSendTime = mSys.mtime();
 			
@@ -2012,6 +2007,16 @@ void Leash::pingRover()
 		p.serialize(buff);
 		sendUDP(buff.begin(), buff.size());
 	}
+}
+
+void Leash::onToggleIbvs()
+{
+	mUseIbvs = !mUseIbvs;
+	int code = COMM_USE_IBVS;
+	uint16 useIbvs = mUseIbvs ? 1 : 0;
+	bool result = true;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&useIbvs, sizeof(useIbvs));
 }
 
 } // namespace Quadrotor

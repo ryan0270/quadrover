@@ -116,6 +116,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		void onMoveRight();
 		void onMoveForward();
 		void onMoveBackward();
+		void onToggleIbvs();
 
 	protected:
 		Ui::Leash *ui;
@@ -132,7 +133,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		Collection<float> mAttObsvDirWeights;
 		Collection<float> mAttObsvNominalMag;
 		TNT::Array2D<float> mIntMemory;
-		int mMotorValues[4], mMotorValuesIbvs[4];
+		int mMotorValues[4];
 		uint64 mTimeMS;
 		int mMotorTrim[4];
 

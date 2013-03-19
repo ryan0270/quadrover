@@ -589,20 +589,20 @@ void Rover::copyImageData(cv::Mat *m)
 }
 
 // assume p is sized for 16 elements
-Collection<int> Rover::getVisionParams()
-{
-	mMutex_vision.lock();
-	Collection<int> p = mVisionProcessor.getVisionParams();
-	mMutex_vision.unlock();
-	return p;
-}
+//Collection<int> Rover::getVisionParams()
+//{
+//	mMutex_vision.lock();
+//	Collection<int> p = mVisionProcessor.getVisionParams();
+//	mMutex_vision.unlock();
+//	return p;
+//}
 
-void Rover::setVisionParams(Collection<int> p)
-{
-	mMutex_vision.lock();
-	mVisionProcessor.setVisionParams(p);
-	mMutex_vision.unlock();
-}
+//void Rover::setVisionParams(Collection<int> p)
+//{
+//	mMutex_vision.lock();
+//	mVisionProcessor.setVisionParams(p);
+//	mMutex_vision.unlock();
+//}
 
 Array2D<double> Rover::getGyroValue()
 {

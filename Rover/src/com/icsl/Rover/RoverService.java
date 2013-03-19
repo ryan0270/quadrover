@@ -219,10 +219,10 @@ public class RoverService extends Service {
 	public native float[] getMagValue();
 	public native float[] getAttitude();
 	public native int getImageProcTimeMS();
-	public native void toggleViewType();
-	public native void toggleUseIbvs();
-	public native int[] getVisionParams();
-	public native void setVisionParams(int[] p);
+//	public native void toggleViewType();
+//	public native void toggleUseIbvs();
+//	public native int[] getVisionParams();
+//	public native void setVisionParams(int[] p);
 	public native boolean pcIsConnected();
 
 	static

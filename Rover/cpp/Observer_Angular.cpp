@@ -231,7 +231,7 @@ void Observer_Angular::doInnovationUpdate(double dt)
 	vI = 1.0/norm2(vI)*vI;
 
 	Array2D<double> transR = transpose(mCurRotMat);
-	if(norm2(mAccel-mAccelDirNom*GRAVITY) < 2)
+	if(norm2(mAccel-mAccelDirNom*GRAVITY) < 3)
 //	if( (norm2(mAccel)-GRAVITY) < 2)
 	{
 		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));

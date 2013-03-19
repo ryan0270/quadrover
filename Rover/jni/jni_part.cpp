@@ -121,38 +121,38 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getAttitude(JNIEn
 	return jval;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleViewType(JNIEnv* env, jobject thiz)
-{
-	if(rover == NULL)
-		return;
+//JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleViewType(JNIEnv* env, jobject thiz)
+//{
+//	if(rover == NULL)
+//		return;
+//
+//	rover->toggleViewType();
+//}
+//
+//JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleUseIbvs(JNIEnv* env, jobject thiz)
+//{
+//	if(rover == NULL)
+//		return;
+//
+//	rover->toggleUseIbvs();
+//}
 
-	rover->toggleViewType();
-}
-
-JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleUseIbvs(JNIEnv* env, jobject thiz)
-{
-	if(rover == NULL)
-		return;
-
-	rover->toggleUseIbvs();
-}
-
-JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getVisionParams(JNIEnv* env, jobject thiz)
-{
-	if(rover == NULL)
-		return NULL;
-
-	toadlet::egg::Collection<int> vals = rover->getVisionParams();
-
-	jintArray jval = env->NewIntArray(vals.size());
-	jint *elem = env->GetIntArrayElements(jval,0);
-	for(int i=0; i<vals.size(); i++)
-		elem[i] = vals[i];
-
-	env->ReleaseIntArrayElements(jval, elem, 0);
-
-	return jval;
-}
+//JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getVisionParams(JNIEnv* env, jobject thiz)
+//{
+//	if(rover == NULL)
+//		return NULL;
+//
+//	toadlet::egg::Collection<int> vals = rover->getVisionParams();
+//
+//	jintArray jval = env->NewIntArray(vals.size());
+//	jint *elem = env->GetIntArrayElements(jval,0);
+//	for(int i=0; i<vals.size(); i++)
+//		elem[i] = vals[i];
+//
+//	env->ReleaseIntArrayElements(jval, elem, 0);
+//
+//	return jval;
+//}
 
 
 JNIEXPORT jint JNICALL Java_com_icsl_Rover_RoverService_getImageProcTimeMS(JNIEnv* env, jobject thiz)
@@ -163,20 +163,20 @@ JNIEXPORT jint JNICALL Java_com_icsl_Rover_RoverService_getImageProcTimeMS(JNIEn
 	return rover->getImageProcTimeMS();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_setVisionParams(JNIEnv* env, jobject thiz, jintArray jval)
-{
-	if(rover == NULL)
-		return;
-
-	toadlet::egg::Collection<int> vals(env->GetArrayLength(jval));
-	jint *elem = env->GetIntArrayElements(jval,0);
-	for(int i=0; i<vals.size(); i++)
-		vals[i] = elem[i];
-
-	env->ReleaseIntArrayElements(jval,elem,0);
-
-	rover->setVisionParams(vals);
-}
+//JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_setVisionParams(JNIEnv* env, jobject thiz, jintArray jval)
+//{
+//	if(rover == NULL)
+//		return;
+//
+//	toadlet::egg::Collection<int> vals(env->GetArrayLength(jval));
+//	jint *elem = env->GetIntArrayElements(jval,0);
+//	for(int i=0; i<vals.size(); i++)
+//		vals[i] = elem[i];
+//
+//	env->ReleaseIntArrayElements(jval,elem,0);
+//
+//	rover->setVisionParams(vals);
+//}
 
 JNIEXPORT bool JNICALL Java_com_icsl_Rover_RoverService_pcIsConnected(JNIEnv* env, jobject thiz)
 {
