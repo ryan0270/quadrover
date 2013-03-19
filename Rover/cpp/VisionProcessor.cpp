@@ -260,7 +260,7 @@ void VisionProcessor::runTargetFinder()
 
 		}
 
-		System::msleep(1);
+		System::msleep(20); // run this a little slower to save computation
 	}
 }
 
@@ -299,11 +299,11 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 	blobby.filterByColor = true;
 	blobby.blobColor = 0;
 	blobby.filterByArea = true;
-	blobby.minArea = 50;
+	blobby.minArea = 125;
 //	blobby.minArea = 500;
 	blobby.maxArea = pyrImg.rows*pyrImg.cols;
 	blobby.filterByCircularity = true;
-	blobby.minCircularity = 0.8;
+	blobby.minCircularity = 0.85;
 //	blobby.maxCircularity = 1.1;
 	blobby.filterByInertia = false;
 	blobby.filterByConvexity = true;

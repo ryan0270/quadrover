@@ -73,6 +73,10 @@ featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_
 featureMatchTimeTime = phoneData(featureMatchTimeIndices,1)'/1000;
 featureMatchTime = phoneData(featureMatchTimeIndices,3)';
 
+gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO_BIAS);
+gyroBiasTime = phoneData(gyroBiasIndices,1)'/1000;
+gyroBias = phoneData(gyroBiasIndices,3:5)';
+
 attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
 attBiasTime = phoneData(attBiasIndices,1)'/1000;
 attBias = phoneData(attBiasIndices,3:5)';
@@ -89,9 +93,9 @@ phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_T
 phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
 phoneTemp = phoneData(phoneTempIndices,3:6)';
 
-velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
-velEstTime = phoneData(velEstIndices,1)'/1000;
-velEst = phoneData(velEstIndices,3:5)';
+% velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
+% velEstTime = phoneData(velEstIndices,1)'/1000;
+% velEst = phoneData(velEstIndices,3:5)';
 
 viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
 viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
@@ -168,6 +172,18 @@ if exist('state','var') && ~isempty(state)
     legend('Commanded','Measured');
 end
  
+%%
+gyroBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
+if exist('gyroBias','var') && ~isempty(gyroBias)
+    figure(643); set(gcf,'name','Gyro Bias')
+    for i=1:3
+        subplot(3,1,i)
+        plot(gyroBiasTime, gyroBias(i,:));
+        xlabel('Time [s]');
+        ylabel(gyroBiasLabels(i));
+    end
+end
+
 %%
 attBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
 if exist('attBias','var') && ~isempty(attBias)
