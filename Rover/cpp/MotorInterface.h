@@ -2,7 +2,9 @@
 #define MOTORINTERFACE
 #include <sched.h>
 
-#include <toadlet/egg.h>
+#include "toadlet/egg.h"
+
+#include "Time.h"
 
 namespace ICSL {
 namespace Quadrotor{
@@ -40,6 +42,11 @@ class MotorInterface : public toadlet::egg::Thread
 	void sendCommandForced(toadlet::egg::Collection<uint8> const &cmds);
 
 	int mThreadPriority, mScheduler;
+
+//	void doMotorWarmup();
+//	bool mWaitingMotorWarmup;
+	bool mDoMotorWarmup;
+	Time mMotorWarmupStartTime;
 };
 
 } // namespace Quadrotor

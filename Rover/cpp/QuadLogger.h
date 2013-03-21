@@ -49,7 +49,11 @@ class QuadLogger : public toadlet::egg::Thread
 		void saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer,
 							 list<shared_ptr<ImageMatchData> > const &matchDataBuffer);
 
-		void saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &featureMatchBuffer);
+		void saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &matchBuffer, 
+									list<Time> const &timeBuffer,
+									list<double> const &dtBuffer,
+									list<TNT::Array2D<double> > const &attPrevBuffer,
+									list<TNT::Array2D<double> > const &attCurBuffer);
 		void setStartTime(Time time){mStartTime.setTime(time);}
 
 	protected:

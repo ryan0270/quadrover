@@ -691,15 +691,15 @@ bool CommManager::sendLogFile(const char* filename)
 
 		if(bytesRead >0)
 		{
-			String str = String() + "Sending " + bytesRead + " bytes";
-			Log::alert(str);
+//			String str = String() + "Sending " + bytesRead + " bytes";
+//			Log::alert(str);
 			mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
 			mSocketTCP->send((tbyte*)buff,bytesRead);
 		}
 	}
 	bytesRead= -1;
-	String str = String() + "Sending " + bytesRead + " bytes";
-	Log::alert(str);
+//	String str = String() + "Sending " + bytesRead + " bytes";
+//	Log::alert(str);
 	mSocketTCP->send((tbyte*)&bytesRead, sizeof(bytesRead));
 	logFile.close();
 	mMutex_socketTCP.unlock();

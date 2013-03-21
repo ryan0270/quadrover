@@ -16,6 +16,9 @@ namespace Quadrotor{
 
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+//		mWaitingMotorWarmup = false;
+		mDoMotorWarmup = true;
 	}
 
 	MotorInterface::~MotorInterface()
@@ -64,11 +67,21 @@ namespace Quadrotor{
 				if(mSocket != NULL)
 					Log::alert("Connected to motors");
 			}
-			else if(!mMotorsEnabled)
+			else if(!mMotorsEnabled && !mDoMotorWarmup)
 			{
 				// this is just to keep the connection alive
 				Collection<uint8> cmds(4,0);
 				sendCommandForced(cmds);
+			}
+			else if(mDoMotorWarmup)
+			{
+				Collection<uint8> cmds(4,10);
+				sendCommandForced(cmds);
+				if(mMotorWarmupStartTime.getElapsedTimeMS() > 4e3)
+				{
+					mDoMotorWarmup = false;
+					mMotorsEnabled = true;
+				}
 			}
 
 			sys.msleep(50);
@@ -79,7 +92,7 @@ namespace Quadrotor{
 		mMutex_socket.lock();
 		if(mSocket != NULL)
 		{
-			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
+//			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
 			mSocket->close();
 			mSocket = NULL;
 		}
@@ -137,16 +150,22 @@ namespace Quadrotor{
 
 	void MotorInterface::enableMotors(bool on)
 	{
-		mMotorsEnabled = on;
-
 		// make sure we are always at a good starting point
 		Collection<uint8> cmds(4,0);
 		sendCommandForced(cmds);
 
-		if(mMotorsEnabled)
+		if(on)
+		{
+			mDoMotorWarmup = true;
+			mMotorWarmupStartTime.setTime();
 			Log::alert("MotorInterface -- Motors enabled");
+		}
 		else
+		{
+			mDoMotorWarmup = false;
+			mMotorsEnabled = false;
 			Log::alert("MotorInterface -- Motors disabled");
+		}
 	}
 
 	// TODO: Need to make this function const
@@ -160,6 +179,15 @@ namespace Quadrotor{
 		mMutex_socket.unlock(); 
 		return temp;
 	}
+
+//	void MotorInterface::doMotorWarmup()
+//	{
+//		Log::alert("Starting motor warmup");
+//		Collection<uint8> cmds(4,20);
+//		sendCommandForced(cmds);
+//		System::msleep(10e3);
+//		Log::alert("Motor warmup done");
+//	}
 
 } // namespace Quadrotor
 } // namespace ICSL

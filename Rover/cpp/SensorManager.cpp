@@ -329,7 +329,7 @@ namespace Quadrotor{
 
 			mMutex_attData.lock();
 			static_pointer_cast<SensorDataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
-			static_pointer_cast<SensorDataImage>(data)->att.inject(mCurAtt);
+			static_pointer_cast<SensorDataImage>(data)->att.inject(matmult(mRotPhoneToCam,mCurAtt));
 			mMutex_attData.unlock();
 			cap->grab();
 			data->timestamp.setTime();

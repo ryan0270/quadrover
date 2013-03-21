@@ -162,9 +162,11 @@ class VisionProcessor : public toadlet::egg::Thread,
 		list<shared_ptr<SensorDataImage> > mImgDataBuffer;
 		list<shared_ptr<ImageMatchData> > mImgMatchDataBuffer;
 		list<vector<vector<cv::Point2f> > > mFeatureMatchBuffer;
+		list<Time> mFeatureMatchTimeBuffer;
+		list<double> mFeatureMatchDTBuffer;
+		list<TNT::Array2D<double> > mFeatureMatchAttPrevBuffer, mFeatureMatchAttCurBuffer;
 
 		Matcher mFeatureMatcher;
-		cv::CascadeClassifier mCascadeClassifier;
 
 		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
 		vector<BlobDetector::Blob> findCircles(cv::Mat const &img);

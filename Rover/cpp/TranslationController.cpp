@@ -118,10 +118,13 @@ using namespace TNT;
 			mErrInt[i][0] = constrain(mErrInt[i][0]+dt*error[i][0],-mErrIntLimit[i][0],mErrIntLimit[i][0]);
 
 
+		Array2D<double> tempI(3,1,0.0);
+		if(mDesState[2][0] > 0.1) // don't build up the integrator when we're sitting still
+			tempI.inject(mGainI);
 		for(int i=0; i<3; i++)
 			mAccelCmd[i][0] =	-mGainP[i][0]*error[i][0]
 								-mGainD[i][0]*error[i+3][0]
-								-mGainI[i][0]*mErrInt[i][0]
+								-tempI[i][0]*mErrInt[i][0]
 								+mDesAccel[i][0];
 		mAccelCmd[2][0] += GRAVITY;
 		Array2D<double> accelCmd= mAccelCmd.copy();

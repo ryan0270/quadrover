@@ -2,18 +2,18 @@
 <Controller>
    <Translation>
       <P>
-         <x>1.500000</x>
-         <y>1.500000</y>
+         <x>3.000000</x>
+         <y>3.000000</y>
          <z>3.000000</z>
       </P>
       <D>
-         <x>2.000000</x>
-         <y>2.000000</y>
+         <x>4.000000</x>
+         <y>4.000000</y>
          <z>4.000000</z>
       </D>
       <I>
-         <x>0.500000</x>
-         <y>0.500000</y>
+         <x>0.000000</x>
+         <y>0.000000</y>
          <z>2.000000</z>
       </I>
       <ILimit>
@@ -38,11 +38,11 @@
 <Observer>
    <Translation>
       <MeasVar>
-         <x>0.000500</x>
-         <y>0.000500</y>
+         <x>0.001000</x>
+         <y>0.001000</y>
          <z>0.001000</z>
-         <xVel>0.040000</xVel>
-         <yVel>0.040000</yVel>
+         <xVel>0.020000</xVel>
+         <yVel>0.020000</yVel>
          <zVel>0.020000</zVel>
       </MeasVar>
       <DynVar>
@@ -54,8 +54,8 @@
          <zVel>0.010000</zVel>
       </DynVar>
       <AttBias>
-         <roll>0.014000</roll>
-         <pitch>0.017000</pitch>
+         <roll>0.004000</roll>
+         <pitch>0.018000</pitch>
          <yaw>0.000000</yaw>
       </AttBias>
       <AttBiasAdaptRate>
@@ -63,7 +63,7 @@
          <pitch>0.005000</pitch>
          <yaw>0.000000</yaw>
       </AttBiasAdaptRate>
-      <ForceGainAdaptRate>0.000500</ForceGainAdaptRate>
+      <ForceGainAdaptRate>0.003000</ForceGainAdaptRate>
       <BarometerZeroHeight>76.000000</BarometerZeroHeight>
    </Translation>
    <Attitude>
@@ -83,15 +83,15 @@
    </Attitude>
 </Observer>
 <Hardware>
-   <MotorForceGain>0.018000</MotorForceGain>
+   <MotorForceGain>0.020000</MotorForceGain>
    <MotorTorqueGain>0.010000</MotorTorqueGain>
    <MotorArmLength>0.200000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
       <North>0.000000</North>
-      <East>5.000000</East>
-      <South>0.000000</South>
-      <West>5.000000</West>
+      <East>10.000000</East>
+      <South>10.000000</South>
+      <West>10.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
