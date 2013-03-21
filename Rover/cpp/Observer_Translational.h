@@ -17,6 +17,7 @@
 #include "AttitudeThrustControllerListener.h"
 #include "SensorManager.h"
 #include "VisionProcessor.h"
+#include "Data.h"
 
 namespace ICSL{
 namespace Quadrotor{
@@ -76,7 +77,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<SensorData> const &data);
+	void onNewSensorUpdate(shared_ptr<Data> const &data);
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);
@@ -119,7 +120,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas, TNT::Array2D<double> const &measCov);
 	void doMeasUpdateKF_posOnly(TNT::Array2D<double> const &meas, TNT::Array2D<double> const &measCov);
 
-	shared_ptr<SensorDataPhoneTemp> mPhoneTempData;
+	shared_ptr<DataPhoneTemp> mPhoneTempData;
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
 
@@ -137,12 +138,10 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	int mThreadPriority, mScheduler;
 
-	list<TNT::Array2D<double> > mAccelBuffer, mStateBuffer, mErrCovKFBuffer, mPosMeasBuffer;
-	list<Time> mAccelTimeBuffer, mStateTimeBuffer, mErrCovKFTimeBuffer, mPosMeasTimeBuffer;
-	list<TNT::Array2D<double> > mVelMeasBuffer; // This is only the vel meas from position updates
-	list<Time> mVelMeasTimeBuffer;
-	list<double> mHeightBuffer;
-	list<Time> mHeightTimeBuffer;
+	list<shared_ptr<DataVector> > mStateDataBuffer, mAccelDataBuffer, mErrCovKFDataBuffer, mPosMeasDataBuffer;
+	list<shared_ptr<Data> > mHeightDataBuffer;
+//	list<TNT::Array2D<double> > mVelMeasBuffer; // This is only the vel meas from position updates
+//	list<Time> mVelMeasTimeBuffer;
 
 	bool mHaveFirstCameraPos;
 	Time mLastCameraPosTime, mLastViconPosTime;

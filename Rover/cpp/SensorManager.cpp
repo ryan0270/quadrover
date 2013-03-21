@@ -183,16 +183,16 @@ namespace Quadrotor{
 // TODO: Set the event time to match the timestamp in the ASensor struct
 				int logFlag = -1;
 				int logID = -1;
-				shared_ptr<SensorData> data = NULL;
+				shared_ptr<Data> data = NULL;
 				switch(event.type)
 				{
 					case ASENSOR_TYPE_PRESSURE:
 						{
 							logFlag= LOG_FLAG_PRESSURE;
 							logID = LOG_ID_PRESSURE;
-							data = shared_ptr<SensorData>(new SensorData(event.pressure, SENSOR_DATA_TYPE_PRESSURE));
-							data = shared_ptr<SensorData>(new SensorData());
-							data->type = SENSOR_DATA_TYPE_PRESSURE;
+							data = shared_ptr<Data>(new Data(event.pressure, DATA_TYPE_PRESSURE));
+							data = shared_ptr<Data>(new Data());
+							data->type = DATA_TYPE_PRESSURE;
 							data->data = event.pressure;
 							data->dataCalibrated = event.pressure;
 							mLastPressure = event.pressure;
@@ -210,10 +210,10 @@ namespace Quadrotor{
 							accelCalibrated[0][0] = (event.data[0]-accelOffX)/accelScaleX;
 							accelCalibrated[1][0] = (event.data[1]-accelOffY)/accelScaleY;
 							accelCalibrated[2][0] = (event.data[2]-accelOffZ)/accelScaleZ;
-							data = shared_ptr<SensorData>(new SensorDataVector());
-							data->type = SENSOR_DATA_TYPE_ACCEL;
-							static_pointer_cast<SensorDataVector>(data)->data = mLastAccel.copy();
-							static_pointer_cast<SensorDataVector>(data)->dataCalibrated = accelCalibrated.copy();
+							data = shared_ptr<Data>(new DataVector());
+							data->type = DATA_TYPE_ACCEL;
+							static_pointer_cast<DataVector>(data)->data = mLastAccel.copy();
+							static_pointer_cast<DataVector>(data)->dataCalibrated = accelCalibrated.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -226,11 +226,11 @@ namespace Quadrotor{
 							mLastGyro[0][0] = event.data[0];
 							mLastGyro[1][0] = event.data[1];
 							mLastGyro[2][0] = event.data[2];
-							data = shared_ptr<SensorData>(new SensorDataVector());
-							data->type = SENSOR_DATA_TYPE_GYRO;
-							static_pointer_cast<SensorDataVector>(data)->data = mLastGyro.copy();
+							data = shared_ptr<Data>(new DataVector());
+							data->type = DATA_TYPE_GYRO;
+							static_pointer_cast<DataVector>(data)->data = mLastGyro.copy();
 // TODO: Apply gyro bias estimate for the calibrated data
-							static_pointer_cast<SensorDataVector>(data)->dataCalibrated = mLastGyro.copy();
+							static_pointer_cast<DataVector>(data)->dataCalibrated = mLastGyro.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -242,10 +242,10 @@ namespace Quadrotor{
 							mLastMag[0][0] = event.data[0];
 							mLastMag[1][0] = event.data[1];
 							mLastMag[2][0] = event.data[2];
-							data = shared_ptr<SensorData>(new SensorDataVector());
-							data->type = SENSOR_DATA_TYPE_MAG;
-							static_pointer_cast<SensorDataVector>(data)->data = mLastMag.copy();
-							static_pointer_cast<SensorDataVector>(data)->dataCalibrated = mLastMag.copy();
+							data = shared_ptr<Data>(new DataVector());
+							data->type = DATA_TYPE_MAG;
+							static_pointer_cast<DataVector>(data)->data = mLastMag.copy();
+							static_pointer_cast<DataVector>(data)->dataCalibrated = mLastMag.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -324,27 +324,27 @@ namespace Quadrotor{
 		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
-			shared_ptr<SensorData> data = shared_ptr<SensorData>(new SensorDataImage());
-			data->type = SENSOR_DATA_TYPE_IMAGE;
+			shared_ptr<Data> data = shared_ptr<Data>(new DataImage());
+			data->type = DATA_TYPE_IMAGE;
 
 			mMutex_attData.lock();
-			static_pointer_cast<SensorDataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
-			static_pointer_cast<SensorDataImage>(data)->att.inject(matmult(mRotPhoneToCam,mCurAtt));
+			static_pointer_cast<DataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
+			static_pointer_cast<DataImage>(data)->att.inject(matmult(mRotPhoneToCam,mCurAtt));
 			mMutex_attData.unlock();
 			cap->grab();
 			data->timestamp.setTime();
 			mMutex_attData.lock();
-			static_pointer_cast<SensorDataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
+			static_pointer_cast<DataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
 			mMutex_attData.unlock();
 
 			shared_ptr<cv::Mat> img(new cv::Mat);
 			cap->retrieve(*img);
-			static_pointer_cast<SensorDataImage>(data)->img = img;
-//			img->copyTo(*static_pointer_cast<SensorDataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
-			static_pointer_cast<SensorDataImage>(data)->cap = cap;
-			static_pointer_cast<SensorDataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+			static_pointer_cast<DataImage>(data)->img = img;
+//			img->copyTo(*static_pointer_cast<DataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
+			static_pointer_cast<DataImage>(data)->cap = cap;
+			static_pointer_cast<DataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
 
-			static_pointer_cast<SensorDataImage>(data)->imgFormat = IMG_FORMAT_BGR;
+			static_pointer_cast<DataImage>(data)->imgFormat = IMG_FORMAT_BGR;
 
 			mMutex_listeners.lock();
 			for(int i=0; i<mListeners.size(); i++)
@@ -377,7 +377,7 @@ namespace Quadrotor{
 			float fgTemp= getFuelgaugeTemp()/10.0;
 			float tmuTemp = getTmuTemp()/10.0;
 
-			shared_ptr<SensorDataPhoneTemp> data = shared_ptr<SensorDataPhoneTemp>(new SensorDataPhoneTemp());
+			shared_ptr<DataPhoneTemp> data = shared_ptr<DataPhoneTemp>(new DataPhoneTemp());
 			data->battTemp = battTemp;
 			data->secTemp = secTemp;
 			data->fgTemp = fgTemp;

@@ -481,25 +481,25 @@ void Observer_Angular::onNewCommStateVicon(Collection<float> const &data)
 	mMutex_data.unlock();
 }
 
-void Observer_Angular::onNewSensorUpdate(shared_ptr<SensorData> const &data)
+void Observer_Angular::onNewSensorUpdate(shared_ptr<Data> const &data)
 {
 	switch(data->type)
 	{
-		case SENSOR_DATA_TYPE_ACCEL:
+		case DATA_TYPE_ACCEL:
 			mMutex_cache.lock();
-			mAccelData = static_pointer_cast<SensorDataVector>(data);
+			mAccelData = static_pointer_cast<DataVector>(data);
 			mNewAccelReady = true;
 			mMutex_cache.unlock();
 			break;
-		case SENSOR_DATA_TYPE_GYRO:
+		case DATA_TYPE_GYRO:
 			mMutex_cache.lock();
-			mGyroData = static_pointer_cast<SensorDataVector>(data);
+			mGyroData = static_pointer_cast<DataVector>(data);
 			mNewGyroReady = true;
 			mMutex_cache.unlock();
 			break;
-		case SENSOR_DATA_TYPE_MAG:
+		case DATA_TYPE_MAG:
 			mMutex_cache.lock();
-			mMagData = static_pointer_cast<SensorDataVector>(data);
+			mMagData = static_pointer_cast<DataVector>(data);
 			mNewMagReady = true;
 			mMutex_cache.unlock();
 			break;

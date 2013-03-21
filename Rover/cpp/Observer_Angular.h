@@ -28,6 +28,7 @@ class Observer_AngularListener
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
+#include "Data.h"
 
 //using toadlet::uint64;
 
@@ -86,7 +87,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
 		
 		// for SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<SensorData> const &data);
+		void onNewSensorUpdate(shared_ptr<Data> const &data);
 
 	protected:
 		bool mRunning, mDone;
@@ -97,7 +98,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		TNT::Array2D<double> mGyroBias, mInnovation;
 		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
 		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
-		shared_ptr<SensorDataVector>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
+		shared_ptr<DataVector>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
 		TNT::Array2D<double> mAccelDirNom, mMagDirNom;
 		Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
 		Collection<double> mExtraDirsWeight;
