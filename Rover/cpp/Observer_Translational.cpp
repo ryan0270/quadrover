@@ -27,7 +27,6 @@ namespace Quadrotor{
 		mLastViconPos(3,1,0.0),
 		mLastCameraPos(3,1,0.0),
 		mBarometerHeightState(2,1,0.0),
-		mOpticFlowVel(3,1,0.0),
 		mLastViconVel(3,1,0.0),
 		mLastCameraVel(3,1,0.0),
 		mViconCameraOffset(3,1,0.0)
@@ -90,6 +89,16 @@ namespace Quadrotor{
 		mHaveFirstCameraPos = false;
 
 		mUseIbvs = false;
+
+		mDataBuffers.push_back( (list<shared_ptr<Data> >*)(&mStateDataBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<Data> >*)(&mAccelDataBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<Data> >*)(&mErrCovKFDataBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<Data> >*)(&mPosMeasDataBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<Data> >*)(&mHeightDataBuffer));
+//		mDataBuffers.push_back(&mAccelDataBuffer);
+
+		mOpticFlowVel.type = DATA_TYPE_OPTIC_FLOW_VEL;
+		mOpticFlowVel.data = Array2D<double>(3,1,0.0);
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -142,7 +151,6 @@ namespace Quadrotor{
 		sched_setscheduler(0, mScheduler, &sp);
 
 		Time loopTime;
-		shared_ptr<DataVector> accelData, errCovData;
 		while(mRunning)
 		{
 			loopTime.setTime();
@@ -175,13 +183,22 @@ namespace Quadrotor{
 				mAttBias.inject(mAttBiasReset);
 				mForceGain = mForceGainReset;
 			}
-			accelData = shared_ptr<DataVector>(new DataVector);
+			shared_ptr<DataVector> accelData = shared_ptr<DataVector>(new DataVector);
 			accelData->type = DATA_TYPE_NET_ACCEL_TRAN;
 			accelData->data = accel.copy();
+			mAccelDataBuffer.push_back(accelData);
 			mMutex_data.unlock();
 
 			dt = lastUpdateTime.getElapsedTimeUS()/1.0e6;
-			doTimeUpdateKF(accel, dt);
+			mMutex_data.lock();
+			for(int i=0; i<3; i++)
+			{
+				mAkf[i][i+3] = dt;
+				mAkf_T[i+3][i] = dt;
+				mBkf[i+3][i] = dt;
+			}
+			doTimeUpdateKF(accel, mAkf, mAkf_T, mBkf, mStateKF, mErrCovKF, mDynCov);
+			mMutex_data.unlock();
 			lastUpdateTime.setTime();
 
 			mMutex_meas.lock();
@@ -200,27 +217,18 @@ namespace Quadrotor{
 			{
 				mNewOpticFlowReady = false;
 				mMutex_meas.lock();
-				Array2D<double> vel = mOpticFlowVel.copy();
-				Time imgTime = mOpticFlowVelTime;
+				Array2D<double> vel = mOpticFlowVel.data.copy();
+				Time imgTime = mOpticFlowVel.timestamp;
 				mMutex_meas.unlock();
 
 				// unwind the state back to the time when the picture was taken
 				mMutex_data.lock();
 
-				list<shared_ptr<DataVector> >::const_iterator stateIter = mStateDataBuffer.begin();
-				while( stateIter != mStateDataBuffer.end() && (*stateIter)->timestamp < imgTime)
-					stateIter++;
-				if(stateIter != mStateDataBuffer.end())
-					mStateKF.inject((*stateIter)->data);
-
-				list<shared_ptr<DataVector> >::const_iterator errCovIter = mErrCovKFDataBuffer.begin();
-				while(errCovIter != mErrCovKFDataBuffer.end() && (*errCovIter)->timestamp < imgTime)
-					errCovIter++;
-				if(errCovIter != mErrCovKFDataBuffer.end())
-					mErrCovKF.inject((*errCovIter)->data);
+				mStateKF.inject( interpolate(imgTime, mStateDataBuffer) );
+				mErrCovKF.inject( interpolate(imgTime, mErrCovKFDataBuffer) );
 
 				// do measurement update
-				doMeasUpdateKF_velOnly(vel, mVelMeasCov);
+				doMeasUpdateKF_velOnly(vel, mVelMeasCov, mStateKF, mErrCovKF);
 
 				// now apply forward back to present time
 				while(mPosMeasDataBuffer.size() > 0 && mPosMeasDataBuffer.front()->timestamp < imgTime)
@@ -239,24 +247,31 @@ namespace Quadrotor{
 				list<shared_ptr<DataVector> >::const_iterator accelIterNext = mAccelDataBuffer.begin();
 				accelIterNext++;
 				list<shared_ptr<DataVector> >::const_iterator posMeasIter = mPosMeasDataBuffer.begin();
-//				list<Time>::const_iterator velMeasTimeIter = mVelMeasTimeBuffer.begin();
 //				list<Array2D<double> >::const_iterator velMeasIter = mVelMeasBuffer.begin();
 				Array2D<double> accel(3,1), pos(3,1);// , vel(3,1);  -- vel is defined above
 				double dt;
-				shared_ptr<DataVector> stateData;
 				while(accelIterNext != mAccelDataBuffer.end())
 				{
 					accel.inject((*accelIter)->data);
 					dt = Time::calcDiffUS( (*accelIter)->timestamp, (*accelIterNext)->timestamp)/1.0e6;
 
-					doTimeUpdateKF(accel, dt);
+					for(int i=0; i<3; i++)
+					{
+						mAkf[i][i+3] = dt;
+						mAkf_T[i+3][i] = dt;
+						mBkf[i+3][i] = dt;
+					}
+					doTimeUpdateKF(accel, mAkf, mAkf_T, mBkf, mStateKF, mErrCovKF, mDynCov);
 
+					// this is basically assuming that the accel data is sampled fast enough
+					// that the position measurement doesn't need to be interpolated before
+					// applying the position update
 					if( posMeasIter != mPosMeasDataBuffer.end() && (*posMeasIter)->timestamp > (*accelIter)->timestamp)
 					{
 						pos.inject( (*posMeasIter)->data );
 						posMeasIter++;
 
-						doMeasUpdateKF_posOnly(pos, mPosMeasCov);
+						doMeasUpdateKF_posOnly(pos, mPosMeasCov, mStateKF, mErrCovKF);
 					}
 //					if( velMeasTimeIter != mVelMeasTimeBuffer.end() && (*velMeasTimeIter) > (*accelIter)->timestamp)
 //					{
@@ -268,12 +283,12 @@ namespace Quadrotor{
 //					}
 
 
-					stateData = shared_ptr<DataVector>(new DataVector());
+					shared_ptr<DataVector> stateData = shared_ptr<DataVector>(new DataVector());
 					stateData->type = DATA_TYPE_STATE_TRAN;
 					stateData->data = mStateKF.copy();
 					stateData->timestamp.setTime( (*accelIter)->timestamp);
 					mStateDataBuffer.push_back(stateData);
-					errCovData = shared_ptr<DataVector>(new DataVector());
+					shared_ptr<DataVector> errCovData = shared_ptr<DataVector>(new DataVector());
 					errCovData->type = DATA_TYPE_KF_ERR_COV;
 					errCovData->data = mErrCovKF.copy();
 					errCovData->timestamp.setTime( (*accelIter)->timestamp);
@@ -301,6 +316,48 @@ namespace Quadrotor{
 				mUseCameraPos = false;
 			}
 
+			// update bias and force scaling estimates
+			if( (mNewViconPosAvailable && mUseViconPos) ||
+				(mNewCameraPosAvailable && mUseCameraPos) )
+			{
+				mMutex_data.lock();
+				if(mLastAttBiasUpdateTime.getMS() == 0)
+					mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
+				double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
+				mMutex_meas.lock();
+				Array2D<double> pos;
+				if(mUseViconPos)
+					pos = mLastViconPos.copy();
+				else
+					pos = mLastCameraPos.copy();
+				mMutex_meas.unlock();
+				Array2D<double> err = pos-submat(mStateKF,0,2,0,0);
+				if(dt < 0.1)
+				{
+					mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+					mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+				}
+				if(mLastForceGainUpdateTime.getMS() == 0)
+					mLastForceGainUpdateTime.setTime();
+				dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
+				if(pos[2][0] > 0.4 && dt < 0.1) // doing this too low runs into problems with ground effect
+					mForceGain += mForceGainAdaptRate*dt*err[2][0];
+				mLastAttBiasUpdateTime.setTime();
+				mLastForceGainUpdateTime.setTime();
+
+				{
+					String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
+					for(int i=0; i<mAttBias.dim1(); i++)
+						str1 = str1+mAttBias[i][0]+"\t";
+					mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+
+					String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
+					str2 = str2+mForceGain+"\t";
+					mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+				}
+				mMutex_data.unlock();
+			}
+
 			if(mNewViconPosAvailable && mUseViconPos)
 			{
 				mNewViconPosAvailable = false;
@@ -310,8 +367,8 @@ namespace Quadrotor{
 				mMutex_meas.unlock();
 
 				mMutex_data.lock();
-				doMeasUpdateKF_posOnly(pos, mPosMeasCov);
-				doMeasUpdateKF_velOnly(vel, 100*mVelMeasCov);
+				doMeasUpdateKF_posOnly(pos, mPosMeasCov, mStateKF, mErrCovKF);
+				doMeasUpdateKF_velOnly(vel, 100*mVelMeasCov, mStateKF, mErrCovKF);
 				mMutex_data.unlock();
 
 			}
@@ -324,8 +381,8 @@ namespace Quadrotor{
 				mMutex_meas.unlock();
 
 				mMutex_data.lock();
-				doMeasUpdateKF_posOnly(pos, mPosMeasCov);
-				doMeasUpdateKF_velOnly(vel, 100*mVelMeasCov);
+				doMeasUpdateKF_posOnly(pos, mPosMeasCov, mStateKF, mErrCovKF);
+				doMeasUpdateKF_velOnly(vel, 100*mVelMeasCov, mStateKF, mErrCovKF);
 				mMutex_data.unlock();
 			}
 
@@ -345,20 +402,14 @@ namespace Quadrotor{
 			stateData->type = DATA_TYPE_STATE_TRAN;
 			stateData->data = mStateKF.copy();
 			mStateDataBuffer.push_back(stateData);
-			errCovData = shared_ptr<DataVector>(new DataVector());
+			shared_ptr<DataVector> errCovData = shared_ptr<DataVector>(new DataVector());
 			errCovData->type = DATA_TYPE_KF_ERR_COV;
 			errCovData->data = mErrCovKF.copy();
+			mErrCovKFDataBuffer.push_back(errCovData);
 
-			while(mAccelDataBuffer.size() > 0 && mAccelDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
-				mAccelDataBuffer.pop_front();
-			while(mStateDataBuffer.size() > 0 && mStateDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
-				mStateDataBuffer.pop_front();
-			while(mErrCovKFDataBuffer.size() > 0 && mErrCovKFDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
-				mErrCovKFDataBuffer.pop_front();
-			while(mPosMeasDataBuffer.size() > 0 && mPosMeasDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
-				mPosMeasDataBuffer.pop_front();
-			while(mHeightDataBuffer.size() > 0 && mHeightDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
-				mHeightDataBuffer.pop_front();
+			for(int i=0; i<mDataBuffers.size(); i++)
+				while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 1e3)
+					mDataBuffers[i]->pop_front();
 
 			for(int i=0; i<3; i++)
 				pos[i][0] = mStateKF[i][0];
@@ -417,21 +468,9 @@ namespace Quadrotor{
 		JAMA::LU<double> SvLU(Sv);
 		Array2D<double> SvInv1 = SvLU.solve(createIdentity(3));
 
-		mOpticFlowVelTime = matchData->imgData1->timestamp;
-		double z;
-		Time zTime;
-		while(mHeightDataBuffer.size() > 0 && mHeightDataBuffer.front()->timestamp < mOpticFlowVelTime)
-		{
-			z = mHeightDataBuffer.front()->data;
-			zTime.setTime( mHeightDataBuffer.front()->timestamp );
-			mHeightDataBuffer.pop_front();
-		}
-		if(mHeightDataBuffer.size() > 0)
-		{
-			double a = Time::calcDiffUS(zTime,mOpticFlowVelTime)/1.0e6;
-			double b = Time::calcDiffUS(mOpticFlowVelTime,mHeightDataBuffer.front()->timestamp)/1.0e6;
-			z = b/(a+b)*z+a/(a+b)*mHeightDataBuffer.front()->data;
-		}
+		mOpticFlowVel.timestamp.setTime(matchData->imgData1->timestamp);
+		Time img1Time = matchData->imgData1->timestamp;
+		double z = interpolate(img1Time, mHeightDataBuffer);
 		z -= 0.060; // offset between markers and camera
 
 		// Rotate prior velocity information to camera coords
@@ -542,7 +581,8 @@ namespace Quadrotor{
 			mNewOpticFlowReady = true;
 
 			mMutex_meas.lock();
-			mOpticFlowVel.inject(vel);
+			mOpticFlowVel.data.inject(vel);
+			mOpticFlowVel.timestamp.setTime(img1Time);
 			mMutex_meas.unlock();
 		}
 		else
@@ -577,105 +617,94 @@ printArray("vel:\n",vel);
 		mMutex_cmds.unlock();
 	}
 
-	void Observer_Translational::doTimeUpdateKF(TNT::Array2D<double> const &actuator, double dt)
+	void Observer_Translational::doTimeUpdateKF(Array2D<double> const &actuator, Array2D<double> const &A, Array2D<double> const &B, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
 	{
-		mMutex_data.lock();
-		for(int i=0; i<3; i++)
-		{
-			mAkf[i][i+3] = dt;
-			mAkf_T[i+3][i] = dt;
-			mBkf[i+3][i] = dt;
-		}
-		mStateKF.inject(matmult(mAkf,mStateKF)+matmult(mBkf, actuator));
-		mErrCovKF.inject(matmult(mAkf, matmult(mErrCovKF, mAkf_T)) + mDynCov);
-		mMutex_data.unlock();
+		doTimeUpdateKF(actuator, A, transpose(A), B, state, errCov, dynCov);
+	}
+
+	void Observer_Translational::doTimeUpdateKF(Array2D<double> const &actuator, Array2D<double> const &A, Array2D<double> const &A_T,  Array2D<double> const &B, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
+	{
+		state.inject(matmult(A,state)+matmult(B, actuator));
+		errCov.inject(matmult(A, matmult(errCov, A_T)) + dynCov);
 	}
 
 	// This function needs to be called inside of a locked
 	// mMutex_data block
-	void Observer_Translational::doMeasUpdateKF(TNT::Array2D<double> const &meas)
-	{
-		mDoMeasUpdate = false;
-		Array2D<double> m1_T = transpose(matmult(mErrCovKF, mCkf_T));
-		Array2D<double> m2_T = transpose(matmult(mCkf, matmult(mErrCovKF, mCkf_T)) + mMeasCov);
-
-		// I need to solve K = m1*inv(m2) which is the wrong order
-		// so solve K^T = inv(m2^T)*m1^T
-// The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
-// of this function was no longer symmetric
-//		JAMA::QR<double> m2QR(m2_T); 
-//	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
-		JAMA::LU<double> m2LU(m2_T);
-		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
-
-		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
-		{
-			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
-			return;
-		}
-
-		// \hat{x} = \hat{x} + K (meas - C \hat{x})
-		Array2D<double> err = meas-matmult(mCkf, mStateKF);
-		mStateKF += matmult(gainKF, err);
-
-		// S = (I-KC) S
-		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, mCkf), mErrCovKF));
-
-		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
-		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
-
-//		// update bias and force scaling estimates
-//		if(mLastAttBiasUpdateTime.getMS() == 0)
-//			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
-//		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
-//		if(dt < 0.1)
-//		{
-//			mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-//			mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-//		}
-//		if(mLastForceGainUpdateTime.getMS() == 0)
-//			mLastForceGainUpdateTime.setTime();
-//		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
-//		if(meas[2][0] > 0.4 && dt < 0.1) // doing this too low runs into problems with ground effect
-//			mForceGain += mForceGainAdaptRate*dt*err[2][0];
-//		mLastAttBiasUpdateTime.setTime();
-//		mLastForceGainUpdateTime.setTime();
+//	void Observer_Translational::doMeasUpdateKF(TNT::Array2D<double> const &meas)
+//	{
+//		mDoMeasUpdate = false;
+//		Array2D<double> m1_T = transpose(matmult(mErrCovKF, mCkf_T));
+//		Array2D<double> m2_T = transpose(matmult(mCkf, matmult(mErrCovKF, mCkf_T)) + mMeasCov);
 //
-//		{
-//			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-//			for(int i=0; i<mAttBias.dim1(); i++)
-//				str1 = str1+mAttBias[i][0]+"\t";
-//			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+//		// I need to solve K = m1*inv(m2) which is the wrong order
+//		// so solve K^T = inv(m2^T)*m1^T
+//// The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
+//// of this function was no longer symmetric
+////		JAMA::QR<double> m2QR(m2_T); 
+////	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
+//		JAMA::LU<double> m2LU(m2_T);
+//		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
 //
-//			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
-//			str2 = str2+mForceGain+"\t";
-//			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+//		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
+//		{
+//			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
+//			return;
 //		}
-
-	}
+//
+//		// \hat{x} = \hat{x} + K (meas - C \hat{x})
+//		Array2D<double> err = meas-matmult(mCkf, mStateKF);
+//		mStateKF += matmult(gainKF, err);
+//
+//		// S = (I-KC) S
+//		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, mCkf), mErrCovKF));
+//
+//		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
+//		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
+//
+////		// update bias and force scaling estimates
+////		if(mLastAttBiasUpdateTime.getMS() == 0)
+////			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
+////		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
+////		if(dt < 0.1)
+////		{
+////			mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+////			mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+////		}
+////		if(mLastForceGainUpdateTime.getMS() == 0)
+////			mLastForceGainUpdateTime.setTime();
+////		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
+////		if(meas[2][0] > 0.4 && dt < 0.1) // doing this too low runs into problems with ground effect
+////			mForceGain += mForceGainAdaptRate*dt*err[2][0];
+////		mLastAttBiasUpdateTime.setTime();
+////		mLastForceGainUpdateTime.setTime();
+////
+////		{
+////			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
+////			for(int i=0; i<mAttBias.dim1(); i++)
+////				str1 = str1+mAttBias[i][0]+"\t";
+////			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+////
+////			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
+////			str2 = str2+mForceGain+"\t";
+////			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+////		}
+//
+//	}
 
 	// This function needs to be called inside of a locked
-	// mMutex_data block
-	void Observer_Translational::doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas, TNT::Array2D<double> const &measCov)
+	void Observer_Translational::doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
 		if(norm2(meas) > 10)
 			return; // screwy measuremnt
-//		mNewOpticFlowReady = false;
-//		Array2D<double> measCov(3,3);
-//		measCov[0][0] = mMeasCov[3][3];
-//		measCov[0][1] = measCov[1][0] = mMeasCov[3][4];
-//		measCov[0][2] = measCov[2][0] = mMeasCov[3][5];
-//		measCov[1][1] = mMeasCov[4][4];
-//		measCov[1][2] = measCov[2][1] = mMeasCov[4][5];
 		Array2D<double> C(3,6,0.0);
 		C[0][3] = C[1][4] = C[2][5] = 1;
 		Array2D<double> C_T = transpose(C);
-		Array2D<double> m1_T = transpose(matmult(mErrCovKF, C_T));
-		Array2D<double> m2_T = transpose(matmult(C, matmult(mErrCovKF, C_T)) + measCov);
+		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
+		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C_T)) + measCov);
 
 		// I need to solve K = m1*inv(m2) which is the wrong order
 		// so solve K^T = inv(m2^T)*m1^T
-// The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
+// The QR solver doesn't seem to give stable results. When I used it the resulting errCov at the end
 // of this function was no longer symmetric
 //		JAMA::QR<double> m2QR(m2_T); 
 //	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
@@ -689,47 +718,28 @@ printArray("vel:\n",vel);
 		}
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
-		Array2D<double> err = meas-matmult(C, mStateKF);
-		mStateKF += matmult(gainKF, err);
+		Array2D<double> err = meas-matmult(C, state);
+		state += matmult(gainKF, err);
 
 		// S = (I-KC) S
-		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, C), mErrCovKF));
+		errCov.inject(matmult(createIdentity(6)-matmult(gainKF, C), errCov));
 
-		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
-		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
-
-//		// update bias and force scaling estimates
-//		if(mLastAttBiasUpdateTime.getMS() == 0)
-//			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
-//		double dt = min(0.05,mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6);
-//		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-//		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-//		mLastAttBiasUpdateTime.setTime();
-//
-//		{
-//			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-//			for(int i=0; i<mAttBias.dim1(); i++)
-//				str1 = str1+mAttBias[i][0]+"\t";
-//			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
-//		}
-//
+		// this is to ensure that errCov always stays symmetric even after small rounding errors
+		errCov = 0.5*(errCov+transpose(errCov));
 	}
 
 	// This function needs to be called inside of a locked
-	// mMutex_data block
-	void Observer_Translational::doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov)
+	void Observer_Translational::doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
-//		mNewViconPosAvailable = mNewCameraPosAvailable = false;
-//		Array2D<double> measCov = submat(mMeasCov,0,2,0,2);
 		Array2D<double> C(3,6,0.0);
 		C[0][0] = C[1][1] = C[2][2] = 1;
 		Array2D<double> C_T = transpose(C);
-		Array2D<double> m1_T = transpose(matmult(mErrCovKF, C_T));
-		Array2D<double> m2_T = transpose(matmult(C, matmult(mErrCovKF, C_T)) + measCov);
+		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
+		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C_T)) + measCov);
 
 		// I need to solve K = m1*inv(m2) which is the wrong order
 		// so solve K^T = inv(m2^T)*m1^T
-// The QR solver doesn't seem to give stable results. When I used it the resulting mErrCovKF at the end
+// The QR solver doesn't seem to give stable results. When I used it the resulting errCov at the end
 // of this function was no longer symmetric
 //		JAMA::QR<double> m2QR(m2_T); 
 //	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
@@ -743,54 +753,14 @@ printArray("vel:\n",vel);
 		}
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
-		Array2D<double> err = meas-matmult(C, mStateKF);
-		mStateKF += matmult(gainKF, err);
+		Array2D<double> err = meas-matmult(C, state);
+		state += matmult(gainKF, err);
 
 		// S = (I-KC) S
-		mErrCovKF.inject(matmult(createIdentity(6)-matmult(gainKF, C), mErrCovKF));
+		errCov.inject(matmult(createIdentity(6)-matmult(gainKF, C), errCov));
 
-		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
-		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
-
-		// update bias and force scaling estimates
-		if(mLastAttBiasUpdateTime.getMS() == 0)
-			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
-		if(dt < 0.1)
-		{
-			mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-			mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-		}
-		if(mLastForceGainUpdateTime.getMS() == 0)
-			mLastForceGainUpdateTime.setTime();
-		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
-		if(meas[2][0] > 0.4 && dt < 0.1) // doing this too low runs into problems with ground effect
-			mForceGain += mForceGainAdaptRate*dt*err[2][0];
-		mLastAttBiasUpdateTime.setTime();
-		mLastForceGainUpdateTime.setTime();
-
-		{
-			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-			for(int i=0; i<mAttBias.dim1(); i++)
-				str1 = str1+mAttBias[i][0]+"\t";
-			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
-
-			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
-			str2 = str2+mForceGain+"\t";
-			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
-		}
-
-//		// update bias and force scaling estimates
-//		if(mLastForceGainUpdateTime.getMS() == 0)
-//			mLastForceGainUpdateTime.setTime(); // this will effectively cause dt=0
-//		double dt = min(0.40,mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6);
-//		mForceGain += mForceGainAdaptRate*err[2][0];
-//		mLastForceGainUpdateTime.setTime();
-//		{
-//			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
-//			str2 = str2+mForceGain+"\t";
-//			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
-//		}
+		// this is to ensure that errCov always stays symmetric even after small rounding errors
+		errCov = 0.5*(errCov+transpose(errCov));
 	}
 
 	void Observer_Translational::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
