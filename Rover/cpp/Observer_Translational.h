@@ -115,10 +115,28 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	double mMotorCmds[4];
 
-	void doTimeUpdateKF(TNT::Array2D<double> const &actuator, double dt);
-	void doMeasUpdateKF(TNT::Array2D<double> const &meas);
-	void doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas, TNT::Array2D<double> const &measCov);
-	void doMeasUpdateKF_posOnly(TNT::Array2D<double> const &meas, TNT::Array2D<double> const &measCov);
+	static void doTimeUpdateKF(TNT::Array2D<double> const &actuator, 
+							   TNT::Array2D<double> const &A, 
+							   TNT::Array2D<double> const &B,
+							   TNT::Array2D<double> &state,
+							   TNT::Array2D<double> &errCov,
+							   TNT::Array2D<double> const &dynCov);
+	static void doTimeUpdateKF(TNT::Array2D<double> const &actuator, 
+							   TNT::Array2D<double> const &A, 
+							   TNT::Array2D<double> const &A_T, 
+							   TNT::Array2D<double> const &B,
+							   TNT::Array2D<double> &state,
+							   TNT::Array2D<double> &errCov,
+							   TNT::Array2D<double> const &dynCov);
+//	void doMeasUpdateKF(TNT::Array2D<double> const &meas);
+	static void doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas,
+									   TNT::Array2D<double> const &measCov,
+									   TNT::Array2D<double> &state,
+									   TNT::Array2D<double> &errCov);
+	static void doMeasUpdateKF_posOnly(TNT::Array2D<double> const &meas,
+									   TNT::Array2D<double> const &measCov,
+									   TNT::Array2D<double> &state,
+									   TNT::Array2D<double> &errCov);
 
 	shared_ptr<DataPhoneTemp> mPhoneTempData;
 	double mZeroHeight;
@@ -131,13 +149,15 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
-	TNT::Array2D<double> mOpticFlowVel;
-	Time mOpticFlowVelTime;
+	DataVector mOpticFlowVel;
+//	TNT::Array2D<double> mOpticFlowVel;
+//	Time mOpticFlowVelTime;
 
 	bool mMotorOn;
 
 	int mThreadPriority, mScheduler;
 
+	vector<list<shared_ptr<Data> > *> mDataBuffers;
 	list<shared_ptr<DataVector> > mStateDataBuffer, mAccelDataBuffer, mErrCovKFDataBuffer, mPosMeasDataBuffer;
 	list<shared_ptr<Data> > mHeightDataBuffer;
 //	list<TNT::Array2D<double> > mVelMeasBuffer; // This is only the vel meas from position updates
