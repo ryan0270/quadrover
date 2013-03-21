@@ -67,10 +67,6 @@ void VisionProcessor::shutdown()
 
 void VisionProcessor::initialize()
 {
-	if(mCascadeClassifier.load("/sdcard/RoverService/lappyCascade.xml"))
-		Log::alert("Cascade classifier loaded");
-	else
-		Log::alert("Failed to load cascade classifier");
 }
 
 void VisionProcessor::getLastImage(cv::Mat *outImage)
@@ -110,6 +106,7 @@ void VisionProcessor::run()
 	targetFinderThread.start();
 
 	vector<BlobDetector::Blob> circles;
+	TNT::Array2D<double> attPrev(3,1,0.0), attCur(3,1,0.0);
 	while(mRunning)
 	{
 		if(mNewImageReady_featureMatch && mImageDataCur == NULL)
@@ -125,6 +122,8 @@ void VisionProcessor::run()
 			mImageDataCur = mImageDataNext;
 			mImageDataPrev->lock(); mImageDataCur->lock();
 			double dt = Time::calcDiffUS(mImageDataPrev->timestamp, mImageDataCur->timestamp)/1.0e6;
+			attPrev.inject(mImageDataPrev->att);
+			attCur.inject(mImageDataCur->att);
 			mImageDataPrev->unlock(); 
 			mMutex_imageSensorData.unlock();
 
@@ -136,7 +135,14 @@ void VisionProcessor::run()
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
-			mFeatureMatchBuffer.push_back(points);
+			if(points[0].size() > 0)
+			{
+				mFeatureMatchBuffer.push_back(points);
+				mFeatureMatchTimeBuffer.push_back(mImageDataCur->timestamp);
+				mFeatureMatchDTBuffer.push_back(dt);
+				mFeatureMatchAttPrevBuffer.push_back(attPrev.copy());
+				mFeatureMatchAttCurBuffer.push_back(attCur.copy());
+			}
 
 			shared_ptr<cv::Mat> imgAnnotated(new cv::Mat());
 			mCurImage.copyTo(*imgAnnotated);
@@ -192,7 +198,11 @@ void VisionProcessor::run()
 	targetFinderThread.join();
 
 //	mQuadLogger->saveImageBuffer(mImgDataBuffer, mImgMatchDataBuffer);
-	mQuadLogger->saveFeatureMatchBuffer(mFeatureMatchBuffer);
+	mQuadLogger->saveFeatureMatchBuffer(mFeatureMatchBuffer, 
+										mFeatureMatchTimeBuffer, 
+										mFeatureMatchDTBuffer, 
+										mFeatureMatchAttPrevBuffer, 
+										mFeatureMatchAttCurBuffer);
 
 	mImgDataBuffer.clear();
 	mImgMatchDataBuffer.clear();
@@ -326,16 +336,17 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 //		double p1 = -0.0049942077937641669;
 //		double p2 = 0.0013584538237561394;
 //		double k3 = 0.32018957065239517;
-//		double cx = 318.2;
-//		double cy = 249.0;
+		double cx = 318.2;
+		double cy = 249.0;
 //		//		macro lens
-		double k1 = -1.7697194955446380e-01;
-		double k2 = 5.0777952754531890e-02;
-		double p1 = -6.7214151752545736e-03;
-		double p2 = -1.4815669835189845e-03;
-		double k3 = -1.4774537700218960e-02;
-		double cx = 640/2.0;
-		double cy = 480/2.0;
+//		double k1 = -1.6684484727208121e-01;
+//		double k2 = 2.3371666312763096e-02;
+//		double p1 = 5.8454330481278330e-03;
+//		double p2 = -1.6372156794818059e-03;
+//		double k3 = 2.4911796969280088e-03;
+//		double cx = 640/2.0;
+//		double cy = 480/2.0;
+
 		cv::Point2f cPt(cx*scale, cy*scale);
 		double f = 3.7*640/5.76*scale;
 
@@ -347,13 +358,13 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 		{
 			// remove distortion and scale back up
 			pt = b.contour[i];
-			pt = 1.0/f*(pt-cPt);
-			ptSq = pow(pt.x,2)+pow(pt.y,2);
-			pt = (1+k1*ptSq+k2*pow(ptSq,2)+k3*pow(ptSq,3))*pt;
-			ptSq = pow(pt.x,2)+pow(pt.y,2);
-			pt.x += 2*p1*pt.x*pt.y+p2*(ptSq+2*pow(pt.x,2));
-			pt.y += 2*p2*pt.x*pt.y+p1*(ptSq+2*pow(pt.y,2));
-			pt = f*pt+cPt;
+//			pt = 1.0/f*(pt-cPt);
+//			ptSq = pow(pt.x,2)+pow(pt.y,2);
+//			pt = (1+k1*ptSq+k2*pow(ptSq,2)+k3*pow(ptSq,3))*pt;
+//			ptSq = pow(pt.x,2)+pow(pt.y,2);
+//			pt.x += 2*p1*pt.x*pt.y+p2*(ptSq+2*pow(pt.x,2));
+//			pt.y += 2*p2*pt.x*pt.y+p1*(ptSq+2*pow(pt.y,2));
+//			pt = f*pt+cPt;
 			b.contourCorrected.push_back(1.0/scale*pt);
 
 			b.contour[i] = 1.0/scale*b.contour[i];
@@ -498,6 +509,10 @@ void VisionProcessor::onNewCommLogClear()
 {
 	mMutex_buffers.lock();
 	mFeatureMatchBuffer.clear();
+	mFeatureMatchTimeBuffer.clear();
+	mFeatureMatchDTBuffer.clear();
+	mFeatureMatchAttPrevBuffer.clear();
+	mFeatureMatchAttCurBuffer.clear();
 	mImgDataBuffer.clear();
 	mImgMatchDataBuffer.clear();
 	mMutex_buffers.unlock();

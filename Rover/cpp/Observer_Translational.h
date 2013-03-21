@@ -97,7 +97,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	// for the translational Kalman Filter
 	TNT::Array2D<double> mAkf, mAkf_T, mBkf, mCkf, mCkf_T;
-	TNT::Array2D<double> mMeasCov, mDynCov, mErrCovKF;
+	TNT::Array2D<double> mMeasCov, mPosMeasCov, mVelMeasCov; 
+	TNT::Array2D<double> mDynCov, mErrCovKF;
 	TNT::Array2D<double> mStateKF, mAttitude;
 	TNT::Array2D<double> mAttBias, mAttBiasReset;
 //	TNT::Array2D<double> mLastMeas;
@@ -138,12 +139,18 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	list<TNT::Array2D<double> > mAccelBuffer, mStateBuffer, mErrCovKFBuffer, mPosMeasBuffer;
 	list<Time> mAccelTimeBuffer, mStateTimeBuffer, mErrCovKFTimeBuffer, mPosMeasTimeBuffer;
+	list<TNT::Array2D<double> > mVelMeasBuffer; // This is only the vel meas from position updates
+	list<Time> mVelMeasTimeBuffer;
+	list<double> mHeightBuffer;
+	list<Time> mHeightTimeBuffer;
 
 	bool mHaveFirstCameraPos;
 	Time mLastCameraPosTime, mLastViconPosTime;
 	TNT::Array2D<double> mLastViconVel, mLastCameraVel;
 
 	bool mUseIbvs;
+
+	TNT::Array2D<double> mViconCameraOffset;
 };
 
 } // namespace Quadrotor

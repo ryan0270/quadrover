@@ -196,17 +196,28 @@ void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataB
 	fclose(fp);
 }
 
-void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &featureMatchBuffer)
+void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &matchBuffer, 
+										list<Time> const &timeBuffer,
+										list<double> const &dtBuffer,
+										list<TNT::Array2D<double> > const &attPrevBuffer,
+										list<TNT::Array2D<double> > const &attCurBuffer)
 {
-	list<vector<vector<cv::Point2f> > >::const_iterator iter = featureMatchBuffer.begin();
+	list<vector<vector<cv::Point2f> > >::const_iterator iter = matchBuffer.begin();
+	list<Time>::const_iterator timeIter = timeBuffer.begin();
+	list<double>::const_iterator dtIter = dtBuffer.begin();
+	list<TNT::Array2D<double> >::const_iterator attPrevIter = attPrevBuffer.begin();
+	list<TNT::Array2D<double> >::const_iterator attCurIter = attCurBuffer.begin();
 	int id = 0;
 	mxml_node_t *xml = mxmlNewXML("1.0");
 	mxml_node_t *root = mxmlNewElement(xml,"root");
-	while(iter != featureMatchBuffer.end())
+	mxmlNewInteger(mxmlNewElement(root,"NumData"),matchBuffer.size());
+	while(iter != matchBuffer.end())
 	{
 		stringstream ss; ss << "match_" << id;
 		vector<vector<cv::Point2f> > const *matchData = &(*iter);
 		mxml_node_t *matchNode = mxmlNewElement(root,ss.str().c_str());
+			mxmlNewInteger(mxmlNewElement(matchNode,"Time"), Time::calcDiffMS(mStartTime, *timeIter));
+			mxmlNewReal(mxmlNewElement(matchNode,"dt"), *dtIter);
 			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
 			if((*matchData)[0].size() == 0)
 				mxmlNewInteger(numPtsNode, 0);
@@ -230,9 +241,21 @@ void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > cons
 					mxmlNewInteger(mxmlNewElement(p1Node,"y"),(int)(pt1.y+0.5));
 				}
 			}
+			mxml_node_t *attPrevNode = mxmlNewElement(matchNode,"AttPrev");
+				mxmlNewReal(mxmlNewElement(attPrevNode,"roll"), (*attPrevIter)[0][0]);
+				mxmlNewReal(mxmlNewElement(attPrevNode,"pitch"), (*attPrevIter)[1][0]);
+				mxmlNewReal(mxmlNewElement(attPrevNode,"yaw"), (*attPrevIter)[2][0]);
+			mxml_node_t *attCurNode = mxmlNewElement(matchNode,"AttCur");
+				mxmlNewReal(mxmlNewElement(attCurNode,"roll"), (*attCurIter)[0][0]);
+				mxmlNewReal(mxmlNewElement(attCurNode,"pitch"), (*attCurIter)[1][0]);
+				mxmlNewReal(mxmlNewElement(attCurNode,"yaw"), (*attCurIter)[2][0]);
 
 		id++;
 		iter++;
+		timeIter++;
+		dtIter++;
+		attPrevIter++;
+		attCurIter++;
 	}
 
 	FILE *fp = fopen((mDir+"/matchData.xml").c_str(),"w");

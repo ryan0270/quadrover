@@ -26,7 +26,8 @@ void loop()
   addrs[1] = MOTOR_ADDR_E;
   addrs[2] = MOTOR_ADDR_S;
   addrs[3] = MOTOR_ADDR_W;
-  for(byte motorID = 0; motorID < 4; motorID++)
+  for(byte motorID = 1; motorID < 4; motorID++)
+//  byte motorID = 3;
   {
 //    byte writeAddr = MOTOR_BASE_ADDR+(motorID << 1);
 //    Wire.beginTransmission(writeAddr >> 1);

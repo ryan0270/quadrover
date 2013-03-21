@@ -15,6 +15,8 @@ namespace Quadrotor{
 		mCkf(6,6,0.0),
 		mCkf_T(6,6,0.0),
 		mMeasCov(6,6,0.0),
+		mPosMeasCov(3,3,0.0),
+		mVelMeasCov(3,3,0.0),
 		mDynCov(6,6,0.0),
 		mErrCovKF(6,6,0.0),
 		mStateKF(6,1,0.0),
@@ -27,7 +29,8 @@ namespace Quadrotor{
 		mBarometerHeightState(2,1,0.0),
 		mOpticFlowVel(3,1,0.0),
 		mLastViconVel(3,1,0.0),
-		mLastCameraVel(3,1,0.0)
+		mLastCameraVel(3,1,0.0),
+		mViconCameraOffset(3,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -47,6 +50,8 @@ namespace Quadrotor{
 		mMeasCov[3][3] = mMeasCov[4][4] = mMeasCov[5][5] = 0.3*0.3;
 		mMeasCov[2][2] = 0.05*0.05;
 		mMeasCov[5][5] = 0.5*0.5;
+		mPosMeasCov = submat(mMeasCov,0,2,0,2);
+		mVelMeasCov = submat(mMeasCov,3,5,3,5);
 		mDynCov.inject(0.02*0.02*createIdentity(6));
 		mDynCov[5][5] *= 10;
 		mErrCovKF.inject(1e-4*createIdentity(6));
@@ -185,7 +190,9 @@ namespace Quadrotor{
 //			if(mDoMeasUpdate)
 //			{
 //				mMutex_meas.lock(); measTemp.inject(mLastMeas); mMutex_meas.unlock();
+//				mMutex_data.lock();
 //				doMeasUpdateKF(measTemp);
+//				mMutex_data.unlock();
 //			}
 			if(mNewOpticFlowReady)
 			{
@@ -199,7 +206,7 @@ namespace Quadrotor{
 				mMutex_data.lock();
 				list<Time>::const_iterator stateTimeIter = mStateTimeBuffer.begin();
 				list<Array2D<double> >::const_iterator stateIter = mStateBuffer.begin();
-				while(stateTimeIter != mStateTimeBuffer.end() && (*stateTimeIter).getUS() < imgTime.getUS())
+				while(stateTimeIter != mStateTimeBuffer.end() && (*stateTimeIter) < imgTime)
 				{
 					stateTimeIter++;
 					stateIter++;
@@ -209,7 +216,7 @@ namespace Quadrotor{
 
 				list<Time>::const_iterator errCovTimeIter = mErrCovKFTimeBuffer.begin();
 				list<Array2D<double> >::const_iterator errCovIter = mErrCovKFBuffer.begin();
-				while(errCovTimeIter != mErrCovKFTimeBuffer.end() && (*errCovTimeIter).getUS() < imgTime.getUS())
+				while(errCovTimeIter != mErrCovKFTimeBuffer.end() && (*errCovTimeIter) < imgTime)
 				{
 					errCovTimeIter++;
 					errCovIter++;
@@ -217,24 +224,21 @@ namespace Quadrotor{
 				if(errCovTimeIter != mErrCovKFTimeBuffer.end())
 					mErrCovKF.inject(*errCovIter);
 
-				Array2D<double> velMeasCov(3,3);
-				velMeasCov[0][0] = mMeasCov[3][3];
-				velMeasCov[0][1] = velMeasCov[1][0] = mMeasCov[3][4];
-				velMeasCov[0][2] = velMeasCov[2][0] = mMeasCov[3][5];
-				velMeasCov[1][1] = mMeasCov[4][4];
-				velMeasCov[1][2] = velMeasCov[2][1] = mMeasCov[4][5];
-				mMutex_data.unlock();
-
-				doMeasUpdateKF_velOnly(vel, velMeasCov);
+				// do measurement update
+				doMeasUpdateKF_velOnly(vel, mVelMeasCov);
 
 				// now apply forward back to present time
-				mMutex_data.lock();
-				while(mPosMeasTimeBuffer.front().getUS() < imgTime.getUS())
+				while(mPosMeasTimeBuffer.front() < imgTime)
 				{
 					mPosMeasTimeBuffer.pop_front();
 					mPosMeasBuffer.pop_front();
 				}
-				while(mAccelTimeBuffer.front().getUS() < imgTime.getUS())
+				while(mVelMeasTimeBuffer.front() < imgTime)
+				{
+					mVelMeasTimeBuffer.pop_front();
+					mVelMeasBuffer.pop_front();
+				}
+				while(mAccelTimeBuffer.front() < imgTime)
 				{
 					mAccelTimeBuffer.pop_front();
 					mAccelBuffer.pop_front();
@@ -250,28 +254,32 @@ namespace Quadrotor{
 				list<Array2D<double> >::const_iterator accelIter = mAccelBuffer.begin();
 				list<Time>::const_iterator posMeasTimeIter = mPosMeasTimeBuffer.begin();
 				list<Array2D<double> >::const_iterator posMeasIter = mPosMeasBuffer.begin();
-				Array2D<double> accel(3,1), pos(3,1);
+				list<Time>::const_iterator velMeasTimeIter = mVelMeasTimeBuffer.begin();
+				list<Array2D<double> >::const_iterator velMeasIter = mVelMeasBuffer.begin();
+				Array2D<double> accel(3,1), pos(3,1);// , vel(3,1);  -- vel is defined above
 				double dt;
-				Array2D<double> posMeasCov = submat(mMeasCov,0,2,0,2);
 				while(accelTimeIterNext != mAccelTimeBuffer.end())
 				{
 					accel.inject(*accelIter);
 					dt = Time::calcDiffUS(*accelTimeIter, (*accelTimeIterNext))/1.0e6;
-					mMutex_data.unlock();
 
 					doTimeUpdateKF(accel, dt);
 
-					mMutex_data.lock();
-
-					if( posMeasTimeIter != mPosMeasTimeBuffer.end() && (*posMeasTimeIter).getUS() > (*accelTimeIter).getUS())
+					if( posMeasTimeIter != mPosMeasTimeBuffer.end() && (*posMeasTimeIter) > (*accelTimeIter))
 					{
 						pos.inject(*posMeasIter);
 						posMeasTimeIter++;
 						posMeasIter++;
 
-						mMutex_data.unlock();
-						doMeasUpdateKF_posOnly(pos, posMeasCov);
-						mMutex_data.lock();
+						doMeasUpdateKF_posOnly(pos, mPosMeasCov);
+					}
+					if( velMeasTimeIter != mVelMeasTimeBuffer.end() && (*velMeasTimeIter) > (*accelTimeIter))
+					{
+						vel.inject(*velMeasIter);
+						velMeasTimeIter++;
+						velMeasIter++;
+
+						doMeasUpdateKF_velOnly(vel, mVelMeasCov);
 					}
 
 
@@ -318,19 +326,9 @@ namespace Quadrotor{
 				mMutex_meas.unlock();
 
 				mMutex_data.lock();
-				Array2D<double> posMeasCov = submat(mMeasCov,0,2,0,2);
+				doMeasUpdateKF_posOnly(pos, mPosMeasCov);
+				doMeasUpdateKF_velOnly(vel, 100*mVelMeasCov);
 				mMutex_data.unlock();
-				doMeasUpdateKF_posOnly(pos, posMeasCov);
-mMutex_data.lock();
-Array2D<double> velMeasCov(3,3);
-velMeasCov[0][0] = mMeasCov[3][3];
-velMeasCov[0][1] = velMeasCov[1][0] = mMeasCov[3][4];
-velMeasCov[0][2] = velMeasCov[2][0] = mMeasCov[3][5];
-velMeasCov[1][1] = mMeasCov[4][4];
-velMeasCov[1][2] = velMeasCov[2][1] = mMeasCov[4][5];
-velMeasCov = 50.0*velMeasCov;
-mMutex_data.unlock();
-				doMeasUpdateKF_velOnly(vel, velMeasCov);
 
 			}
 			if(mNewCameraPosAvailable && mUseCameraPos)
@@ -342,19 +340,9 @@ mMutex_data.unlock();
 				mMutex_meas.unlock();
 
 				mMutex_data.lock();
-				Array2D<double> posMeasCov = submat(mMeasCov,0,2,0,2);
+				doMeasUpdateKF_posOnly(pos, mPosMeasCov);
+				doMeasUpdateKF_velOnly(vel, 100*mVelMeasCov);
 				mMutex_data.unlock();
-				doMeasUpdateKF_posOnly(pos, posMeasCov);
-mMutex_data.lock();
-Array2D<double> velMeasCov(3,3);
-velMeasCov[0][0] = mMeasCov[3][3];
-velMeasCov[0][1] = velMeasCov[1][0] = mMeasCov[3][4];
-velMeasCov[0][2] = velMeasCov[2][0] = mMeasCov[3][5];
-velMeasCov[1][1] = mMeasCov[4][4];
-velMeasCov[1][2] = velMeasCov[2][1] = mMeasCov[4][5];
-velMeasCov = 50.0*velMeasCov;
-mMutex_data.unlock();
-				doMeasUpdateKF_velOnly(vel, velMeasCov);
 			}
 
 			if(mNewImageResultsReady && mFlowCalcDone
@@ -438,24 +426,42 @@ mMutex_data.unlock();
 
 		double dt = matchData->dt;
 		if(dt < 1e-3)
+		{
+			mFlowCalcDone = true;
 			return;
+		}
 		mMutex_data.lock();
-		Array2D<double> mu_v = submat(mStateKF,3,5,0,0);
 		Array2D<double> Sn = 300*300*createIdentity(2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0]; SnInv[1][1] = 1.0/Sn[1][1];
 
+		Array2D<double> mu_v1 = submat(mStateKF,3,5,0,0);
 		Array2D<double> Sv = submat(mErrCovKF,3,5,3,5);
 		JAMA::LU<double> SvLU(Sv);
-		Array2D<double> SvInv = SvLU.solve(createIdentity(3));
-		double z = mStateKF[2][0];
+		Array2D<double> SvInv1 = SvLU.solve(createIdentity(3));
+
+		mOpticFlowVelTime = matchData->imgData1->timestamp;
+		double z;
+		Time zTime;
+		while(mHeightTimeBuffer.size() > 0 && mHeightTimeBuffer.front() < mOpticFlowVelTime)
+		{
+			z = mHeightBuffer.front();
+			zTime = mHeightTimeBuffer.front();
+			mHeightBuffer.pop_front();
+			mHeightTimeBuffer.pop_front();
+		}
+		if(mHeightBuffer.size() > 0)
+		{
+			double a = Time::calcDiffUS(zTime,mOpticFlowVelTime)/1.0e6;
+			double b = Time::calcDiffUS(mOpticFlowVelTime,mHeightTimeBuffer.front())/1.0e6;
+			z = b/(a+b)*z+a/(a+b)*mHeightBuffer.front();
+		}
 		z -= 0.060; // offset between markers and camera
 
 		// Rotate prior velocity information to camera coords
-		mu_v = matmult(mRotPhoneToCam, mu_v);
-		SvInv = matmult(mRotPhoneToCam, matmult(SvInv, mRotCamToPhone));
+		Array2D<double> mu_v = matmult(mRotPhoneToCam, mu_v1);
+		Array2D<double> SvInv = matmult(mRotPhoneToCam, matmult(SvInv1, mRotCamToPhone));
 
-		mOpticFlowVelTime = matchData->imgData1->timestamp;
 		mMutex_data.unlock();
 //Log::alert("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
@@ -475,6 +481,11 @@ mMutex_data.unlock();
 		double f2 = matchData->imgData1->focalLength;
 		double cx = matchData->imgData0->img->cols/2;
 		double cy = matchData->imgData0->img->rows/2;
+		Array2D<double> rotPoint(3,1);
+		rotPoint[0][0] = 0;
+		rotPoint[1][0] = 0;
+		rotPoint[2][0] = 0;
+		rotPoint = rotPoint*(f1/0.0037); // assumes f1=f2
 		for(int i=0; i<matchData->featurePoints[0].size(); i++)
 		{
 			q1[0][0] = matchData->featurePoints[0][i].x-cx;
@@ -491,10 +502,10 @@ mMutex_data.unlock();
 			q2a[2][0] = f2;
 //			// change q2 points to q1 attitude
 //			q2a = matmult(R, q2a); 
-			q1a = matmult(R1_T, q1a);
-			q2a = matmult(R2_T, q2a);
+			q1a = matmult(R1_T, q1a-rotPoint)+rotPoint;
+			q2a = matmult(R2_T, q2a-rotPoint)+rotPoint;
 
-			// project back onto the focal plane
+			// project back on to the focal plane
 			q1a = f1/q1a[2][0]*q1a;
 			q2a = f2/q2a[2][0]*q2a;
 
@@ -604,9 +615,11 @@ printArray("vel:\n",vel);
 		mMutex_data.unlock();
 	}
 
+	// This function needs to be called inside of a locked
+	// mMutex_data block
 	void Observer_Translational::doMeasUpdateKF(TNT::Array2D<double> const &meas)
 	{
-		mMutex_data.lock();
+		mDoMeasUpdate = false;
 		Array2D<double> m1_T = transpose(matmult(mErrCovKF, mCkf_T));
 		Array2D<double> m2_T = transpose(matmult(mCkf, matmult(mErrCovKF, mCkf_T)) + mMeasCov);
 
@@ -622,7 +635,6 @@ printArray("vel:\n",vel);
 		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
 		{
 			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
-			mMutex_data.unlock();
 			return;
 		}
 
@@ -636,41 +648,43 @@ printArray("vel:\n",vel);
 		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
 
-		// update bias and force scaling estimates
-		if(mLastAttBiasUpdateTime.getMS() == 0)
-			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
-		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-		if(mLastForceGainUpdateTime.getMS() == 0)
-			mLastForceGainUpdateTime.setTime();
-		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
-		if(meas[2][0] > 0.4) // doing this too low runs into problems with ground effect
-			mForceGain += mForceGainAdaptRate*dt*err[2][0];
-		mLastAttBiasUpdateTime.setTime();
-		mLastForceGainUpdateTime.setTime();
+//		// update bias and force scaling estimates
+//		if(mLastAttBiasUpdateTime.getMS() == 0)
+//			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
+//		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
+//		if(dt < 0.1)
+//		{
+//			mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+//			mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+//		}
+//		if(mLastForceGainUpdateTime.getMS() == 0)
+//			mLastForceGainUpdateTime.setTime();
+//		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
+//		if(meas[2][0] > 0.4 && dt < 0.1) // doing this too low runs into problems with ground effect
+//			mForceGain += mForceGainAdaptRate*dt*err[2][0];
+//		mLastAttBiasUpdateTime.setTime();
+//		mLastForceGainUpdateTime.setTime();
+//
+//		{
+//			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
+//			for(int i=0; i<mAttBias.dim1(); i++)
+//				str1 = str1+mAttBias[i][0]+"\t";
+//			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+//
+//			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
+//			str2 = str2+mForceGain+"\t";
+//			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+//		}
 
-		{
-			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-			for(int i=0; i<mAttBias.dim1(); i++)
-				str1 = str1+mAttBias[i][0]+"\t";
-			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
-
-			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
-			str2 = str2+mForceGain+"\t";
-			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
-		}
-		mMutex_data.unlock();
-
-		mDoMeasUpdate = false;
 	}
 
+	// This function needs to be called inside of a locked
+	// mMutex_data block
 	void Observer_Translational::doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas, TNT::Array2D<double> const &measCov)
 	{
 		if(norm2(meas) > 10)
 			return; // screwy measuremnt
 //		mNewOpticFlowReady = false;
-		mMutex_data.lock();
 //		Array2D<double> measCov(3,3);
 //		measCov[0][0] = mMeasCov[3][3];
 //		measCov[0][1] = measCov[1][0] = mMeasCov[3][4];
@@ -695,7 +709,6 @@ printArray("vel:\n",vel);
 		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
 		{
 			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
-			mMutex_data.unlock();
 			return;
 		}
 
@@ -709,28 +722,28 @@ printArray("vel:\n",vel);
 		// this is to ensure that mErrCovKF always stays symmetric even after small rounding errors
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
 
-		// update bias and force scaling estimates
-		if(mLastAttBiasUpdateTime.getMS() == 0)
-			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = min(0.05,mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6);
-		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-		mLastAttBiasUpdateTime.setTime();
-
-		{
-			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-			for(int i=0; i<mAttBias.dim1(); i++)
-				str1 = str1+mAttBias[i][0]+"\t";
-			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
-		}
-
-		mMutex_data.unlock();
+//		// update bias and force scaling estimates
+//		if(mLastAttBiasUpdateTime.getMS() == 0)
+//			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
+//		double dt = min(0.05,mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6);
+//		mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+//		mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+//		mLastAttBiasUpdateTime.setTime();
+//
+//		{
+//			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
+//			for(int i=0; i<mAttBias.dim1(); i++)
+//				str1 = str1+mAttBias[i][0]+"\t";
+//			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+//		}
+//
 	}
 
+	// This function needs to be called inside of a locked
+	// mMutex_data block
 	void Observer_Translational::doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov)
 	{
 //		mNewViconPosAvailable = mNewCameraPosAvailable = false;
-		mMutex_data.lock();
 //		Array2D<double> measCov = submat(mMeasCov,0,2,0,2);
 		Array2D<double> C(3,6,0.0);
 		C[0][0] = C[1][1] = C[2][2] = 1;
@@ -750,7 +763,6 @@ printArray("vel:\n",vel);
 		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
 		{
 			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
-			mMutex_data.unlock();
 			return;
 		}
 
@@ -765,18 +777,44 @@ printArray("vel:\n",vel);
 		mErrCovKF = 0.5*(mErrCovKF+transpose(mErrCovKF));
 
 		// update bias and force scaling estimates
-		if(mLastForceGainUpdateTime.getMS() == 0)
-			mLastForceGainUpdateTime.setTime(); // this will effectively cause dt=0
-		double dt = min(0.40,mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6);
-		mForceGain += mForceGainAdaptRate*err[2][0];
-		mLastForceGainUpdateTime.setTime();
+		if(mLastAttBiasUpdateTime.getMS() == 0)
+			mLastAttBiasUpdateTime.setTime(); // this will effectively cause dt=0
+		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
+		if(dt < 0.1)
 		{
+			mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
+			mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
+		}
+		if(mLastForceGainUpdateTime.getMS() == 0)
+			mLastForceGainUpdateTime.setTime();
+		dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
+		if(meas[2][0] > 0.4 && dt < 0.1) // doing this too low runs into problems with ground effect
+			mForceGain += mForceGainAdaptRate*dt*err[2][0];
+		mLastAttBiasUpdateTime.setTime();
+		mLastForceGainUpdateTime.setTime();
+
+		{
+			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
+			for(int i=0; i<mAttBias.dim1(); i++)
+				str1 = str1+mAttBias[i][0]+"\t";
+			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+
 			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
 			str2 = str2+mForceGain+"\t";
 			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
 		}
 
-		mMutex_data.unlock();
+//		// update bias and force scaling estimates
+//		if(mLastForceGainUpdateTime.getMS() == 0)
+//			mLastForceGainUpdateTime.setTime(); // this will effectively cause dt=0
+//		double dt = min(0.40,mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6);
+//		mForceGain += mForceGainAdaptRate*err[2][0];
+//		mLastForceGainUpdateTime.setTime();
+//		{
+//			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
+//			str2 = str2+mForceGain+"\t";
+//			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+//		}
 	}
 
 	void Observer_Translational::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
@@ -788,6 +826,7 @@ printArray("vel:\n",vel);
 
 	void Observer_Translational::onNewCommStateVicon(Collection<float> const &data)
 	{
+		Time now;
 		Array2D<double> pos(3,1);
 		for(int i=0; i<3; i++)
 			pos[i][0] = data[i+6];
@@ -798,7 +837,7 @@ printArray("vel:\n",vel);
 		mMutex_meas.lock();
 		Array2D<double> vel(3,1,0.0);
 		double dt = mLastViconPosTime.getElapsedTimeUS()/1.0e6;
-		mLastViconPosTime.setTime();
+		mLastViconPosTime.setTime(now);
 		if(dt < 0.2)
 		{
 			// This velocity ``measurement'' is very noisy, but it helps to correct some
@@ -815,11 +854,15 @@ printArray("vel:\n",vel);
 		{
 			mMutex_data.lock();
 			mPosMeasBuffer.push_back(mLastViconPos.copy());
-			mPosMeasTimeBuffer.push_back(Time());
+			mPosMeasTimeBuffer.push_back(now);
+//			mVelMeasBuffer.push_back(vel.copy());
+//			mVelMeasTimeBuffer.push_back(now);
+			mHeightBuffer.push_back(mLastViconPos[2][0]);
+			mHeightTimeBuffer.push_back(now);
 			mMutex_data.unlock();
 		}
 		mMutex_meas.unlock();
-		mLastPosReceiveTime.setTime();
+		mLastPosReceiveTime.setTime(now);
 
 
 		{
@@ -889,6 +932,8 @@ printArray("vel:\n",vel);
 		String s = "Meas var update -- diag(mMeasCov): \t";
 		for(int i=0; i<mMeasCov.dim1(); i++)
 			s = s+mMeasCov[i][i]+"\t";
+		mPosMeasCov = submat(mMeasCov,0,2,0,2);
+		mVelMeasCov = submat(mMeasCov,3,5,3,5);
 		mMutex_data.unlock();
 		Log::alert(s);
 	}
@@ -1021,13 +1066,15 @@ printArray("vel:\n",vel);
 		pos[0][0] = x; 
 		pos[1][0] = y; 
 		pos[2][0] = z;
-		pos[2][0] += 0.030; // offset between camera estimate and Vicon
 		mMutex_meas.lock();
 ///////////////// HACK ////////////////////
 pos[2][0] = mLastViconPos[2][0];
 ///////////////// HACK ////////////////////
 		bool doLog = false;
 		mMutex_data.lock();
+		if(!mHaveFirstCameraPos)
+			mViconCameraOffset.inject(mLastViconPos-pos);
+		pos = pos+mViconCameraOffset;
 		if( !mHaveFirstCameraPos ||
 			(mHaveFirstCameraPos && 
 			 norm2(mLastCameraPos-pos) < 0.2) &&
@@ -1047,6 +1094,8 @@ pos[2][0] = mLastViconPos[2][0];
 			{
 				mPosMeasBuffer.push_back(mLastCameraPos.copy());
 				mPosMeasTimeBuffer.push_back(data->imgData->timestamp);
+//				mVelMeasBuffer.push_back(mLastCameraVel.copy());
+//				mVelMeasTimeBuffer.push_back(data->imgData->timestamp);
 			}
 
 			doLog = true;
@@ -1058,7 +1107,8 @@ pos[2][0] = mLastViconPos[2][0];
 		if(doLog)
 		{
 			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CAMERA_POS+"\t";
-			s = s+x+"\t"+y+"\t"+z;
+			for(int i=0; i<pos.dim1(); i++)
+				s = s+pos[i][0]+"\t";
 			mQuadLogger->addLine(s, LOG_FLAG_CAM_RESULTS);
 		}
 

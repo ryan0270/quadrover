@@ -175,8 +175,10 @@ end
 
 %%
 if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
-% 	opticFlowVelLS = opticFlowVelLS([2 1 3],:);
-% 	opticFlowVel = opticFlowVel([2 1 3],:);
+	[b, a] = butter(5,0.05);
+	flowLSFiltTime = opticFlowVelLSTime(1):0.04:opticFlowVelLSTime(end);
+	flowLSInterp = interp1(opticFlowVelLSTime, opticFlowVelLS', flowLSFiltTime)';
+	flowLSFilt = filtfilt(b,a,flowLSInterp')';
 	opticFlowVelLabels = {'xDot [m/s]','yDot [m/s]','zDot [m/s]'};
 	figure(123450); clf; set(gcf,'Name','Bayesian Optical Flow');
 	for i=1:3
@@ -187,6 +189,7 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 		plot(viconStateTime(mask), viconState(i+9,mask)); hold all
 		plot(opticFlowVelTime, opticFlowVel(i,:),'.'); hold all
 		plot(opticFlowVelLSTime, opticFlowVelLS(i,:),'x'); hold all
+% 		plot(flowLSFiltTime, flowLSFilt(i,:),'k'); hold all
 		axis tight
 		ax = axis;
 		for j=1:length(ibvsOnTime)
@@ -199,7 +202,9 @@ if exist('opticFlowVel','var') && ~isempty(opticFlowVel)
 		xlabel('Time [s]');
 		ylabel(opticFlowVelLabels{i});
 	end
-	legend('Vicon','BOF','OF LS');
+	legend('Vicon','MAP','LS','LS filt');
+	err = flowLSFilt-flowLSInterp;
+	fprintf('LS noise rms: %1.2f\t%1.2f\t%1.2f\n',rms(err(1,:)),rms(err(2,:)),rms(err(3,:)));
 	
 % 	figure(12346); clf;
 % 	for i=1:3
