@@ -28,6 +28,7 @@
 #include "SensorManager.h"
 #include "VideoMaker.h"
 #include "MotorInterface.h"
+#include "Data.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -74,7 +75,7 @@ public:
 	void onNewCommLogClear();
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<SensorData> const &data);
+	void onNewSensorUpdate(shared_ptr<Data> const &data);
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);

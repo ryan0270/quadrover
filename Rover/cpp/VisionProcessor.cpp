@@ -117,7 +117,7 @@ void VisionProcessor::run()
 		else if(mNewImageReady_featureMatch)
 		{
 			mNewImageReady_featureMatch = false;
-			mMutex_imageSensorData.lock();
+			mMutex_imageData.lock();
 			mImageDataPrev = mImageDataCur;
 			mImageDataCur = mImageDataNext;
 			mImageDataPrev->lock(); mImageDataCur->lock();
@@ -125,7 +125,7 @@ void VisionProcessor::run()
 			attPrev.inject(mImageDataPrev->att);
 			attCur.inject(mImageDataCur->att);
 			mImageDataPrev->unlock(); 
-			mMutex_imageSensorData.unlock();
+			mMutex_imageData.unlock();
 
 			mCurImage = *(mImageDataCur->img);
 			mCurImageGray.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
@@ -180,7 +180,7 @@ void VisionProcessor::run()
 			if(mLogImages && mMotorOn)
 			{
 //				mMutex_buffers.lock();
-//				mImgDataBuffer.push_back(shared_ptr<SensorDataImage>(mImageDataCur));
+//				mImgDataBuffer.push_back(shared_ptr<DataImage>(mImageDataCur));
 //				while(mImgDataBuffer.size() > mImgBufferMaxSize)
 //					mImgDataBuffer.pop_front();
 //
@@ -217,7 +217,7 @@ void VisionProcessor::runTargetFinder()
 	sched_setscheduler(0, mScheduler, &sp);
 
 	cv::Mat curImage, curImageGray;
-	shared_ptr<SensorDataImage> curImageData;
+	shared_ptr<DataImage> curImageData;
 	vector<BlobDetector::Blob> circles;
 	uint32 imgProcTimeUS;
 	while(mRunning)
@@ -460,13 +460,13 @@ void VisionProcessor::setVisionParams(Collection<int> const &p)
 {
 }
 
-void VisionProcessor::onNewSensorUpdate(shared_ptr<SensorData> const &data)
+void VisionProcessor::onNewSensorUpdate(shared_ptr<Data> const &data)
 {
-	if(data->type == SENSOR_DATA_TYPE_IMAGE)
+	if(data->type == DATA_TYPE_IMAGE)
 	{
-		mMutex_imageSensorData.lock();
-		mImageDataNext = static_pointer_cast<SensorDataImage>(data);
-		mMutex_imageSensorData.unlock();
+		mMutex_imageData.lock();
+		mImageDataNext = static_pointer_cast<DataImage>(data);
+		mMutex_imageData.unlock();
 		mNewImageReady_featureMatch = mNewImageReady_targetFind = true;
 	}
 }

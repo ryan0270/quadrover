@@ -91,6 +91,7 @@ set (H ${H}
 	./cpp/VideoMaker.h
 	./cpp/constants.h
 	./cpp/BlobDetector.h
+	./cpp/Data.h
 	${CPUFEATURES_PATH}/cpu-features.h
 )
 

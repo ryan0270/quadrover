@@ -142,6 +142,7 @@ namespace Quadrotor{
 		sched_setscheduler(0, mScheduler, &sp);
 
 		Time loopTime;
+		shared_ptr<DataVector> accelData, errCovData;
 		while(mRunning)
 		{
 			loopTime.setTime();
@@ -174,8 +175,9 @@ namespace Quadrotor{
 				mAttBias.inject(mAttBiasReset);
 				mForceGain = mForceGainReset;
 			}
-			mAccelBuffer.push_back(accel.copy());
-			mAccelTimeBuffer.push_back(Time());
+			accelData = shared_ptr<DataVector>(new DataVector);
+			accelData->type = DATA_TYPE_NET_ACCEL_TRAN;
+			accelData->data = accel.copy();
 			mMutex_data.unlock();
 
 			dt = lastUpdateTime.getElapsedTimeUS()/1.0e6;
@@ -204,93 +206,81 @@ namespace Quadrotor{
 
 				// unwind the state back to the time when the picture was taken
 				mMutex_data.lock();
-				list<Time>::const_iterator stateTimeIter = mStateTimeBuffer.begin();
-				list<Array2D<double> >::const_iterator stateIter = mStateBuffer.begin();
-				while(stateTimeIter != mStateTimeBuffer.end() && (*stateTimeIter) < imgTime)
-				{
-					stateTimeIter++;
-					stateIter++;
-				}
-				if(stateIter != mStateBuffer.end())
-					mStateKF.inject(*stateIter);
 
-				list<Time>::const_iterator errCovTimeIter = mErrCovKFTimeBuffer.begin();
-				list<Array2D<double> >::const_iterator errCovIter = mErrCovKFBuffer.begin();
-				while(errCovTimeIter != mErrCovKFTimeBuffer.end() && (*errCovTimeIter) < imgTime)
-				{
-					errCovTimeIter++;
+				list<shared_ptr<DataVector> >::const_iterator stateIter = mStateDataBuffer.begin();
+				while( stateIter != mStateDataBuffer.end() && (*stateIter)->timestamp < imgTime)
+					stateIter++;
+				if(stateIter != mStateDataBuffer.end())
+					mStateKF.inject((*stateIter)->data);
+
+				list<shared_ptr<DataVector> >::const_iterator errCovIter = mErrCovKFDataBuffer.begin();
+				while(errCovIter != mErrCovKFDataBuffer.end() && (*errCovIter)->timestamp < imgTime)
 					errCovIter++;
-				}
-				if(errCovTimeIter != mErrCovKFTimeBuffer.end())
-					mErrCovKF.inject(*errCovIter);
+				if(errCovIter != mErrCovKFDataBuffer.end())
+					mErrCovKF.inject((*errCovIter)->data);
 
 				// do measurement update
 				doMeasUpdateKF_velOnly(vel, mVelMeasCov);
 
 				// now apply forward back to present time
-				while(mPosMeasTimeBuffer.front() < imgTime)
-				{
-					mPosMeasTimeBuffer.pop_front();
-					mPosMeasBuffer.pop_front();
-				}
-				while(mVelMeasTimeBuffer.front() < imgTime)
-				{
-					mVelMeasTimeBuffer.pop_front();
-					mVelMeasBuffer.pop_front();
-				}
-				while(mAccelTimeBuffer.front() < imgTime)
-				{
-					mAccelTimeBuffer.pop_front();
-					mAccelBuffer.pop_front();
-				}
+				while(mPosMeasDataBuffer.size() > 0 && mPosMeasDataBuffer.front()->timestamp < imgTime)
+					mPosMeasDataBuffer.pop_front();
+//				while(mVelMeasTimeBuffer.front() < imgTime)
+//				{
+//					mVelMeasTimeBuffer.pop_front();
+//					mVelMeasBuffer.pop_front();
+//				}
+				while(mAccelDataBuffer.size() > 0 && mAccelDataBuffer.front()->timestamp < imgTime)
+					mAccelDataBuffer.pop_front();
 				
-				mStateBuffer.clear();
-				mStateTimeBuffer.clear();
-				mErrCovKFBuffer.clear();
-				mErrCovKFTimeBuffer.clear();
-				list<Time>::const_iterator accelTimeIter = mAccelTimeBuffer.begin();
-				list<Time>::const_iterator accelTimeIterNext = mAccelTimeBuffer.begin();
-				accelTimeIterNext++;
-				list<Array2D<double> >::const_iterator accelIter = mAccelBuffer.begin();
-				list<Time>::const_iterator posMeasTimeIter = mPosMeasTimeBuffer.begin();
-				list<Array2D<double> >::const_iterator posMeasIter = mPosMeasBuffer.begin();
-				list<Time>::const_iterator velMeasTimeIter = mVelMeasTimeBuffer.begin();
-				list<Array2D<double> >::const_iterator velMeasIter = mVelMeasBuffer.begin();
+				mStateDataBuffer.clear();
+				mErrCovKFDataBuffer.clear();
+				list<shared_ptr<DataVector> >::const_iterator accelIter = mAccelDataBuffer.begin();
+				list<shared_ptr<DataVector> >::const_iterator accelIterNext = mAccelDataBuffer.begin();
+				accelIterNext++;
+				list<shared_ptr<DataVector> >::const_iterator posMeasIter = mPosMeasDataBuffer.begin();
+//				list<Time>::const_iterator velMeasTimeIter = mVelMeasTimeBuffer.begin();
+//				list<Array2D<double> >::const_iterator velMeasIter = mVelMeasBuffer.begin();
 				Array2D<double> accel(3,1), pos(3,1);// , vel(3,1);  -- vel is defined above
 				double dt;
-				while(accelTimeIterNext != mAccelTimeBuffer.end())
+				shared_ptr<DataVector> stateData;
+				while(accelIterNext != mAccelDataBuffer.end())
 				{
-					accel.inject(*accelIter);
-					dt = Time::calcDiffUS(*accelTimeIter, (*accelTimeIterNext))/1.0e6;
+					accel.inject((*accelIter)->data);
+					dt = Time::calcDiffUS( (*accelIter)->timestamp, (*accelIterNext)->timestamp)/1.0e6;
 
 					doTimeUpdateKF(accel, dt);
 
-					if( posMeasTimeIter != mPosMeasTimeBuffer.end() && (*posMeasTimeIter) > (*accelTimeIter))
+					if( posMeasIter != mPosMeasDataBuffer.end() && (*posMeasIter)->timestamp > (*accelIter)->timestamp)
 					{
-						pos.inject(*posMeasIter);
-						posMeasTimeIter++;
+						pos.inject( (*posMeasIter)->data );
 						posMeasIter++;
 
 						doMeasUpdateKF_posOnly(pos, mPosMeasCov);
 					}
-					if( velMeasTimeIter != mVelMeasTimeBuffer.end() && (*velMeasTimeIter) > (*accelTimeIter))
-					{
-						vel.inject(*velMeasIter);
-						velMeasTimeIter++;
-						velMeasIter++;
+//					if( velMeasTimeIter != mVelMeasTimeBuffer.end() && (*velMeasTimeIter) > (*accelIter)->timestamp)
+//					{
+//						vel.inject(*velMeasIter);
+//						velMeasTimeIter++;
+//						velMeasIter++;
+//
+//						doMeasUpdateKF_velOnly(vel, mVelMeasCov);
+//					}
 
-						doMeasUpdateKF_velOnly(vel, mVelMeasCov);
-					}
 
+					stateData = shared_ptr<DataVector>(new DataVector());
+					stateData->type = DATA_TYPE_STATE_TRAN;
+					stateData->data = mStateKF.copy();
+					stateData->timestamp.setTime( (*accelIter)->timestamp);
+					mStateDataBuffer.push_back(stateData);
+					errCovData = shared_ptr<DataVector>(new DataVector());
+					errCovData->type = DATA_TYPE_KF_ERR_COV;
+					errCovData->data = mErrCovKF.copy();
+					errCovData->timestamp.setTime( (*accelIter)->timestamp);
+					mErrCovKFDataBuffer.push_back(errCovData);
 
-					mStateBuffer.push_back(mStateKF.copy());
-					mStateTimeBuffer.push_back(*accelTimeIter);
-					mErrCovKFBuffer.push_back(mErrCovKF.copy());
-					mErrCovKFTimeBuffer.push_back(*accelTimeIter);
-
-					accelTimeIter++;
-					accelTimeIterNext++;
 					accelIter++;
+					accelIterNext++;
 				}
 
 				mMutex_data.unlock();
@@ -298,21 +288,15 @@ namespace Quadrotor{
 
 			if(mUseIbvs && mHaveFirstCameraPos)
 			{
-				if(mUseViconPos)
-				{ // first time in here after switch
-					mPosMeasTimeBuffer.clear();
-					mPosMeasBuffer.clear();
-				}
+				if(mUseViconPos) // first time in here after switch
+					mPosMeasDataBuffer.clear();
 				mUseViconPos = false;
 				mUseCameraPos = true;
 			}
 			else
 			{
-				if(mUseCameraPos)
-				{ // first time in here after switch
-					mPosMeasTimeBuffer.clear();
-					mPosMeasBuffer.clear();
-				}
+				if(mUseCameraPos) // first time in here after switch
+					mPosMeasDataBuffer.clear();
 				mUseViconPos = true;
 				mUseCameraPos = false;
 			}
@@ -357,31 +341,24 @@ namespace Quadrotor{
 			}
 
 			mMutex_data.lock();
-			mStateBuffer.push_back(mStateKF.copy());
-			mStateTimeBuffer.push_back(Time());
-			mErrCovKFBuffer.push_back(mErrCovKF.copy());
-			mErrCovKFTimeBuffer.push_back(Time());
+			shared_ptr<DataVector> stateData = shared_ptr<DataVector>(new DataVector());
+			stateData->type = DATA_TYPE_STATE_TRAN;
+			stateData->data = mStateKF.copy();
+			mStateDataBuffer.push_back(stateData);
+			errCovData = shared_ptr<DataVector>(new DataVector());
+			errCovData->type = DATA_TYPE_KF_ERR_COV;
+			errCovData->data = mErrCovKF.copy();
 
-			while(mAccelBuffer.size() > 500)
-			{
-				mAccelBuffer.pop_front();
-				mAccelTimeBuffer.pop_front();
-			}
-			while(mStateBuffer.size() > 1000)
-			{
-				mStateBuffer.pop_front();
-				mStateTimeBuffer.pop_front();
-			}
-			while(mErrCovKFBuffer.size() > 1000)
-			{
-				mErrCovKFBuffer.pop_front();
-				mErrCovKFTimeBuffer.pop_front();
-			}
-			while(mPosMeasBuffer.size() > 1000)
-			{
-				mPosMeasBuffer.pop_front();
-				mPosMeasTimeBuffer.pop_front();
-			}
+			while(mAccelDataBuffer.size() > 0 && mAccelDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
+				mAccelDataBuffer.pop_front();
+			while(mStateDataBuffer.size() > 0 && mStateDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
+				mStateDataBuffer.pop_front();
+			while(mErrCovKFDataBuffer.size() > 0 && mErrCovKFDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
+				mErrCovKFDataBuffer.pop_front();
+			while(mPosMeasDataBuffer.size() > 0 && mPosMeasDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
+				mPosMeasDataBuffer.pop_front();
+			while(mHeightDataBuffer.size() > 0 && mHeightDataBuffer.front()->timestamp.getElapsedTimeMS() > 1e3)
+				mHeightDataBuffer.pop_front();
 
 			for(int i=0; i<3; i++)
 				pos[i][0] = mStateKF[i][0];
@@ -443,18 +420,17 @@ namespace Quadrotor{
 		mOpticFlowVelTime = matchData->imgData1->timestamp;
 		double z;
 		Time zTime;
-		while(mHeightTimeBuffer.size() > 0 && mHeightTimeBuffer.front() < mOpticFlowVelTime)
+		while(mHeightDataBuffer.size() > 0 && mHeightDataBuffer.front()->timestamp < mOpticFlowVelTime)
 		{
-			z = mHeightBuffer.front();
-			zTime = mHeightTimeBuffer.front();
-			mHeightBuffer.pop_front();
-			mHeightTimeBuffer.pop_front();
+			z = mHeightDataBuffer.front()->data;
+			zTime.setTime( mHeightDataBuffer.front()->timestamp );
+			mHeightDataBuffer.pop_front();
 		}
-		if(mHeightBuffer.size() > 0)
+		if(mHeightDataBuffer.size() > 0)
 		{
 			double a = Time::calcDiffUS(zTime,mOpticFlowVelTime)/1.0e6;
-			double b = Time::calcDiffUS(mOpticFlowVelTime,mHeightTimeBuffer.front())/1.0e6;
-			z = b/(a+b)*z+a/(a+b)*mHeightBuffer.front();
+			double b = Time::calcDiffUS(mOpticFlowVelTime,mHeightDataBuffer.front()->timestamp)/1.0e6;
+			z = b/(a+b)*z+a/(a+b)*mHeightDataBuffer.front()->data;
 		}
 		z -= 0.060; // offset between markers and camera
 
@@ -852,13 +828,21 @@ printArray("vel:\n",vel);
 		mLastViconVel.inject(vel);
 		if(mUseViconPos)
 		{
+			shared_ptr<DataVector> data = shared_ptr<DataVector>(new DataVector);
+			data->type = DATA_TYPE_VICON_POS;
+			data->timestamp.setTime(now);
+
 			mMutex_data.lock();
-			mPosMeasBuffer.push_back(mLastViconPos.copy());
-			mPosMeasTimeBuffer.push_back(now);
+			data->data = mLastViconPos.copy();
+			mPosMeasDataBuffer.push_back(data);
 //			mVelMeasBuffer.push_back(vel.copy());
 //			mVelMeasTimeBuffer.push_back(now);
-			mHeightBuffer.push_back(mLastViconPos[2][0]);
-			mHeightTimeBuffer.push_back(now);
+
+			shared_ptr<Data> heightData = shared_ptr<Data>(new Data);
+			heightData->type = DATA_TYPE_VICON_HEIGHT;
+			heightData->timestamp.setTime(now);
+			heightData->data = mLastViconPos[2][0];
+			mHeightDataBuffer.push_back(heightData);
 			mMutex_data.unlock();
 		}
 		mMutex_meas.unlock();
@@ -967,11 +951,11 @@ printArray("vel:\n",vel);
 		mMutex_cmds.unlock();
 	}
 
-	void Observer_Translational::onNewSensorUpdate(shared_ptr<SensorData> const &data)
+	void Observer_Translational::onNewSensorUpdate(shared_ptr<Data> const &data)
 	{
 		switch(data->type)
 		{
-			case SENSOR_DATA_TYPE_PRESSURE:
+			case DATA_TYPE_PRESSURE:
 			{
 				// equation taken from wikipedia
 				double pressure = data->data;
@@ -1019,10 +1003,10 @@ printArray("vel:\n",vel);
 				}
 			}
 			break;
-			case SENSOR_DATA_TYPE_PHONE_TEMP:
+			case DATA_TYPE_PHONE_TEMP:
 			{
 				mMutex_phoneTempData.lock();
-				mPhoneTempData = static_pointer_cast<SensorDataPhoneTemp>(data);
+				mPhoneTempData = static_pointer_cast<DataPhoneTemp>(data);
 				mMutex_phoneTempData.unlock();
 			}
 			break;
@@ -1092,8 +1076,11 @@ pos[2][0] = mLastViconPos[2][0];
 			mLastCameraPosTime.setTime();
 			if(mUseCameraPos)
 			{
-				mPosMeasBuffer.push_back(mLastCameraPos.copy());
-				mPosMeasTimeBuffer.push_back(data->imgData->timestamp);
+				shared_ptr<DataVector> posData = shared_ptr<DataVector>(new DataVector);
+				posData->type = DATA_TYPE_VICON_POS;
+				posData->timestamp.setTime(data->imgData->timestamp);
+				posData->data = mLastCameraPos.copy();
+				mPosMeasDataBuffer.push_back(posData);
 //				mVelMeasBuffer.push_back(mLastCameraVel.copy());
 //				mVelMeasTimeBuffer.push_back(data->imgData->timestamp);
 			}
