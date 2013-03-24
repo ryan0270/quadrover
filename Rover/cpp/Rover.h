@@ -66,7 +66,7 @@ public:
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
 
 	// Observer_AngularListener
-	void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel);
+	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
 
 	// for CommManagerListener
 	void onNewCommTimeSync(int time);

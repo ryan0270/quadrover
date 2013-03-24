@@ -56,7 +56,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
 	// for Observer_AngularListener
-	void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel);
+	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
 
 	protected:
 	bool mRunning, mDone;
