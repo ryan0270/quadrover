@@ -1,13 +1,16 @@
 // Separate this out to avoid some circular include problems
 #ifndef ICSL_OBSERVER_ANGULAR_LISTENER
+#include <memory>
+#include "Data.h"
 #include "TNT/tnt.h"
 namespace ICSL{ namespace Quadrotor{
+using namespace std;
 class Observer_AngularListener
 {
 	public:
 	virtual ~Observer_AngularListener(){};
 
-	virtual void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel)=0;
+	virtual void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)=0;
 };
 }}
 #define ICSL_OBSERVER_ANGULAR_LISTENER

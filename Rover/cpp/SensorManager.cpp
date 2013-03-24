@@ -480,11 +480,11 @@ namespace Quadrotor{
 		return temp;
 	}
 
-	void SensorManager::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
+	void SensorManager::onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)
 	{
 		mMutex_attData.lock();
-		mCurAtt.inject(att);
-		mCurAngularVel.inject(angularVel);
+		mCurAtt.inject(attData->data);
+		mCurAngularVel.inject(angularVelData->data);
 		mMutex_attData.unlock();
 	}
 

@@ -39,19 +39,48 @@ class Time
 		static uint64 calcDiffUS(Time const &tm1,Time const &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e6+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec)/1.0e3; }
 		static uint64 calcDiffMS(Time const &tm1,Time const &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e3+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec)/1.0e6; }
 
-		bool operator>(Time const &t) const
+		bool operator > (Time const &t) const
 		{
 			if(mTime.tv_sec > t.mTime.tv_sec)
 				return true;
-			if(mTime.tv_sec < t.mTime.tv_sec)
-				return false;
-			if(mTime.tv_nsec > t.mTime.tv_nsec)
+			else if(mTime.tv_sec == t.mTime.tv_sec && mTime.tv_nsec > t.mTime.tv_nsec)
 				return true;
-			if(mTime.tv_nsec < t.mTime.tv_nsec)
+			else
 				return false;
 		}
 
-		bool operator<(Time const &t) const {return !operator>(t);}
+		bool operator >= (Time const &t) const
+		{
+			if(mTime.tv_sec > t.mTime.tv_sec)
+				return true;
+			else if(mTime.tv_sec == t.mTime.tv_sec && mTime.tv_nsec >= t.mTime.tv_nsec)
+				return true;
+			else
+				return false;
+		}
+
+		bool operator < (Time const &t) const
+		{
+			if(mTime.tv_sec < t.mTime.tv_sec)
+				return true;
+			else if(mTime.tv_sec == t.mTime.tv_sec && mTime.tv_nsec < t.mTime.tv_nsec)
+				return true;
+			else
+				return false;
+		}
+
+		bool operator <= (Time const &t) const
+		{
+			if(mTime.tv_sec < t.mTime.tv_sec)
+				return true;
+			else if(mTime.tv_sec == t.mTime.tv_sec && mTime.tv_nsec <= t.mTime.tv_nsec)
+				return true;
+			else
+				return false;
+		}
+
+		bool operator == (Time const &t) const {return mTime.tv_nsec == t.mTime.tv_nsec && mTime.tv_sec == t.mTime.tv_sec;}
+
 	protected:
 		timespec mTime;
 };

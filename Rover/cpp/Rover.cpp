@@ -481,11 +481,11 @@ void Rover::transmitImage()
 	mImageIsSending = false;
 }
 
-void Rover::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
+void Rover::onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)
 {
 	mMutex_observer.lock();
-	mCurAtt.inject(att);
-	mCurAngularVel.inject(angularVel);
+	mCurAtt.inject(attData->data);
+	mCurAngularVel.inject(angularVelData->data);
 	mMutex_observer.unlock();
 }
 

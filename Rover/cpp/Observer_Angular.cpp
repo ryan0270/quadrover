@@ -295,13 +295,20 @@ void Observer_Angular::doGyroUpdate(double dt)
 	mCurRotMat = matmult(mCurRotMat,A);
 	mCurAttitude = extractEulerAngles(mCurRotMat);
 
-	Array2D<double> att = mCurAttitude.copy();
+	shared_ptr<DataVector> attData(new DataVector);
+	attData->type = DATA_TYPE_ATTITUDE;
+//	attData->setTime(    
+	attData->data = mCurAttitude.copy();
 
-	Array2D<double> vel = mCurVel.copy();
+	shared_ptr<DataVector> velData(new DataVector);
+	velData->type = DATA_TYPE_ANGULAR_VEL;
+//	velData->setTime(
+	velData->data = mCurVel.copy();
 	mMutex_data.unlock();
 
+
 	for(int i=0; i<mListeners.size(); i++)
-		mListeners[i]->onObserver_AngularUpdated(att, vel);
+		mListeners[i]->onObserver_AngularUpdated(attData, velData);
 }
 
 Array2D<double> Observer_Angular::convert_so3toCoord(Array2D<double> const &so3)
