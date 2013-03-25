@@ -148,11 +148,39 @@ namespace Quadrotor{
 
 		Time loopTime;
 		double thrust=0;
-unsigned int procTime;
-int numProc = 0;
 		while(mRunning)
 		{
 			loopTime.setTime();
+
+			mMutex_meas.lock();
+			if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 500)
+				mHaveFirstCameraPos = false;
+			mMutex_meas.unlock();
+
+			if(mUseIbvs && mHaveFirstCameraPos)
+			{
+				mUseViconPos = false;
+				mUseCameraPos = true;
+			}
+			else
+			{
+				mUseViconPos = true;
+				mUseCameraPos = false;
+			}
+
+			// process new events
+			list<shared_ptr<Data> > events;
+			mMutex_meas.lock();
+			mNewEventsBuffer.swap(events);
+			mMutex_meas.unlock();
+			events.sort(Data::timeSortPredicate);
+			while(events.size() > 0)
+			{
+				lastUpdateTime.setTime( applyData(events.front()) );
+				events.pop_front();
+			}
+
+			// time update since last processed event
 			mMutex_cmds.lock(); mMutex_adaptation.lock();
 			if(mMotorCmdsBuffer.size() > 0)
 			{
@@ -197,38 +225,6 @@ int numProc = 0;
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
 			mMutex_data.unlock();
 			lastUpdateTime.setTime();
-
-			mMutex_meas.lock();
-			if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 500)
-				mHaveFirstCameraPos = false;
-			mMutex_meas.unlock();
-
-			if(mUseIbvs && mHaveFirstCameraPos)
-			{
-				mUseViconPos = false;
-				mUseCameraPos = true;
-			}
-			else
-			{
-				mUseViconPos = true;
-				mUseCameraPos = false;
-			}
-
-			// process new events
-			list<shared_ptr<Data> > events;
-			mMutex_meas.lock();
-			mNewEventsBuffer.swap(events);
-			mMutex_meas.unlock();
-			events.sort(Data::timeSortPredicate);
-			while(events.size() > 0)
-			{
-Time start;
-				lastUpdateTime.setTime( applyData(events.front()) );
-				procTime += start.getElapsedTimeMS();
-numProc++;
-Log::alert(String()+"processing time:\t" + ((double)procTime)/numProc);
-				events.pop_front();
-			}
 
 			if(mNewImageResultsReady && mFlowCalcDone
 //					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
@@ -489,76 +485,63 @@ printArray("vel:\n",vel);
 			errCov[i][i] += dynCov[i][i];
 	}
 
-	// This function needs to be called inside of a locked mMutex_data
 	void Observer_Translational::doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
 		if(norm2(meas) > 10)
 			return; // screwy measuremnt
-		Array2D<double> C(3,6,0.0);
-		C[0][3] = C[1][4] = C[2][5] = 1;
-		Array2D<double> C_T = transpose(C);
-		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
-		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C_T)) + measCov);
 
-		// I need to solve K = m1*inv(m2) which is the wrong order
-		// so solve K^T = inv(m2^T)*m1^T
-// The QR solver doesn't seem to give stable results. When I used it the resulting errCov at the end
-// of this function was no longer symmetric
-//		JAMA::QR<double> m2QR(m2_T); 
-//	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
-		JAMA::LU<double> m2LU(m2_T);
-		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
-
-		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
+		Array2D<double> gainKF(6,3,0.0);
+		for(int i=0; i<3; i++)
 		{
-			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
-			return;
+			gainKF[i][i] = errCov[i][i+3]/(errCov[i+3][i+3]+measCov[i][i]);
+			gainKF[i+3][i] = errCov[i+3][i+3]/(errCov[i+3][i+3]+measCov[i][i]);
 		}
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
-		Array2D<double> err = meas-matmult(C, state);
-		state += matmult(gainKF, err);
+		Array2D<double> err = meas-submat(state,3,5,0,0);
+		for(int i=0; i<3; i++)
+			state[i][0] += gainKF[i][i]*err[i][0];
+		for(int i=3; i<6; i++)
+			state[i][0] += gainKF[i][i-3]*err[i-3][0];
 
 		// S = (I-KC) S
-		errCov.inject(matmult(createIdentity(6)-matmult(gainKF, C), errCov));
+		for(int i=0; i<3; i++)
+		{
+			errCov[i][i] -= gainKF[i][i]*errCov[i][i+3];
+			errCov[i][i+3] -= gainKF[i][i]*errCov[i+3][i+3];
+			errCov[i+3][i] = errCov[i][i+3];
+		}
+		for(int i=3; i<6; i++)
+			errCov[i][i] -= gainKF[i][i-3]*errCov[i][i];
 
-		// this is to ensure that errCov always stays symmetric even after small rounding errors
-		errCov = 0.5*(errCov+transpose(errCov));
 	}
 
-	// This function needs to be called inside of a locked
 	void Observer_Translational::doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
-		Array2D<double> C(3,6,0.0);
-		C[0][0] = C[1][1] = C[2][2] = 1;
-		Array2D<double> C_T = transpose(C);
-		Array2D<double> m1_T = transpose(matmult(errCov, C_T));
-		Array2D<double> m2_T = transpose(matmult(C, matmult(errCov, C_T)) + measCov);
-
-		// I need to solve K = m1*inv(m2) which is the wrong order
-		// so solve K^T = inv(m2^T)*m1^T
-// The QR solver doesn't seem to give stable results. When I used it the resulting errCov at the end
-// of this function was no longer symmetric
-//		JAMA::QR<double> m2QR(m2_T); 
-//	 	Array2D<double> gainKF = transpose(m2QR.solve(m1_T));
-		JAMA::LU<double> m2LU(m2_T);
-		Array2D<double> gainKF = transpose(m2LU.solve(m1_T));
-
-		if(gainKF.dim1() == 0 || gainKF.dim2() == 0)
+		Array2D<double> gainKF(6,3,0.0);
+		for(int i=0; i<3; i++)
 		{
-			Log::alert("SystemControllerFeedbackLin::doMeasUpdateKF() -- Error computing Kalman gain");
-			return;
+			gainKF[i][i] = errCov[i][i]/(errCov[i][i]+measCov[i][i]);
+			gainKF[i+3][i] = errCov[i][i+3]/(errCov[i][i]+measCov[i][i]);
 		}
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
-		Array2D<double> err = meas-matmult(C, state);
-		state += matmult(gainKF, err);
+		Array2D<double> state2 = state.copy();
+		Array2D<double> err2= meas-submat(state,0,2,0,0);
+		for(int i=0; i<3; i++)
+			state2[i][0] += gainKF[i][i]*err2[i][0];
+		for(int i=3; i<6; i++)
+			state2[i][0] += gainKF[i][i-3]*err2[i-3][0];
 
 		// S = (I-KC) S
-		errCov.inject(matmult(createIdentity(6)-matmult(gainKF, C), errCov));
-
-		// this is to ensure that errCov always stays symmetric even after small rounding errors
-		errCov = 0.5*(errCov+transpose(errCov));
+		for(int i=3; i<6; i++)
+			errCov[i][i] -= gainKF[i][i-3]*errCov[i-3][i];
+		for(int i=0; i<3; i++)
+		{
+			errCov[i][i] -= gainKF[i][i]*errCov[i][i];
+			errCov[i][i+3] -= gainKF[i][i]*errCov[i][i+3];
+			errCov[i+3][i] = errCov[i][i+3];
+		}
 	}
 
 	void Observer_Translational::onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)
