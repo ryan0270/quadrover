@@ -12,9 +12,9 @@ namespace Quadrotor{
 Observer_Angular::Observer_Angular() :
 	mGyroBias(3,1,0.0),
 	mInnovation(3,1,0.0),
-	mGyro(3,1,0.0),
-	mAccel(3,1,0.0),
-	mMagnometer(3,1,0.0),
+//	mGyro(3,1,0.0),
+//	mAccel(3,1,0.0),
+//	mMagnometer(3,1,0.0),
 	mAccelDirNom(3,1,0.0),
 	mMagDirNom(3,1,0.0),
 	mCurAttitude(3,1,0.0),
@@ -91,11 +91,11 @@ void Observer_Angular::reset()
 
 //	mGyroBias = Array2D<double>(3,1,0.0);
 
-	mGyro.inject(Array2D<double>(3,1,0.0));
-	mAccel.inject(Array2D<double>(3,1,0.0));
-	mAccel[2][0] = GRAVITY;
+//	mGyro.inject(Array2D<double>(3,1,0.0));
+//	mAccel.inject(Array2D<double>(3,1,0.0));
+//	mAccel[2][0] = GRAVITY;
 //	mMagnometer = Array2D<double>(3,1,0.0);
-	mMagnometer.inject(mMagDirNom);
+//	mMagnometer.inject(mMagDirNom);
 	mMutex_data.unlock();
 }
 
@@ -129,21 +129,22 @@ void Observer_Angular::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	shared_ptr<DataVector> gyroData, accelData, magData;
+	gyroData = accelData = magData = NULL;
 	while(mRunning)
 	{
 		if(mNewGyroReady)
 		{
-			mMutex_data.lock();
 			mMutex_cache.lock();
-			mGyroData->lock();
-			mGyro.inject(mGyroData->dataCalibrated);
-			mGyroData->unlock();
+			gyroData = mGyroData;
 			mMutex_cache.unlock();
+
+			mMutex_data.lock();
 			if(mDoingBurnIn && mBurnCount < 2000)
 			{
-				gyroSum += mGyro;
-				magSum += mMagnometer;
-				accelSum += mAccel;
+				if(gyroData != NULL) {gyroData->lock(); gyroSum += gyroData->dataCalibrated; gyroData->unlock();}
+				if(magData != NULL) {magData->lock(); magSum += magData->dataCalibrated; magData->unlock();}
+				if(accelData != NULL) {accelData->lock(); accelSum += accelData->dataCalibrated; accelData->unlock();}
 				mBurnCount++;
 				if(mBurnCount == 2000)
 				{
@@ -159,38 +160,30 @@ void Observer_Angular::run()
 					mMutex_cache.unlock();
 				}
 			}
-			mNewGyroReady = false;
 			mMutex_data.unlock();
+			mNewGyroReady = false;
 			gyroProcessed = false;
 		}
 		if(mNewAccelReady)
 		{
-			mMutex_data.lock();
 			mMutex_cache.lock();
-			mAccelData->lock();
-			mAccel.inject(mAccelData->dataCalibrated);
-			mAccelData->unlock();
+			accelData = mAccelData;
 			mMutex_cache.unlock();
 			mNewAccelReady = false;
-			mMutex_data.unlock();
 			accelProcessed = false;
 		}
 		if(mNewMagReady)
 		{
-			mMutex_data.lock();
 			mMutex_cache.lock();
-			mMagData->lock();
-			mMagnometer.inject(mMagData->dataCalibrated);
-			mMagData->unlock();
+			magData = mMagData;
 			mMutex_cache.unlock();
 			mNewMagReady = false;
-			mMutex_data.unlock();
 			magProcessed = false;
 		}
 
 		if(!mDoingBurnIn && !accelProcessed && !magProcessed)
 		{
-			doInnovationUpdate(lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6);
+			doInnovationUpdate(lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6, accelData, magData);
 			lastInnovationUpdateTime.setTime();
 			accelProcessed = true;
 			magProcessed = true;
@@ -204,11 +197,11 @@ void Observer_Angular::run()
 
 		if(!mDoingBurnIn && !gyroProcessed)
 		{
-			mMutex_cache.lock();
-			double dt = Time::calcDiffNS(lastGyroUpdateTime, mGyroData->timestamp)/1.0e9;
-			lastGyroUpdateTime.setTime(mGyroData->timestamp);
-			mMutex_cache.unlock();
-			doGyroUpdate(dt);
+			gyroData->lock();
+			double dt = Time::calcDiffNS(lastGyroUpdateTime, gyroData->timestamp)/1.0e9;
+			lastGyroUpdateTime.setTime(gyroData->timestamp);
+			gyroData->unlock();
+			doGyroUpdate(dt, gyroData);
 			gyroProcessed = true;
 		}
 
@@ -219,20 +212,23 @@ void Observer_Angular::run()
 	Log::alert("------------------ QuadLogger runner dead --------------------");
 }
 
-void Observer_Angular::doInnovationUpdate(double dt)
+void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector> const &accelData, shared_ptr<DataVector> const &magData)
 {
+	accelData->lock(); Array2D<double> accel = accelData->dataCalibrated.copy(); accelData->unlock();
+	magData->lock(); Array2D<double> mag = magData->dataCalibrated.copy(); magData->unlock();
+
 	mMutex_data.lock();
 	// orthogonalize the directions (see Hua et al (2011) - Nonlinear attitude estimation with measurement decoupling and anti-windpu gyro-bias compensation)
-	Array2D<double> uB = 1.0/norm2(mAccel)*mAccel;
+	Array2D<double> uB = 1.0/norm2(accel)*accel;
 	Array2D<double> uI = mAccelDirNom;
-	Array2D<double> vB = cross(-1.0*mAccelDirNom, mMagnometer);
+	Array2D<double> vB = cross(-1.0*mAccelDirNom, mag);
 	vB = 1.0/norm2(vB)*vB;
 	Array2D<double> vI = cross(-1.0*uI, mMagDirNom);
 	vI = 1.0/norm2(vI)*vI;
 
 	Array2D<double> transR = transpose(mCurRotMat);
-	if(norm2(mAccel-mAccelDirNom*GRAVITY) < 3)
-//	if( (norm2(mAccel)-GRAVITY) < 2)
+	if(norm2(accel-mAccelDirNom*GRAVITY) < 3)
+//	if( (norm2(accel)-GRAVITY) < 2)
 	{
 		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));
 		mInnovation += mMagWeight*cross(vB, matmult(transR, vI));
@@ -272,15 +268,19 @@ void Observer_Angular::doInnovationUpdate(double dt)
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer
-void Observer_Angular::doGyroUpdate(double dt)
+void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector> const &gyroData)
 {
 	if(dt > 0.05)
 		return; // too long of a period to integrate over
 
 	mMutex_data.lock();
-	Array2D<double> gyro;
-	mCurVel = mGyro - mGyroBias;
-	gyro = mCurVel+mGainP*mInnovation;
+//	Array2D<double> gyro;
+//	mCurVel = mGyro - mGyroBias;
+	gyroData->lock();
+	mCurVel = gyroData->data - mGyroBias;
+	Time gyroTime( gyroData->timestamp);
+	gyroData->unlock();
+	Array2D<double> gyro = mCurVel+mGainP*mInnovation;
 
 	Array2D<double> gyro_x = convert_coordToso3(gyro);
 
@@ -297,15 +297,14 @@ void Observer_Angular::doGyroUpdate(double dt)
 
 	shared_ptr<DataVector> attData(new DataVector);
 	attData->type = DATA_TYPE_ATTITUDE;
-//	attData->setTime(    
+	attData->timestamp.setTime(gyroTime);
 	attData->data = mCurAttitude.copy();
 
 	shared_ptr<DataVector> velData(new DataVector);
 	velData->type = DATA_TYPE_ANGULAR_VEL;
-//	velData->setTime(
+	velData->timestamp.setTime(gyroTime);
 	velData->data = mCurVel.copy();
 	mMutex_data.unlock();
-
 
 	for(int i=0; i<mListeners.size(); i++)
 		mListeners[i]->onObserver_AngularUpdated(attData, velData);
@@ -374,28 +373,31 @@ Array2D<double> Observer_Angular::getBias()
 
 Array2D<double> Observer_Angular::getLastGyro()
 {
-	Array2D<double> lastGyro;
-	mMutex_data.lock();
-	lastGyro = mGyro.copy();
-	mMutex_data.unlock();
+	Array2D<double> lastGyro(3,1,0.0);
+	mMutex_cache.lock();
+	if(mGyroData != NULL)
+	{ mGyroData->lock(); lastGyro = mGyroData->data.copy(); mGyroData->unlock(); }
+	mMutex_cache.unlock(); 
 	return lastGyro;
 }
 
 Array2D<double> Observer_Angular::getLastAccel()
 {
-	Array2D<double> lastAccel;
-	mMutex_data.lock();
-	lastAccel = mAccel.copy();
-	mMutex_data.unlock();
+	Array2D<double> lastAccel(3,1,0.0);
+	mMutex_cache.lock();
+	if(mAccelData != NULL)
+	{ mAccelData->lock(); lastAccel = mAccelData->dataCalibrated.copy(); mAccelData->unlock(); }
+	mMutex_cache.unlock();
 	return lastAccel;
 }
 
 Array2D<double> Observer_Angular::getLastMagnometer()
 {
-	Array2D<double> lastMag;
-	mMutex_data.lock();
-	lastMag = mMagnometer.copy();
-	mMutex_data.unlock();
+	Array2D<double> lastMag(3,1,0.0);
+	mMutex_cache.lock();
+	if(mMagData != NULL)
+	{ mMagData->lock(); lastMag = mMagData->dataCalibrated.copy(); mMagData->unlock(); }
+	mMutex_cache.unlock();
 	return lastMag;
 }
 
@@ -422,7 +424,8 @@ void Observer_Angular::setYawZero()
 	mMutex_data.lock();
 	Array2D<double> rot = createRotMat(2, -mCurAttitude[2][0]);
 	mCurRotMat = matmult(rot, mCurRotMat);
-	mMagDirNom.inject(1.0/norm2(mMagnometer)*mMagnometer);
+	mMagData->lock(); Array2D<double> mag = mMagData->dataCalibrated; mMagData->unlock();
+	mMagDirNom.inject(1.0/norm2(mag)*mag);
 	temp = mMagDirNom.copy();
 	mMutex_data.unlock();
 
