@@ -90,6 +90,8 @@ class Data
 	static std::list<std::shared_ptr<Data> >::iterator truncate(Time const &t, std::list<std::shared_ptr<Data> > &d);
 	static void truncate(Time const &t, std::list<std::shared_ptr<DataVector> > &d);
 
+	static bool timeSortPredicate(shared_ptr<Data> const &d1, shared_ptr<Data> const &d2){return d1->timestamp < d2->timestamp;}
+
 	protected:
 	toadlet::egg::Mutex mMutex;
 };
