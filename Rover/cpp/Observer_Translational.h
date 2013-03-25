@@ -97,36 +97,27 @@ class Observer_Translational : public toadlet::egg::Thread,
 	Collection<Observer_TranslationalListener*> mListeners;
 
 	// for the translational Kalman Filter
-	TNT::Array2D<double> mAkf, mAkf_T, mBkf, mCkf, mCkf_T;
+	TNT::Array2D<double> mCkf, mCkf_T;
 	TNT::Array2D<double> mMeasCov, mPosMeasCov, mVelMeasCov; 
 	TNT::Array2D<double> mDynCov, mErrCovKF;
 	TNT::Array2D<double> mStateKF;
 	TNT::Array2D<double> mAttBias, mAttBiasReset;
-//	TNT::Array2D<double> mLastMeas;
 	TNT::Array2D<double> mLastViconPos, mLastCameraPos;
 	double mMass, mForceGainReset, mForceGain;
 	Collection<double> mAttBiasAdaptRate;
 	double mForceGainAdaptRate;
 
 	toadlet::egg::Mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
+	toadlet::egg::Mutex mMutex_adaptation;
 
 	Time mLastPosReceiveTime, mLastBarometerMeasTime;
 	Time mLastForceGainUpdateTime, mLastAttBiasUpdateTime;
 
-	static void doTimeUpdateKF(TNT::Array2D<double> const &actuator, 
-							   TNT::Array2D<double> const &A, 
-							   TNT::Array2D<double> const &B,
+	static void doTimeUpdateKF(TNT::Array2D<double> const &accel, 
+							   double const &dt,
 							   TNT::Array2D<double> &state,
 							   TNT::Array2D<double> &errCov,
 							   TNT::Array2D<double> const &dynCov);
-	static void doTimeUpdateKF(TNT::Array2D<double> const &actuator, 
-							   TNT::Array2D<double> const &A, 
-							   TNT::Array2D<double> const &A_T, 
-							   TNT::Array2D<double> const &B,
-							   TNT::Array2D<double> &state,
-							   TNT::Array2D<double> &errCov,
-							   TNT::Array2D<double> const &dynCov);
-//	void doMeasUpdateKF(TNT::Array2D<double> const &meas);
 	static void doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas,
 									   TNT::Array2D<double> const &measCov,
 									   TNT::Array2D<double> &state,
@@ -161,6 +152,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	list<shared_ptr<Data> > mHeightDataBuffer;
 	list<shared_ptr<DataVector> > mMotorCmdsBuffer, mThrustDirBuffer;
 	list<shared_ptr<Data> > mThrustBuffer;
+	list<shared_ptr<Data> > mNewEventsBuffer;
 
 	bool mHaveFirstCameraPos;
 	Time mLastCameraPosTime, mLastViconPosTime;
@@ -170,7 +162,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	TNT::Array2D<double> mViconCameraOffset;
 
-	void rebuildState(Time const &startTime);
+	Time applyData(shared_ptr<Data> const &data);
+	void doForceGainAdaptation(TNT::Array2D<double> const &err);
+	void doAttBiasAdaptation(TNT::Array2D<double> const &err);
 };
 
 } // namespace Quadrotor
