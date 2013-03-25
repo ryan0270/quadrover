@@ -47,8 +47,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 		Observer_Angular();
 		virtual ~Observer_Angular();
 
-		void doInnovationUpdate(double dt);
-		void doGyroUpdate(double dt);
+		void doInnovationUpdate(double dt, shared_ptr<DataVector> const &accelData, shared_ptr<DataVector> const &magData);
+		void doGyroUpdate(double dt, shared_ptr<DataVector> const &gyroData);
 
 		/*
 		 * @return current attitude in [roll pitch yaw]^T column vector format
@@ -100,7 +100,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		double mAccelWeight, mMagWeight;
 		TNT::Array2D<double> mGyroBias, mInnovation;
 		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
-		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
+//		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
 		shared_ptr<DataVector>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
 		TNT::Array2D<double> mAccelDirNom, mMagDirNom;
 		Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
