@@ -3,10 +3,20 @@ package com.icsl.Rover;
 import android.app.Activity;
 import android.content.ServiceConnection;
 import android.content.ComponentName;
+import android.hardware.Camera;
+import android.hardware.Camera.PreviewCallback;
+import android.hardware.Camera.Size;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapFactory.Options;
+import android.graphics.ImageFormat;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.view.View;
+import android.view.SurfaceView;
+import android.view.SurfaceHolder;
 import android.widget.ImageView;
 import android.content.Intent;
 import android.widget.EditText;
@@ -19,6 +29,7 @@ import java.lang.Integer;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.regex.Pattern;
+import java.util.List;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -42,6 +53,16 @@ public class Rover extends Activity implements Runnable
 	RoverService mService;
 	boolean mBound = false;
 
+	Camera mCamera = null;
+	MediaRecorder mMediaRecorder = null;
+	long mLastPreviewTimeNS = 0;
+	Mat mImgYUV, mImgRGB;
+	double mAvgProcTime = 0;
+	int mImgProcCnt = 0;
+	double mAvgDT = 0;
+	byte[] mImgBuffer;
+	
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -61,7 +82,6 @@ public class Rover extends Activity implements Runnable
 		mTvRoll = (TextView)findViewById(R.id.tvRollAngle);
 		mTvPitch= (TextView)findViewById(R.id.tvPitchAngle);
 		mTvYaw= (TextView)findViewById(R.id.tvYawAngle);
-
     }
 
     @Override
@@ -71,38 +91,80 @@ public class Rover extends Activity implements Runnable
 		mBitmap = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
 		mIvImageDisplay.setImageBitmap(mBitmap);
 
-//		onJNIStart();
-//
-//		mImage = new Mat(240,320,CvType.CV_8UC3,new Scalar(127));
-//		File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
-//		if(!logDir.exists())
-//		{
-//			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
-//			logDir.mkdir();
-//		}
-//		else
-//			Log.i(ME,"Log dir: "+logDir.toString()+" already exists.");
-//		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
-//		if(imgLogDir.exists())
-//		{
-//			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
-//			if(bakDir.exists())
-//				deleteDir(bakDir);
-//			imgLogDir.renameTo(bakDir);
-//		}
-//		imgLogDir.mkdir();
-//		setLogDir(logDir.toString());
-//		File logFile = new File(logDir.getAbsolutePath()+"/log.txt");
-//		if(logFile.exists())
-//		{
-//			File bakFile = new File(logFile.getAbsolutePath()+".bak");
-//			if(bakFile.exists())
-//				bakFile.delete();
-//			logFile.renameTo(bakFile);
-//		}
-//		startLogging();
+		try{
+			mCamera = Camera.open();
+			Camera.Parameters camParams = mCamera.getParameters();
+			List<Size> previewSizes = camParams.getSupportedPreviewSizes();
+			camParams.setPreviewSize(640,480);
 
-//		populateVisionParams();
+//			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
+//			int[] fps = fpsList.get(fpsList.size()-1);
+//			camParams.setPreviewFpsRange((fps[0]), fps[1]);
+			camParams.setPreviewFpsRange(30000, 30000);
+
+			if(camParams.getVideoStabilization())
+			{
+				Log.i(ME, "I have video stabilization");
+				camParams.setVideoStabilization(true);
+			}
+			else
+				Log.i(ME, "I don't have video stabilization");
+
+			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
+			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
+
+			camParams.setExposureCompensation( camParams.getMaxExposureCompensation() );
+
+			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO );
+
+			mCamera.setParameters(camParams);
+			SurfaceView dummy = new SurfaceView(getBaseContext());
+			mCamera.setPreviewDisplay(dummy.getHolder());
+
+			mMediaRecorder = new MediaRecorder();
+			mMediaRecorder.setCamera(mCamera);
+			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+			mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_480P));
+			mMediaRecorder.prepare();
+		}
+		catch(Exception e){Log.i(ME, e.toString());}
+
+		Camera.Size imgSize = mCamera.getParameters().getPreviewSize();
+		int imgFormat = mCamera.getParameters().getPreviewFormat();
+		Log.i(ME,"Image Format: "+String.valueOf(imgFormat));
+		int bytesPerPixel = ImageFormat.getBitsPerPixel(imgFormat)/8;
+		mImgBuffer = new byte[(int)(imgSize.width*imgSize.height*bytesPerPixel*1.5)]; // I'm not sure why the 1.5 needs to be there
+		mCamera.addCallbackBuffer(mImgBuffer);
+		mBitmap = Bitmap.createBitmap(imgSize.width, imgSize.height, Bitmap.Config.ARGB_8888);
+		mImgYUV = new Mat(imgSize.height+imgSize.height/2, imgSize.width, CvType.CV_8UC1);
+		mImgRGB = new Mat(imgSize.height, imgSize.width, CvType.CV_8UC4);
+		mCamera.setPreviewCallbackWithBuffer( new Camera.PreviewCallback(){
+			@Override
+			public void onPreviewFrame(byte[] data, Camera cam)
+			{
+				if(mBitmap == null)
+					return;
+
+				if(mLastPreviewTimeNS == 0)
+					mLastPreviewTimeNS = System.nanoTime();
+				else
+				{
+					double dt = (System.nanoTime()-mLastPreviewTimeNS)/1.0e9;
+					mAvgDT = (mAvgDT*mImgProcCnt+dt)/(mImgProcCnt+1);
+					mLastPreviewTimeNS = System.nanoTime();
+				}
+				
+				mImgProcCnt++;
+				mImgYUV.put(0,0,data);
+				Imgproc.cvtColor(mImgYUV,mImgRGB,Imgproc.COLOR_YUV420sp2RGB);
+				Utils.matToBitmap(mImgRGB, mBitmap);
+				mIvImageDisplay.setImageBitmap(mBitmap);
+
+				mCamera.addCallbackBuffer(mImgBuffer);
+			}
+		});
+
+		mCamera.startPreview();
 
 		(new Thread(this)).start();
 	}
@@ -110,6 +172,18 @@ public class Rover extends Activity implements Runnable
     @Override
 	public void onPause()
 	{
+		if(mCamera != null)
+		{
+			mCamera.setPreviewCallback(null);
+			mCamera.release();
+			mCamera = null;
+		}
+		if(mMediaRecorder != null)
+		{
+			mMediaRecorder.reset();
+			mMediaRecorder.release();
+			mMediaRecorder = null;
+		}
 		mThreadRun = false;
 		while(!mThreadIsDone)
 		{
@@ -123,10 +197,6 @@ public class Rover extends Activity implements Runnable
 		if(mImage != null)
 			mImage.release();
 		mImage = null;
-
-//		if (mOpenCVManagerConnected)
-//			onJNIStop();
-
 
 		// There seems be a thread issue where android is still trying to draw the bitmap during
 		// shutdown after I've already recycled mBitmap. So set the image to null before recycling.
@@ -154,9 +224,9 @@ public class Rover extends Activity implements Runnable
 
 	public void onBtnStartService_clicked(View v)
 	{
-		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
-		startService(roverServiceIntent);
-		bindService(roverServiceIntent, mConnection, BIND_AUTO_CREATE);
+//		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
+//		startService(roverServiceIntent);
+//		bindService(roverServiceIntent, mConnection, BIND_AUTO_CREATE);
 	}
 
 	public void onBtnStopService_clicked(View v)
@@ -168,7 +238,6 @@ public class Rover extends Activity implements Runnable
 		}
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		stopService(roverServiceIntent);
-//		toggleViewType();
 	}
 
 	public void run()
@@ -234,5 +303,9 @@ public class Rover extends Activity implements Runnable
 			Log.i(ME, "Unbound from Rover service");
 		}
 	};
+
+	static{
+		System.loadLibrary("opencv_java");
+	}
 }
 
