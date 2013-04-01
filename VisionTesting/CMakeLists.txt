@@ -35,10 +35,12 @@ set (LIBS
 # Source files
 set (SRC ${SRC}
 	./cpp/main.cpp
+	./cpp/mser.cpp
 )
 
 # Headers
 set (H ${H}
+	./cpp/mser.cpp
 )
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
