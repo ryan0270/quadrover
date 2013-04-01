@@ -173,11 +173,11 @@ using namespace TNT;
 		}
 	}
 	
-	void AttitudeThrustController::onObserver_AngularUpdated(Array2D<double> const &att, Array2D<double> const &angularVel)
+	void AttitudeThrustController::onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)
 	{
 		mMutex_data.lock();
-		mCurAtt.inject(att);
-		mCurAngularVel.inject(angularVel);
+		mCurAtt.inject(attData->data);
+		mCurAngularVel.inject(angularVelData->data);
 		mMutex_data.unlock();
 	
 		mDoControl = true;

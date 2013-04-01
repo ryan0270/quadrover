@@ -69,6 +69,7 @@ set (SRC ${SRC}
 	./cpp/Matcher.cpp
 	./cpp/VideoMaker.cpp
 	./cpp/BlobDetector.cpp
+	./cpp/Data.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 )
 
@@ -91,11 +92,12 @@ set (H ${H}
 	./cpp/VideoMaker.h
 	./cpp/constants.h
 	./cpp/BlobDetector.h
+	./cpp/Data.h
 	${CPUFEATURES_PATH}/cpu-features.h
 )
 
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti  -std=c++0x")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti  -std=c++11")
 
 set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 # Why doesn't this work?

@@ -1,54 +1,3 @@
-#ifndef ICSL_IMAGEMATCHDATA
-#define ICSL_IMAGEMATCHDATA
-#include <toadlet/egg.h>
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/features2d/features2d.hpp>
-//#include <opencv2/video/tracking.hpp>
-//#include <opencv2/objdetect/objdetect.hpp>
-
-#include "BlobDetector.h"
-#define ICSL_SENSOR_DATA_ONLY
-#include "SensorManager.h"
-#undef ICSL_SENSOR_DATA_ONLY
-namespace ICSL {
-namespace Quadrotor {
-
-class ImageMatchData
-{
-	public:
-	vector<vector<cv::Point2f> > featurePoints;
-	shared_ptr<SensorDataImage> imgData0, imgData1;
-	double dt;
-
-	void lock(){mMutex.lock(); if(imgData0 != NULL) imgData0->lock(); if(imgData1 != NULL) imgData1->lock();}
-	void unlock(){mMutex.unlock(); if(imgData0 != NULL) imgData0->unlock(); if(imgData1 != NULL) imgData1->unlock();}
-
-	shared_ptr<cv::Mat> imgAnnotated;
-
-	protected:
-	toadlet::egg::Mutex mMutex;
-};
-
-class ImageTargetFindData
-{
-	public:
-	vector<BlobDetector::Blob> circleBlobs;
-	shared_ptr<SensorDataImage> imgData;
-
-	void lock(){mMutex.lock(); if(imgData != NULL) imgData->lock();}
-	void unlock(){mMutex.unlock(); if(imgData != NULL) imgData->unlock();}
-
-	protected:
-	toadlet::egg::Mutex mMutex;
-};
-} // namespace Quadrotor
-} // namespace ICSL
-#endif // ICSL_IMAGEMATCHDATA
-
-#ifndef ICSL_IMAGEMATCHDATA_ONLY
 #ifndef VISIONPROCESSOR_H
 #define VISIONPROCESSOR_H
 #include <memory>
@@ -76,6 +25,8 @@ class ImageTargetFindData
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
+#include "BlobDetector.h"
+#include "Data.h"
 
 #include "Matcher.h"
 
@@ -130,7 +81,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void onNewCommLogClear();
 		
 		// SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<SensorData> const &data);
+		void onNewSensorUpdate(shared_ptr<Data> const &data);
 
 	protected:
 		bool mUseIbvs;
@@ -143,7 +94,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		vector<vector<double> > mMSERHuMoments;
 		vector<cv::Point2f> mMSERCentroids;
 
-		shared_ptr<SensorDataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
+		shared_ptr<DataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
 
 		Time mStartTime, mLastImgFoundTime, mLastProcessTime;
 
@@ -151,7 +102,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		QuadLogger *mQuadLogger;
 
-		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageSensorData, mMutex_buffers, mMutex_matcher;
+		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers, mMutex_matcher;
 		toadlet::egg::Mutex mMutex_logger;
 
 		Collection<VisionProcessorListener*> mListeners;
@@ -159,7 +110,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void run();
 
 		int mImgBufferMaxSize;
-		list<shared_ptr<SensorDataImage> > mImgDataBuffer;
+		list<shared_ptr<DataImage> > mImgDataBuffer;
 		list<shared_ptr<ImageMatchData> > mImgMatchDataBuffer;
 		list<vector<vector<cv::Point2f> > > mFeatureMatchBuffer;
 		list<Time> mFeatureMatchTimeBuffer;
@@ -185,4 +136,3 @@ class VisionProcessor : public toadlet::egg::Thread,
 } // namespace ICSL
 
 #endif // VISIONPROCESSOR_H
-#endif // ICSL_IMAGEMATCHDATA_ONLY

@@ -28,6 +28,7 @@
 #include "SensorManager.h"
 #include "VideoMaker.h"
 #include "MotorInterface.h"
+#include "Data.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -65,7 +66,7 @@ public:
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
 
 	// Observer_AngularListener
-	void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel);
+	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
 
 	// for CommManagerListener
 	void onNewCommTimeSync(int time);
@@ -74,7 +75,7 @@ public:
 	void onNewCommLogClear();
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<SensorData> const &data);
+	void onNewSensorUpdate(shared_ptr<Data> const &data);
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);

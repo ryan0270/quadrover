@@ -1,13 +1,16 @@
 // Separate this out to avoid some circular include problems
 #ifndef ICSL_OBSERVER_ANGULAR_LISTENER
+#include <memory>
+#include "Data.h"
 #include "TNT/tnt.h"
 namespace ICSL{ namespace Quadrotor{
+using namespace std;
 class Observer_AngularListener
 {
 	public:
 	virtual ~Observer_AngularListener(){};
 
-	virtual void onObserver_AngularUpdated(TNT::Array2D<double> const &att, TNT::Array2D<double> const &angularVel)=0;
+	virtual void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)=0;
 };
 }}
 #define ICSL_OBSERVER_ANGULAR_LISTENER
@@ -28,6 +31,7 @@ class Observer_AngularListener
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
+#include "Data.h"
 
 //using toadlet::uint64;
 
@@ -43,8 +47,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 		Observer_Angular();
 		virtual ~Observer_Angular();
 
-		void doInnovationUpdate(double dt);
-		void doGyroUpdate(double dt);
+		void doInnovationUpdate(double dt, shared_ptr<DataVector> const &accelData, shared_ptr<DataVector> const &magData);
+		void doGyroUpdate(double dt, shared_ptr<DataVector> const &gyroData);
 
 		/*
 		 * @return current attitude in [roll pitch yaw]^T column vector format
@@ -86,7 +90,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
 		
 		// for SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<SensorData> const &data);
+		void onNewSensorUpdate(shared_ptr<Data> const &data);
 
 	protected:
 		bool mRunning, mDone;
@@ -96,8 +100,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 		double mAccelWeight, mMagWeight;
 		TNT::Array2D<double> mGyroBias, mInnovation;
 		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
-		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
-		shared_ptr<SensorDataVector>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
+//		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
+		shared_ptr<DataVector>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
 		TNT::Array2D<double> mAccelDirNom, mMagDirNom;
 		Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
 		Collection<double> mExtraDirsWeight;

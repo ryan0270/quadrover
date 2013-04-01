@@ -116,17 +116,17 @@ void QuadLogger::close()
 	this->join();
 }
 
-void QuadLogger::saveImageBuffer(list<shared_ptr<SensorDataImage> > const &dataBuffer,
+void QuadLogger::saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
 								 list<shared_ptr<ImageMatchData> > const &matchDataBuffer)
 {
-	list<shared_ptr<SensorDataImage> >::const_iterator dataIter = dataBuffer.begin();
+	list<shared_ptr<DataImage> >::const_iterator dataIter = dataBuffer.begin();
 	int id = 0;
 	mxml_node_t *xml = mxmlNewXML("1.0");
 	mxml_node_t *root = mxmlNewElement(xml,"root");
 	mxml_node_t *imgDataNode = mxmlNewElement(root,"ImgData");
 	while(dataIter != dataBuffer.end())
 	{
-		shared_ptr<SensorDataImage> data = static_pointer_cast<SensorDataImage>(*dataIter);
+		shared_ptr<DataImage> data = static_pointer_cast<DataImage>(*dataIter);
 		data->lock();
 		shared_ptr<cv::Mat> mat = data->img; 
 		String filename = mDir+"/images/img_"+id+".bmp";
