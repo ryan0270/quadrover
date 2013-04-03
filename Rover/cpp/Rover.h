@@ -64,6 +64,7 @@ public:
 //	toadlet::egg::Collection<int> getVisionParams();
 //	void setVisionParams(toadlet::egg::Collection<int> p);
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
+	void passNewImage(cv::Mat *img){Log::alert("got image");}
 
 	// Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);

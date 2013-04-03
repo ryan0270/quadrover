@@ -23,8 +23,6 @@ import android.util.Log;
 
 import java.lang.Thread;
 import java.io.File;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -36,12 +34,15 @@ public class RoverService extends Service {
 //	private ServiceHandler mServiceHandler;
 	private final static String ME = "RoverService";
 
-	public Timer mTimer;
 	public Notification.Builder mNotificationBuilder;
 
 	private PowerManager.WakeLock mWakeLock;
 
 	private final IBinder mBinder = new RoverBinder();
+
+	private Camera mCamera = null;
+	MediaRecorder mMediaRecorder = null;
+	byte[] mImgBuffer;
 
 	public class RoverBinder extends Binder 
 	{ RoverService getService(){ return RoverService.this; } }
@@ -112,22 +113,10 @@ public class RoverService extends Service {
 		final NotificationManager nm = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
 		nm.notify(1, mNotificationBuilder.build());
 
-//		TimerTask task = new TimerTask(){
-//			public void run(){
-//				String str = String.format("Tmeas: %1.1f\tTinf: %1.1f\tTcpu: %1.1f", getMeasuredTemp(), getTempEst(), getCpuTemp(false));
-//
-//				mNotificationBuilder.setContentText(str);
-//				Notification noti = mNotificationBuilder.build();
-//
-//				nm.notify(1, noti);
-//			}
-//		};
-
 		PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
 		mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, ME);
 
-//		mTimer = new Timer();
-//		mTimer.schedule(task, 100, 500);
+		openCamera();
 
 		Toast.makeText(this, "Rover fetching", Toast.LENGTH_SHORT).show();
 	}
@@ -142,11 +131,22 @@ public class RoverService extends Service {
 	}
 
 	@Override
-	public void onDestroy()
+	public void onPause()
 	{
 		Log.i(ME,"Rover service stop started");
-//		mTimer.cancel();
-//		mTimer.purge();
+		if(mCamera != null)
+		{
+			mCamera.setPreviewCallback(null);
+			mCamera.release();
+			mCamera = null;
+		}
+		if(mMediaRecorder != null)
+		{
+			mMediaRecorder.reset();
+			mMediaRecorder.release();
+			mMediaRecorder = null;
+		}
+
 		onJNIStop();
 		mWakeLock.release();
 		Toast.makeText(this, "Rover sleeping", Toast.LENGTH_SHORT).show();
@@ -160,6 +160,85 @@ public class RoverService extends Service {
 	public IBinder onBind(Intent intent)
 	{
 		return mBinder;
+	}
+
+	private void openCamera()
+	{
+		try{
+			mCamera = Camera.open();
+			Camera.Parameters camParams = mCamera.getParameters();
+			List<Size> previewSizes = camParams.getSupportedPreviewSizes();
+			camParams.setPreviewSize(640,480);
+
+			//			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
+			//			int[] fps = fpsList.get(fpsList.size()-1);
+			//			camParams.setPreviewFpsRange((fps[0]), fps[1]);
+			camParams.setPreviewFpsRange(30000, 30000);
+
+			if(camParams.getVideoStabilization())
+			{
+				Log.i(ME, "I have video stabilization");
+				camParams.setVideoStabilization(true);
+			}
+			else
+				Log.i(ME, "I don't have video stabilization");
+
+			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
+			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
+
+//			camParams.setExposureCompensation( camParams.getMaxExposureCompensation() );
+
+			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO );
+
+			mCamera.setParameters(camParams);
+			SurfaceView dummy = new SurfaceView(getBaseContext());
+			mCamera.setPreviewDisplay(dummy.getHolder());
+
+			mMediaRecorder = new MediaRecorder();
+			mMediaRecorder.setCamera(mCamera);
+			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+			mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_480P));
+			mMediaRecorder.prepare();
+		}
+		catch(Exception e){Log.i(ME, e.toString());}
+
+		Camera.Size imgSize = mCamera.getParameters().getPreviewSize();
+		int imgFormat = mCamera.getParameters().getPreviewFormat();
+		Log.i(ME,"Image Format: "+String.valueOf(imgFormat));
+		int bytesPerPixel = ImageFormat.getBitsPerPixel(imgFormat)/8;
+		mImgBuffer = new byte[(int)(imgSize.width*imgSize.height*bytesPerPixel*1.5)]; // I'm not sure why the 1.5 needs to be there
+		mCamera.addCallbackBuffer(mImgBuffer);
+		mBitmap = Bitmap.createBitmap(imgSize.width, imgSize.height, Bitmap.Config.ARGB_8888);
+		mImgYUV = new Mat(imgSize.height+imgSize.height/2, imgSize.width, CvType.CV_8UC1);
+//		mImgRGB = new Mat(imgSize.height, imgSize.width, CvType.CV_8UC4);
+		mCamera.setPreviewCallbackWithBuffer( new Camera.PreviewCallback(){
+			@Override
+			public void onPreviewFrame(byte[] data, Camera cam)
+			{
+				if(mBitmap == null)
+				return;
+	
+				if(mLastPreviewTimeNS == 0)
+					mLastPreviewTimeNS = System.nanoTime();
+				else
+				{
+					double dt = (System.nanoTime()-mLastPreviewTimeNS)/1.0e9;
+					mAvgDT = (mAvgDT*mImgProcCnt+dt)/(mImgProcCnt+1);
+					mLastPreviewTimeNS = System.nanoTime();
+				}
+		
+				mImgProcCnt++;
+				mImgYUV.put(0,0,data);
+				passNewImage(&mImgYUV);
+//				Imgproc.cvtColor(mImgYUV,mImgRGB,Imgproc.COLOR_YUV420sp2RGB);
+//				Utils.matToBitmap(mImgRGB, mBitmap);
+//				mIvImageDisplay.setImageBitmap(mBitmap);
+		
+				mCamera.addCallbackBuffer(mImgBuffer);
+			}
+		});
+
+		mCamera.startPreview();
 	}
 
 	// taken from 
