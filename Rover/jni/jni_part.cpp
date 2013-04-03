@@ -57,6 +57,14 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_getImage(JNIEnv* env, jo
 	rover->copyImageData((cv::Mat*)addr);
 }
 
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_passNewImage(JNIEnv* env, jobject thiz, jlong imgAddr)
+{
+	if(rover == NULL)
+		return;
+
+	rover->passNewImage((cv::Mat*)imgAddr);
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getGyroValue(JNIEnv* env, jobject thiz, jlong addr)
 {
 	if(rover == NULL)
