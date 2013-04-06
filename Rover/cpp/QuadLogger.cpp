@@ -78,6 +78,10 @@ void QuadLogger::run()
 	mLogStream->write((tbyte*)str.c_str(),str.length());
 	mMutex_file.unlock();
 
+	sched_param sp;
+	sp.sched_priority = mThreadPriority;
+	sched_setscheduler(0, mScheduler, &sp);
+
 	System sys;
 	String line;
 	while(mRunning)

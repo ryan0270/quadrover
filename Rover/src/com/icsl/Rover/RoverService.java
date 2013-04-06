@@ -8,7 +8,13 @@ import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Intent;
 import android.content.Context;
+import android.hardware.Camera;
+import android.hardware.Camera.PreviewCallback;
+import android.hardware.Camera.Size;
 import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.Handler;
@@ -18,11 +24,14 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.HandlerThread;
 import android.os.PowerManager;
-import android.widget.Toast;
 import android.util.Log;
+import android.widget.Toast;
+import android.view.SurfaceView;
+import android.view.SurfaceHolder;
 
 import java.lang.Thread;
 import java.io.File;
+import java.util.List;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -41,8 +50,14 @@ public class RoverService extends Service {
 	private final IBinder mBinder = new RoverBinder();
 
 	private Camera mCamera = null;
-	MediaRecorder mMediaRecorder = null;
-	byte[] mImgBuffer;
+	private MediaRecorder mMediaRecorder = null;
+	private byte[] mImgBuffer;
+	private Mat mImgYUV, mImgRGB;
+	private long mLastPreviewTimeNS = 0;
+	private int mImgProcCnt = 0;
+	private double mAvgDT = 0;
+	private Mat mImage;
+	private Bitmap mBmp = null;
 
 	public class RoverBinder extends Binder 
 	{ RoverService getService(){ return RoverService.this; } }
@@ -130,8 +145,8 @@ public class RoverService extends Service {
 		return START_NOT_STICKY;
 	}
 
-	@Override
-	public void onPause()
+    @Override
+	public void onDestroy()
 	{
 		Log.i(ME,"Rover service stop started");
 		if(mCamera != null)
@@ -208,31 +223,27 @@ public class RoverService extends Service {
 		int bytesPerPixel = ImageFormat.getBitsPerPixel(imgFormat)/8;
 		mImgBuffer = new byte[(int)(imgSize.width*imgSize.height*bytesPerPixel*1.5)]; // I'm not sure why the 1.5 needs to be there
 		mCamera.addCallbackBuffer(mImgBuffer);
-		mBitmap = Bitmap.createBitmap(imgSize.width, imgSize.height, Bitmap.Config.ARGB_8888);
 		mImgYUV = new Mat(imgSize.height+imgSize.height/2, imgSize.width, CvType.CV_8UC1);
-//		mImgRGB = new Mat(imgSize.height, imgSize.width, CvType.CV_8UC4);
 		mCamera.setPreviewCallbackWithBuffer( new Camera.PreviewCallback(){
 			@Override
 			public void onPreviewFrame(byte[] data, Camera cam)
 			{
-				if(mBitmap == null)
-				return;
-	
-				if(mLastPreviewTimeNS == 0)
-					mLastPreviewTimeNS = System.nanoTime();
-				else
-				{
-					double dt = (System.nanoTime()-mLastPreviewTimeNS)/1.0e9;
-					mAvgDT = (mAvgDT*mImgProcCnt+dt)/(mImgProcCnt+1);
-					mLastPreviewTimeNS = System.nanoTime();
-				}
-		
+				// System.nanoTime() is the same as clock_gettime(CLOCK_MONOTONIC, &tv) in c++
+				long timestamp = System.nanoTime();
+//				if(mLastPreviewTimeNS == 0)
+//					mLastPreviewTimeNS = System.nanoTime();
+//				else
+//				{
+//					double dt = (System.nanoTime()-mLastPreviewTimeNS)/1.0e9;
+//					mAvgDT = (mAvgDT*mImgProcCnt+dt)/(mImgProcCnt+1);
+//					mLastPreviewTimeNS = System.nanoTime();
+//
+//					Log.i(ME, "mAvgDT: "+String.valueOf(mAvgDT));
+//				}
+  	
 				mImgProcCnt++;
 				mImgYUV.put(0,0,data);
-				passNewImage(&mImgYUV);
-//				Imgproc.cvtColor(mImgYUV,mImgRGB,Imgproc.COLOR_YUV420sp2RGB);
-//				Utils.matToBitmap(mImgRGB, mBitmap);
-//				mIvImageDisplay.setImageBitmap(mBitmap);
+				passNewImage(mImgYUV.getNativeObjAddr(), timestamp);
 		
 				mCamera.addCallbackBuffer(mImgBuffer);
 			}
@@ -264,20 +275,19 @@ public class RoverService extends Service {
 		if(pcIsConnected())
 			return null;
 
-		Mat img = new Mat();
-		Bitmap bmp;
 		try{
-			getImage(img.getNativeObjAddr());
-			Imgproc.cvtColor(img,img,Imgproc.COLOR_BGR2RGB);
-			bmp = Bitmap.createBitmap(img.width(), img.height(), Bitmap.Config.ARGB_8888);
-			Utils.matToBitmap(img, bmp);
+			if( getImage(mImage.getNativeObjAddr()) )
+				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
+			else
+				return null;
+			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
+				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
+			Utils.matToBitmap(mImage, mBmp);
 		} catch(Exception e){
-			img = null;
-			bmp = null;
+			mImage = null;
+			mBmp = null;
 		}
-		if(img != null)
-			img.release();
-		return bmp;
+		return mBmp;
 	}
 
 	float[] getRoverGyroValue(){ return getGyroValue(); }
@@ -285,6 +295,8 @@ public class RoverService extends Service {
 	float[] getRoverMagValue(){ return getMagValue(); }
 	float[] getRoverAttitude(){ return getAttitude(); }
 	int getRoverImageProcTimeMS(){ return getImageProcTimeMS(); }
+	boolean isConnectedToPC(){ return pcIsConnected();}
+//	boolean isConnectedToPC(){ return true; }
 
 	public native String nativeTest();
 	public native void onJNIStart();
@@ -292,17 +304,14 @@ public class RoverService extends Service {
 	public native void setNumCpuCores(int numCores);
 	public native void setLogDir(String jdir);
 	public native void startLogging();
-	public native void getImage(long addr);
+	public native boolean getImage(long addr);
 	public native float[] getGyroValue();
 	public native float[] getAccelValue();
 	public native float[] getMagValue();
 	public native float[] getAttitude();
 	public native int getImageProcTimeMS();
-//	public native void toggleViewType();
-//	public native void toggleUseIbvs();
-//	public native int[] getVisionParams();
-//	public native void setVisionParams(int[] p);
 	public native boolean pcIsConnected();
+	public native void passNewImage(long addr, long timestampNS);
 
 	static
 	{

@@ -5,15 +5,17 @@
 #include <sstream>
 #include <memory>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 #include "mxml.h"
 
-#include <toadlet/toadlet.h>
+#include <math.h>
+#include <toadlet/egg.h>
 #include "Common.h"
 #include "Time.h"
 #include "Data.h"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 namespace ICSL {
 namespace Quadrotor {

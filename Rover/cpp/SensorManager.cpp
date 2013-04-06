@@ -26,6 +26,10 @@ namespace Quadrotor{
 
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+		mImgDT = 0;
+		mImgCnt = 0;
+		mLastImgTime.setTimeMS(0);
 	}
 
 	SensorManager::~SensorManager()
@@ -128,9 +132,9 @@ namespace Quadrotor{
 	void SensorManager::run()
 	{
 		mRunning = true;
-		shared_ptr<cv::VideoCapture> cap = initCamera();
-		if(cap == NULL)
-			mRunning = false;
+//		shared_ptr<cv::VideoCapture> cap = initCamera();
+//		if(cap == NULL)
+//			mRunning = false;
 
 		class : public Thread{
 			public:
@@ -139,8 +143,8 @@ namespace Quadrotor{
 			SensorManager *parent;
 		} imgAcqThread;
 		imgAcqThread.parent = this;
-		imgAcqThread.cap = cap;
-		imgAcqThread.start();
+//		imgAcqThread.cap = cap;
+//		imgAcqThread.start();
 
 		class : public Thread{
 			public:
@@ -315,6 +319,8 @@ namespace Quadrotor{
 
 	void SensorManager::runImgAcq(shared_ptr<cv::VideoCapture> cap)
 	{
+		return;
+
 		if(cap == NULL)
 			return;
 
@@ -486,6 +492,38 @@ namespace Quadrotor{
 		mCurAtt.inject(attData->data);
 		mCurAngularVel.inject(angularVelData->data);
 		mMutex_attData.unlock();
+	}
+
+	void SensorManager::passNewImage(cv::Mat const *imgYUV, int64 const &timestampNS)
+	{
+		Time curTime, imgTime;
+		imgTime.setTimeNS(timestampNS);
+
+		if(mLastImgTime.getMS() != 0)
+		{
+			double dt = mLastImgTime.getElapsedTimeNS()/1.0e9;
+			mImgDT = (mImgDT*mImgCnt + dt)/(mImgCnt+1);
+			mImgCnt++;
+		}
+		mLastImgTime.setTime();
+
+		shared_ptr<cv::Mat> imgBGR(new cv::Mat);
+		cv::cvtColor(*imgYUV, *imgBGR, CV_YUV420sp2BGR);
+
+		shared_ptr<DataImage> data(new DataImage());
+		data->type = DATA_TYPE_IMAGE;
+
+		mMutex_attData.lock();
+		data->startAngularVel.inject(matmult(mRotPhoneToCam, mCurAngularVel));
+		data->endAngularVel.inject(matmult(mRotPhoneToCam, mCurAngularVel));
+		data->att.inject(matmult(mRotPhoneToCam, mCurAtt));
+		mMutex_attData.unlock();
+
+		data->img = imgBGR;
+		data->imgFormat = IMG_FORMAT_BGR;
+		data->cap = NULL;
+		data->focalLength = 3.7*imgBGR->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+		data->Time.setTime(imgTime);
 	}
 
 } // namespace Quadrotor

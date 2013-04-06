@@ -43,6 +43,8 @@ Rover::Rover() :
 
 	mImageMatchData = NULL;
 
+	mScheduler = SCHED_NORMAL;
+	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 }
 
 Rover::~Rover()
@@ -65,6 +67,7 @@ void Rover::initialize()
 	mCommManager.setThreadPriority(sched,minPriority);
 	mQuadLogger.setThreadPriority(sched,minPriority);
 	mVideoMaker.setThreadPriority(sched,minPriority);
+	this->setThreadPriority(sched,minPriority);
 
 	mCommManager.initialize();
 	mCommManager.addListener(this);
@@ -139,7 +142,7 @@ void Rover::initialize()
 void Rover::shutdown()
 {
 	stopLogging();
-	mRunCommPC = false;
+	mRunning = false;
 	mMutex_cntl.lock();
 	mAttitudeThrustController.enableMotors(false);
 	mMutex_cntl.unlock();
@@ -170,7 +173,7 @@ void Rover::shutdown()
 
 void Rover::run()
 {
-	mRunCommPC = true;
+	mRunning = true;
 	System sys;
 	mRunnerIsDone = false;
 	class : public Thread{
@@ -191,8 +194,11 @@ void Rover::run()
 	Array2D<int> cpuUsagePrev(1,7,0.0), cpuUsageCur(1,7,0.0);
 	Time mLastCpuUsageTime;
 
-	double alphaAttBias = 0.01/(1+0.01);
-	while(mRunCommPC) 
+	sched_param sp;
+	sp.sched_priority = mThreadPriority;
+	sched_setscheduler(0, mScheduler, &sp);
+
+	while(mRunning) 
 	{
 		if(!mDataIsSending && mLastDataSendTime.getElapsedTimeMS() > 100)
 		{
@@ -580,29 +586,13 @@ void Rover::onImageProcessed(shared_ptr<ImageMatchData> const data)
 
 void Rover::copyImageData(cv::Mat *m)
 {
-	if(!mRunCommPC) // use this as an indicator that we are shutting down
+	if(!mRunning) // use this as an indicator that we are shutting down
 		return;
 
 	mMutex_vision.lock();
 	mVisionProcessor.getLastImageAnnotated(m);
 	mMutex_vision.unlock();
 }
-
-// assume p is sized for 16 elements
-//Collection<int> Rover::getVisionParams()
-//{
-//	mMutex_vision.lock();
-//	Collection<int> p = mVisionProcessor.getVisionParams();
-//	mMutex_vision.unlock();
-//	return p;
-//}
-
-//void Rover::setVisionParams(Collection<int> p)
-//{
-//	mMutex_vision.lock();
-//	mVisionProcessor.setVisionParams(p);
-//	mMutex_vision.unlock();
-//}
 
 Array2D<double> Rover::getGyroValue()
 {
