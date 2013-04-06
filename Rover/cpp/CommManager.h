@@ -3,7 +3,7 @@
 #include <sched.h>
 
 #include <vector>
-#include <toadlet/toadlet.h>
+#include <toadlet/egg.h>
 
 #include "Common.h"
 #include "Time.h"

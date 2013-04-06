@@ -3,9 +3,9 @@ package com.icsl.Rover;
 import android.app.Activity;
 import android.content.ServiceConnection;
 import android.content.ComponentName;
-import android.hardware.Camera;
-import android.hardware.Camera.PreviewCallback;
-import android.hardware.Camera.Size;
+// import android.hardware.Camera;
+// import android.hardware.Camera.PreviewCallback;
+// import android.hardware.Camera.Size;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapFactory.Options;
 import android.graphics.ImageFormat;
@@ -243,12 +243,11 @@ public class Rover extends Activity implements Runnable
 	public void run()
 	{
 		Log.i(ME, "Java runner started");
-		long startTime = System.nanoTime();
 		mThreadIsDone = false;
 		mThreadRun = true;
 		while(mThreadRun)
 		{
-			if(mBound)
+			if(mBound && !mService.isConnectedToPC())
 			{
 				mBitmap = mService.getImage();
 
@@ -259,13 +258,13 @@ public class Rover extends Activity implements Runnable
 				final int imgProcTimeMS = mService.getRoverImageProcTimeMS();
 				runOnUiThread(new Runnable(){
 					public void run(){ 
-						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
-						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
-						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
-						mTvImgProcTime.setText("Proc Time: "+String.valueOf(imgProcTimeMS)+"ms");
-						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
-						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
-						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
+//						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
+//						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
+//						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
+//						mTvImgProcTime.setText("Proc Time: "+String.valueOf(imgProcTimeMS)+"ms");
+//						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
+//						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
+//						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
 
 						if(mBitmap != null)
 							mIvImageDisplay.setImageBitmap(mBitmap); 

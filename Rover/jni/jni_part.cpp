@@ -49,20 +49,21 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_startLogging(JNIEnv* env
 	rover->startLogging();
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_getImage(JNIEnv* env, jobject thiz, jlong addr)
+JNIEXPORT jboolean JNICALL Java_com_icsl_Rover_RoverService_getImage(JNIEnv* env, jobject thiz, jlong addr)
 {
 	if(rover == NULL)
-		return;
+		return false;
 
 	rover->copyImageData((cv::Mat*)addr);
+	return true;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_passNewImage(JNIEnv* env, jobject thiz, jlong imgAddr)
+JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_passNewImage(JNIEnv* env, jobject thiz, jlong imgAddr, jlong timestampNS)
 {
 	if(rover == NULL)
 		return;
 
-	rover->passNewImage((cv::Mat*)imgAddr);
+	rover->passNewImage((cv::Mat*)imgAddr, (int64)timestampNS);
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getGyroValue(JNIEnv* env, jobject thiz, jlong addr)
@@ -129,40 +130,6 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getAttitude(JNIEn
 	return jval;
 }
 
-//JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleViewType(JNIEnv* env, jobject thiz)
-//{
-//	if(rover == NULL)
-//		return;
-//
-//	rover->toggleViewType();
-//}
-//
-//JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_toggleUseIbvs(JNIEnv* env, jobject thiz)
-//{
-//	if(rover == NULL)
-//		return;
-//
-//	rover->toggleUseIbvs();
-//}
-
-//JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getVisionParams(JNIEnv* env, jobject thiz)
-//{
-//	if(rover == NULL)
-//		return NULL;
-//
-//	toadlet::egg::Collection<int> vals = rover->getVisionParams();
-//
-//	jintArray jval = env->NewIntArray(vals.size());
-//	jint *elem = env->GetIntArrayElements(jval,0);
-//	for(int i=0; i<vals.size(); i++)
-//		elem[i] = vals[i];
-//
-//	env->ReleaseIntArrayElements(jval, elem, 0);
-//
-//	return jval;
-//}
-
-
 JNIEXPORT jint JNICALL Java_com_icsl_Rover_RoverService_getImageProcTimeMS(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
@@ -170,21 +137,6 @@ JNIEXPORT jint JNICALL Java_com_icsl_Rover_RoverService_getImageProcTimeMS(JNIEn
 
 	return rover->getImageProcTimeMS();
 }
-
-//JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_setVisionParams(JNIEnv* env, jobject thiz, jintArray jval)
-//{
-//	if(rover == NULL)
-//		return;
-//
-//	toadlet::egg::Collection<int> vals(env->GetArrayLength(jval));
-//	jint *elem = env->GetIntArrayElements(jval,0);
-//	for(int i=0; i<vals.size(); i++)
-//		vals[i] = elem[i];
-//
-//	env->ReleaseIntArrayElements(jval,elem,0);
-//
-//	rover->setVisionParams(vals);
-//}
 
 JNIEXPORT bool JNICALL Java_com_icsl_Rover_RoverService_pcIsConnected(JNIEnv* env, jobject thiz)
 {
