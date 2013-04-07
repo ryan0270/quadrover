@@ -251,20 +251,28 @@ public class Rover extends Activity implements Runnable
 			{
 				mBitmap = mService.getImage();
 
-				final float gyro[] = mService.getRoverGyroValue();
-				final float accel[] = mService.getRoverAccelValue();
-				final float mag[] = mService.getRoverMagValue();
-				final float att[] = mService.getRoverAttitude();
-				final int imgProcTimeMS = mService.getRoverImageProcTimeMS();
+				float gyro[] = mService.getRoverGyroValue();
+				float accel[] = mService.getRoverAccelValue();
+				float mag[] = mService.getRoverMagValue();
+				float att[] = mService.getRoverAttitude();
+				int imgProcTimeMS = mService.getRoverImageProcTimeMS();
+
+				final String strGyro = String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]);
+				final String strAccel = String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]);
+				final String strMag = String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]);
+				final String strImgProcTime = "Proc Time: "+String.valueOf(imgProcTimeMS)+"ms";
+				final String strRoll = String.format("Roll:\t%1.3f",att[0]);
+				final String strPitch = String.format("Pitch:\t%1.3f",att[1]);
+				final String strYaw = String.format("Yaw:\t%1.3f",att[2]);
 				runOnUiThread(new Runnable(){
 					public void run(){ 
-//						mTvGyro.setText(String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]));
-//						mTvAccel.setText(String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]));
-//						mTvMag.setText(String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]));
-//						mTvImgProcTime.setText("Proc Time: "+String.valueOf(imgProcTimeMS)+"ms");
-//						mTvRoll.setText(String.format("Roll:\t%1.3f",att[0]));
-//						mTvPitch.setText(String.format("Pitch:\t%1.3f",att[1]));
-//						mTvYaw.setText(String.format("Yaw:\t%1.3f",att[2]));
+//						mTvGyro.setText(strGyro);
+//						mTvAccel.setText(strAccel);
+//						mTvMag.setText(strMag);
+//						mTvImgProcTime.setText(strImgProcTime);
+//						mTvRoll.setText(strRoll);
+//						mTvPitch.setText(strPitch);
+//						mTvYaw.setText(strYaw);
 
 						if(mBitmap != null)
 							mIvImageDisplay.setImageBitmap(mBitmap); 

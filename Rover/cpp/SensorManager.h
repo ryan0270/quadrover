@@ -84,8 +84,11 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	Collection<SensorManagerListener *> mListeners;
 
 	shared_ptr<cv::VideoCapture> initCamera();
-	void runImgAcq(shared_ptr<cv::VideoCapture> cap);
+//	void runImgAcq(shared_ptr<cv::VideoCapture> cap);
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
+	TNT::Array2D<double> mAttAccum, mAngularVelAccum; // accumulators so I can get the average during img acq interval
+	int mAttAccumCnt, mAngularVelAccumCnt;
+	toadlet::egg::Mutex mMutex_accum;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 

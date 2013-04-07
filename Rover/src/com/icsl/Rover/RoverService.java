@@ -15,6 +15,7 @@ import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
+import android.media.MediaRecorder.OutputFormat;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.Handler;
@@ -209,11 +210,24 @@ public class RoverService extends Service {
 			SurfaceView dummy = new SurfaceView(getBaseContext());
 			mCamera.setPreviewDisplay(dummy.getHolder());
 
-			mMediaRecorder = new MediaRecorder();
-			mMediaRecorder.setCamera(mCamera);
-			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-			mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_480P));
-			mMediaRecorder.prepare();
+			// I can't decide if using video record mode helps
+			// the preview images or not
+			//
+			// MediaRecorder runs in a state machine and without setting
+			// things up in the right order it fails. I'm too lazy to figure
+			// out which of  the below steps I could skip.
+//			mMediaRecorder = new MediaRecorder();
+//			mMediaRecorder.setCamera(mCamera);
+//			mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+//			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+//			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+//			mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+//			mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+//			File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
+//			mMediaRecorder.setOutputFile(logDir.toString()+"/vid.mpg");
+//			mMediaRecorder.setVideoSize(640,480);
+//			mMediaRecorder.setVideoFrameRate(30);
+//			mMediaRecorder.prepare();
 		}
 		catch(Exception e){Log.i(ME, e.toString());}
 
@@ -276,14 +290,21 @@ public class RoverService extends Service {
 			return null;
 
 		try{
+			if(mImage == null)
+				mImage = new Mat();
 			if( getImage(mImage.getNativeObjAddr()) )
+			{
 				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
+			}
 			else
+			{
 				return null;
+			}
 			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
 				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
 			Utils.matToBitmap(mImage, mBmp);
 		} catch(Exception e){
+			Log.e(ME,e.toString());
 			mImage = null;
 			mBmp = null;
 		}
