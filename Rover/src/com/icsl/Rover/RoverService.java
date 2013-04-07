@@ -72,15 +72,15 @@ public class RoverService extends Service {
 			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
 			logDir.mkdir();
 		}
-		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
-		if(imgLogDir.exists())
-		{
-			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
-			if(bakDir.exists())
-				deleteDir(bakDir);
-			imgLogDir.renameTo(bakDir);
-		}
-		imgLogDir.mkdir();
+//		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
+//		if(imgLogDir.exists())
+//		{
+//			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
+//			if(bakDir.exists())
+//				deleteDir(bakDir);
+//			imgLogDir.renameTo(bakDir);
+//		}
+//		imgLogDir.mkdir();
 		File videoDir = new File(logDir.getAbsolutePath()+"/video");
 		Log.i(ME,"Video dir = "+videoDir.getAbsolutePath());
 		if(videoDir.exists())
@@ -191,13 +191,13 @@ public class RoverService extends Service {
 			//			camParams.setPreviewFpsRange((fps[0]), fps[1]);
 			camParams.setPreviewFpsRange(30000, 30000);
 
-			if(camParams.getVideoStabilization())
-			{
-				Log.i(ME, "I have video stabilization");
+//			if(camParams.getVideoStabilization())
+//			{
+//				Log.i(ME, "I have video stabilization");
 				camParams.setVideoStabilization(true);
-			}
-			else
-				Log.i(ME, "I don't have video stabilization");
+//			}
+//			else
+//				Log.i(ME, "I don't have video stabilization");
 
 			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
 			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
@@ -205,6 +205,18 @@ public class RoverService extends Service {
 //			camParams.setExposureCompensation( camParams.getMaxExposureCompensation() );
 
 			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO );
+
+//			camParams.setSceneMode( Camera.Parameters.SCENE_MODE_SPORTS );
+
+			// iso 100, 200, 400, 800
+			camParams.set("iso",800);
+			// I'm not sure what fast-fps-mode does
+//			camParams.set("fast-fps-mode","on");
+//			String [] params = camParams.flatten().split(";");
+//			Log.i(ME,"Camera params");
+//			for(int i=0; i<params.length; i++)
+//				Log.i(ME,"\t"+params[i]);
+//			Log.i(ME,"Params: "+camParams.flatten());
 
 			mCamera.setParameters(camParams);
 			SurfaceView dummy = new SurfaceView(getBaseContext());
