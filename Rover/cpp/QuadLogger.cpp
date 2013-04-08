@@ -78,6 +78,10 @@ void QuadLogger::run()
 	mLogStream->write((tbyte*)str.c_str(),str.length());
 	mMutex_file.unlock();
 
+	sched_param sp;
+	sp.sched_priority = mThreadPriority;
+	sched_setscheduler(0, mScheduler, &sp);
+
 	System sys;
 	String line;
 	while(mRunning)
@@ -139,14 +143,10 @@ void QuadLogger::saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
 				mxmlNewReal(mxmlNewElement(attNode,"roll"),data->att[0][0]);
 				mxmlNewReal(mxmlNewElement(attNode,"pitch"),data->att[1][0]);
 				mxmlNewReal(mxmlNewElement(attNode,"yaw"),data->att[2][0]);
-			mxml_node_t *startAngularVelNode = mxmlNewElement(imgNode,"startAngularVel");
-				mxmlNewReal(mxmlNewElement(startAngularVelNode,"x"),data->startAngularVel[0][0]);
-				mxmlNewReal(mxmlNewElement(startAngularVelNode,"y"),data->startAngularVel[1][0]);
-				mxmlNewReal(mxmlNewElement(startAngularVelNode,"z"),data->startAngularVel[2][0]);
-			mxml_node_t *endAngularVelNode = mxmlNewElement(imgNode,"endAngularVel");
-				mxmlNewReal(mxmlNewElement(endAngularVelNode,"x"),data->endAngularVel[0][0]);
-				mxmlNewReal(mxmlNewElement(endAngularVelNode,"y"),data->endAngularVel[1][0]);
-				mxmlNewReal(mxmlNewElement(endAngularVelNode,"z"),data->endAngularVel[2][0]);
+			mxml_node_t *angularVelNode = mxmlNewElement(imgNode,"angularVel");
+				mxmlNewReal(mxmlNewElement(angularVelNode,"x"),data->angularVel[0][0]);
+				mxmlNewReal(mxmlNewElement(angularVelNode,"y"),data->angularVel[1][0]);
+				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
 		data->unlock();
 
 		id++;

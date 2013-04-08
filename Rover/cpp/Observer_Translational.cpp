@@ -387,6 +387,7 @@ namespace Quadrotor{
 //			Lw = Lw1.copy();
 
 //			angularVel.inject(0.5*(matchData->imgData0->startAngularVel+matchData->imgData1->endAngularVel));
+			angularVel.inject(matchData->imgData0->angularVel);
 
 //			A += matmult(transpose(q2-q1-matmult(Lw,matmult(mRotPhoneToCam,angularVel))),matmult(SnInv, Lv));
 			A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
@@ -909,7 +910,10 @@ pos[2][0] = mLastViconPos[2][0];
 					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector>(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
 				}
 				else
+				{
+					mMutex_data.unlock();
 					return dataTime;
+				}
 				break;
 			case DATA_TYPE_CAMERA_POS:
 				mCameraPosBuffer.push_back(static_pointer_cast<DataVector>(data));
@@ -920,21 +924,30 @@ pos[2][0] = mLastViconPos[2][0];
 					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector>(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
 				}
 				else
+				{
+					mMutex_data.unlock();
 					return dataTime;
+				}
 				break;
 			case DATA_TYPE_VICON_VEL:
 				mViconVelBuffer.push_back(static_pointer_cast<DataVector>(data));
 				if(mUseViconPos)
 					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
 				else
+				{
+					mMutex_data.unlock();
 					return dataTime;
+				}
 				break;
 			case DATA_TYPE_CAMERA_VEL:
 				mCameraVelBuffer.push_back(static_pointer_cast<DataVector>(data));
 				if(mUseCameraPos)
 					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
 				else
+				{
+					mMutex_data.unlock();
 					return dataTime;
+				}
 				break;
 			case DATA_TYPE_OPTIC_FLOW_VEL:
 				mOpticFlowVelBuffer.push_back(static_pointer_cast<DataVector>(data));

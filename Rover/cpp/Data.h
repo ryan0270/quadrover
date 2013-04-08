@@ -120,19 +120,19 @@ class DataVector : public Data
 class DataImage : public Data
 {
 	public:
-	DataImage() : att(3,1,0.0), startAngularVel(3,1,0.0), endAngularVel(3,1,0.)  {
+	DataImage() : att(3,1,0.0), angularVel(3,1,0.)  {
 		type = DATA_TYPE_IMAGE; 
 		imgFormat = IMG_FORMAT_BGR; 
 		img = shared_ptr<cv::Mat>(new cv::Mat());
 		cap = NULL;
+		id = sNextID()++;
 	}
-	DataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
-		img1.copyTo(*img);
-		att = att1.copy();
-		startAngularVel = startAngularVel.copy();
-		endAngularVel = endAngularVel.copy();
-		imgFormat = fmt;
-	}
+//	DataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
+//		img1.copyTo(*img);
+//		att = att1.copy();
+//		angularVel = angularVel.copy();
+//		imgFormat = fmt;
+//	}
 
 	void copyTo(DataImage &d) {
 		if(&d == this)
@@ -142,19 +142,22 @@ class DataImage : public Data
 		d.timestamp.setTime(timestamp); 
 		img->copyTo(*(d.img)); 
 		d.att.inject(att);
-		d.startAngularVel.inject(startAngularVel);
-		d.endAngularVel.inject(endAngularVel);
+		d.angularVel.inject(angularVel);
 		d.focalLength = focalLength;
 		d.unlock();
 		unlock();
 	}
+	unsigned int id;
 	shared_ptr<cv::Mat> img;
 	TNT::Array2D<double> att;
-	TNT::Array2D<double> startAngularVel, endAngularVel;
+	TNT::Array2D<double> angularVel;
 	ImageFormat imgFormat;
 	double focalLength;
 	shared_ptr<cv::VideoCapture> cap;
-};
+
+	private:
+	static inline unsigned int &sNextID(){ static unsigned int data = 0; return data;}
+}; 
 
 class DataPhoneTemp : public Data
 {

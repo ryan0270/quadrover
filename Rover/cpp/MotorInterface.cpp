@@ -70,12 +70,12 @@ namespace Quadrotor{
 			else if(!mMotorsEnabled && !mDoMotorWarmup)
 			{
 				// this is just to keep the connection alive
-				Collection<uint8> cmds(4,0);
+				Collection<uint16> cmds(4,0);
 				sendCommandForced(cmds);
 			}
 			else if(mDoMotorWarmup)
 			{
-				Collection<uint8> cmds(4,10);
+				Collection<uint16> cmds(4,10);
 				sendCommandForced(cmds);
 				if(mMotorWarmupStartTime.getElapsedTimeMS() > 4e3)
 				{
@@ -87,12 +87,12 @@ namespace Quadrotor{
 			sys.msleep(50);
 		}
 
-		Collection<uint8> cmds(4,0);
+		Collection<uint16> cmds(4,0);
 		sendCommandForced(cmds);
 		mMutex_socket.lock();
 		if(mSocket != NULL)
 		{
-//			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
+//			mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
 			mSocket->close();
 			mSocket = NULL;
 		}
@@ -103,7 +103,7 @@ namespace Quadrotor{
 		mShutdown = true;
 	}
 
-	void MotorInterface::sendCommand(Collection<uint8> const &cmds)
+	void MotorInterface::sendCommand(Collection<uint16> const &cmds)
 	{
 		if(!isConnected() || !mMotorsEnabled)
 			return;
@@ -112,10 +112,10 @@ namespace Quadrotor{
 
 		for(int i=0; i<cmds.size(); i++)
 			mMotorCmds[i] = cmds[i];
-		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
+		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
-		if(result != 4*sizeof(uint8))
+		if(result != 4*sizeof(uint16))
 		{
 			if(mSocket != NULL)
 				mSocket->close();
@@ -125,7 +125,7 @@ namespace Quadrotor{
 		}
 	}
 
-	void MotorInterface::sendCommandForced(Collection<uint8> const &cmds)
+	void MotorInterface::sendCommandForced(Collection<uint16> const &cmds)
 	{
 		if(!isConnected())
 			return;
@@ -134,11 +134,11 @@ namespace Quadrotor{
 
 		for(int i=0; i<cmds.size(); i++)
 			mMotorCmds[i] = cmds[i];
-		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint8));
+		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
 
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
-		if(result != 4*sizeof(uint8))
+		if(result != 4*sizeof(uint16))
 		{
 			if(mSocket != NULL)
 				mSocket->close();
@@ -151,7 +151,7 @@ namespace Quadrotor{
 	void MotorInterface::enableMotors(bool on)
 	{
 		// make sure we are always at a good starting point
-		Collection<uint8> cmds(4,0);
+		Collection<uint16> cmds(4,0);
 		sendCommandForced(cmds);
 
 		if(on)
@@ -183,7 +183,7 @@ namespace Quadrotor{
 //	void MotorInterface::doMotorWarmup()
 //	{
 //		Log::alert("Starting motor warmup");
-//		Collection<uint8> cmds(4,20);
+//		Collection<uint16> cmds(4,20);
 //		sendCommandForced(cmds);
 //		System::msleep(10e3);
 //		Log::alert("Motor warmup done");

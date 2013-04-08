@@ -13,7 +13,9 @@ namespace Quadrotor{
 		mLastMag(3,1,0.0),
 		mLastPressure(0),
 		mCurAtt(3,1,0.0),
-		mCurAngularVel(3,1,0.0)
+		mCurAngularVel(3,1,0.0),
+		mAttAccum(3,1,0.0),
+		mAngularVelAccum(3,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -26,6 +28,13 @@ namespace Quadrotor{
 
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+		mImgDT = 0;
+		mImgCnt = 0;
+		mLastImgTime.setTimeMS(0);
+
+		mAttAccumCnt = 0;
+		mAngularVelAccum = 0;
 	}
 
 	SensorManager::~SensorManager()
@@ -128,19 +137,19 @@ namespace Quadrotor{
 	void SensorManager::run()
 	{
 		mRunning = true;
-		shared_ptr<cv::VideoCapture> cap = initCamera();
-		if(cap == NULL)
-			mRunning = false;
+//		shared_ptr<cv::VideoCapture> cap = initCamera();
+//		if(cap == NULL)
+//			mRunning = false;
 
-		class : public Thread{
-			public:
-			void run(){parent->runImgAcq(cap);}
-			shared_ptr<cv::VideoCapture> cap;
-			SensorManager *parent;
-		} imgAcqThread;
-		imgAcqThread.parent = this;
-		imgAcqThread.cap = cap;
-		imgAcqThread.start();
+//		class : public Thread{
+//			public:
+//			void run(){parent->runImgAcq(cap);}
+//			shared_ptr<cv::VideoCapture> cap;
+//			SensorManager *parent;
+//		} imgAcqThread;
+//		imgAcqThread.parent = this;
+//		imgAcqThread.cap = cap;
+//		imgAcqThread.start();
 
 		class : public Thread{
 			public:
@@ -275,7 +284,7 @@ namespace Quadrotor{
 			sys.usleep(500);
 		}
 
-		imgAcqThread.join();
+//		imgAcqThread.join();
 		tempMonitorThread.join();
 
 		mDone = true;
@@ -313,56 +322,56 @@ namespace Quadrotor{
 		return cap;
 	}
 
-	void SensorManager::runImgAcq(shared_ptr<cv::VideoCapture> cap)
-	{
-		if(cap == NULL)
-			return;
-
-		cv::Mat img;
-		sched_param sp;
-		sp.sched_priority = mThreadPriority-1;
-		sched_setscheduler(0, mScheduler, &sp);
-		while(mRunning)
-		{
-			shared_ptr<Data> data = shared_ptr<Data>(new DataImage());
-			data->type = DATA_TYPE_IMAGE;
-
-			mMutex_attData.lock();
-			static_pointer_cast<DataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
-			static_pointer_cast<DataImage>(data)->att.inject(matmult(mRotPhoneToCam,mCurAtt));
-			mMutex_attData.unlock();
-			cap->grab();
-			data->timestamp.setTime();
-			mMutex_attData.lock();
-			static_pointer_cast<DataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
-			mMutex_attData.unlock();
-
-			shared_ptr<cv::Mat> img(new cv::Mat);
-			cap->retrieve(*img);
-			static_pointer_cast<DataImage>(data)->img = img;
-//			img->copyTo(*static_pointer_cast<DataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
-			static_pointer_cast<DataImage>(data)->cap = cap;
-			static_pointer_cast<DataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
-
-			static_pointer_cast<DataImage>(data)->imgFormat = IMG_FORMAT_BGR;
-
-			mMutex_listeners.lock();
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onNewSensorUpdate(data);
-			mMutex_listeners.unlock();
-
-			data = NULL;
-		}
-
-		if(cap->isOpened())
-		{
-			cap->set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF);
-			cap->release();
-		}
-		cap == NULL;
-
-//		delete cap;
-	}
+//	void SensorManager::runImgAcq(shared_ptr<cv::VideoCapture> cap)
+//	{
+//		if(cap == NULL)
+//			return;
+//
+//		cv::Mat img;
+//		sched_param sp;
+//		sp.sched_priority = mThreadPriority-1;
+//		sched_setscheduler(0, mScheduler, &sp);
+//		while(mRunning)
+//		{
+//			shared_ptr<Data> data = shared_ptr<Data>(new DataImage());
+//			data->type = DATA_TYPE_IMAGE;
+//
+//			mMutex_attData.lock();
+//			static_pointer_cast<DataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
+//			static_pointer_cast<DataImage>(data)->att.inject(matmult(mRotPhoneToCam,mCurAtt));
+//			mMutex_attData.unlock();
+//			cap->grab();
+//			data->timestamp.setTime();
+//			mMutex_attData.lock();
+//			static_pointer_cast<DataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
+//			mMutex_attData.unlock();
+//
+//			shared_ptr<cv::Mat> img(new cv::Mat);
+//			cap->retrieve(*img);
+//			static_pointer_cast<DataImage>(data)->img = img;
+////			img->copyTo(*static_pointer_cast<DataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
+//			static_pointer_cast<DataImage>(data)->cap = cap;
+//			static_pointer_cast<DataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+//
+//			static_pointer_cast<DataImage>(data)->imgFormat = IMG_FORMAT_BGR;
+//
+//			mMutex_listeners.lock();
+//			for(int i=0; i<mListeners.size(); i++)
+//				mListeners[i]->onNewSensorUpdate(data);
+//			mMutex_listeners.unlock();
+//
+//			data = NULL;
+//		}
+//
+//		if(cap->isOpened())
+//		{
+//			cap->set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF);
+//			cap->release();
+//		}
+//		cap == NULL;
+//
+////		delete cap;
+//	}
 
 	void SensorManager::runTemperatureMonitor()
 	{
@@ -384,7 +393,9 @@ namespace Quadrotor{
 			data->tmuTemp = tmuTemp;
 			mMutex_listeners.lock();
 			for(int i=0; i<mListeners.size(); i++)
+			{
 				mListeners[i]->onNewSensorUpdate(data);
+			}
 			mMutex_listeners.unlock();
 
 			String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
@@ -486,6 +497,69 @@ namespace Quadrotor{
 		mCurAtt.inject(attData->data);
 		mCurAngularVel.inject(angularVelData->data);
 		mMutex_attData.unlock();
+
+		mMutex_accum.lock();
+		mAttAccum += attData->data;
+		mAttAccumCnt++;
+		mAngularVelAccum += angularVelData->data;
+		mAngularVelAccumCnt++;
+		mMutex_accum.unlock();
+	}
+
+	void SensorManager::passNewImage(cv::Mat const *imgYUV, int64 const &timestampNS)
+	{
+//		if(mLastImgTime.getMS() != 0)
+//		{
+//			double dt = mLastImgTime.getElapsedTimeNS()/1.0e9;
+//			mImgDT = (mImgDT*mImgCnt + dt)/(mImgCnt+1);
+//			mImgCnt++;
+//		}
+//		mLastImgTime.setTime();
+//		Log::alert(String()+"dt: "+mImgDT);
+
+		shared_ptr<cv::Mat> imgBGR(new cv::Mat);
+		cv::cvtColor(*imgYUV, *imgBGR, CV_YUV420sp2BGR);
+
+		shared_ptr<DataImage> data(new DataImage());
+		data->type = DATA_TYPE_IMAGE;
+		data->timestamp.setTimeNS(timestampNS);
+
+		Array2D<double> att, angVel;
+		mMutex_accum.lock();
+		if(mAttAccumCnt == 0)
+			att = Array2D<double>(3,1,0.0);
+		else
+			att = 1.0/mAttAccumCnt*mAttAccum;
+		if(mAngularVelAccumCnt == 0)
+			angVel = Array2D<double>(3,1,0.0);
+		else
+			angVel = 1.0/mAngularVelAccumCnt*mAngularVelAccum;
+
+		for(int i=0; i<3; i++)
+		{
+			mAttAccum[i][0] = 0;
+			mAngularVelAccum[i][0] = 0;
+		}
+		mAttAccumCnt = 0;
+		mAngularVelAccumCnt = 0;
+		mMutex_accum.unlock();
+
+		Array2D<double> attCam(3,1);
+		attCam[0][0] = matmultS(submat(mRotPhoneToCam,0,0,0,2), att);
+		attCam[1][0] = matmultS(submat(mRotPhoneToCam,1,1,0,2), att);
+		attCam[2][0] = matmultS(submat(mRotPhoneToCam,2,2,0,2), att);
+		data->att.inject(attCam);
+		data->angularVel.inject(matmult(mRotPhoneToCam, angVel));
+
+		data->img = imgBGR;
+		data->imgFormat = IMG_FORMAT_BGR;
+		data->cap = NULL;
+		data->focalLength = 3.7*imgBGR->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+
+		mMutex_listeners.lock();
+		for(int i=0; i<mListeners.size(); i++)
+			mListeners[i]->onNewSensorUpdate(static_pointer_cast<Data>(data));
+		mMutex_listeners.unlock();
 	}
 
 } // namespace Quadrotor

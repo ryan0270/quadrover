@@ -11,24 +11,25 @@
 //using toadlet::uint64;
 //using toadlet::egg::String;
 
-#include <opencv2/core/core.hpp>
-
-#include "Observer_Translational.h"
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
+
 #include "constants.h"
+#include "Common.h"
+#include "Data.h"
 #include "Observer_Angular.h"
+#include "Observer_Translational.h"
 #include "QuadLogger.h"
 #include "CommManager.h"
 #include "VisionProcessor.h"
-#include "Common.h"
 #include "Time.h"
 #include "TranslationController.h"
 #include "AttitudeThrustController.h"
 #include "SensorManager.h"
 #include "VideoMaker.h"
 #include "MotorInterface.h"
-#include "Data.h"
+
+#include <opencv2/core/core.hpp>
 
 namespace ICSL {
 namespace Quadrotor {
@@ -51,6 +52,8 @@ public:
 	void stopLogging();
 
 	void run();
+
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 	
 	// these functions are primarily for the jni interface
 	void copyImageData(cv::Mat *m);
@@ -64,6 +67,7 @@ public:
 //	toadlet::egg::Collection<int> getVisionParams();
 //	void setVisionParams(toadlet::egg::Collection<int> p);
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
+	void passNewImage(cv::Mat *img, int64 const &timestampNS){mSensorManager.passNewImage(img, timestampNS);}
 
 	// Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
@@ -84,7 +88,7 @@ public:
 
 protected:
 	CommManager mCommManager;
-	bool mRunCommPC, mRunnerIsDone;
+	bool mRunning, mRunnerIsDone;
 	bool mDataIsSending, mImageIsSending;
 
 	TranslationController mTranslationController;
@@ -122,6 +126,8 @@ protected:
 	VideoMaker mVideoMaker;
 	
 	MotorInterface mMotorInterface;
+
+	int mThreadPriority, mScheduler;
 }; // class Rover
 
 } // namespace Quadrotor

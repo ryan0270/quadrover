@@ -8,16 +8,10 @@
 #include <sstream>
 
 #include <android/sensor.h>
-#include <opencv2/core/core.hpp>
+
 #include <toadlet/egg.h>
 
 #include "TNT/tnt.h"
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/video/tracking.hpp>
 
 #include "constants.h"
 
@@ -27,6 +21,12 @@
 #define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
 #undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/video/tracking.hpp>
 
 namespace ICSL{
 namespace Quadrotor{
@@ -55,6 +55,9 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
+	// used to pass images in from Java
+	void passNewImage(cv::Mat const *img, int64 const &timestampNS);
+
 	// for Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
 
@@ -81,13 +84,20 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	Collection<SensorManagerListener *> mListeners;
 
 	shared_ptr<cv::VideoCapture> initCamera();
-	void runImgAcq(shared_ptr<cv::VideoCapture> cap);
+//	void runImgAcq(shared_ptr<cv::VideoCapture> cap);
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
+	TNT::Array2D<double> mAttAccum, mAngularVelAccum; // accumulators so I can get the average during img acq interval
+	int mAttAccumCnt, mAngularVelAccumCnt;
+	toadlet::egg::Mutex mMutex_accum;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
 	int64_t mTimestampOffsetNS;
 	int mThreadPriority, mScheduler;
+
+	Time mLastImgTime;
+	double mImgDT;
+	int mImgCnt;
 };
 
 
