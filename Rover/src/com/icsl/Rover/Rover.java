@@ -249,35 +249,35 @@ public class Rover extends Activity implements Runnable
 		{
 			if(mBound && !mService.isConnectedToPC())
 			{
-//				mBitmap = mService.getImage();
-//
-//				float gyro[] = mService.getRoverGyroValue();
-//				float accel[] = mService.getRoverAccelValue();
-//				float mag[] = mService.getRoverMagValue();
-//				float att[] = mService.getRoverAttitude();
-//				int imgProcTimeMS = mService.getRoverImageProcTimeMS();
-//
-//				final String strGyro = String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]);
-//				final String strAccel = String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]);
-//				final String strMag = String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]);
-//				final String strImgProcTime = "Proc Time: "+String.valueOf(imgProcTimeMS)+"ms";
-//				final String strRoll = String.format("Roll:\t%1.3f",att[0]);
-//				final String strPitch = String.format("Pitch:\t%1.3f",att[1]);
-//				final String strYaw = String.format("Yaw:\t%1.3f",att[2]);
-//				runOnUiThread(new Runnable(){
-//					public void run(){ 
-////						mTvGyro.setText(strGyro);
-////						mTvAccel.setText(strAccel);
-////						mTvMag.setText(strMag);
-////						mTvImgProcTime.setText(strImgProcTime);
-////						mTvRoll.setText(strRoll);
-////						mTvPitch.setText(strPitch);
-////						mTvYaw.setText(strYaw);
-//
-//						if(mBitmap != null)
-//							mIvImageDisplay.setImageBitmap(mBitmap); 
-//					}
-//				});
+				mBitmap = mService.getImage();
+
+				float gyro[] = mService.getRoverGyroValue();
+				float accel[] = mService.getRoverAccelValue();
+				float mag[] = mService.getRoverMagValue();
+				float att[] = mService.getRoverAttitude();
+				int imgProcTimeMS = mService.getRoverImageProcTimeMS();
+
+				final String strGyro = String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]);
+				final String strAccel = String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]);
+				final String strMag = String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]);
+				final String strImgProcTime = "Proc Time: "+String.valueOf(imgProcTimeMS)+"ms";
+				final String strRoll = String.format("Roll:\t%1.3f",att[0]);
+				final String strPitch = String.format("Pitch:\t%1.3f",att[1]);
+				final String strYaw = String.format("Yaw:\t%1.3f",att[2]);
+				runOnUiThread(new Runnable(){
+					public void run(){ 
+//						mTvGyro.setText(strGyro);
+//						mTvAccel.setText(strAccel);
+//						mTvMag.setText(strMag);
+//						mTvImgProcTime.setText(strImgProcTime);
+//						mTvRoll.setText(strRoll);
+//						mTvPitch.setText(strPitch);
+//						mTvYaw.setText(strYaw);
+
+						if(mBitmap != null)
+							mIvImageDisplay.setImageBitmap(mBitmap); 
+					}
+				});
 			}
 
 			try{

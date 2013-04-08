@@ -508,14 +508,14 @@ namespace Quadrotor{
 
 	void SensorManager::passNewImage(cv::Mat const *imgYUV, int64 const &timestampNS)
 	{
-		if(mLastImgTime.getMS() != 0)
-		{
-			double dt = mLastImgTime.getElapsedTimeNS()/1.0e9;
-			mImgDT = (mImgDT*mImgCnt + dt)/(mImgCnt+1);
-			mImgCnt++;
-		}
-		mLastImgTime.setTime();
-Log::alert(String()+"dt: "+mImgDT);
+//		if(mLastImgTime.getMS() != 0)
+//		{
+//			double dt = mLastImgTime.getElapsedTimeNS()/1.0e9;
+//			mImgDT = (mImgDT*mImgCnt + dt)/(mImgCnt+1);
+//			mImgCnt++;
+//		}
+//		mLastImgTime.setTime();
+//		Log::alert(String()+"dt: "+mImgDT);
 
 		shared_ptr<cv::Mat> imgBGR(new cv::Mat);
 		cv::cvtColor(*imgYUV, *imgBGR, CV_YUV420sp2BGR);

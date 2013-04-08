@@ -318,7 +318,7 @@ void Rover::transmitDataUDP()
 	pDesState.type = COMM_DESIRED_STATE;
 
 	pCntl.dataInt32.resize(4);
-	mMutex_cntl.lock(); Collection<uint8> cmds = mAttitudeThrustController.getLastMotorCmds(); mMutex_cntl.unlock();
+	mMutex_cntl.lock(); Collection<uint16> cmds = mAttitudeThrustController.getLastMotorCmds(); mMutex_cntl.unlock();
 	for(int i=0; i<4; i++)
 		pCntl.dataInt32[i] = cmds[i];
 	pCntl.type = COMM_MOTOR_VAL;
