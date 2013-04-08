@@ -55,9 +55,8 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
-	jni/jni_part.cpp
 	./cpp/Rover.cpp
-	./cpp/Observer_Angular.cpp
+	jni/jni_part.cpp
 	./cpp/Observer_Translational.cpp
 	./cpp/QuadLogger.cpp
 	./cpp/CommManager.cpp
@@ -70,16 +69,17 @@ set (SRC ${SRC}
 	./cpp/VideoMaker.cpp
 	./cpp/BlobDetector.cpp
 	./cpp/Data.cpp
+	./cpp/Observer_Angular.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 )
 
 # Headers
 set (H ${H}
+	./cpp/Common.h
 	./cpp/Rover.h
 	./cpp/Observer_Angular.h
 	./cpp/Observer_Translational.h
 	./cpp/QuadLogger.h
-	./cpp/Common.h
 	./cpp/Time.h
 	./cpp/CommManager.h
 	./cpp/VisionProcessor.h

@@ -1,5 +1,5 @@
-#ifndef QUAD_CONSTANTS
-#define QUAD_CONSTANTS
+#ifndef QUAD_COMMON
+#define QUAD_COMMON
 
 #include <toadlet/egg.h>
 

@@ -8,7 +8,14 @@ import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.Intent;
 import android.content.Context;
+import android.hardware.Camera;
+import android.hardware.Camera.PreviewCallback;
+import android.hardware.Camera.Size;
 import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
+import android.media.MediaRecorder.OutputFormat;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.Handler;
@@ -18,13 +25,14 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.HandlerThread;
 import android.os.PowerManager;
-import android.widget.Toast;
 import android.util.Log;
+import android.widget.Toast;
+import android.view.SurfaceView;
+import android.view.SurfaceHolder;
 
 import java.lang.Thread;
 import java.io.File;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.List;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -36,12 +44,21 @@ public class RoverService extends Service {
 //	private ServiceHandler mServiceHandler;
 	private final static String ME = "RoverService";
 
-	public Timer mTimer;
 	public Notification.Builder mNotificationBuilder;
 
 	private PowerManager.WakeLock mWakeLock;
 
 	private final IBinder mBinder = new RoverBinder();
+
+	private Camera mCamera = null;
+	private MediaRecorder mMediaRecorder = null;
+	private byte[] mImgBuffer;
+	private Mat mImgYUV, mImgRGB;
+	private long mLastPreviewTimeNS = 0;
+	private int mImgProcCnt = 0;
+	private double mAvgDT = 0;
+	private Mat mImage;
+	private Bitmap mBmp = null;
 
 	public class RoverBinder extends Binder 
 	{ RoverService getService(){ return RoverService.this; } }
@@ -55,15 +72,15 @@ public class RoverService extends Service {
 			Log.i(ME,"Log dir: "+logDir.toString()+" does not exist. Creating it.");
 			logDir.mkdir();
 		}
-		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
-		if(imgLogDir.exists())
-		{
-			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
-			if(bakDir.exists())
-				deleteDir(bakDir);
-			imgLogDir.renameTo(bakDir);
-		}
-		imgLogDir.mkdir();
+//		File imgLogDir = new File(logDir.getAbsolutePath()+"/images");
+//		if(imgLogDir.exists())
+//		{
+//			File bakDir = new File(imgLogDir.getAbsolutePath()+"_bak");
+//			if(bakDir.exists())
+//				deleteDir(bakDir);
+//			imgLogDir.renameTo(bakDir);
+//		}
+//		imgLogDir.mkdir();
 		File videoDir = new File(logDir.getAbsolutePath()+"/video");
 		Log.i(ME,"Video dir = "+videoDir.getAbsolutePath());
 		if(videoDir.exists())
@@ -112,22 +129,10 @@ public class RoverService extends Service {
 		final NotificationManager nm = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
 		nm.notify(1, mNotificationBuilder.build());
 
-//		TimerTask task = new TimerTask(){
-//			public void run(){
-//				String str = String.format("Tmeas: %1.1f\tTinf: %1.1f\tTcpu: %1.1f", getMeasuredTemp(), getTempEst(), getCpuTemp(false));
-//
-//				mNotificationBuilder.setContentText(str);
-//				Notification noti = mNotificationBuilder.build();
-//
-//				nm.notify(1, noti);
-//			}
-//		};
-
 		PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
 		mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, ME);
 
-//		mTimer = new Timer();
-//		mTimer.schedule(task, 100, 500);
+		openCamera();
 
 		Toast.makeText(this, "Rover fetching", Toast.LENGTH_SHORT).show();
 	}
@@ -141,12 +146,23 @@ public class RoverService extends Service {
 		return START_NOT_STICKY;
 	}
 
-	@Override
+    @Override
 	public void onDestroy()
 	{
 		Log.i(ME,"Rover service stop started");
-//		mTimer.cancel();
-//		mTimer.purge();
+		if(mCamera != null)
+		{
+			mCamera.setPreviewCallback(null);
+			mCamera.release();
+			mCamera = null;
+		}
+		if(mMediaRecorder != null)
+		{
+			mMediaRecorder.reset();
+			mMediaRecorder.release();
+			mMediaRecorder = null;
+		}
+
 		onJNIStop();
 		mWakeLock.release();
 		Toast.makeText(this, "Rover sleeping", Toast.LENGTH_SHORT).show();
@@ -160,6 +176,107 @@ public class RoverService extends Service {
 	public IBinder onBind(Intent intent)
 	{
 		return mBinder;
+	}
+
+	private void openCamera()
+	{
+		try{
+			mCamera = Camera.open();
+			Camera.Parameters camParams = mCamera.getParameters();
+			List<Size> previewSizes = camParams.getSupportedPreviewSizes();
+			camParams.setPreviewSize(640,480);
+
+			//			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
+			//			int[] fps = fpsList.get(fpsList.size()-1);
+			//			camParams.setPreviewFpsRange((fps[0]), fps[1]);
+			camParams.setPreviewFpsRange(30000, 30000);
+
+//			if(camParams.getVideoStabilization())
+//			{
+//				Log.i(ME, "I have video stabilization");
+				camParams.setVideoStabilization(true);
+//			}
+//			else
+//				Log.i(ME, "I don't have video stabilization");
+
+			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
+			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
+
+//			camParams.setExposureCompensation( camParams.getMaxExposureCompensation() );
+
+			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO );
+
+//			camParams.setSceneMode( Camera.Parameters.SCENE_MODE_SPORTS );
+
+			// iso 100, 200, 400, 800
+			camParams.set("iso",800);
+			// with high iso there seems to be more banding
+			camParams.setAntibanding( Camera.Parameters.ANTIBANDING_AUTO );
+			// I'm not sure what fast-fps-mode does
+//			camParams.set("fast-fps-mode","on");
+			String [] params = camParams.flatten().split(";");
+			Log.i(ME,"Camera params");
+			for(int i=0; i<params.length; i++)
+				Log.i(ME,"\t"+params[i]);
+
+			mCamera.setParameters(camParams);
+			SurfaceView dummy = new SurfaceView(getBaseContext());
+			mCamera.setPreviewDisplay(dummy.getHolder());
+
+			// I can't decide if using video record mode helps
+			// the preview images or not
+			//
+			// MediaRecorder runs in a state machine and without setting
+			// things up in the right order it fails. I'm too lazy to figure
+			// out which of  the below steps I could skip.
+//			mMediaRecorder = new MediaRecorder();
+//			mMediaRecorder.setCamera(mCamera);
+//			mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+//			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+//			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+//			mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+//			mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+//			File logDir = new File(Environment.getExternalStorageDirectory().toString()+"/"+ME);
+//			mMediaRecorder.setOutputFile(logDir.toString()+"/vid.mpg");
+//			mMediaRecorder.setVideoSize(640,480);
+//			mMediaRecorder.setVideoFrameRate(30);
+//			mMediaRecorder.prepare();
+		}
+		catch(Exception e){Log.i(ME, e.toString());}
+
+		Camera.Size imgSize = mCamera.getParameters().getPreviewSize();
+		int imgFormat = mCamera.getParameters().getPreviewFormat();
+		Log.i(ME,"Image Format: "+String.valueOf(imgFormat));
+		int bytesPerPixel = ImageFormat.getBitsPerPixel(imgFormat)/8;
+		mImgBuffer = new byte[(int)(imgSize.width*imgSize.height*bytesPerPixel*1.5)]; // I'm not sure why the 1.5 needs to be there
+		mCamera.addCallbackBuffer(mImgBuffer);
+		mImgYUV = new Mat(imgSize.height+imgSize.height/2, imgSize.width, CvType.CV_8UC1);
+		mCamera.setPreviewCallbackWithBuffer( new Camera.PreviewCallback(){
+			@Override
+			public void onPreviewFrame(byte[] data, Camera cam)
+			{
+				// System.nanoTime() is the same as clock_gettime(CLOCK_MONOTONIC, &tv) in c++
+				long timestamp = System.nanoTime();
+//				if(mLastPreviewTimeNS == 0)
+//					mLastPreviewTimeNS = System.nanoTime();
+//				else
+//				{
+//					double dt = (System.nanoTime()-mLastPreviewTimeNS)/1.0e9;
+//					mAvgDT = (mAvgDT*mImgProcCnt+dt)/(mImgProcCnt+1);
+//					mLastPreviewTimeNS = System.nanoTime();
+//
+//					Log.i(ME, "mAvgDT: "+String.valueOf(mAvgDT));
+//				}
+  	
+				mImgProcCnt++;
+				mImgYUV.put(0,0,data);
+				passNewImage(mImgYUV.getNativeObjAddr(), timestamp);
+		
+				mCamera.addCallbackBuffer(mImgBuffer);
+			}
+		});
+
+		mCamera.startPreview();
 	}
 
 	// taken from 
@@ -185,20 +302,26 @@ public class RoverService extends Service {
 		if(pcIsConnected())
 			return null;
 
-		Mat img = new Mat();
-		Bitmap bmp;
 		try{
-			getImage(img.getNativeObjAddr());
-			Imgproc.cvtColor(img,img,Imgproc.COLOR_BGR2RGB);
-			bmp = Bitmap.createBitmap(img.width(), img.height(), Bitmap.Config.ARGB_8888);
-			Utils.matToBitmap(img, bmp);
+			if(mImage == null)
+				mImage = new Mat();
+			if( getImage(mImage.getNativeObjAddr()) )
+			{
+				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
+			}
+			else
+			{
+				return null;
+			}
+			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
+				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
+			Utils.matToBitmap(mImage, mBmp);
 		} catch(Exception e){
-			img = null;
-			bmp = null;
+			Log.e(ME,e.toString());
+			mImage = null;
+			mBmp = null;
 		}
-		if(img != null)
-			img.release();
-		return bmp;
+		return mBmp;
 	}
 
 	float[] getRoverGyroValue(){ return getGyroValue(); }
@@ -206,6 +329,8 @@ public class RoverService extends Service {
 	float[] getRoverMagValue(){ return getMagValue(); }
 	float[] getRoverAttitude(){ return getAttitude(); }
 	int getRoverImageProcTimeMS(){ return getImageProcTimeMS(); }
+	boolean isConnectedToPC(){ return pcIsConnected();}
+//	boolean isConnectedToPC(){ return true; }
 
 	public native String nativeTest();
 	public native void onJNIStart();
@@ -213,17 +338,14 @@ public class RoverService extends Service {
 	public native void setNumCpuCores(int numCores);
 	public native void setLogDir(String jdir);
 	public native void startLogging();
-	public native void getImage(long addr);
+	public native boolean getImage(long addr);
 	public native float[] getGyroValue();
 	public native float[] getAccelValue();
 	public native float[] getMagValue();
 	public native float[] getAttitude();
 	public native int getImageProcTimeMS();
-//	public native void toggleViewType();
-//	public native void toggleUseIbvs();
-//	public native int[] getVisionParams();
-//	public native void setVisionParams(int[] p);
 	public native boolean pcIsConnected();
+	public native void passNewImage(long addr, long timestampNS);
 
 	static
 	{
