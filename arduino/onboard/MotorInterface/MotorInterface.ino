@@ -4,7 +4,7 @@
 
 int verbosity=0;
 
-byte motorCommands[4];
+short motorCommands[4];
 
 boolean phoneIsConnected;
 unsigned long lastPhoneUpdateTimeMS;
@@ -45,7 +45,8 @@ void adbEventHandler(Connection * connection, adb_eventType event, uint16_t leng
     phoneIsConnected = true;
     for(int i=0; i<4; i++)
     {
-      byte val = data[i];
+//      byte val = data[i];
+      short val = (data[2*i+1] << 8) | (data[2*i]);
       motorCommands[i] = val;
     }
     
@@ -56,11 +57,19 @@ void adbEventHandler(Connection * connection, adb_eventType event, uint16_t leng
 boolean sendCommand(byte addr, byte cmd)
 {
   Wire.beginTransmission(addr);
-  Wire.write(cmd);
+  byte upper = floor(cmd/8);
+  byte lower = cmd % 8;
+  Wire.write(upper);
+  Wire.write( lower & 0x07 );
   byte result = Wire.endTransmission(true);
   return result == 0;  
 }
  
+byte MOTOR_ADDR_E = (0x53 + (0 << 1)) >> 1;
+byte MOTOR_ADDR_W = (0x53 + (1 << 1)) >> 1;
+byte MOTOR_ADDR_S = (0x53 + (2 << 1)) >> 1;
+byte MOTOR_ADDR_N = (0x53 + (3 << 1)) >> 1;
+
 byte motorAddr[4];
 void setup()
 { 
@@ -71,11 +80,12 @@ void setup()
   }
   delay(1000);
   
+
   Wire.begin();
-  motorAddr[0] = (0x53+(2<<1))>>1;
-  motorAddr[1] = (0x53+(1<<1))>>1;
-  motorAddr[2] = (0x53+(0<<1))>>1;
-  motorAddr[3] = (0x53+(3<<1))>>1;
+  motorAddr[0] = MOTOR_ADDR_N;
+  motorAddr[1] = MOTOR_ADDR_E;
+  motorAddr[2] = MOTOR_ADDR_S;
+  motorAddr[3] = MOTOR_ADDR_W;
     
   for(int i=0; i<4; i++)
   {
@@ -94,7 +104,6 @@ void setup()
   lastPhoneUpdateTimeMS = millis();
 }  
  
-byte power=0;
 unsigned long startTime = 0;
 void loop() 
 {
