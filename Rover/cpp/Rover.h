@@ -6,10 +6,9 @@
 
 #include <cpu-features.h>
 
+#include <opencv2/core/core.hpp>
+
 #include <toadlet/egg.h>
-//using toadlet::int64;
-//using toadlet::uint64;
-//using toadlet::egg::String;
 
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
@@ -28,8 +27,6 @@
 #include "SensorManager.h"
 #include "VideoMaker.h"
 #include "MotorInterface.h"
-
-#include <opencv2/core/core.hpp>
 
 namespace ICSL {
 namespace Quadrotor {

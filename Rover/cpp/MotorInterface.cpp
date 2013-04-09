@@ -84,7 +84,7 @@ namespace Quadrotor{
 				}
 			}
 
-			sys.msleep(50);
+			sys.msleep(20);
 		}
 
 		Collection<uint16> cmds(4,0);
