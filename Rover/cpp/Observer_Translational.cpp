@@ -186,6 +186,7 @@ namespace Quadrotor{
 			{
 				for(int i=0; i<4; i++)
 					thrust += mForceGain*mMotorCmdsBuffer.back()->data[i][0];
+Log::alert(String()+"thrust1: "+thrust);
 			}
 			else
 				thrust = 0;
@@ -193,9 +194,12 @@ namespace Quadrotor{
 
 			shared_ptr<Data> thrustData(new Data());
 			thrustData->type = DATA_TYPE_THRUST;
-			if(mMotorCmdsBuffer.size() > 10)
+			if(mMotorCmdsBuffer.size() > 1)
 				thrustData->timestamp.setTime(mMotorCmdsBuffer.back()->timestamp);
-			thrustData->data = thrust;
+			if(mMotorOn)
+				thrustData->data = thrust;
+			else
+				thrustData->data = -1; // a bit of a hack
 			mThrustBuffer.push_back(thrustData);
 
 			mMutex_data.lock();
@@ -226,8 +230,9 @@ namespace Quadrotor{
 			mMutex_data.unlock();
 			lastUpdateTime.setTime();
 
+			// optical flow
 			if(mNewImageResultsReady && mFlowCalcDone
-//					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
+					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
 					)
 			{
 				// if we're here then the previous thread should already be finished
@@ -237,6 +242,7 @@ namespace Quadrotor{
 				mNewImageResultsReady = false;
 			}
 
+			// buffers
 			mMutex_data.lock();
 			shared_ptr<DataVector> stateData = shared_ptr<DataVector>(new DataVector());
 			stateData->type = DATA_TYPE_STATE_TRAN;
@@ -469,9 +475,6 @@ printArray("vel:\n",vel);
 
 	void Observer_Translational::doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
 	{
-//		state.inject(matmult(A,state)+matmult(B, actuator));
-//		errCov.inject(matmult(A, matmult(errCov, A_T)) + dynCov);
-
 		for(int i=0; i<3; i++)
 			state[i][0] += dt*state[i+3][0];
 		for(int i=3; i<6; i++)
@@ -527,12 +530,11 @@ printArray("vel:\n",vel);
 		}
 
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
-		Array2D<double> state2 = state.copy();
 		Array2D<double> err2= meas-submat(state,0,2,0,0);
 		for(int i=0; i<3; i++)
-			state2[i][0] += gainKF[i][i]*err2[i][0];
+			state[i][0] += gainKF[i][i]*err2[i][0];
 		for(int i=3; i<6; i++)
-			state2[i][0] += gainKF[i][i-3]*err2[i-3][0];
+			state[i][0] += gainKF[i][i-3]*err2[i-3][0];
 
 		// S = (I-KC) S
 		for(int i=3; i<6; i++)
@@ -721,6 +723,12 @@ printArray("vel:\n",vel);
 		for(int i=0; i<4; i++)
 			data->data[i][0] = cmds[i];
 
+//{
+//String s = "cmds:\t";
+//for(int i=0; i<4; i++)
+//	s = s+cmds[i]+"\t";
+//Log::alert(s);
+//}
 		mMutex_cmds.lock();
 		mMotorCmdsBuffer.push_back(data);
 		mMutex_cmds.unlock();
@@ -1029,7 +1037,14 @@ pos[2][0] = mLastViconPos[2][0];
 
 		// apply events in order
 		list<shared_ptr<Data> >::const_iterator eventIter = events.begin();
-		Array2D<double> accel = thrust/mMass*thrustDir;
+		Array2D<double> accel;
+		if(thrust != -1)
+			accel = thrust/mMass*thrustDir;
+		else
+		{
+Log::alert(String()+"thrust2: "+thrust);
+			accel = Array2D<double>(3,1,0.0);
+		}
 		Time lastUpdateTime(dataTime);
 		double dt;
 		while(eventIter != events.end())
@@ -1041,22 +1056,33 @@ pos[2][0] = mLastViconPos[2][0];
 			{
 				case DATA_TYPE_THRUST:
 					thrust = (*eventIter)->data;
-					accel.inject(thrust/mMass*thrustDir);
+					if(thrust != -1)
+					{
+Log::alert(String()+"thrust3: "+thrust);
+						accel.inject(thrust/mMass*thrustDir);
+					}
+					else
+						for(int i=0; i<3; i++)
+							accel[i][0] = 0;
 					break;
 				case DATA_TYPE_THRUST_DIR:
-					thrustDir.inject( static_pointer_cast<DataVector>(data)->data);
-					accel.inject(thrust/mMass*thrustDir);
+					thrustDir.inject( static_pointer_cast<DataVector>(*eventIter)->data);
+					if(thrust != -1)
+						accel.inject(thrust/mMass*thrustDir);
+					else
+						for(int i=0; i<3; i++)
+							accel[i][0] = 0;
 					break;
 				case DATA_TYPE_VICON_POS:
 				case DATA_TYPE_CAMERA_POS:
-					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector>(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
+					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_VICON_VEL:
 				case DATA_TYPE_CAMERA_VEL:
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
+					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(*eventIter)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_OPTIC_FLOW_VEL:
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(data)->data, mVelMeasCov, mStateKF, mErrCovKF);
+					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
 					break;
 				default:
 					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);

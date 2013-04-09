@@ -158,8 +158,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -1941,7 +1941,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mMutex_logBuffer.unlock();
 
 //		if(mSys.mtime() - mLastTelemSendTime > 350-5)
-		if(mSys.mtime() - mLastTelemSendTime > 70-5)
+		if(mSys.mtime() - mLastTelemSendTime > 10-5)
 		{
 			mLastTelemSendTime = mSys.mtime();
 			

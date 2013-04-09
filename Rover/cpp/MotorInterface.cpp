@@ -75,7 +75,7 @@ namespace Quadrotor{
 			}
 			else if(mDoMotorWarmup)
 			{
-				Collection<uint16> cmds(4,10);
+				Collection<uint16> cmds(4,50);
 				sendCommandForced(cmds);
 				if(mMotorWarmupStartTime.getElapsedTimeMS() > 4e3)
 				{
