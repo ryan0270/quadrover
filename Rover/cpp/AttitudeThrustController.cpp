@@ -120,7 +120,18 @@ using namespace TNT;
 		cmds[1] = cmdThrust-cmdRoll+cmdPitch-cmdYaw;
 		cmds[2] = cmdThrust+cmdRoll+cmdPitch+cmdYaw;
 		cmds[3] = cmdThrust+cmdRoll-cmdPitch-cmdYaw;
-
+//{
+//String s = "cmds:\t";
+//for(int i=0; i<4; i++)
+//	s = s+cmds[i]+"\t";
+//String s2 = "chad:\t";
+//s2 = s2+cmdThrust+"\t";
+//s2 = s2+cmdRoll+"\t";
+//s2 = s2+cmdPitch+"\t";
+//s2 = s2+cmdYaw+"\t";
+//Log::alert(s);
+//Log::alert(s2);
+//}
 		for(int i=0; i<4; i++)
 			cmds[i] = min((double)(1 << 11), max(0.0, cmds[i]));
 	

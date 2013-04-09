@@ -214,10 +214,10 @@ public class RoverService extends Service {
 			camParams.setAntibanding( Camera.Parameters.ANTIBANDING_AUTO );
 			// I'm not sure what fast-fps-mode does
 //			camParams.set("fast-fps-mode","on");
-			String [] params = camParams.flatten().split(";");
-			Log.i(ME,"Camera params");
-			for(int i=0; i<params.length; i++)
-				Log.i(ME,"\t"+params[i]);
+//			String [] params = camParams.flatten().split(";");
+//			Log.i(ME,"Camera params");
+//			for(int i=0; i<params.length; i++)
+//				Log.i(ME,"\t"+params[i]);
 
 			mCamera.setParameters(camParams);
 			SurfaceView dummy = new SurfaceView(getBaseContext());
