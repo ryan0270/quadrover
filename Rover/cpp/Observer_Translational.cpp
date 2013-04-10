@@ -182,19 +182,17 @@ namespace Quadrotor{
 
 			// time update since last processed event
 			mMutex_cmds.lock(); mMutex_adaptation.lock();
+			thrust = 0;
 			if(mMotorCmdsBuffer.size() > 0)
-			{
 				for(int i=0; i<4; i++)
 					thrust += mForceGain*mMotorCmdsBuffer.back()->data[i][0];
-Log::alert(String()+"thrust1: "+thrust);
-			}
 			else
 				thrust = 0;
 			mMutex_adaptation.unlock(); mMutex_cmds.unlock();
 
 			shared_ptr<Data> thrustData(new Data());
 			thrustData->type = DATA_TYPE_THRUST;
-			if(mMotorCmdsBuffer.size() > 1)
+			if(mMotorCmdsBuffer.size() > 0)
 				thrustData->timestamp.setTime(mMotorCmdsBuffer.back()->timestamp);
 			if(mMotorOn)
 				thrustData->data = thrust;
@@ -723,12 +721,6 @@ printArray("vel:\n",vel);
 		for(int i=0; i<4; i++)
 			data->data[i][0] = cmds[i];
 
-//{
-//String s = "cmds:\t";
-//for(int i=0; i<4; i++)
-//	s = s+cmds[i]+"\t";
-//Log::alert(s);
-//}
 		mMutex_cmds.lock();
 		mMotorCmdsBuffer.push_back(data);
 		mMutex_cmds.unlock();
@@ -1041,10 +1033,7 @@ pos[2][0] = mLastViconPos[2][0];
 		if(thrust != -1)
 			accel = thrust/mMass*thrustDir;
 		else
-		{
-Log::alert(String()+"thrust2: "+thrust);
 			accel = Array2D<double>(3,1,0.0);
-		}
 		Time lastUpdateTime(dataTime);
 		double dt;
 		while(eventIter != events.end())
@@ -1057,10 +1046,7 @@ Log::alert(String()+"thrust2: "+thrust);
 				case DATA_TYPE_THRUST:
 					thrust = (*eventIter)->data;
 					if(thrust != -1)
-					{
-Log::alert(String()+"thrust3: "+thrust);
 						accel.inject(thrust/mMass*thrustDir);
-					}
 					else
 						for(int i=0; i<3; i++)
 							accel[i][0] = 0;
