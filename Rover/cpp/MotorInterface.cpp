@@ -58,16 +58,15 @@ namespace Quadrotor{
 		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
-//			if(!isConnected())
-//			{
-//				mWaitingForConnection = true;
-//				mWaitingForConnection = false;
-//				mSocket = Socket::ptr(mServerSocket->accept());
-//				if(mSocket != NULL)
-//					Log::alert("Connected to motors");
-//			}
-//			else if(!mMotorsEnabled && !mDoMotorWarmup)
-			if(!mMotorsEnabled && !mDoMotorWarmup)
+			if(!isConnected())
+			{
+				mWaitingForConnection = true;
+				mWaitingForConnection = false;
+				mSocket = Socket::ptr(mServerSocket->accept());
+				if(mSocket != NULL)
+					Log::alert("Connected to motors");
+			}
+			else if(!mMotorsEnabled && !mDoMotorWarmup)
 			{
 				// this is just to keep the connection alive
 				Collection<uint16> cmds(4,0);
@@ -81,7 +80,7 @@ namespace Quadrotor{
 				{
 					mDoMotorWarmup = false;
 					mMotorsEnabled = true;
-Log::alert("Warmup done");
+					Log::alert("Warmup done");
 				}
 			}
 
