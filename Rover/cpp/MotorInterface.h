@@ -32,7 +32,7 @@ class MotorInterface : public toadlet::egg::Thread
 	protected:
 	toadlet::egg::Socket::ptr mServerSocket, mSocket;
 	bool mRunning, mShutdown;
-	bool mMotorsEnabled, mIsConnected;
+	bool mMotorsEnabled;
 	bool mWaitingForConnection;
 	uint16 mMotorCmds[4];
 
