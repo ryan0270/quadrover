@@ -123,77 +123,77 @@ void QuadLogger::close()
 void QuadLogger::saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
 								 list<shared_ptr<ImageMatchData> > const &matchDataBuffer)
 {
-	list<shared_ptr<DataImage> >::const_iterator dataIter = dataBuffer.begin();
-	int id = 0;
-	mxml_node_t *xml = mxmlNewXML("1.0");
-	mxml_node_t *root = mxmlNewElement(xml,"root");
-	mxml_node_t *imgDataNode = mxmlNewElement(root,"ImgData");
-	while(dataIter != dataBuffer.end())
-	{
-		shared_ptr<DataImage> data = static_pointer_cast<DataImage>(*dataIter);
-		data->lock();
-		shared_ptr<cv::Mat> mat = data->img; 
-		String filename = mDir+"/images/img_"+id+".bmp";
-		cv::imwrite(filename.c_str(), *mat);
-
-		stringstream ss; ss << "img_" << id;
-		mxml_node_t *imgNode = mxmlNewElement(imgDataNode,ss.str().c_str());
-			mxmlNewInteger(mxmlNewElement(imgNode,"time"),Time::calcDiffMS(mStartTime, data->timestamp));
-			mxml_node_t *attNode = mxmlNewElement(imgNode,"att");
-				mxmlNewReal(mxmlNewElement(attNode,"roll"),data->att[0][0]);
-				mxmlNewReal(mxmlNewElement(attNode,"pitch"),data->att[1][0]);
-				mxmlNewReal(mxmlNewElement(attNode,"yaw"),data->att[2][0]);
-			mxml_node_t *angularVelNode = mxmlNewElement(imgNode,"angularVel");
-				mxmlNewReal(mxmlNewElement(angularVelNode,"x"),data->angularVel[0][0]);
-				mxmlNewReal(mxmlNewElement(angularVelNode,"y"),data->angularVel[1][0]);
-				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
-		data->unlock();
-
-		id++;
-		dataIter++;
-	}
-	mxmlNewInteger(mxmlNewElement(imgDataNode,"NumImages"),id);
-
-	list<shared_ptr<ImageMatchData> >::const_iterator matchDataIter = matchDataBuffer.begin();
-	mxml_node_t *matchDataNode = mxmlNewElement(root,"MatchData");
-	id = 0;
-	while(matchDataIter != matchDataBuffer.end())
-	{
-		stringstream ss; ss << "match_" << id;
-		shared_ptr<ImageMatchData> matchData = static_pointer_cast<ImageMatchData>(*matchDataIter);
-		matchData->lock();
-		mxml_node_t *matchNode = mxmlNewElement(matchDataNode,ss.str().c_str());
-			mxmlNewReal(mxmlNewElement(matchNode, "dt"), matchData->dt);
-			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
-			if(matchData->featurePoints.size() == 0 || matchData->featurePoints[0].size() == 0)
-				mxmlNewInteger(numPtsNode, 0);
-			else
-			{
-				mxmlNewInteger(numPtsNode, matchData->featurePoints[0].size());
-				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
-				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
-				for(int i=0; i<matchData->featurePoints[0].size(); i++)
-				{
-					cv::Point2f pt0 = matchData->featurePoints[0][i];
-					cv::Point2f pt1 = matchData->featurePoints[1][i];
-	
-					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
-					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");
-					mxmlNewReal(mxmlNewElement(p0Node,"x"),pt0.x);
-					mxmlNewReal(mxmlNewElement(p0Node,"y"),pt0.y);
-					mxmlNewReal(mxmlNewElement(p1Node,"x"),pt1.x);
-					mxmlNewReal(mxmlNewElement(p1Node,"y"),pt1.y);
-				}
-			}
-			matchData->unlock();
-
-		id++;
-		matchDataIter++;
-	}
-
-	FILE *fp = fopen((mDir+"/images/data.xml").c_str(),"w");
-	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
-	fclose(fp);
+//	list<shared_ptr<DataImage> >::const_iterator dataIter = dataBuffer.begin();
+//	int id = 0;
+//	mxml_node_t *xml = mxmlNewXML("1.0");
+//	mxml_node_t *root = mxmlNewElement(xml,"root");
+//	mxml_node_t *imgDataNode = mxmlNewElement(root,"ImgData");
+//	while(dataIter != dataBuffer.end())
+//	{
+//		shared_ptr<DataImage> data = static_pointer_cast<DataImage>(*dataIter);
+//		data->lock();
+//		shared_ptr<cv::Mat> mat = data->img; 
+//		String filename = mDir+"/images/img_"+id+".bmp";
+//		cv::imwrite(filename.c_str(), *mat);
+//
+//		stringstream ss; ss << "img_" << id;
+//		mxml_node_t *imgNode = mxmlNewElement(imgDataNode,ss.str().c_str());
+//			mxmlNewInteger(mxmlNewElement(imgNode,"time"),Time::calcDiffMS(mStartTime, data->timestamp));
+//			mxml_node_t *attNode = mxmlNewElement(imgNode,"att");
+//				mxmlNewReal(mxmlNewElement(attNode,"roll"),data->att[0][0]);
+//				mxmlNewReal(mxmlNewElement(attNode,"pitch"),data->att[1][0]);
+//				mxmlNewReal(mxmlNewElement(attNode,"yaw"),data->att[2][0]);
+//			mxml_node_t *angularVelNode = mxmlNewElement(imgNode,"angularVel");
+//				mxmlNewReal(mxmlNewElement(angularVelNode,"x"),data->angularVel[0][0]);
+//				mxmlNewReal(mxmlNewElement(angularVelNode,"y"),data->angularVel[1][0]);
+//				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
+//		data->unlock();
+//
+//		id++;
+//		dataIter++;
+//	}
+//	mxmlNewInteger(mxmlNewElement(imgDataNode,"NumImages"),id);
+//
+//	list<shared_ptr<ImageMatchData> >::const_iterator matchDataIter = matchDataBuffer.begin();
+//	mxml_node_t *matchDataNode = mxmlNewElement(root,"MatchData");
+//	id = 0;
+//	while(matchDataIter != matchDataBuffer.end())
+//	{
+//		stringstream ss; ss << "match_" << id;
+//		shared_ptr<ImageMatchData> matchData = static_pointer_cast<ImageMatchData>(*matchDataIter);
+//		matchData->lock();
+//		mxml_node_t *matchNode = mxmlNewElement(matchDataNode,ss.str().c_str());
+//			mxmlNewReal(mxmlNewElement(matchNode, "dt"), matchData->dt);
+//			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
+//			if(matchData->featurePoints.size() == 0 || matchData->featurePoints[0].size() == 0)
+//				mxmlNewInteger(numPtsNode, 0);
+//			else
+//			{
+//				mxmlNewInteger(numPtsNode, matchData->featurePoints[0].size());
+//				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
+//				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
+//				for(int i=0; i<matchData->featurePoints[0].size(); i++)
+//				{
+//					cv::Point2f pt0 = matchData->featurePoints[0][i];
+//					cv::Point2f pt1 = matchData->featurePoints[1][i];
+//	
+//					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
+//					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");
+//					mxmlNewReal(mxmlNewElement(p0Node,"x"),pt0.x);
+//					mxmlNewReal(mxmlNewElement(p0Node,"y"),pt0.y);
+//					mxmlNewReal(mxmlNewElement(p1Node,"x"),pt1.x);
+//					mxmlNewReal(mxmlNewElement(p1Node,"y"),pt1.y);
+//				}
+//			}
+//			matchData->unlock();
+//
+//		id++;
+//		matchDataIter++;
+//	}
+//
+//	FILE *fp = fopen((mDir+"/images/data.xml").c_str(),"w");
+//	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
+//	fclose(fp);
 }
 
 void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &matchBuffer, 
@@ -258,6 +258,7 @@ void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > cons
 		attCurIter++;
 	}
 
+Log::alert("Saving match data to " + mDir + "/matchData.xml");
 	FILE *fp = fopen((mDir+"/matchData.xml").c_str(),"w");
 	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
 	fclose(fp);

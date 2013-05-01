@@ -49,7 +49,7 @@ set (LIBS
 	${OpenCV_LIBS_OPT} 
 	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
 	${TBB_DIR}/libs/${NDK_NAME_ARCH}/libtbb.a
-	-lgnustl_static # this i already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
+	-lgnustl_static # this is already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
 	-lz -llog -ldl EGL android
 )
 

@@ -19,6 +19,8 @@ namespace Quadrotor{
 
 //		mWaitingMotorWarmup = false;
 		mDoMotorWarmup = true;
+
+		mMutex_socket.unlock();
 	}
 
 	MotorInterface::~MotorInterface()
@@ -29,9 +31,8 @@ namespace Quadrotor{
 	{
 		Log::alert("------------------------ MotorInterface shutdown started");
 		mRunning = false;
-		System sys;
 		while(!mShutdown)
-			sys.msleep(10);
+			System::msleep(10);
 
 		Log::alert("------------------------ MotorInterface shutdown done -------------------------");
 	}
@@ -150,7 +151,6 @@ namespace Quadrotor{
 
 	void MotorInterface::enableMotors(bool on)
 	{
-Log::alert("enabling motors");
 		// make sure we are always at a good starting point
 		Collection<uint16> cmds(4,0);
 		sendCommandForced(cmds);
@@ -172,11 +172,8 @@ Log::alert("enabling motors");
 	// TODO: Need to make this function const
 	bool MotorInterface::isConnected()
 	{
-		if(mWaitingForConnection)
-			return false;
-
 		mMutex_socket.lock(); 
-		bool temp = (mSocket != NULL); 
+		bool temp = (mSocket != NULL) && !mWaitingForConnection; 
 		mMutex_socket.unlock(); 
 		return temp;
 	}

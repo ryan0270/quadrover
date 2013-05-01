@@ -5,10 +5,10 @@ cmake .. \
 -DANDROID_SDK=/opt/android-sdk/  \
 -DANDROID_SDK_API_LEVEL=14  \
 -DARM_TARGET="armeabi-v7a with NEON"  \
--DMXML_DIR=/home/ryantr/mxml/android  \
+-DMXML_DIR=/home/ryantr/Software/ExternalSoftware/mxml/2.7/android14/ \
 -DANDROID_STL=GNU_STATIC \
 -DCMAKE_BUILD_TYPE=Release  \
 -DCMAKE_MODULE_PATH=/home/ryantr/toadlet/cmake/Modules/  \
 -DCMAKE_PREFIX_PATH=/home/ryantr/toadlet/android14 \
--DOpenCV_DIR=/home/ryantr/OpenCV-2.4.3.2-android-sdk/sdk/native/jni \
+-DOpenCV_DIR=/home/ryantr/Software/OpenCV/OpenCV-2.4.5-android-sdk/sdk/native/jni \
 -DTBB_DIR=/home/ryantr/Software/ExternalSoftware/tbb/tbb41_20130116oss/android14/
