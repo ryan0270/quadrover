@@ -91,99 +91,12 @@ public class Rover extends Activity implements Runnable
 		mBitmap = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
 		mIvImageDisplay.setImageBitmap(mBitmap);
 
-//		try{
-//			mCamera = Camera.open();
-//			Camera.Parameters camParams = mCamera.getParameters();
-//			List<Size> previewSizes = camParams.getSupportedPreviewSizes();
-//			camParams.setPreviewSize(640,480);
-//
-////			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
-////			int[] fps = fpsList.get(fpsList.size()-1);
-////			camParams.setPreviewFpsRange((fps[0]), fps[1]);
-//			camParams.setPreviewFpsRange(30000, 30000);
-//
-//			if(camParams.getVideoStabilization())
-//			{
-//				Log.i(ME, "I have video stabilization");
-//				camParams.setVideoStabilization(true);
-//			}
-//			else
-//				Log.i(ME, "I don't have video stabilization");
-//
-//			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
-//			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
-//
-//			camParams.setExposureCompensation( camParams.getMaxExposureCompensation() );
-//
-//			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO );
-//
-//			mCamera.setParameters(camParams);
-//			SurfaceView dummy = new SurfaceView(getBaseContext());
-//			mCamera.setPreviewDisplay(dummy.getHolder());
-//
-//			mMediaRecorder = new MediaRecorder();
-//			mMediaRecorder.setCamera(mCamera);
-//			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-//			mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_480P));
-//			mMediaRecorder.prepare();
-//		}
-//		catch(Exception e){Log.i(ME, e.toString());}
-//
-//		Camera.Size imgSize = mCamera.getParameters().getPreviewSize();
-//		int imgFormat = mCamera.getParameters().getPreviewFormat();
-//		Log.i(ME,"Image Format: "+String.valueOf(imgFormat));
-//		int bytesPerPixel = ImageFormat.getBitsPerPixel(imgFormat)/8;
-//		mImgBuffer = new byte[(int)(imgSize.width*imgSize.height*bytesPerPixel*1.5)]; // I'm not sure why the 1.5 needs to be there
-//		mCamera.addCallbackBuffer(mImgBuffer);
-//		mBitmap = Bitmap.createBitmap(imgSize.width, imgSize.height, Bitmap.Config.ARGB_8888);
-//		mImgYUV = new Mat(imgSize.height+imgSize.height/2, imgSize.width, CvType.CV_8UC1);
-//		mImgRGB = new Mat(imgSize.height, imgSize.width, CvType.CV_8UC4);
-//		mCamera.setPreviewCallbackWithBuffer( new Camera.PreviewCallback(){
-//			@Override
-//			public void onPreviewFrame(byte[] data, Camera cam)
-//			{
-//				if(mBitmap == null)
-//					return;
-//
-//				if(mLastPreviewTimeNS == 0)
-//					mLastPreviewTimeNS = System.nanoTime();
-//				else
-//				{
-//					double dt = (System.nanoTime()-mLastPreviewTimeNS)/1.0e9;
-//					mAvgDT = (mAvgDT*mImgProcCnt+dt)/(mImgProcCnt+1);
-//					mLastPreviewTimeNS = System.nanoTime();
-//				}
-//				
-//				mImgProcCnt++;
-//				mImgYUV.put(0,0,data);
-//				Imgproc.cvtColor(mImgYUV,mImgRGB,Imgproc.COLOR_YUV420sp2RGB);
-//				Utils.matToBitmap(mImgRGB, mBitmap);
-//				mIvImageDisplay.setImageBitmap(mBitmap);
-//
-//				mCamera.addCallbackBuffer(mImgBuffer);
-//			}
-//		});
-//
-//		mCamera.startPreview();
-
 		(new Thread(this)).start();
 	}
 
     @Override
 	public void onPause()
 	{
-//		if(mCamera != null)
-//		{
-//			mCamera.setPreviewCallback(null);
-//			mCamera.release();
-//			mCamera = null;
-//		}
-//		if(mMediaRecorder != null)
-//		{
-//			mMediaRecorder.reset();
-//			mMediaRecorder.release();
-//			mMediaRecorder = null;
-//		}
 		mThreadRun = false;
 		while(!mThreadIsDone)
 		{

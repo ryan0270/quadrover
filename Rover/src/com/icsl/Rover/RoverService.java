@@ -108,6 +108,8 @@ public class RoverService extends Service {
 			matchDataFile.renameTo(bakFile);
 		}
 
+		openCamera();
+
 		onJNIStart();
 		setLogDir(logDir.toString());
 		startLogging();
@@ -131,8 +133,6 @@ public class RoverService extends Service {
 
 		PowerManager pm = (PowerManager)getSystemService(Context.POWER_SERVICE);
 		mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, ME);
-
-		openCamera();
 
 		Toast.makeText(this, "Rover fetching", Toast.LENGTH_SHORT).show();
 	}
@@ -186,11 +186,10 @@ public class RoverService extends Service {
 			List<Size> previewSizes = camParams.getSupportedPreviewSizes();
 			camParams.setPreviewSize(640,480);
 
-			//			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
-			//			int[] fps = fpsList.get(fpsList.size()-1);
-			//			camParams.setPreviewFpsRange((fps[0]), fps[1]);
+			//	List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
+			//	int[] fps = fpsList.get(fpsList.size()-1);
+			//	camParams.setPreviewFpsRange((fps[0]), fps[1]);
 			camParams.setPreviewFpsRange(30000, 30000);
-
 //			if(camParams.getVideoStabilization())
 //			{
 //				Log.i(ME, "I have video stabilization");
@@ -242,7 +241,7 @@ public class RoverService extends Service {
 //			mMediaRecorder.setVideoFrameRate(30);
 //			mMediaRecorder.prepare();
 		}
-		catch(Exception e){Log.i(ME, e.toString());}
+		catch(Exception e){Log.i(ME,"CHADDDDDDDD"); Log.e(ME, e.toString());}
 
 		Camera.Size imgSize = mCamera.getParameters().getPreviewSize();
 		int imgFormat = mCamera.getParameters().getPreviewFormat();

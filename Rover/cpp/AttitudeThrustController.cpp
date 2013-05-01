@@ -59,7 +59,9 @@ using namespace TNT;
 		while(!mDone)
 			sys.msleep(10);
 	
+		mMutex_motorInterface.lock();
 		mMotorInterface->shutdown();
+		mMutex_motorInterface.unlock();
 	
 		Log::alert("------------------------- AttitudeThrustController shutdown done");
 	}

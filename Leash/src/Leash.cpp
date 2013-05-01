@@ -669,7 +669,7 @@ bool Leash::sendUDP(tbyte* data, int size)
 //	mMutex_socketUDP.lock();
 	try
 	{
-		mSocketUDP->sendTo(data,size,toadlet::egg::net::Socket::stringToIP(String(mIP.c_str())),mPort);
+		mSocketUDP->sendTo(data,size,toadlet::egg::Socket::stringToIP(String(mIP.c_str())),mPort);
 	}
 	catch (...)
 	{
