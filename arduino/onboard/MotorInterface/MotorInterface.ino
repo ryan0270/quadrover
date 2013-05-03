@@ -54,11 +54,17 @@ void adbEventHandler(Connection * connection, adb_eventType event, uint16_t leng
   }
 }
 
-boolean sendCommand(byte addr, byte cmd)
+boolean sendCommand(byte addr, short cmd)
 {
   Wire.beginTransmission(addr);
-  byte upper = floor(cmd/8);
+  byte upper = floor(cmd/8.0);
   byte lower = cmd % 8;
+//  delay(70);
+//  Serial.print("upper: ");
+//  Serial.print(upper);
+//  Serial.print(" --- lower: ");
+//  Serial.print(lower);
+//  Serial.print("\n");
   Wire.write(upper);
   Wire.write( lower & 0x07 );
   byte result = Wire.endTransmission(true);
@@ -78,7 +84,17 @@ void setup()
     Serial.begin(57600);
     Serial.println("Start chadding");
   }
+  
+  delay(500);
+  
+  // Initialise the ADB subsystem.  
+  ADB::init();
+  // Open an ADB stream to the phone's shell. Auto-reconnect
+  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
+  
   delay(1000);
+  
+  
   
 
   Wire.begin();
@@ -92,11 +108,7 @@ void setup()
     motorCommands[i] = 0;
     sendCommand(motorAddr[i], 0);
   }
-  
-  // Initialise the ADB subsystem.  
-  ADB::init();
-  // Open an ADB stream to the phone's shell. Auto-reconnect
-  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
+    
 
   doRegularMotorStart();
 

@@ -17,7 +17,6 @@ namespace Quadrotor{
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 
-//		mWaitingMotorWarmup = false;
 		mDoMotorWarmup = true;
 
 		mMutex_socket.unlock();
@@ -75,7 +74,7 @@ namespace Quadrotor{
 			}
 			else if(mDoMotorWarmup)
 			{
-				Collection<uint16> cmds(4,50);
+				Collection<uint16> cmds(4,100);
 				sendCommandForced(cmds);
 				if(mMotorWarmupStartTime.getElapsedTimeMS() > 4e3)
 				{
@@ -177,15 +176,5 @@ namespace Quadrotor{
 		mMutex_socket.unlock(); 
 		return temp;
 	}
-
-//	void MotorInterface::doMotorWarmup()
-//	{
-//		Log::alert("Starting motor warmup");
-//		Collection<uint16> cmds(4,20);
-//		sendCommandForced(cmds);
-//		System::msleep(10e3);
-//		Log::alert("Motor warmup done");
-//	}
-
 } // namespace Quadrotor
 } // namespace ICSL

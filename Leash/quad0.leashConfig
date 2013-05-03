@@ -14,7 +14,7 @@
       <I>
          <x>0.000000</x>
          <y>0.000000</y>
-         <z>2.000000</z>
+         <z>0.000000</z>
       </I>
       <ILimit>
          <x>2.000000</x>
@@ -24,13 +24,13 @@
    </Translation>
    <Attitude>
       <P>
-         <x>0.400000</x>
-         <y>0.400000</y>
+         <x>0.350000</x>
+         <y>0.350000</y>
          <z>1.000000</z>
       </P>
       <D>
-         <x>0.300000</x>
-         <y>0.300000</y>
+         <x>0.200000</x>
+         <y>0.200000</y>
          <z>1.000000</z>
       </D>
    </Attitude>
@@ -83,22 +83,22 @@
    </Attitude>
 </Observer>
 <Hardware>
-   <MotorForceGain>0.020000</MotorForceGain>
-   <MotorTorqueGain>0.010000</MotorTorqueGain>
+   <MotorForceGain>0.002000</MotorForceGain>
+   <MotorTorqueGain>0.000500</MotorTorqueGain>
    <MotorArmLength>0.200000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
       <North>0.000000</North>
-      <East>10.000000</East>
-      <South>10.000000</South>
-      <West>10.000000</West>
+      <East>0.000000</East>
+      <South>0.000000</South>
+      <West>0.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
    <RatioThreshold>0.200000</RatioThreshold>
    <MatchRadius>30.000000</MatchRadius>
 </Vision>
-<LogMask>505</LogMask>
+<LogMask>56</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>
