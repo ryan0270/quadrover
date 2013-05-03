@@ -55,7 +55,6 @@ namespace Quadrotor {
 			while(!mImgQueue.empty())
 			{
 				shared_ptr<ImageMatchData> data = mImgQueue.front();
-				mMutex_imgQueue.unlock();
 
 				id = data->imgData1->id;
 				String filename = String()+"/sdcard/RoverService/video/img_"+id+".bmp";
@@ -65,8 +64,6 @@ namespace Quadrotor {
 				cv::imwrite(filename.c_str(), img);
 				mMutex_imgQueue.lock();
 				id++;
-
-				mMutex_imgQueue.lock();
 			}
 			mMutex_imgQueue.unlock();
 			sys.msleep(1);
