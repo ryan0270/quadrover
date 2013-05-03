@@ -43,8 +43,6 @@ class MotorInterface : public toadlet::egg::Thread
 
 	int mThreadPriority, mScheduler;
 
-//	void doMotorWarmup();
-//	bool mWaitingMotorWarmup;
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
 };

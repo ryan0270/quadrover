@@ -135,12 +135,18 @@ void Leash::initialize()
 	connect(mScStopMotors,SIGNAL(activated()), this, SLOT(onBtnStopMotors_clicked()));
 	connect(mScQuit,SIGNAL(activated()), this, SLOT(onBtnQuit_clicked()));
 
-	mScIncreaseHeight = new QShortcut(Qt::Key_9, this);
-	mScDecreaseHeight = new QShortcut(Qt::Key_7, this);
-	mScMoveLeft = new QShortcut(Qt::Key_4, this);
-	mScMoveRight = new QShortcut(Qt::Key_6, this);
-	mScMoveForward = new QShortcut(Qt::Key_8, this);
-	mScMoveBackward = new QShortcut(Qt::Key_2, this);
+//	mScIncreaseHeight = new QShortcut(Qt::Key_9, this);
+//	mScDecreaseHeight = new QShortcut(Qt::Key_7, this);
+//	mScMoveLeft = new QShortcut(Qt::Key_4, this);
+//	mScMoveRight = new QShortcut(Qt::Key_6, this);
+//	mScMoveForward = new QShortcut(Qt::Key_8, this);
+//	mScMoveBackward = new QShortcut(Qt::Key_2, this);
+	mScIncreaseHeight = new QShortcut(Qt::Key_PageUp, this);
+	mScDecreaseHeight = new QShortcut(Qt::Key_PageDown, this);
+	mScMoveLeft = new QShortcut(Qt::Key_Left, this);
+	mScMoveRight = new QShortcut(Qt::Key_Right, this);
+	mScMoveForward = new QShortcut(Qt::Key_Up, this);
+	mScMoveBackward = new QShortcut(Qt::Key_Down, this);
 	connect(mScIncreaseHeight,SIGNAL(activated()), this, SLOT(onIncreaseHeight()));
 	connect(mScDecreaseHeight,SIGNAL(activated()), this, SLOT(onDecreaseHeight()));
 	connect(mScMoveLeft,SIGNAL(activated()), this, SLOT(onMoveLeft()));
@@ -158,8 +164,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
