@@ -118,6 +118,7 @@ void Rover::initialize()
 
 	mVideoMaker.initialize();
 	mVideoMaker.start();
+	mCommManager.addListener(&mVideoMaker);
 	mVisionProcessor.addListener(&mVideoMaker);
 
 	mSensorManager.initialize();
