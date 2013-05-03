@@ -26,6 +26,7 @@ QuadLogger::QuadLogger()
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 
+	mPaused = false;
 	mRunning = false;;
 }
 
@@ -87,7 +88,7 @@ void QuadLogger::run()
 	while(mRunning)
 	{
 		mMutex_logQueue.lock(); int size = mLogQueue.size(); mMutex_logQueue.unlock();
-		while(size > 0)
+		while(size > 0 && !mPaused)
 		{
 			mMutex_logQueue.lock();
 			line = mLogQueue.front();

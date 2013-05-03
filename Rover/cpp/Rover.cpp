@@ -545,11 +545,11 @@ void Rover::onNewCommTimeSync(int time)
 
 void Rover::onNewCommLogTransfer()
 {
-	mQuadLogger.close();
-	Log::alert("Before sending log file");
+//	mQuadLogger.close();
+	mQuadLogger.pause();
 	mCommManager.sendLogFile(mQuadLogger.getFullPath().c_str());
-	Log::alert("After sending log file");
-	mQuadLogger.start();
+	mQuadLogger.resume();
+//	mQuadLogger.start();
 }
 
 void Rover::onNewCommLogMask(uint32 mask)

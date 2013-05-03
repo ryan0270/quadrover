@@ -46,21 +46,27 @@ void VisionProcessor::shutdown()
 {
 	Log::alert("-------------------------- Vision processor shutdown started ----------------------");
 	mRunning = false;
-	System sys;
-	while(!mFinished)
-	{
-		Log::alert("VisionProcessor waiting");
-		sys.msleep(100); // this can take a while if we are saving a lot of images
-	}
+	this->join();
+//	while(!mFinished)
+//	{
+//		Log::alert("VisionProcessor waiting");
+//		System::msleep(100); // this can take a while if we are saving a lot of images
+//	}
 
+Log::alert("vision proc 10");
 	mImageDataCur = NULL;
 	mImageDataPrev = NULL;
 	mImageDataNext = NULL;
 
+Log::alert("vision proc 11");
 	mMutex_image.lock();
+Log::alert("vision proc 12");
 	mCurImage.release();
+Log::alert("vision proc 13");
 	mCurImageGray.release();
+Log::alert("vision proc 14");
 	mMutex_image.unlock();
+Log::alert("vision proc 15");
 
 	Log::alert("-------------------------- Vision processor done ----------------------");
 }
@@ -165,8 +171,13 @@ void VisionProcessor::run()
 			data->imgData0 = mImageDataPrev;
 			data->imgData1 = mImageDataCur;
 			data->imgAnnotated = imgAnnotatedData;
+Log::alert("vision proc 5");
 			for(int i=0; i<mListeners.size(); i++)
+			{
+Log::alert(String()+"Listener "+i);
 				mListeners[i]->onImageProcessed(data);
+			}
+Log::alert("vision proc 6");
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			if(mQuadLogger != NULL)
