@@ -141,19 +141,6 @@ using namespace TNT;
 		mLastMotorCmds = motorCmds; // should copy all the data
 		mMutex_motorInterface.unlock();
 	
-{
-//String s = "cmds:\t";
-//for(int i=0; i<4; i++)
-//	s = s+motorCmds[i]+"\t";
-//Log::alert(s);
-//String s2 = "chad:\t";
-//s2 = s2+cmdThrust+"\t";
-//s2 = s2+cmdRoll+"\t";
-//s2 = s2+cmdPitch+"\t";
-//s2 = s2+cmdYaw+"\t";
-//Log::alert(s2);
-}
-	
 		mDoControl = false;
 
 		if(!mMotorInterface->isMotorsEnabled())

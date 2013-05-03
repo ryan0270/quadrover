@@ -47,7 +47,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	void setStartTime(Time t){mStartTime = t;}
+	void setStartTime(Time t);
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 	void setRotViconToPhone(TNT::Array2D<double> const &rot){mRotViconToPhone.inject(rot);}
 	void setMotorCmds(double const cmds[4]);
@@ -131,7 +131,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
 
-	bool mNewImageResultsReady, mNewOpticFlowReady, mFlowCalcDone;
+	bool mNewImageResultsReady, mFlowCalcDone;
 	toadlet::egg::Mutex mMutex_imageData;
 	shared_ptr<ImageMatchData> mImageMatchData; 
 	void calcOpticalFlow(shared_ptr<ImageMatchData> const img);

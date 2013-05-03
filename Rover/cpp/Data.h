@@ -159,6 +159,15 @@ class DataImage : public Data
 	static inline unsigned int &sNextID(){ static unsigned int data = 0; return data;}
 }; 
 
+class DataAnnotatedImage : public Data
+{
+	public:
+	DataAnnotatedImage(){ };
+
+	shared_ptr<cv::Mat> imgAnnotated;
+	shared_ptr<DataImage> imgDataSource;
+};
+
 class DataPhoneTemp : public Data
 {
 	public:
@@ -179,12 +188,12 @@ class ImageMatchData
 	public:
 	vector<vector<cv::Point2f> > featurePoints;
 	shared_ptr<DataImage> imgData0, imgData1;
-	double dt;
+	shared_ptr<DataAnnotatedImage> imgAnnotated;
+//	shared_ptr<cv::Mat> imgAnnotated;
+//	double dt;
 
 	void lock(){mMutex.lock(); if(imgData0 != NULL) imgData0->lock(); if(imgData1 != NULL) imgData1->lock();}
 	void unlock(){mMutex.unlock(); if(imgData0 != NULL) imgData0->unlock(); if(imgData1 != NULL) imgData1->unlock();}
-
-	shared_ptr<cv::Mat> imgAnnotated;
 
 	protected:
 	toadlet::egg::Mutex mMutex;

@@ -287,11 +287,20 @@ using namespace toadlet::egg;
 	template <class T>
 	inline void printArray(String str, TNT::Array2D<T> m)
 	{
-		for(int i=0; i<m.dim1(); i++)
+		if(m.dim2() == 1)
 		{
-			for(int j=0; j<m.dim2(); j++)
-				str = str+m[i][j]+"\t";
+			for(int i=0; i<m.dim1(); i++)
+				str = str+m[i][0]+"\t";
 			str = str+"\n";
+		}
+		else
+		{
+			for(int i=0; i<m.dim1(); i++)
+			{
+				for(int j=0; j<m.dim2(); j++)
+					str = str+m[i][j]+"\t";
+				str = str+"\n";
+			}
 		}
 		Log::alert(str);
 	}

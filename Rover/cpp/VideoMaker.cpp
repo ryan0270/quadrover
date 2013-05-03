@@ -10,6 +10,8 @@ namespace Quadrotor {
 
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+		mMotorOn = false;
 	}
 
 	VideoMaker::~VideoMaker()
@@ -40,7 +42,8 @@ namespace Quadrotor {
 		System sys;
 
 		bool firstImage = true;
-		int id = 0;
+		int id = -1;
+		cv::Mat img;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
@@ -51,8 +54,10 @@ namespace Quadrotor {
 				Log::alert(String()+"Backlog: "+mImgQueue.size());
 			while(!mImgQueue.empty())
 			{
+				shared_ptr<ImageMatchData> data = mImgQueue.front();
+				id = data->imgData1->id;
 				String filename = String()+"/sdcard/RoverService/video/img_"+id+".bmp";
-				cv::Mat img = *(mImgQueue.front());
+				cv::Mat img = *(data->imgData1->img);
 				mImgQueue.pop();
   				mMutex_imgQueue.unlock();
 				cv::imwrite(filename.c_str(), img);
@@ -68,12 +73,12 @@ namespace Quadrotor {
 
 	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const data)
 	{
-		if(mLastImgTime.getElapsedTimeMS() > 80)
+		if(mLastImgTime.getElapsedTimeMS() > 50 && mMotorOn)
 		{
-//			mLastImgTime.setTime();
-//			mMutex_imgQueue.lock();
-//			mImgQueue.push(data->imgAnnotated);
-//			mMutex_imgQueue.unlock();
+			mLastImgTime.setTime();
+			mMutex_imgQueue.lock();
+			mImgQueue.push(data);
+			mMutex_imgQueue.unlock();
 		}
 	}
 
