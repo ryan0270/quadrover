@@ -75,6 +75,9 @@ class QuadLogger : public toadlet::egg::Thread
 		void setMask(uint32 mask){mTypeMask = mask;}
 		void addLine(String const &str, LogFlags type);
 
+		void pause(){mPaused = true;}
+		void resume(){mPaused = false;}
+
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 //		void start();
 		void run();
@@ -97,6 +100,8 @@ class QuadLogger : public toadlet::egg::Thread
 		FileStream::ptr mLogStream;
 		Mutex mMutex_file, mMutex_logQueue;
 		Time mStartTime;
+
+		bool mPaused;
 
 		void generateMatlabHeader();
 

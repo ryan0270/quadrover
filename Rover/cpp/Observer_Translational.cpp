@@ -104,9 +104,9 @@ namespace Quadrotor{
 	{
 		Log::alert("------------------------- Observer_Translational shutdown started  --------------------------------------------------");
 		mRunning = false;
-		System sys;
-		while(!mDone)
-			sys.msleep(10);
+		this->join();
+//		while(!mDone)
+//			System::msleep(10);
 
 		mPhoneTempData = NULL;
 		mImageMatchData = NULL;
