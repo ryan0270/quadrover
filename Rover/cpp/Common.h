@@ -9,6 +9,7 @@ namespace Quadrotor {
 using toadlet::uint64;
 enum LogFlags
 {
+	LOG_FLAG_OTHER			= 0,
 	LOG_FLAG_STATE			= 1 << 0,
 	LOG_FLAG_STATE_DES		= 1 << 1,
 	LOG_FLAG_MOTORS 		= 1 << 2,

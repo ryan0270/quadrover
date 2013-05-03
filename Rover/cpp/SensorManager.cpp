@@ -190,7 +190,7 @@ namespace Quadrotor{
 				if(mTimestampOffsetNS == 0)
 					mTimestampOffsetNS = mStartTime.getNS()-event.timestamp;
 // TODO: Set the event time to match the timestamp in the ASensor struct
-				int logFlag = -1;
+				LogFlags logFlag = LOG_FLAG_OTHER;
 				int logID = -1;
 				shared_ptr<Data> data = NULL;
 				switch(event.type)
@@ -267,7 +267,9 @@ namespace Quadrotor{
 				{
 					String s=String()+(data->timestamp.getMS()-mStartTime.getMS())+"\t"+logID+"\t";
 					s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
+					mMutex_logger.lock();
 					mQuadLogger->addLine(s,logFlag);
+					mMutex_logger.unlock();
 				}
 
 				if(data != NULL)
@@ -281,7 +283,7 @@ namespace Quadrotor{
 			}
 
 
-			sys.usleep(500);
+			sys.usleep(100);
 		}
 
 //		imgAcqThread.join();
@@ -398,12 +400,17 @@ namespace Quadrotor{
 			}
 			mMutex_listeners.unlock();
 
-			String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
-			s = s+battTemp+"\t";
-			s = s+secTemp+"\t";
-			s = s+fgTemp+"\t";
-			s = s+tmuTemp+"\t";
-			mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
+			if(mQuadLogger != NULL)
+			{
+				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
+				s = s+battTemp+"\t";
+				s = s+secTemp+"\t";
+				s = s+fgTemp+"\t";
+				s = s+tmuTemp+"\t";
+				mMutex_logger.lock();
+				mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
+				mMutex_logger.unlock();
+			}
 
 			sys.msleep(500);
 		}
@@ -560,6 +567,14 @@ namespace Quadrotor{
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onNewSensorUpdate(static_pointer_cast<Data>(data));
 		mMutex_listeners.unlock();
+
+		if(mQuadLogger != NULL)
+		{
+			String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMAGE + "\t" + data->id;
+			mMutex_logger.lock();
+			mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+			mMutex_logger.unlock();
+		}
 	}
 
 } // namespace Quadrotor

@@ -68,7 +68,6 @@ namespace Quadrotor{
 		mRotPhoneToCam = transpose(mRotCamToPhone);
 
 		mFlowCalcDone = true;
-		mNewOpticFlowReady = false;
 
 		mMotorOn = false;
 
@@ -230,7 +229,7 @@ namespace Quadrotor{
 
 			// optical flow
 			if(mNewImageResultsReady && mFlowCalcDone
-					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
+//					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
 					)
 			{
 				// if we're here then the previous thread should already be finished
@@ -277,7 +276,7 @@ namespace Quadrotor{
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
-
+	
 			uint64 t = loopTime.getElapsedTimeUS();
 			if(t < 5e3)
 				System::usleep(5e3-t); // maintain a (roughly) 200Hz update rate
@@ -297,7 +296,7 @@ namespace Quadrotor{
 			return;
 		}
 
-		double dt = matchData->dt;
+		double dt = Time::calcDiffNS( matchData->imgData0->timestamp, matchData->imgData1->timestamp)/1.0e9;
 		if(dt < 1e-3)
 		{
 			mFlowCalcDone = true;
@@ -421,8 +420,6 @@ namespace Quadrotor{
 				str = str+vel[i][0]+"\t";
 			str = str+matchData->imgData0->timestamp.getElapsedTimeMS()+"\t";
 			mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
-
-			mNewOpticFlowReady = true;
 
 			mMutex_meas.lock();
 			mOpticFlowVel.timestamp.setTime(img1Time);
@@ -770,11 +767,11 @@ printArray("vel:\n",vel);
 				mBarometerHeightState[0][0]= h-mZeroHeight;
 				mMutex_meas.unlock();
 
-				if(mQuadLogger != NULL)
-				{
-					String s = String() + mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_BAROMETER_HEIGHT+"\t" + h + "\t" + hComp;
-					mQuadLogger->addLine(s,LOG_FLAG_PC_UPDATES);
-				}
+//				if(mQuadLogger != NULL)
+//				{
+//					String s = String() + mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_BAROMETER_HEIGHT+"\t" + h + "\t" + hComp;
+//					mQuadLogger->addLine(s,LOG_FLAG_PC_UPDATES);
+//				}
 			}
 			break;
 			case DATA_TYPE_PHONE_TEMP:
@@ -1141,6 +1138,20 @@ pos[2][0] = mLastViconPos[2][0];
 			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
 		}
 		mMutex_adaptation.unlock();
+	}
+
+	void Observer_Translational::setStartTime(Time t)
+	{
+		mMutex_data.lock(); mMutex_att.lock(); mMutex_meas.lock(); mMutex_cmds.lock(); mMutex_phoneTempData.lock();
+		mStartTime.setTime(t);
+		// for now I'll be lazy and just clearn everything out, assuming 
+		// this only happens when nothing interesting is happening anyhow
+		for(int i=0; i<mDataBuffers.size(); i++)
+			mDataBuffers[i]->clear();
+
+		mNewEventsBuffer.clear();
+
+		mMutex_data.unlock(); mMutex_att.unlock(); mMutex_meas.unlock(); mMutex_cmds.unlock(); mMutex_phoneTempData.unlock();
 	}
 
 } // namespace Quadrotor

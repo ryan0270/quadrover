@@ -14,7 +14,7 @@
       <I>
          <x>0.000000</x>
          <y>0.000000</y>
-         <z>0.000000</z>
+         <z>2.000000</z>
       </I>
       <ILimit>
          <x>2.000000</x>
@@ -98,7 +98,7 @@
    <RatioThreshold>0.200000</RatioThreshold>
    <MatchRadius>30.000000</MatchRadius>
 </Vision>
-<LogMask>56</LogMask>
+<LogMask>509</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

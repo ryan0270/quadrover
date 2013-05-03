@@ -27,6 +27,7 @@ enum LogIDs
 	LOG_ID_GYRO = 2,
 	LOG_ID_MAGNOMETER = 3,
 	LOG_ID_PRESSURE = 4,
+	LOG_ID_IMAGE = 10,
 	LOG_ID_PHONE_TEMP = 500,
 	LOG_ID_CPU_USAGE = -2000,
 	LOG_ID_TIME_SYNC = -500,
@@ -72,7 +73,7 @@ class QuadLogger : public toadlet::egg::Thread
 		void setDir(String dir){mDir = dir;}
 		void setFilename(String name){mFilename = name;}
 		void setMask(uint32 mask){mTypeMask = mask;}
-		void addLine(String const &str, uint16 type);
+		void addLine(String const &str, LogFlags type);
 
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 //		void start();

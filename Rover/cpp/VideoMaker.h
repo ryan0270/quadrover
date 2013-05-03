@@ -13,8 +13,9 @@
 namespace ICSL{
 namespace Quadrotor{
 
-class VideoMaker : public VisionProcessorListener,
-				   public toadlet::egg::Thread
+class VideoMaker : 	public VisionProcessorListener,
+					public CommManagerListener,
+				   	public toadlet::egg::Thread
 {
 	public:
 		VideoMaker();
@@ -30,9 +31,15 @@ class VideoMaker : public VisionProcessorListener,
 		void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
 		void onImageLost(){};
 
+		// from CommManagerListener
+		void onNewCommMotorOn(){mMotorOn = true;}
+		void onNewCommMotorOff(){mMotorOn = false;}
+
 	protected:
 		bool mRunning, mDone;
-		std::queue<shared_ptr<cv::Mat> > mImgQueue;
+		bool mMotorOn;
+//		std::queue<shared_ptr<cv::Mat> > mImgQueue;
+		std::queue<shared_ptr<ImageMatchData> > mImgQueue;
 
 		Time mLastImgTime;
 		toadlet::egg::Mutex mMutex_imgQueue;

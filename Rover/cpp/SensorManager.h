@@ -51,7 +51,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
-	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime = time; mTimestampOffsetNS = 0; mMutex_startTime.unlock();}
+	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime.setTime(time); /*mTimestampOffsetNS = 0;*/ mMutex_startTime.unlock();}
 
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
@@ -78,6 +78,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	TNT::Array2D<double> mLastAccel, mLastGyro, mLastMag;
 	double mLastPressure;
 	toadlet::egg::Mutex mMutex_data, mMutex_listeners, mMutex_startTime, mMutex_attData;
+	toadlet::egg::Mutex mMutex_logger;
 
 	Time mStartTime;
 

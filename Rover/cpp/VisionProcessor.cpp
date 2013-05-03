@@ -135,14 +135,14 @@ void VisionProcessor::run()
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
 			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
-			if(points[0].size() > 0)
-			{
-				mFeatureMatchBuffer.push_back(points);
-				mFeatureMatchTimeBuffer.push_back(mImageDataCur->timestamp);
-				mFeatureMatchDTBuffer.push_back(dt);
-				mFeatureMatchAttPrevBuffer.push_back(attPrev.copy());
-				mFeatureMatchAttCurBuffer.push_back(attCur.copy());
-			}
+//			if(points[0].size() > 0)
+//			{
+//				mFeatureMatchBuffer.push_back(points);
+//				mFeatureMatchTimeBuffer.push_back(mImageDataCur->timestamp);
+//				mFeatureMatchDTBuffer.push_back(dt);
+//				mFeatureMatchAttPrevBuffer.push_back(attPrev.copy());
+//				mFeatureMatchAttCurBuffer.push_back(attCur.copy());
+//			}
 
 			shared_ptr<cv::Mat> imgAnnotated(new cv::Mat());
 			mCurImage.copyTo(*imgAnnotated);
@@ -154,17 +154,22 @@ void VisionProcessor::run()
 			drawTarget(circles, *imgAnnotated);
 
 			mCurImageAnnotated = imgAnnotated;
+			
+			shared_ptr<DataAnnotatedImage> imgAnnotatedData(new DataAnnotatedImage());
+			imgAnnotatedData->imgAnnotated = imgAnnotated;
+			imgAnnotatedData->imgDataSource = mImageDataCur;
 
 			shared_ptr<ImageMatchData> data(new ImageMatchData());
-			data->dt = dt;
+//			data->dt = dt;
 			data->featurePoints = points;
 			data->imgData0 = mImageDataPrev;
 			data->imgData1 = mImageDataCur;
-			data->imgAnnotated = imgAnnotated;
+			data->imgAnnotated = imgAnnotatedData;
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onImageProcessed(data);
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
+			if(mQuadLogger != NULL)
 			{
 				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImgProcTimeUS;
 				mMutex_logger.lock();
@@ -198,11 +203,11 @@ void VisionProcessor::run()
 	targetFinderThread.join();
 
 //	mQuadLogger->saveImageBuffer(mImgDataBuffer, mImgMatchDataBuffer);
-	mQuadLogger->saveFeatureMatchBuffer(mFeatureMatchBuffer, 
-										mFeatureMatchTimeBuffer, 
-										mFeatureMatchDTBuffer, 
-										mFeatureMatchAttPrevBuffer, 
-										mFeatureMatchAttCurBuffer);
+//	mQuadLogger->saveFeatureMatchBuffer(mFeatureMatchBuffer, 
+//										mFeatureMatchTimeBuffer, 
+//										mFeatureMatchDTBuffer, 
+//										mFeatureMatchAttPrevBuffer, 
+//										mFeatureMatchAttCurBuffer);
 
 	mImgDataBuffer.clear();
 	mImgMatchDataBuffer.clear();
