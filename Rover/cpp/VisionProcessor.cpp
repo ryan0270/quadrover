@@ -171,13 +171,8 @@ void VisionProcessor::run()
 			data->imgData0 = mImageDataPrev;
 			data->imgData1 = mImageDataCur;
 			data->imgAnnotated = imgAnnotatedData;
-Log::alert("vision proc 5");
 			for(int i=0; i<mListeners.size(); i++)
-			{
-Log::alert(String()+"Listener "+i);
 				mListeners[i]->onImageProcessed(data);
-			}
-Log::alert("vision proc 6");
 
 			mImgProcTimeUS = procStart.getElapsedTimeUS();
 			if(mQuadLogger != NULL)
