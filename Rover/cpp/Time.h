@@ -4,11 +4,11 @@
 #include <time.h>
 #include <toadlet/egg.h>
 
-using namespace std;
-using toadlet::uint64;
 
 namespace ICSL{
 namespace Quadrotor{
+using namespace std;
+using toadlet::uint64;
 
 class Time
 {

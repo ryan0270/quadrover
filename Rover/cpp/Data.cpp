@@ -97,7 +97,7 @@ double Data::interpolate(Time const &t, list<shared_ptr<Data> > const &d)
 	return interp;
 }
 
-// the list is assumed to sorted in increasing time order
+// the list is assumed to be sorted in increasing time order
 TNT::Array2D<double> Data::interpolate(Time const &t, list<shared_ptr<DataVector> > const &d)
 {
 	if(d.size() == 0)

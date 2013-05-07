@@ -10,5 +10,5 @@ cmake .. \
 -DCMAKE_BUILD_TYPE=Release  \
 -DCMAKE_MODULE_PATH=/home/ryantr/toadlet/cmake/Modules/  \
 -DCMAKE_PREFIX_PATH=/home/ryantr/toadlet/android14 \
--DOpenCV_DIR=/home/ryantr/OpenCV-2.4.3.2-android-sdk/sdk/native/jni \
+-DOpenCV_DIR=/home/ryantr/Software/OpenCV/OpenCV-2.4.5-android-sdk/sdk/native/jni \
 -DTBB_DIR=/home/ryantr/Software/ExternalSoftware/tbb/tbb41_20130116oss/android14/
