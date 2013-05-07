@@ -36,11 +36,15 @@ set (LIBS
 set (SRC ${SRC}
 	./cpp/main.cpp
 	./cpp/mser.cpp
+	../../Rover/cpp/Data.cpp
 )
 
 # Headers
 set (H ${H}
 	./cpp/mser.cpp
+	../../Rover/cpp/Time.h
+	../../Rover/cpp/Common.h
+	../../Rover/cpp/TNT_Utils.h
 )
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
