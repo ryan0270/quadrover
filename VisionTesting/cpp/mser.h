@@ -29,6 +29,8 @@ public:
     //! the operator that extracts the MSERs from the image or the specific part of it
 	CV_WRAP_AS(detect) void operator()( const cv::Mat& image, CV_OUT std::vector<std::vector<cv::Point> >& msers,
                                         const cv::Mat& mask=cv::Mat() ) const;
+	CV_WRAP_AS(detect) void operator()( const cv::Mat& image, CV_OUT std::vector<std::vector<cv::Point> >& msers, 
+										CV_OUT std::vector<cv::Vec4i>& hierarchy, const cv::Mat& mask ) const; 
 //    AlgorithmInfo* info() const;
 
 protected:

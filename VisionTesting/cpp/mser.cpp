@@ -1283,6 +1283,37 @@ void MSER::operator()( const Mat& image, std::vector<std::vector<Point> >& dstco
     for( i = 0; i < ncontours; i++, ++it )
         Seq<Point>(*it).copyTo(dstcontours[i]);
 }
+void MSER::operator()( const Mat& image, vector<vector<Point> >& dstcontours, vector<Vec4i>& hierarchy, const Mat& mask ) const 
+{ 
+	CvMat _image = image, _mask, *pmask = 0; 
+	if( mask.data ) 
+		pmask = &(_mask = mask); 
+	MemStorage storage(cvCreateMemStorage(0)); 
+	Seq<CvSeq*> contours; 
+    extractMSER( &_image, pmask, &contours.seq, storage,
+                 MSERParams(delta, minArea, maxArea, maxVariation, minDiversity,
+                            maxEvolution, areaThreshold, minMargin, edgeBlurSize));
+	SeqIterator<CvSeq*> it = contours.begin(); 
+	size_t i, ncontours = contours.size(); 
+	dstcontours.resize(ncontours); 
+	for( i = 0; i < ncontours; i++, ++it ) { 
+		Seq<Point>(*it).copyTo(dstcontours[i]); 
+		((CvContour *)*it)->color = (int)i; 
+	} 
+
+	hierarchy.resize(ncontours); 
+
+	it = contours.begin(); 
+	for( i = 0; i < ncontours; i++, ++it ) 
+	{ 
+		CvContour* c = (CvContour *)*it; 
+		int h_next = c->h_next ? ((CvContour*)c->h_next)->color : -1; 
+		int h_prev = c->h_prev ? ((CvContour*)c->h_prev)->color : -1; 
+		int v_next = c->v_next ? ((CvContour*)c->v_next)->color : -1; 
+		int v_prev = c->v_prev ? ((CvContour*)c->v_prev)->color : -1; 
+		hierarchy[i] = Vec4i(h_next, h_prev, v_next, v_prev); 
+	} 
+} 
 
 
 //void MserFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const

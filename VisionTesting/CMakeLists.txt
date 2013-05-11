@@ -42,6 +42,7 @@ set (SRC ${SRC}
 # Headers
 set (H ${H}
 	./cpp/mser.cpp
+	../../Rover/cpp/Data.h
 	../../Rover/cpp/Time.h
 	../../Rover/cpp/Common.h
 	../../Rover/cpp/TNT_Utils.h
