@@ -32,11 +32,16 @@ void loadLog(String filename,
 				);
 vector<string> tokenize(string str);
 
+inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
 vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
 													Array2D<double> const &mv, Array2D<double> const &Sv, 
 													double const &mz, double const &varz, 
 													double const &focalLength, double const &dt);
-inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
+Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, 
+									Array2D<double> > > const &priorDistList, 
+									vector<cv::Point2f> const &curPointList, 
+									Array2D<double> const &Sn, 
+									Array2D<double> const &SnInv);
 
 enum LogIDs
 {
@@ -91,17 +96,6 @@ int main(int argv, char* argc[])
 		return 0;
 	}
 
-//	int delta = 5;
-//	int minArea = 1e3;
-//	int maxArea = 640*480/5;
-//	double maxVariation = 0.25;
-//	double minDiversity = 0.2;
-//	int maxEvolution = 200;
-//	double areaThreshold = 1.01;
-//	double minMargin = 0.003;
-//	int edgeBlurSize = 5;
-//	ICSL::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity, maxEvolution, areaThreshold, minMargin, edgeBlurSize);
-
 	int keypress = 0;
 	cv::namedWindow("chad",1);
 	cv::moveWindow("chad",0,0);
@@ -112,6 +106,9 @@ int main(int argv, char* argc[])
 	vector<vector<cv::Point> > regions, hulls;
 	vector<cv::Point> hull;
 	vector<cv::Vec4i> heirarchy;
+	vector<cv::Point2f> prevPoints, curPoints;
+	Time prevTime, curTime;
+	curTime.setTimeMS(0);
 	int imgIdx = 0;
 	while(keypress != (int)'q' && imgIdx < imgIdList.size())
 	{
@@ -128,56 +125,61 @@ int main(int argv, char* argc[])
 				cout << "imgIdx exceeded vector" << endl;
 				return 0;
 			}
-			Time t = imgIdList[imgIdx].second;
-			Array2D<double> attState  = Data::interpolate(t, attDataList);
-			Array2D<double> transState = Data::interpolate(t, transDataList);
-			Array2D<double> errCov = Data::interpolate(t, errCovList);
+			prevTime.setTime(curTime);
+			curTime = imgIdList[imgIdx].second;
+			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
+			Array2D<double> transState = Data::interpolate(curTime, transDataList);
+			Array2D<double> errCov = Data::interpolate(curTime, errCovList);
 
 			Time start;
 
-//			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
-//			hulls.clear();
-//			mserDetector(imgGray, regions);
-//			cout << "\t" << regions.size() << " regions found " << endl;
-//			for(int i=0; i<regions.size(); i++)
-//			{
-//				cv::convexHull(regions[i], hull);
-//				hulls.push_back(hull);
-//			}
-//
-//			cv::drawContours(img, hulls, -1, cv::Scalar(0,0,255), 2);
-
-//			vector<cv::KeyPoint> kpList;
-//			cv::FAST(img, kpList, 50);
-//			cout << "\t" << kpList.size() << " keypoints found" << endl;
-//			cv::drawKeypoints(img, kpList, img, cv::Scalar(0,0,255));
-
 			cv::Mat imgGray;
 			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
-			vector<cv::Point2f> corners;
-			int maxCorners = 100;
+			int maxCorners = 5;
 			double qualityLevel = 0.05;
 			double minDistance = 10;
-			cv::goodFeaturesToTrack(imgGray, corners, maxCorners, qualityLevel, minDistance);
+			curPoints.swap(prevPoints);
+			cv::goodFeaturesToTrack(imgGray, curPoints, maxCorners, qualityLevel, minDistance);
+			cv::Point2f center(320,240);
 			cout << "\t" << "Proc time: " << start.getElapsedTimeNS()/1.0e9 << endl;
-			cout << "\t" << corners.size() << " corners found" << endl;
-			for(int i=0; i<corners.size(); i++)
-				cv::circle(img, corners[i], 4, cv::Scalar(0,0,255), -1);
-
-			imshow("chad",img);
+			cout << "\t" << curPoints.size() << " points found" << endl;
 
 			start.setTime();
+			for(int i=0; i<curPoints.size(); i++)
+				curPoints[i] -= center;
 			Array2D<double> mv(3,1,0.0);
-			mv[1][0] = 0.2;
 			Array2D<double> Sv = 0.2*createIdentity(3);
-			Sv[0][0] = Sv[1][1] = 0.1*0.1;
-			Sv[2][2] = 0.01*0.01;
-			double mz = 0.12;
-			double sz = 0.04;
+			double mz = transState[2][0];
+			double sz = 0.1;
 			double focalLength = 3.7*640/5.76;
-			double dt = 0.1;
-			calcPriorDistributions(corners, mv, Sv, mz, sz*sz, focalLength, dt);
+			double dt;
+			if(prevTime.getMS() > 0)
+				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
+			else
+				dt = 0;
+			vector<pair<Array2D<double>, Array2D<double> > > priorDistList;
+			priorDistList = calcPriorDistributions(prevPoints, mv, Sv, mz, sz*sz, focalLength, dt);
+			Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
+			Sn[0][0] = Sn[1][1] = 50;
+			SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
+			Array2D<double> C;
+			C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
 			cout << "\tVel calc time: " << start.getElapsedTimeNS()/1.0e9 << endl;
+
+			// prior distributions
+			for(int i=0; i<priorDistList.size(); i++)
+			{
+				cv::Point2f pt(priorDistList[i].first[0][0], priorDistList[i].first[1][0]);
+				double stdX = sqrt(priorDistList[i].second[0][0]);
+				double stdY = sqrt(priorDistList[i].second[1][1]);
+				cv::RotatedRect rect(pt+center, cv::Size(2*stdX, 2*stdY), 0);
+				cv::ellipse(img, rect, cv::Scalar(255,0,0), 3);
+			}
+
+			// current points
+			for(int i=0; i<curPoints.size(); i++)
+				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
+			imshow("chad",img);
 
 			keypress = cv::waitKey() % 256;
 
@@ -351,6 +353,8 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 		Array2D<double> SDelta = SDeltaList[i];
 		Array2D<double> md(2,1), Sd(2,2,0.0);
 		md = mDelta*mz1Inv;
+		md[0][0] += points[i].x;
+		md[1][0] += points[i].y;
 
 		Sd[0][0] = (pow(mDelta[0][0],2)+SDelta[0][0])*mz2Inv-pow(mDelta[0][0],2)*pow(mz1Inv,2);
 		Sd[1][1] = (pow(mDelta[1][0],2)+SDelta[1][1])*mz2Inv-pow(mDelta[1][0],2)*pow(mz1Inv,2);
@@ -359,7 +363,7 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 		double y = points[i].y;
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
-		dDistList.push_back(pair<Array2D<double>, Array2D<double> >(md, Sd));
+		dDistList.push_back(pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy()));
 	}
 
 	return dDistList;
@@ -369,11 +373,16 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 {
 	int N1 = priorDistList.size();
 	int N2 = curPointList.size();
+
+	if(N1 == 0 || N2 == 0)
+		return Array2D<double>();
 	Array2D<double> C(N1+1, N2+1, 0.0);
 	double x, y;
 	Array2D<double> mq(2,1), md(2,1);
 	Array2D<double> Sd, SdInv, Sa, SaInv;
 	Array2D<double> eye2 = createIdentity(2);
+	vector<double> colSum(N2,0.0);
+	double probNoCorr = 1.0/640.0/480.0;
 	for(int j=0; j<N2; j++)
 	{
 		x = curPointList[j].x;
@@ -400,8 +409,17 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 			double det_Sd = Sd[0][0]*Sd[1][1] - Sd[0][1]*Sd[1][0];
 			double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
 			C[i][j] = sqrt(det_Sa)/2.0/ICSL::Constants::PI/sqrt(det_Sd*det_Sn)*exp(-0.5*F);
+			colSum[j] += C[i][j];
 		}
+
+		C[N1][j] = probNoCorr;
+		colSum[j] += probNoCorr;
 	}
 
+	for(int j=0; j<N2; j++)
+		for(int i=0; i<N1+1; i++)
+			C[i][j] /= colSum[j];
+
+printArray("C\n",C);
 	return C;
 }
