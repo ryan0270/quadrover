@@ -90,10 +90,10 @@ RotCamToPhone = createRotMat(3,-pi/2)*...
 				createRotMat(1,pi);
 RotPhoneToCam = RotCamToPhone';
 RotViconToPhone = RotQuadToPhone*RotViconToQuad;
-R1 = diag([1 -1 -1]);
-R2 = 1/2*[sqrt(2)    -sqrt(2)    0;
-     -sqrt(2)   -sqrt(2)    0;
-     0          0           -2];
+% R1 = diag([1 -1 -1]);
+% R2 = 1/2*[sqrt(2)    -sqrt(2)    0;
+%      -sqrt(2)   -sqrt(2)    0;
+%      0          0           -2];
 R1 = RotViconToQuad;
 R2 = RotQuadToPhone;
 % R = R*diag([1 -1 -1]);

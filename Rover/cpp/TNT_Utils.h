@@ -304,5 +304,23 @@ using namespace toadlet::egg;
 		}
 		Log::alert(str);
 	}
+
+	template <class T1, class T2>
+	inline TNT::Array2D<T1> blkdiag(TNT::Array2D<T1> const &m1, TNT::Array2D<T2> const &m2)
+	{
+		Array2D<T1> m(m1.dim1()+m2.dim1(), m1.dim2()+m2.dim2());
+		for(int i=0; i<m.dim1(); i++)
+			for(int j=0; j<m.dim2(); j++)
+			{
+				if(i < m1.dim1() && j < m1.dim2())
+					m[i][j] = m1[i][j];
+				else if(i >= m1.dim1() && j >=m1.dim1())
+					m[i][j] = m2[i-m1.dim1()][j-m1.dim2()];
+				else
+					m[i][j] = 0;
+			}
+
+		return m;
+	}
 }
 #endif
