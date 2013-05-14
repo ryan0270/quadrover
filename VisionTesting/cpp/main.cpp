@@ -39,13 +39,12 @@ void loadPcLog(String filename,
 vector<string> tokenize(string str);
 
 inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
-vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
+list<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
 													Array2D<double> const &mv, Array2D<double> const &Sv, 
 													double const &mz, double const &varz, 
 													double const &focalLength, double const &dt,
 													Array2D<double> const &omega);
-Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, 
-									Array2D<double> > > const &priorDistList, 
+Array2D<double> calcCorrespondence(list<pair<Array2D<double>, Array2D<double> > > const &priorDistList, 
 									vector<cv::Point2f> const &curPointList, 
 									Array2D<double> const &Sn, 
 									Array2D<double> const &SnInv);
@@ -114,7 +113,6 @@ int main(int argv, char* argc[])
 	int keypress = 0;
 	cv::namedWindow("chad",1);
 	cv::moveWindow("chad",0,0);
-//	int imgId = 1482;
 	int imgId = 1700;
 	stringstream ss;
 	cv::Mat img, imgGray, imgGrayRaw;
@@ -127,7 +125,8 @@ int main(int argv, char* argc[])
 	attPrev = createIdentity(3);
 	attCur = createIdentity(3);
 	attChange = createIdentity(3);
-	while(keypress != (int)'q' && imgIdx < imgIdList.size())
+	Time begin;
+	while(keypress != (int)'q' && imgIdx < imgIdList.size() && imgId < 2000)
 	{
 		ss.str("");
 		ss << "img_" << imgId++ << ".bmp";
@@ -198,7 +197,7 @@ int main(int argv, char* argc[])
 			else
 				dt = 0;
 			Array2D<double> omega = logSO3(attChange, dt);
-			vector<pair<Array2D<double>, Array2D<double> > > priorDistList;
+			list<pair<Array2D<double>, Array2D<double> > > priorDistList;
 			priorDistList = calcPriorDistributions(prevPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
 
 			// Correspondence
@@ -214,10 +213,10 @@ int main(int argv, char* argc[])
 				Array2D<double> vel;
 				double z;
 				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
-//cout << "    mv:\t" << mv[0][0] << "\t" << mv[1][0] << "\t" << mv[2][0] << endl;
-//cout << "velEst:\t" << vel[0][0] << "\t" << vel[1][0] << "\t" << vel[2][0] << endl;
-//cout << "  mz:\t" << mz << endl;
-//cout << "zEst:\t" << z << endl;
+cout << "    mv:\t" << mv[0][0] << "\t" << mv[1][0] << "\t" << mv[2][0] << endl;
+cout << "velEst:\t" << vel[0][0] << "\t" << vel[1][0] << "\t" << vel[2][0] << endl;
+cout << "  mz:\t" << mz << endl;
+cout << "zEst:\t" << z << endl;
 			}
 
 			cout << "\tVel calc time: " << start.getElapsedTimeNS()/1.0e9 << endl;
@@ -229,9 +228,11 @@ int main(int argv, char* argc[])
 			if(priorDistList.size() > 0)
 				maxSigma = 0;
 			cv::Mat overlay = img.clone();
+			list<pair<Array2D<double>, Array2D<double> > >::const_iterator iter_priorDistList;
+			iter_priorDistList = priorDistList.begin();
 			for(int i=0; i<priorDistList.size(); i++)
 			{
-				Array2D<double> Sd = priorDistList[i].second;
+				Array2D<double> Sd = iter_priorDistList->second;
 				JAMA::Eigenvalue<double> eig_Sd(Sd);
 				Array2D<double> V, D;
 				eig_Sd.getV(V);
@@ -240,12 +241,14 @@ int main(int argv, char* argc[])
 				for(int i=0; i<D.dim1(); i++)
 					maxSigma = max(maxSigma, sqrt(D[i][i]));
 
-				cv::Point2f pt(priorDistList[i].first[0][0], priorDistList[i].first[1][0]);
+				cv::Point2f pt(iter_priorDistList->first[0][0], iter_priorDistList->first[1][0]);
 				double width = 2*sqrt(D[0][0]);
 				double height = 2*sqrt(D[1][1]);
 				double theta = atan2(V[1][0], V[0][0]);
 				cv::RotatedRect rect(pt+center, cv::Size(width, height), theta);
 				cv::ellipse(overlay, rect, cv::Scalar(255,0,0), -1);
+
+				iter_priorDistList++;
 			}
 			double opacity = 0.3;
 			cv::addWeighted(overlay, opacity, img, 1-opacity, 0, img);
@@ -261,6 +264,8 @@ int main(int argv, char* argc[])
 			img.data = NULL;
 		}
 	}
+
+	cout << "Total time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
 
     return 0;
 }
@@ -416,7 +421,7 @@ void loadPcLog(String filename,
 		cout << "Couldn't find " << filename.c_str() << endl;
 }
 
-vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
+list<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
 							Array2D<double> const &mv, Array2D<double> const &Sv, 
 							double const &mz, double const &varz, 
 							double const &focalLength, double const &dt, 
@@ -478,7 +483,7 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 	}
 
 	// calc distribution moments
-	vector<pair<Array2D<double>, Array2D<double> > > dDistList;
+	list<pair<Array2D<double>, Array2D<double> > > priorDistList;
 	for(int i=0; i<mDeltaList.size(); i++)
 	{
 		Array2D<double> mDelta = mDeltaList[i];
@@ -503,24 +508,63 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
-		dDistList.push_back(pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy()));
+		priorDistList.push_back(pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy()));
 	}
 
-	return dDistList;
+	return priorDistList;
 }
 
-Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<double> const &Sn, Array2D<double> const &SnInv)
+Array2D<double> calcCorrespondence(list<pair<Array2D<double>, Array2D<double> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<double> const &Sn, Array2D<double> const &SnInv)
 {
 	int N1 = priorDistList.size();
 	int N2 = curPointList.size();
 
 	if(N1 == 0 || N2 == 0)
 		return Array2D<double>();
+
+	// Precompute some things
+	list<Array2D<double> > SdInvList, SaInvList, SaList;
+	list<double> fBList, coeffList, xRangeList, yRangeList;
+	Array2D<double> Sd, SdInv, Sa, SaInv;
+	Array2D<double> md;
+	Array2D<double> eye2 = createIdentity(2);
+	double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
+	list<pair<Array2D<double>, Array2D<double> > >::const_iterator iter_priorDistList;
+	iter_priorDistList = priorDistList.begin();
+	for(int i=0; i<N1; i++)
+	{
+		md = iter_priorDistList->first;
+		Sd = iter_priorDistList->second;
+
+		JAMA::Cholesky<double> chol_Sd(Sd);
+		SdInv = chol_Sd.solve(eye2);
+		
+		SaInv = SdInv+SnInv;
+		JAMA::Cholesky<double> chol_SaInv(SaInv);
+		Sa = chol_SaInv.solve(eye2);
+
+		double fB = matmultS(transpose(md),matmult(SdInv,md));
+		double det_Sd = Sd[0][0]*Sd[1][1] - Sd[0][1]*Sd[1][0];
+		double det_Sa = Sa[0][0]*Sa[1][1] - Sa[0][1]*Sa[1][0];
+		double coeff = sqrt(det_Sa)*2.0*ICSL::Constants::PI*sqrt(det_Sd*det_Sn);
+		double xrange = 5*sqrt(Sd[0][0]+Sn[0][0]);
+		double yrange = 5*sqrt(Sd[1][1]+Sn[1][1]);
+
+		SdInvList.push_back(SdInv.copy());
+		SaInvList.push_back(SaInv.copy());
+		SaList.push_back(Sa.copy());
+		fBList.push_back(fB);
+		coeffList.push_back(coeff);
+		xRangeList.push_back(xrange);
+		yRangeList.push_back(yrange);
+
+		iter_priorDistList++;
+	}
+
 	Array2D<double> C(N1+1, N2+1, 0.0);
 	double x, y;
-	Array2D<double> mq(2,1), md(2,1);
-	Array2D<double> Sd, SdInv, Sa, SaInv;
-	Array2D<double> eye2 = createIdentity(2);
+	Array2D<double> mq(2,1);//, md(2,1);
+//	Array2D<double> Sd, SdInv, Sa, SaInv;
 	vector<double> colSum(N2,0.0);
 	double probNoCorr = 1.0/640.0/480.0;
 	for(int j=0; j<N2; j++)
@@ -530,26 +574,54 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		mq[0][0] = x;
 		mq[1][0] = y;
 
+		list<Array2D<double> >::const_iterator iter_SdInvList, iter_SaInvList, iter_SaList;
+		list<double>::const_iterator iter_fBList, iter_coeffList, iter_xRangeList, iter_yRangeList;
+		iter_SdInvList = SdInvList.begin();
+		iter_SaInvList = SaInvList.begin();
+		iter_SaList = SaList.begin();
+		iter_fBList = fBList.begin();
+		iter_coeffList = coeffList.begin();
+		iter_xRangeList = xRangeList.begin();
+		iter_yRangeList = yRangeList.begin();
+
+		list<pair<Array2D<double>, Array2D<double> > >::const_iterator iter_priorDistList;
+		iter_priorDistList = priorDistList.begin();
+		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
 		for(int i=0; i<N1; i++)
 		{
-			md = priorDistList[i].first;
-			Sd = priorDistList[i].second;
-			double xrange = 3*sqrt(Sd[0][0]+Sn[0][0]);
-			double yrange = 3*sqrt(Sd[1][1]+Sn[1][1]);
+			md = iter_priorDistList->first;
+
+			double xrange = *iter_xRangeList;
+			double yrange = *iter_yRangeList;
+			iter_xRangeList++;
+			iter_yRangeList++;
 			if(abs(x-md[0][0]) > xrange || abs(y-md[1][0]) > yrange )
+			{
+				iter_SdInvList++;
+				iter_SaInvList++;
+				iter_SaList++;
+				iter_fBList++;
+				iter_coeffList++;
+				iter_priorDistList++;
 				continue;
-			JAMA::Cholesky<double> chol_Sd(Sd);
-			SdInv = chol_Sd.solve(eye2);
-			SaInv = (SdInv + SnInv);
-			JAMA::Cholesky<double> chol_SaInv(SaInv);
-			Sa = chol_SaInv.solve(eye2);
-			Array2D<double> ma = matmult(Sa,matmult(SdInv,md)+matmult(SnInv,mq));
-			double F = -1.0*matmultS(transpose(ma),matmult(SaInv,ma))+matmultS(transpose(md),matmult(SdInv,md))+matmultS(transpose(mq),matmult(SnInv,mq));
-			double det_Sa = Sa[0][0]*Sa[1][1] - Sa[0][1]*Sa[1][0];
-			double det_Sd = Sd[0][0]*Sd[1][1] - Sd[0][1]*Sd[1][0];
-			double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
-			C[i][j] = sqrt(det_Sa)/2.0/ICSL::Constants::PI/sqrt(det_Sd*det_Sn)*exp(-0.5*F);
+			}
+
+			SdInv = *iter_SdInvList;
+			SaInv = *iter_SaInvList;
+			Sa = *iter_SaList;
+			double fB = *iter_fBList;
+
+			Array2D<double> ma = matmult(Sa,matmult(*iter_SdInvList,md)+matmult(SnInv,mq));
+			double f = -1.0*matmultS(transpose(ma),matmult(SaInv,ma))+fB+fC;
+			C[i][j] = (*iter_coeffList)*exp(-0.5*f);
 			colSum[j] += C[i][j];
+
+			iter_SdInvList++;
+			iter_SaInvList++;
+			iter_SaList++;
+			iter_fBList++;
+			iter_coeffList++;
+			iter_priorDistList++;
 		}
 
 		C[N1][j] = probNoCorr;
