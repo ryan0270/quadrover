@@ -2,6 +2,8 @@
 #include <tbb/parallel_for.h>
 #include <tbb/mutex.h>
 
+#include <iostream>
+
 namespace ICSL {
 namespace Rover {
 
@@ -22,14 +24,13 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
 	vector<Array2D<double> > mDeltaList(points.size()), SDeltaList(points.size());
-	double x, y;
-	Array2D<double> mDelta(2,1), SDelta(2,2,0.0);
 //	for(int i=0; i<points.size(); i++)
-	tbb::parallel_for(size_t(0), size_t(points.size()), [&](size_t i)
+	tbb::parallel_for(0, (int)points.size(), [&](int i)
 	{
-		x = points[i].x;
-		y = points[i].y;
+		double x = points[i].x;
+		double y = points[i].y;
 
+		Array2D<double> mDelta(2,1), SDelta(2,2,0.0);
 		mDelta[0][0] = x*mvz*dt-f*mvx*dt;
 		mDelta[1][0] = y*mvz*dt-f*mvy*dt;
 
@@ -38,7 +39,8 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 
 		mDeltaList[i] = mDelta.copy();
 		SDeltaList[i] = SDelta.copy();
-	});
+	}
+	);
 
 	// calc distribution of Z^-1
 	double mz1Inv = 1.0/mz;
@@ -71,7 +73,7 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 //	list<pair<Array2D<double>, Array2D<double> > > priorDistList;
 	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(mDeltaList.size());
 //	for(int i=0; i<mDeltaList.size(); i++)
-	tbb::parallel_for(size_t(0), size_t(mDeltaList.size()), [&](size_t i)
+	tbb::parallel_for(0, (int)mDeltaList.size(), [&](int i)
 	{
 		Array2D<double> mDelta = mDeltaList[i];
 		Array2D<double> SDelta = SDeltaList[i];
@@ -96,7 +98,8 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
 		priorDistList[i] = pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy());
-	});
+	}
+	);
 
 	return priorDistList;
 }
@@ -115,7 +118,7 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	Array2D<double> eye2 = createIdentity(2);
 	double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
 //	for(int i=0; i<N1; i++)
-	tbb::parallel_for(size_t(0), size_t(N1), [&](size_t i)
+	tbb::parallel_for(0, N1, [&](int i)
 	{
 		Array2D<double> md = priorDistList[i].first;
 		Array2D<double> Sd = priorDistList[i].second;
@@ -149,8 +152,7 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	double probNoCorr = 1.0/640.0/480.0;
 	for(int j=0; j<N2; j++)
 	// parallelizing at this level is causing memory curruption, but not sure why
-//	tbb::mutex mutex_sum, mutex_list;
-//	tbb::parallel_for(size_t(0), size_t(N2), [&](size_t j)
+//	tbb::parallel_for(0, N2, [&](int j)
 	{
 		double x = curPointList[j].x;
 		double y = curPointList[j].y;
@@ -160,7 +162,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 
 		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
 //		for(int i=0; i<N1; i++)
-		tbb::parallel_for(size_t(0), size_t(N1), [&](size_t i)
+		tbb::mutex mutex_sum;
+		tbb::parallel_for(0, N1, [&](int i)
 		{
 			Array2D<double> md = priorDistList[i].first;
 
@@ -171,8 +174,12 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 				double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
 //				mutex_list.unlock();
 				C[i][j] = coeffList[i]*exp(-0.5*f);
+				mutex_sum.lock();
 				colSum[j] += C[i][j];
+				mutex_sum.unlock();
 			}
+			else
+				C[i][j] = 0;
 		}
 		);
 
@@ -183,17 +190,17 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	}
 //	);
 
+	C[N1][N2] = 0;
+
 	// Scale colums to unit sum
-//	for(int j=0; j<N2; j++)
-	tbb::parallel_for(size_t(0), size_t(N2), [&](size_t j)
+	for(int j=0; j<N2; j++)
 	{
 		for(int i=0; i<N1+1; i++)
 			C[i][j] /= colSum[j];
-	});
+	}
 
 	// Now check if any of the rows sum to over 1
-//	for(int i=0; i<N1; i++)
-	tbb::parallel_for(size_t(0), size_t(N1), [&](size_t i)
+	for(int i=0; i<N1; i++)
 	{
 		double rowSum = 0;
 		for(int j=0; j<N2; j++)
@@ -209,18 +216,15 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		else
 			C[i][N2] = 1-rowSum;
 	}
-	);
 
 	// and, finally, reset the virtual point correspondence so columns sum to 1 again
-//	for(int j=0; j<N2; j++)
-	tbb::parallel_for(size_t(0), size_t(N2), [&](size_t j)
+	for(int j=0; j<N2; j++)
 	{
 		double colSum = 0;
 		for(int i=0; i<N1; i++)
 			colSum += C[i][j];
 		C[N1][j] = 1-colSum;
 	}
-	);
 
 	return C;
 }
@@ -250,14 +254,13 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 	// Build up constant matrices
 	///////////////////////////////////////////////////////////////
 	vector<Array2D<double> > LvList(N1), q1HatList(N1);
-	Array2D<double> Lv(2,3);
-	double x, y;
 //	for(int i=0; i<N1; i++)
-	tbb::parallel_for(size_t(0), size_t(N1), [&](size_t i)
+	tbb::parallel_for(0, N1, [&](int i)
 	{
 		double x = prevPoints[i].x;
 		double y = prevPoints[i].y;
-		
+
+		Array2D<double> Lv(2,3);
 		Lv[0][0] = -f; Lv[0][1] = 0;  Lv[0][2] = x;
 		Lv[1][0] = 0;  Lv[1][1] = -f; Lv[1][2] = y;
 		LvList[i] = Lv.copy();
@@ -274,9 +277,18 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 	}
 	);
 
+for(int i=0; i<N1; i++)
+{
+	cout << "point " << i << " Lv" << endl;
+	for(int k=0; k<2; k++)
+		for(int j=0; j<3; j++)
+				cout << LvList[i][k][j] << "\t" << endl;
+	cout << "--------------------------------------------------" << endl;
+}
+
 	vector<Array2D<double> > AjList(N2);
 //	for(int j=0; j<N2; j++)
-	tbb::parallel_for(size_t(0), size_t(N2), [&](size_t j)
+	tbb::parallel_for(0, N2, [&](int j)
 	{
 		Array2D<double> Aj(2,3,0.0);
 		for(int i=0; i<N1; i++)
@@ -289,11 +301,29 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 		AjList[j] = Aj.copy();
 	}
 	);
+//cout << "C" << endl;
+//for(int i=0; i<C.dim1(); i++)
+//{
+//	for(int j=0; j<C.dim2(); j++)
+//		cout << C[i][j] << "\t";
+//	cout << endl;
+//}
+//cout << "--------------------------------------------------" << endl;
+
+for(int i=0; i<N2; i++)
+{
+	cout << "point " << i << " Aj" << endl;
+	for(int k=0; k<2; k++)
+		for(int j=0; j<3; j++)
+				cout << AjList[i][k][j] << "\t" << endl;
+	cout << "--------------------------------------------------" << endl;
+}
 
 	double s0 = 0;
 	Array2D<double> s1_T(1,3,0.0), S2(3,3,0.0);
+	tbb::mutex mutex_S;
 //	for(int j=0; j<N2; j++)
-	tbb::parallel_for(size_t(0), size_t(N2), [&](size_t j)
+	tbb::parallel_for(0, N2, [&](int j)
 	{
 		Array2D<double> Aj = AjList[j];
 		Array2D<double> Aj_T = transpose(Aj);
@@ -315,14 +345,39 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 			}
 	
 			Array2D<double> temp2 = matmult(SnInv, Aj);
-			s0   += (1-C[N1][j])*matmultS(transpose(temp1), matmult(SnInv, temp1));
-			s1_T += (1-C[N1][j])*matmult(transpose(temp1), temp2);
-			S2   += (1-C[N1][j])*matmult(Aj_T, temp2);
+			mutex_S.lock();
+			double 			ds0   = (1-C[N1][j])*matmultS(transpose(temp1), matmult(SnInv, temp1));
+			Array2D<double>	ds1_T = (1-C[N1][j])*matmult(transpose(temp1), temp2);
+			Array2D<double>	dS2   = (1-C[N1][j])*matmult(Aj_T, temp2);
+			mutex_S.unlock();
+
+			mutex_S.lock();
+			s0   += ds0;
+			s1_T += ds1_T;
+			S2   += dS2;
+			mutex_S.unlock();
 		}
 	}
 	);
 
+
 	Array2D<double> s1 = transpose(s1_T);
+
+cout << "s0: " << s0 << endl;
+cout << "--------------------------------------------------" << endl;
+cout << "s1:\t";
+for(int i=0; i<3; i++)
+	cout << s1[i][0] << "\t";
+cout << endl;
+cout << "--------------------------------------------------" << endl;
+cout << "S2:\n";
+for(int i=0; i<3; i++)
+{
+	for(int j=0; j<3; j++)
+		cout << S2[i][j] << "\t";
+	cout << endl;
+}
+cout << "--------------------------------------------------" << endl;
 
 	// For easy evaluation of the objective function
 	auto scoreFunc = [&](Array2D<double> const &vel, double const &z){ return -0.5*(
@@ -397,6 +452,10 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
+
+for(int i=0; i<3; i++)
+	cout << velMAP[i][0] << "\t";
+cout << endl;
 }
 
 }
