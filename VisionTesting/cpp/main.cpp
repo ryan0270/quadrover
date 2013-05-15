@@ -9,10 +9,10 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/nonfree/features2d.hpp>
 
 #include "toadlet/egg.h"
 
-//#include "mser.h"
 #include "../../Rover/cpp/Data.h"
 #include "../../Rover/cpp/TNT/tnt.h"
 #include "../../Rover/cpp/TNT/jama_cholesky.h"
@@ -21,7 +21,10 @@
 #include "../../Rover/cpp/Time.h"
 #include "../../Rover/cpp/constants.h"
 
+#include "mapFuncs.h"
+
 using namespace std;
+using namespace ICSL::Rover;
 using namespace ICSL::Quadrotor;
 using namespace ICSL::Constants;
 using namespace TNT;
@@ -37,31 +40,6 @@ void loadPcLog(String filename,
 				list<shared_ptr<DataVector> > &transStateList
 		);
 vector<string> tokenize(string str);
-
-inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
-list<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
-													Array2D<double> const &mv, Array2D<double> const &Sv, 
-													double const &mz, double const &varz, 
-													double const &focalLength, double const &dt,
-													Array2D<double> const &omega);
-Array2D<double> calcCorrespondence(list<pair<Array2D<double>, Array2D<double> > > const &priorDistList, 
-									vector<cv::Point2f> const &curPointList, 
-									Array2D<double> const &Sn, 
-									Array2D<double> const &SnInv);
-
-void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out*/,
-						vector<cv::Point2f> const &prevPoints,
-						vector<cv::Point2f> const &curPoints, 
-						Array2D<double> const &C, // correspondence matrix
-						Array2D<double> const &mv, // velocity mean
-						Array2D<double> const &Sv, // velocity covariance
-						double const &mz, // height mean
-						double const &vz, // height variance
-						Array2D<double> const &Sn, // feature measurement covariance
-						double const &focalLength, double const &dt, Array2D<double> const &omega);
-
-template<class T>
-Array2D<T> logSO3(Array2D<T> const &R, double theta);
 
 enum LogIDs
 {
@@ -99,6 +77,22 @@ int main(int argv, char* argc[])
 		return 0;
 	}
 
+	// preload all images
+	list<pair<int, cv::Mat> > imgList;
+	int imgId = 1700;
+	for(int i=0; i<100; i++)
+	{
+		cv::Mat img;
+		while(img.data == NULL)
+		{
+			stringstream ss;
+			ss << "img_" << ++imgId << ".bmp";
+			img = cv::imread(imgDir+"/"+ss.str());
+		}
+
+		imgList.push_back(pair<int, cv::Mat>(imgId, img));
+	}
+
 	list<shared_ptr<DataVector> > viconAttDataList, viconTransDataList;
 	loadPcLog("../pcData_fullState.txt", viconAttDataList, viconTransDataList);
 
@@ -113,159 +107,268 @@ int main(int argv, char* argc[])
 	int keypress = 0;
 	cv::namedWindow("chad",1);
 	cv::moveWindow("chad",0,0);
-	int imgId = 1700;
-	stringstream ss;
+
 	cv::Mat img, imgGray, imgGrayRaw;
 	vector<cv::Point2f> prevPoints, curPoints;
 	Time prevTime, curTime;
-	curTime.setTimeMS(0);
-	int imgIdx = 0;
-	double maxSigma = 30;
 	Array2D<double> attPrev, attCur, attChange;
+
+	cout << "//////////////////////////////////////////////////" << endl;
+
+	//////////////////////////////////////////////////////////////////
+	// And again using surf features
+	//////////////////////////////////////////////////////////////////
+	{
+	curTime.setTimeMS(0);
 	attPrev = createIdentity(3);
 	attCur = createIdentity(3);
 	attChange = createIdentity(3);
-	Time begin;
-	while(keypress != (int)'q' && imgIdx < imgIdList.size() && imgId < 2000)
+	int imgIdx = 0;
+	double maxSigma = 30;
+	list<pair<int, cv::Mat> >::iterator iter_imgList;
+	iter_imgList = imgList.begin();
+	double totT1, totT2, totT3, totT4;
+	totT1 = totT2 = totT3 = totT4 = 0;
+	Time begin, t1, t2, t3, t4;
+	long long numFeaturesAccum = 0;
+	vector<cv::KeyPoint> prevKp, curKp;
+	cv::Mat prevDescriptors, curDescriptors;
+	while(keypress != (int)'q' && iter_imgList != imgList.end())
 	{
-		ss.str("");
-		ss << "img_" << imgId++ << ".bmp";
-		img = cv::imread(imgDir+"/"+ss.str());
-		cout << imgDir << "/" << ss.str() << endl;
-		if(img.data != NULL)
+t1.setTime();
+		imgId = iter_imgList->first;
+		img = iter_imgList->second;
+		iter_imgList++;
+		while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
+			imgIdx++;
+		if(imgIdx == imgIdList.size() )
 		{
-			while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
-				imgIdx++;
-			if(imgIdx == imgIdList.size() )
-			{
-				cout << "imgIdx exceeded vector" << endl;
-				return 0;
-			}
-			prevTime.setTime(curTime);
-			curTime = imgIdList[imgIdx].second;
-			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
-			Array2D<double> transState = Data::interpolate(curTime, transDataList);
-			Array2D<double> errCov = Data::interpolate(curTime, errCovList);
-			Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
-			Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
-
-			// Rotate to camera coords
-			attState = matmult(rotPhoneToCam2, attState);
-			transState = matmult(rotPhoneToCam2, transState);
-			errCov = matmult(rotPhoneToCam3, errCov);
-			viconAttState = matmult(rotPhoneToCam2, viconAttState);
-			viconTransState = matmult(rotPhoneToCam2, viconTransState);
-
-			attPrev.inject(attCur);
-			attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
-//			attChange.inject( matmult(attCur, transpose(attPrev)) );
-			attChange.inject( matmult(transpose(attCur), attPrev) );
-
-			/////////////////////////////////////////////////////
-			Time start;
-			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
-//			cv::bilateralFilter(imgGrayRaw, imgGray, 5, 11, 3);
-			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
-
-			int maxPoints= 300;
-			double qualityLevel = 0.05;
-			double minDistance = maxSigma;
-			curPoints.swap(prevPoints);
-			cv::goodFeaturesToTrack(imgGray, curPoints, maxPoints, qualityLevel, minDistance);
-			cv::Point2f center(320,240);
-			cout << "\t" << "Proc time: " << start.getElapsedTimeNS()/1.0e9 << endl;
-			cout << "\t" << curPoints.size() << " points found" << endl;
-
-			start.setTime();
-			/////////////////////////////////////////////////////
-			//  Prior distributions
-			for(int i=0; i<curPoints.size(); i++)
-				curPoints[i] -= center;
-			Array2D<double> mv(3,1,0.0);
-			mv[0][0] = viconTransState[3][0];
-			mv[1][0] = viconTransState[4][0];
-			mv[2][0] = viconTransState[5][0];
-			Array2D<double> Sv = 0.1*0.1*createIdentity(3);
-			double mz = -viconTransState[2][0]; // in camera coords, z is flipped
-			mz -= 0.1; // camera to vicon markers offset
-			double sz = 0.02;
-//			double sz = errCov[2][0];
-			double focalLength = 3.7*640/5.76;
-			double dt;
-			if(prevTime.getMS() > 0)
-				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
-			else
-				dt = 0;
-			Array2D<double> omega = logSO3(attChange, dt);
-			list<pair<Array2D<double>, Array2D<double> > > priorDistList;
-			priorDistList = calcPriorDistributions(prevPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
-
-			// Correspondence
-			Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
-			Sn[0][0] = Sn[1][1] = 2*5*5;
-			SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
-			Array2D<double> C;
-			C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
-
-			// MAP velocity and height
-			if(prevPoints.size() > 0)
-			{
-				Array2D<double> vel;
-				double z;
-				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
-cout << "    mv:\t" << mv[0][0] << "\t" << mv[1][0] << "\t" << mv[2][0] << endl;
-cout << "velEst:\t" << vel[0][0] << "\t" << vel[1][0] << "\t" << vel[2][0] << endl;
-cout << "  mz:\t" << mz << endl;
-cout << "zEst:\t" << z << endl;
-			}
-
-			cout << "\tVel calc time: " << start.getElapsedTimeNS()/1.0e9 << endl;
-
-
-			//////////////////////////////////////////////////
-			//Drawing
-			// prior distributions
-			if(priorDistList.size() > 0)
-				maxSigma = 0;
-			cv::Mat overlay = img.clone();
-			list<pair<Array2D<double>, Array2D<double> > >::const_iterator iter_priorDistList;
-			iter_priorDistList = priorDistList.begin();
-			for(int i=0; i<priorDistList.size(); i++)
-			{
-				Array2D<double> Sd = iter_priorDistList->second;
-				JAMA::Eigenvalue<double> eig_Sd(Sd);
-				Array2D<double> V, D;
-				eig_Sd.getV(V);
-				eig_Sd.getD(D);
-
-				for(int i=0; i<D.dim1(); i++)
-					maxSigma = max(maxSigma, sqrt(D[i][i]));
-
-				cv::Point2f pt(iter_priorDistList->first[0][0], iter_priorDistList->first[1][0]);
-				double width = 2*sqrt(D[0][0]);
-				double height = 2*sqrt(D[1][1]);
-				double theta = atan2(V[1][0], V[0][0]);
-				cv::RotatedRect rect(pt+center, cv::Size(width, height), theta);
-				cv::ellipse(overlay, rect, cv::Scalar(255,0,0), -1);
-
-				iter_priorDistList++;
-			}
-			double opacity = 0.3;
-			cv::addWeighted(overlay, opacity, img, 1-opacity, 0, img);
-
-			// current points
-			for(int i=0; i<curPoints.size(); i++)
-				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
-			imshow("chad",img);
-
-			keypress = cv::waitKey() % 256;
-
-			img.release();
-			img.data = NULL;
+			cout << "imgIdx exceeded vector" << endl;
+			return 0;
 		}
+		prevTime.setTime(curTime);
+		curTime = imgIdList[imgIdx].second;
+		Array2D<double> attState  = Data::interpolate(curTime, attDataList);
+		Array2D<double> transState = Data::interpolate(curTime, transDataList);
+		Array2D<double> errCov = Data::interpolate(curTime, errCovList);
+		Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
+		Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
+
+		// Rotate to camera coords
+		attState = matmult(rotPhoneToCam2, attState);
+		transState = matmult(rotPhoneToCam2, transState);
+		errCov = matmult(rotPhoneToCam3, errCov);
+		viconAttState = matmult(rotPhoneToCam2, viconAttState);
+		viconTransState = matmult(rotPhoneToCam2, viconTransState);
+
+		attPrev.inject(attCur);
+		attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
+//		attChange.inject( matmult(attCur, transpose(attPrev)) );
+		attChange.inject( matmult(transpose(attCur), attPrev) );
+
+		/////////////////////////////////////////////////////
+		Time start;
+		cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
+//			cv::bilateralFilter(imgGrayRaw, imgGray, 5, 11, 3);
+		cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
+
+totT1 += t1.getElapsedTimeNS()/1.0e9; t2.setTime();
+		curKp.swap(prevKp);
+		curKp.clear();
+		int minHessian = 500;
+		cv::SurfFeatureDetector detector(minHessian);
+		detector.extended = 0; // 64-bit descriptors
+		detector.upright = 1; // don't compute orientation
+		detector.detect(imgGray, curKp);
+		numFeaturesAccum += curKp.size();
+//		cout << "num features: " << curKp.size() << endl;
+
+totT2 += t2.getElapsedTimeNS()/1.0e9; t3.setTime();
+		prevDescriptors = curDescriptors;
+		curDescriptors.release();
+		curDescriptors.data = NULL;
+		cv::SurfDescriptorExtractor extractor;
+		extractor.extended = 0; // 64-bit descriptors
+		extractor.upright = 1; // don't compute orientation
+		extractor.compute(imgGray, curKp, curDescriptors);
+
+totT3 += t3.getElapsedTimeNS()/1.0e9; t4.setTime();
+		cv::FlannBasedMatcher matcher;
+		vector<cv::DMatch> matches;
+		matcher.match(prevDescriptors, curDescriptors, matches);
+
+totT4 += t4.getElapsedTimeNS()/1.0e9;
+		img.release();
+		img.data = NULL;
 	}
 
-	cout << "Total time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
+	cout << "Avg num surf features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
+	cout << "Surf time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
+	cout << "totT1: " << totT1 << endl;
+	cout << "totT2: " << totT2 << endl;
+	cout << "totT3: " << totT3 << endl;
+	cout << "totT4: " << totT4 << endl;
+
+	}
+
+	cout << "//////////////////////////////////////////////////" << endl;
+
+	//////////////////////////////////////////////////////////////////
+	// Once for new algo
+	//////////////////////////////////////////////////////////////////
+	{
+	curTime.setTimeMS(0);
+	attPrev = createIdentity(3);
+	attCur = createIdentity(3);
+	attChange = createIdentity(3);
+	int imgIdx = 0;
+	double maxSigma = 30;
+	list<pair<int, cv::Mat> >::iterator iter_imgList;
+	iter_imgList = imgList.begin();
+	double totT1, totT2, totT3, totT4, totT5, totT6;
+	totT1 = totT2 = totT3 = totT4 = totT5 = totT6 = 0;
+	Time begin, t1, t2, t3, t4, t5, t6;
+	long long numFeaturesAccum = 0;
+	while(keypress != (int)'q' && iter_imgList != imgList.end())
+	{
+t1.setTime();
+		imgId = iter_imgList->first;
+		img = iter_imgList->second;
+		iter_imgList++;
+		while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
+			imgIdx++;
+		if(imgIdx == imgIdList.size() )
+		{
+			cout << "imgIdx exceeded vector" << endl;
+			return 0;
+		}
+		prevTime.setTime(curTime);
+		curTime = imgIdList[imgIdx].second;
+		Array2D<double> attState  = Data::interpolate(curTime, attDataList);
+		Array2D<double> transState = Data::interpolate(curTime, transDataList);
+		Array2D<double> errCov = Data::interpolate(curTime, errCovList);
+		Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
+		Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
+
+		// Rotate to camera coords
+		attState = matmult(rotPhoneToCam2, attState);
+		transState = matmult(rotPhoneToCam2, transState);
+		errCov = matmult(rotPhoneToCam3, errCov);
+		viconAttState = matmult(rotPhoneToCam2, viconAttState);
+		viconTransState = matmult(rotPhoneToCam2, viconTransState);
+
+		attPrev.inject(attCur);
+		attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
+//		attChange.inject( matmult(attCur, transpose(attPrev)) );
+		attChange.inject( matmult(transpose(attCur), attPrev) );
+
+		/////////////////////////////////////////////////////
+		cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
+//			cv::bilateralFilter(imgGrayRaw, imgGray, 5, 11, 3);
+		cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
+
+totT1 += t1.getElapsedTimeNS()/1.0e9; t2.setTime();
+		int maxPoints= 400;
+		double qualityLevel = 0.05;
+		double minDistance = maxSigma;
+		int blockSize = 5;
+		bool useHarrisDetector = false;
+		curPoints.swap(prevPoints);
+		cv::goodFeaturesToTrack(imgGray, curPoints, maxPoints, qualityLevel, minDistance, cv::noArray(), blockSize, useHarrisDetector);
+		numFeaturesAccum += curPoints.size();
+
+totT2 += t2.getElapsedTimeNS()/1.0e9; t3.setTime();
+		/////////////////////////////////////////////////////
+		//  Prior distributions
+		cv::Point2f center(320,240);
+		for(int i=0; i<curPoints.size(); i++)
+			curPoints[i] -= center;
+		Array2D<double> mv(3,1,0.0);
+		mv[0][0] = viconTransState[3][0];
+		mv[1][0] = viconTransState[4][0];
+		mv[2][0] = viconTransState[5][0];
+		Array2D<double> Sv = 0.1*0.1*createIdentity(3);
+		double mz = -viconTransState[2][0]; // in camera coords, z is flipped
+		mz -= 0.1; // camera to vicon markers offset
+		double sz = 0.02;
+//			double sz = errCov[2][0];
+		double focalLength = 3.7*640/5.76;
+		double dt;
+		if(prevTime.getMS() > 0)
+			dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
+		else
+			dt = 0;
+		Array2D<double> omega = logSO3(attChange, dt);
+		vector<pair<Array2D<double>, Array2D<double> > > priorDistList;
+		priorDistList = calcPriorDistributions(prevPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
+
+totT3 += t3.getElapsedTimeNS()/1.0e9; t4.setTime();
+		// Correspondence
+		Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
+		Sn[0][0] = Sn[1][1] = 2*5*5;
+		SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
+		Array2D<double> C;
+		C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
+
+totT4 += t4.getElapsedTimeNS()/1.0e9; t5.setTime();
+		// MAP velocity and height
+		if(prevPoints.size() > 0)
+		{
+			Array2D<double> vel;
+			double z;
+			computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
+		}
+
+totT5 += t5.getElapsedTimeNS()/1.0e9; t6.setTime();
+		//////////////////////////////////////////////////
+		//Drawing
+		// prior distributions
+		if(priorDistList.size() > 0)
+			maxSigma = 0;
+		cv::Mat overlay = img.clone();
+		for(int i=0; i<priorDistList.size(); i++)
+		{
+			Array2D<double> Sd = priorDistList[i].second;
+			JAMA::Eigenvalue<double> eig_Sd(Sd);
+			Array2D<double> V, D;
+			eig_Sd.getV(V);
+			eig_Sd.getD(D);
+
+			for(int i=0; i<D.dim1(); i++)
+				maxSigma = max(maxSigma, sqrt(D[i][i]));
+
+//			cv::Point2f pt(iter_priorDistList->first[0][0], iter_priorDistList->first[1][0]);
+//			double width = 2*sqrt(D[0][0]);
+//			double height = 2*sqrt(D[1][1]);
+//			double theta = atan2(V[1][0], V[0][0]);
+//			cv::RotatedRect rect(pt+center, cv::Size(width, height), theta);
+//			cv::ellipse(overlay, rect, cv::Scalar(255,0,0), -1);
+		}
+		double opacity = 0.3;
+//		cv::addWeighted(overlay, opacity, img, 1-opacity, 0, img);
+
+		// current points
+//		for(int i=0; i<curPoints.size(); i++)
+//			cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
+//		imshow("chad",img);
+//
+//		keypress = cv::waitKey() % 256;
+
+		img.release();
+		img.data = NULL;
+totT6 += t6.getElapsedTimeNS()/1.0e9;
+	}
+
+	cout << "Avg num features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
+	cout << "New total time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
+	cout << "totT1: " << totT1 << endl;
+	cout << "totT2: " << totT2 << endl;
+	cout << "totT3: " << totT3 << endl;
+	cout << "totT4: " << totT4 << endl;
+	cout << "totT5: " << totT5 << endl;
+	cout << "totT6: " << totT6 << endl;
+
+	}
 
     return 0;
 }
@@ -298,7 +401,6 @@ void loadPhoneLog(String filename,
 		vector<string> tokens;
 
 		while(file.good())
-//		for(int i=0; i<10000; i++)
 		{
 			getline(file, line);
 			stringstream ss(line);
@@ -419,440 +521,4 @@ void loadPcLog(String filename,
 	}
 	else
 		cout << "Couldn't find " << filename.c_str() << endl;
-}
-
-list<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
-							Array2D<double> const &mv, Array2D<double> const &Sv, 
-							double const &mz, double const &varz, 
-							double const &focalLength, double const &dt, 
-							Array2D<double> const &omega)
-{
-	double mvx = mv[0][0];
-	double mvy = mv[1][0];
-	double mvz = mv[2][0];
-	double svx = sqrt(Sv[0][0]);
-	double svy = sqrt(Sv[1][1]);
-	double svz = sqrt(Sv[2][2]);
-	double sz = sqrt(varz);
-	double f = focalLength;
-
-	// delta_x = q_x*v_z*dt-f*v_x*dt
-	vector<Array2D<double> > mDeltaList, SDeltaList;
-	double x, y;
-	Array2D<double> mDelta(2,1), SDelta(2,2,0.0);
-	for(int i=0; i<points.size(); i++)
-	{
-		x = points[i].x;
-		y = points[i].y;
-
-		mDelta[0][0] = x*mvz*dt-f*mvx*dt;
-		mDelta[1][0] = y*mvz*dt-f*mvy*dt;
-
-		SDelta[0][0] = pow(x*svz*dt,2)+pow(f*svx*dt, 2);
-		SDelta[1][1] = pow(y*svz*dt,2)+pow(f*svy*dt, 2);
-
-		mDeltaList.push_back(mDelta.copy());
-		SDeltaList.push_back(SDelta.copy());
-	}
-
-	// calc distribution of Z^-1
-	double mz1Inv = 1.0/mz;
-	double mz2Inv = 1.0/mz/mz;
-	double log_sz = log(sz);
-	double log_mz = log(mz);
-	double del1LnOld = 0xFFFFFFFF;
-	double del2LnOld = 0xFFFFFFFF;
-	double del1Ln = 0;
-	double del2Ln = 0;
-	double fact;
-	for(int k=1; k<10; k++)
-	{
-		fact = fact2ln(k);
-		del1Ln = 2*k*log_sz+fact-(2*k+1)*log_mz;
-		del2Ln = log(2*k+1)+2*k*log_sz+fact-(2*k+2)*log_mz;
-		if(del1Ln < del1LnOld)
-		{
-			mz1Inv = mz1Inv+exp(del1Ln);
-			del1LnOld = del1Ln;
-		}
-		if(del2Ln < del2LnOld)
-		{
-			mz2Inv = mz2Inv+exp(del2Ln);
-			del2LnOld = del2Ln;
-		}
-	}
-
-	// calc distribution moments
-	list<pair<Array2D<double>, Array2D<double> > > priorDistList;
-	for(int i=0; i<mDeltaList.size(); i++)
-	{
-		Array2D<double> mDelta = mDeltaList[i];
-		Array2D<double> SDelta = SDeltaList[i];
-		Array2D<double> md(2,1), Sd(2,2,0.0);
-		md = mDelta*mz1Inv;
-
-		// Shift the mean to so the distribution is for the location of q2 instead of q2-q1-Lw*w
-		double x = points[i].x;
-		double y = points[i].y;
-
-		Array2D<double> Lw(2,3);
-		Lw[0][0] = 1.0/f*x*y; 		Lw[0][1] = -1.0/f*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = 1.0/f*(1+y*y);	Lw[1][1] = -1.0/f*x*y;		Lw[1][2] = -x;
-		md = md+dt*matmult(Lw, omega);
-
-		md[0][0] += x;
-		md[1][0] += y;
-
-		Sd[0][0] = (pow(mDelta[0][0],2)+SDelta[0][0])*mz2Inv-pow(mDelta[0][0],2)*pow(mz1Inv,2);
-		Sd[1][1] = (pow(mDelta[1][0],2)+SDelta[1][1])*mz2Inv-pow(mDelta[1][0],2)*pow(mz1Inv,2);
-
-		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
-
-		priorDistList.push_back(pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy()));
-	}
-
-	return priorDistList;
-}
-
-Array2D<double> calcCorrespondence(list<pair<Array2D<double>, Array2D<double> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<double> const &Sn, Array2D<double> const &SnInv)
-{
-	int N1 = priorDistList.size();
-	int N2 = curPointList.size();
-
-	if(N1 == 0 || N2 == 0)
-		return Array2D<double>();
-
-	// Precompute some things
-	list<Array2D<double> > SdInvList, SaInvList, SaList;
-	list<double> fBList, coeffList, xRangeList, yRangeList;
-	Array2D<double> Sd, SdInv, Sa, SaInv;
-	Array2D<double> md;
-	Array2D<double> eye2 = createIdentity(2);
-	double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
-	list<pair<Array2D<double>, Array2D<double> > >::const_iterator iter_priorDistList;
-	iter_priorDistList = priorDistList.begin();
-	for(int i=0; i<N1; i++)
-	{
-		md = iter_priorDistList->first;
-		Sd = iter_priorDistList->second;
-
-		JAMA::Cholesky<double> chol_Sd(Sd);
-		SdInv = chol_Sd.solve(eye2);
-		
-		SaInv = SdInv+SnInv;
-		JAMA::Cholesky<double> chol_SaInv(SaInv);
-		Sa = chol_SaInv.solve(eye2);
-
-		double fB = matmultS(transpose(md),matmult(SdInv,md));
-		double det_Sd = Sd[0][0]*Sd[1][1] - Sd[0][1]*Sd[1][0];
-		double det_Sa = Sa[0][0]*Sa[1][1] - Sa[0][1]*Sa[1][0];
-		double coeff = sqrt(det_Sa)*2.0*ICSL::Constants::PI*sqrt(det_Sd*det_Sn);
-		double xrange = 5*sqrt(Sd[0][0]+Sn[0][0]);
-		double yrange = 5*sqrt(Sd[1][1]+Sn[1][1]);
-
-		SdInvList.push_back(SdInv.copy());
-		SaInvList.push_back(SaInv.copy());
-		SaList.push_back(Sa.copy());
-		fBList.push_back(fB);
-		coeffList.push_back(coeff);
-		xRangeList.push_back(xrange);
-		yRangeList.push_back(yrange);
-
-		iter_priorDistList++;
-	}
-
-	Array2D<double> C(N1+1, N2+1, 0.0);
-	double x, y;
-	Array2D<double> mq(2,1);//, md(2,1);
-//	Array2D<double> Sd, SdInv, Sa, SaInv;
-	vector<double> colSum(N2,0.0);
-	double probNoCorr = 1.0/640.0/480.0;
-	for(int j=0; j<N2; j++)
-	{
-		x = curPointList[j].x;
-		y = curPointList[j].y;
-		mq[0][0] = x;
-		mq[1][0] = y;
-
-		list<Array2D<double> >::const_iterator iter_SdInvList, iter_SaInvList, iter_SaList;
-		list<double>::const_iterator iter_fBList, iter_coeffList, iter_xRangeList, iter_yRangeList;
-		iter_SdInvList = SdInvList.begin();
-		iter_SaInvList = SaInvList.begin();
-		iter_SaList = SaList.begin();
-		iter_fBList = fBList.begin();
-		iter_coeffList = coeffList.begin();
-		iter_xRangeList = xRangeList.begin();
-		iter_yRangeList = yRangeList.begin();
-
-		list<pair<Array2D<double>, Array2D<double> > >::const_iterator iter_priorDistList;
-		iter_priorDistList = priorDistList.begin();
-		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
-		for(int i=0; i<N1; i++)
-		{
-			md = iter_priorDistList->first;
-
-			double xrange = *iter_xRangeList;
-			double yrange = *iter_yRangeList;
-			iter_xRangeList++;
-			iter_yRangeList++;
-			if(abs(x-md[0][0]) > xrange || abs(y-md[1][0]) > yrange )
-			{
-				iter_SdInvList++;
-				iter_SaInvList++;
-				iter_SaList++;
-				iter_fBList++;
-				iter_coeffList++;
-				iter_priorDistList++;
-				continue;
-			}
-
-			SdInv = *iter_SdInvList;
-			SaInv = *iter_SaInvList;
-			Sa = *iter_SaList;
-			double fB = *iter_fBList;
-
-			Array2D<double> ma = matmult(Sa,matmult(*iter_SdInvList,md)+matmult(SnInv,mq));
-			double f = -1.0*matmultS(transpose(ma),matmult(SaInv,ma))+fB+fC;
-			C[i][j] = (*iter_coeffList)*exp(-0.5*f);
-			colSum[j] += C[i][j];
-
-			iter_SdInvList++;
-			iter_SaInvList++;
-			iter_SaList++;
-			iter_fBList++;
-			iter_coeffList++;
-			iter_priorDistList++;
-		}
-
-		C[N1][j] = probNoCorr;
-		colSum[j] += probNoCorr;
-	}
-
-	// Scale colums to unit sum
-	for(int j=0; j<N2; j++)
-		for(int i=0; i<N1+1; i++)
-			C[i][j] /= colSum[j];
-
-	// Now check if any of the rows sum to over 1
-	for(int i=0; i<N1; i++)
-	{
-		double rowSum = 0;
-		for(int j=0; j<N2; j++)
-			rowSum += C[i][j];
-
-		if(rowSum > 1)
-		{
-			for(int j=0; j<N2; j++)
-				C[i][j] /= rowSum;
-
-			C[i][N2] = 0;
-		}
-		else
-			C[i][N2] = 1-rowSum;
-	}
-
-	// and, finally, reset the virtual point correspondence so columns sum to 1 again
-	for(int j=0; j<N2; j++)
-	{
-		double colSum = 0;
-		for(int i=0; i<N1; i++)
-			colSum += C[i][j];
-		C[N1][j] = 1-colSum;
-	}
-
-	return C;
-}
-
-template<class T>
-Array2D<T> logSO3(Array2D<T> const &R, double theta)
-{
-	Array2D<T> w(3,1);
-	if(theta > 0)
-	{
-		double sTheta = sin(theta);
-		w[0][0] = (R[2][1]-R[1][2])/2.0/sTheta;
-		w[1][0] = (R[0][2]-R[2][0])/2.0/sTheta;
-		w[2][0] = (R[1][0]-R[0][1])/2.0/sTheta;
-	}
-	else
-		w = Array2D<double>(3,1,0.0);
-
-	return w;
-}
-
-void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out*/,
-						vector<cv::Point2f> const &prevPoints,
-						vector<cv::Point2f> const &curPoints, 
-						Array2D<double> const &C, // correspondence matrix
-						Array2D<double> const &mv, // velocity mean
-						Array2D<double> const &Sv, // velocity covariance
-						double const &mz, // height mean
-						double const &vz, // height variance
-						Array2D<double> const &Sn, // feature measurement covariance
-						double const &focalLength, double const &dt, Array2D<double> const &omega)
-{
-	int N1 = prevPoints.size();
-	int N2 = curPoints.size();
-	double f = focalLength;
-
-	JAMA::Cholesky<double> chol_Sv(Sv), chol_Sn(Sn);
-	Array2D<double> SvInv = chol_Sv.solve(createIdentity(3));
-	Array2D<double> SnInv = chol_Sn.solve(createIdentity(2));
-
-	double sz = sqrt(vz);
-	
-	///////////////////////////////////////////////////////////////
-	// Build up constant matrices
-	///////////////////////////////////////////////////////////////
-	list<Array2D<double> > LvList, LwList;
-	Array2D<double> Lv(2,3), Lw(2,3);
-	double x, y;
-	for(int i=0; i<N1; i++)
-	{
-		double x = prevPoints[i].x;
-		double y = prevPoints[i].y;
-		
-		Lv[0][0] = -f; Lv[0][1] = 0;  Lv[0][2] = x;
-		Lv[1][0] = 0;  Lv[1][1] = -f; Lv[1][2] = y;
-		LvList.push_back(Lv.copy());
-
-		Lw[0][0] = 1.0/f*x*y; 		Lw[0][1] = -1.0/f*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = 1.0/f*(1+y*y);	Lw[1][1] = -1.0/f*x*y;		Lw[1][2] = -x;
-		LwList.push_back(Lw.copy());
-	}
-
-	list<Array2D<double> > AjList;
-	list<Array2D<double> >::const_iterator iterLv;
-	for(int j=0; j<N2; j++)
-	{
-		iterLv = LvList.begin();
-		Array2D<double> Aj(2,3,0.0);
-		for(int i=0; i<N1; i++)
-		{
-			Lv = *iterLv;
-			Aj += C[i][j]*Lv;
-			iterLv++;
-		}
-		Aj = dt*Aj;
-
-		AjList.push_back(Aj.copy());
-	}
-
-	list<Array2D<double> >::const_iterator iterAj, iterLw;
-	iterAj = AjList.begin();
-	double s0 = 0;
-	Array2D<double> s1_T(1,3,0.0), S2(3,3,0.0);
-	Array2D<double> Aj;
-	for(int j=0; j<N2; j++)
-	{
-		if( (1-C[N1][j]) < 1e-1)
-		{
-			iterAj++;
-			continue;
-		}
-
-		Array2D<double> q1(2,1), q2(2,1);
-		q2[0][0] = curPoints[j].x;
-		q2[1][0] = curPoints[j].y;
-		Array2D<double> Lw;
-		iterLw = LwList.begin();
-		Array2D<double> temp1(2,1,0.0);
-		for(int i=0; i<N1; i++)
-		{
-			if(C[i][j] > 0.01)
-			{
-				q1[0][0] = prevPoints[i].x;
-				q1[1][0] = prevPoints[i].y;
-				Lw = *iterLw;
-
-				temp1 += C[i][j]*(q2-q1-matmult(Lw,omega));
-			}
-
-			iterLw++;
-		}
-
-		Aj = *iterAj;
-		Array2D<double> temp2 = matmult(SnInv, Aj);
-		s0   += (1-C[N1][j])*matmultS(transpose(temp1), matmult(SnInv, temp1));
-		s1_T += (1-C[N1][j])*matmult(transpose(temp1), temp2);
-		S2   += (1-C[N1][j])*matmult(transpose(Aj), temp2);
-
-		iterAj++;
-	}
-
-	Array2D<double> s1 = transpose(s1_T);
-
-	// For easy evaluation of the objective function
-	auto scoreFunc = [&](Array2D<double> const &vel, double const &z){ return -0.5*(
-							s0
-							-2.0/z*matmultS(s1_T, vel)
-							+1.0/z/z*matmultS(transpose(vel), matmult(S2, vel))
-							+matmultS( transpose(vel-mv), matmult(SvInv, vel-mv))
-							+pow(z-mz,2)/vz
-							);};
-
-	// unique solution for optimal vel, given z
-	auto solveVel =  [&](double const &z){
-		Array2D<double> temp1 = 1.0/z*s1+matmult(SvInv,mv);
-		Array2D<double> temp2 = 1.0/z/z*S2+SvInv;
-		JAMA::Cholesky<double> chol_temp2(temp2);
-		return chol_temp2.solve(temp1);
-	};
-
-	///////////////////////////////////////////////////////////////
-	// Find a good starting point
-	///////////////////////////////////////////////////////////////
-	double scoreBest = -0xFFFFFF;
-	Array2D<double> velBest(3,1), velTemp(3,1);
-	double zBest;
-	double interval = 6.0*sz/10.0;
-	for(double zTemp=mz-3*sz; zTemp < mz+3.1*sz; zTemp += interval )
-	{
-		velTemp.inject(solveVel(zTemp));
-		double score = scoreFunc(velTemp, zTemp);
-		if(score > scoreBest)
-		{
-			scoreBest = score;
-			velBest.inject(velTemp);
-			zBest = zTemp;
-		}
-	}
-
-	///////////////////////////////////////////////////////////////
-	// Line search to find the optimum
-	///////////////////////////////////////////////////////////////
-	double zL= zBest-interval;
-	double zR= zBest+interval;
-	Array2D<double> velL = solveVel(zL);
-	Array2D<double> velR = solveVel(zR);
-	Array2D<double> vel1, vel2;
-	double z1, z2;
-	double score1, score2;
-	double offset;
-	double range = zR-zL;
-	while(range > 1e-3)
-	{
-		offset = 0.618*range;
-		z1 = zR-offset;
-		z2 = zL-offset;
-		vel1 = solveVel(z1);
-		vel2 = solveVel(z2);
-		score1 = scoreFunc(vel1, z1);
-		score2 = scoreFunc(vel2, z2);
-		if( score1 < score2 ) // keep right region
-		{
-			zL = z1;
-			velL = vel1;
-		}
-		else
-		{
-			zR = z2;
-			velR = vel2;
-		}
-
-		range = zR-zL;
-	}
-
-	velMAP = 0.5*(velL+velR);
-	heightMAP = 0.5*(zL+zR);
 }

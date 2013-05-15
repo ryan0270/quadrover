@@ -30,18 +30,21 @@ include_directories (${INC})
 set (LIBS 
 	${TOADLET_EGG_LIB} 
 	${OpenCV_LIBS_OPT} 
+	-ltbb
 )
 
 # Source files
 set (SRC ${SRC}
 	./cpp/main.cpp
-	./cpp/mser.cpp
+	./cpp/mapFuncs.cpp
+#	./cpp/mser.cpp
 	../../Rover/cpp/Data.cpp
 )
 
 # Headers
 set (H ${H}
-	./cpp/mser.cpp
+	./cpp/mapFuncs.h
+#	./cpp/mser.h
 	../../Rover/cpp/Data.h
 	../../Rover/cpp/Time.h
 	../../Rover/cpp/Common.h
