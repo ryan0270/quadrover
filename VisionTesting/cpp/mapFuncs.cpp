@@ -277,15 +277,6 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 	}
 	);
 
-for(int i=0; i<N1; i++)
-{
-	cout << "point " << i << " Lv" << endl;
-	for(int k=0; k<2; k++)
-		for(int j=0; j<3; j++)
-				cout << LvList[i][k][j] << "\t" << endl;
-	cout << "--------------------------------------------------" << endl;
-}
-
 	vector<Array2D<double> > AjList(N2);
 //	for(int j=0; j<N2; j++)
 	tbb::parallel_for(0, N2, [&](int j)
@@ -301,23 +292,6 @@ for(int i=0; i<N1; i++)
 		AjList[j] = Aj.copy();
 	}
 	);
-//cout << "C" << endl;
-//for(int i=0; i<C.dim1(); i++)
-//{
-//	for(int j=0; j<C.dim2(); j++)
-//		cout << C[i][j] << "\t";
-//	cout << endl;
-//}
-//cout << "--------------------------------------------------" << endl;
-
-for(int i=0; i<N2; i++)
-{
-	cout << "point " << i << " Aj" << endl;
-	for(int k=0; k<2; k++)
-		for(int j=0; j<3; j++)
-				cout << AjList[i][k][j] << "\t" << endl;
-	cout << "--------------------------------------------------" << endl;
-}
 
 	double s0 = 0;
 	Array2D<double> s1_T(1,3,0.0), S2(3,3,0.0);
@@ -362,22 +336,6 @@ for(int i=0; i<N2; i++)
 
 
 	Array2D<double> s1 = transpose(s1_T);
-
-cout << "s0: " << s0 << endl;
-cout << "--------------------------------------------------" << endl;
-cout << "s1:\t";
-for(int i=0; i<3; i++)
-	cout << s1[i][0] << "\t";
-cout << endl;
-cout << "--------------------------------------------------" << endl;
-cout << "S2:\n";
-for(int i=0; i<3; i++)
-{
-	for(int j=0; j<3; j++)
-		cout << S2[i][j] << "\t";
-	cout << endl;
-}
-cout << "--------------------------------------------------" << endl;
 
 	// For easy evaluation of the objective function
 	auto scoreFunc = [&](Array2D<double> const &vel, double const &z){ return -0.5*(
@@ -453,9 +411,9 @@ cout << "--------------------------------------------------" << endl;
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
 
-for(int i=0; i<3; i++)
-	cout << velMAP[i][0] << "\t";
-cout << endl;
+//for(int i=0; i<3; i++)
+//	cout << velMAP[i][0] << "\t";
+//cout << endl;
 }
 
 }
