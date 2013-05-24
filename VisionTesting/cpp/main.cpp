@@ -9,7 +9,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
 
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
@@ -83,7 +82,7 @@ int main(int argv, char* argc[])
 	// preload all images
 	list<pair<int, cv::Mat> > imgList;
 	int imgId = 1700;
-	for(int i=0; i<10; i++)
+	for(int i=0; i<500; i++)
 	{
 		cv::Mat img;
 		while(img.data == NULL)
@@ -111,174 +110,38 @@ int main(int argv, char* argc[])
 	cv::namedWindow("chad",1);
 	cv::moveWindow("chad",0,0);
 
-	cv::Mat img, imgGray, imgGrayRaw;
+	cv::Mat img, imgGray, imgGrayRaw, imgPrev;
 	vector<cv::Point2f> prevPoints, curPoints;
 	Time prevTime, curTime;
 	Array2D<double> attPrev, attCur, attChange;
 
-
-	Array2D<double> Sv = 0.1*0.1*createIdentity(3);
-	double sz = 0.02;
+	Array2D<double> Sv = pow(0.2,2)*createIdentity(3);
+	double sz = 0.01;
 //		double sz = errCov[2][0];
 	double focalLength = 3.7*640/5.76;
 	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
-	Sn[0][0] = Sn[1][1] = 2*5*5;
+	Sn[0][0] = Sn[1][1] = 2*pow(5,2);
 	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
+
+	cv::Point2f center(330,240);
 
 	tbb::task_scheduler_init init;
 
 	cout << "//////////////////////////////////////////////////" << endl;
 
-	//////////////////////////////////////////////////////////////////
-	// using surf features
-	//////////////////////////////////////////////////////////////////
-//	{
-//		curTime.setTimeMS(0);
-//		attPrev = createIdentity(3);
-//		attCur = createIdentity(3);
-//		attChange = createIdentity(3);
-//		int imgIdx = 0;
-//		double maxSigma = 30;
-//		list<pair<int, cv::Mat> >::iterator iter_imgList;
-//		iter_imgList = imgList.begin();
-//		long long numFeaturesAccum = 0;
-//		vector<cv::KeyPoint> prevKp, curKp;
-//		cv::Mat prevDescriptors, curDescriptors;
-//
-//		fstream fs("surfResults.txt", fstream::out);
-//		Time begin;
-//		while(keypress != (int)'q' && iter_imgList != imgList.end())
-//		{
-//			imgId = iter_imgList->first;
-//			img = iter_imgList->second;
-//			iter_imgList++;
-//			while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
-//				imgIdx++;
-//			if(imgIdx == imgIdList.size() )
-//			{
-//				cout << "imgIdx exceeded vector" << endl;
-//				return 0;
-//			}
-//			prevTime.setTime(curTime);
-//			curTime = imgIdList[imgIdx].second;
-//			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
-//			Array2D<double> transState = Data::interpolate(curTime, transDataList);
-//			Array2D<double> errCov = Data::interpolate(curTime, errCovList);
-//			Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
-//			Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
-//
-//			// Rotate to camera coords
-//			attState = matmult(rotPhoneToCam2, attState);
-//			transState = matmult(rotPhoneToCam2, transState);
-//			errCov = matmult(rotPhoneToCam3, errCov);
-//			viconAttState = matmult(rotPhoneToCam2, viconAttState);
-//			viconTransState = matmult(rotPhoneToCam2, viconTransState);
-//
-//			attPrev.inject(attCur);
-//			attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
-////				attChange.inject( matmult(attCur, transpose(attPrev)) );
-//			attChange.inject( matmult(transpose(attCur), attPrev) );
-//
-//			/////////////////////////////////////////////////////
-//			Time start;
-//			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
-//			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
-//
-//			curKp.swap(prevKp);
-//			curKp.clear();
-//			int minHessian = 800;
-//			cv::SurfFeatureDetector detector(minHessian);
-//			detector.extended = 0; // 64-bit descriptors
-//			detector.upright = 1; // don't compute orientation
-//			detector.detect(imgGray, curKp);
-//			numFeaturesAccum += curKp.size();
-//
-//			prevDescriptors = curDescriptors;
-//			curDescriptors.release();
-//			curDescriptors.data = NULL;
-//			cv::SurfDescriptorExtractor extractor;
-//			extractor.extended = 0; // 64-bit descriptors
-//			extractor.upright = 1; // don't compute orientation
-//			extractor.compute(imgGray, curKp, curDescriptors);
-//
-//			cv::FlannBasedMatcher matcher;
-//			vector<cv::DMatch> matches;
-//			matcher.match(prevDescriptors, curDescriptors, matches);
-//
-//			float minDist = 100;
-//			for(int i=0; i<matches.size(); i++)
-//				minDist = min(matches[i].distance, minDist);
-//
-//			vector<cv::DMatch> goodMatches;
-//			for(int i=0; i<matches.size(); i++)
-//				if(matches[i].distance < 2.0*minDist) goodMatches.push_back(matches[i]);
-//
-//			int N1, N2;
-//			N1 = N2 = goodMatches.size();
-//			Array2D<double> C(N1+1, N2+1, 0.0); // the extra row and column will stay at zero
-//			vector<cv::Point2f> prevPoints(N1), curPoints(N2);
-//			for(int i=0; i<N1; i++)
-//			{
-//				C[i][i] = 1;
-//
-//				int idx1 = goodMatches[i].queryIdx;
-//				int idx2 = goodMatches[i].trainIdx;
-//				prevPoints[i] = prevKp[idx1].pt;
-//				curPoints[i] = curKp[idx2].pt;
-//			}
-//
-//			// MAP velocity and height
-//			cv::Point2f center(320,240);
-//			for(int i=0; i<curPoints.size(); i++)
-//				curPoints[i] -= center;
-//			Array2D<double> mv(3,1,0.0);
-//			mv[0][0] = viconTransState[3][0];
-//			mv[1][0] = viconTransState[4][0];
-//			mv[2][0] = viconTransState[5][0];
-//
-//			double mz = -viconTransState[2][0]; // in camera coords, z is flipped
-//			mz -= 0.1; // camera to vicon markers offset
-//
-//			double dt;
-//			if(prevTime.getMS() > 0)
-//				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
-//			else
-//				dt = 0;
-//			Array2D<double> omega = logSO3(attChange, dt);
-//
-//			if(curPoints.size() > 0)
-//			{
-//				Array2D<double> vel;
-//				double z;
-//				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
-//
-//				fs << curTime.getMS() << "\t" << 98 << "\t";
-//				for(int i=0; i<vel.dim1(); i++)
-//					fs << vel[i][0] << "\t";
-//				fs << endl;
-//				fs << curTime.getMS() << "\t" << 99 << "\t" << z << endl;
-//			}
-//
-////			for(int i=0; i<curPoints.size(); i++)
-////				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
-////			imshow("chad",img);
-////			keypress = cv::waitKey() % 256;
-//
-//			img.release();
-//			img.data = NULL;
-//		}
-//
-//		fs.close();
-//
-//		cout << "Avg num surf features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
-//		cout << "Surf time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
-//
-//	}
+//	cv::FastFeatureDetector featureDetector;
+	int maxCorners = 1000;
+	double qualityLevel = 0.01;
+	double minDistance = 30;
+	int blockSize = 3;
+	bool useHarrisDetector = false;
+	double k=0.04;
+	cv::GoodFeaturesToTrackDetector featureDetector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
 
-	cout << "//////////////////////////////////////////////////" << endl;
+	bool useViconState = false;
 
 	//////////////////////////////////////////////////////////////////
-	// Once for new algo
+	// using ORB descriptors
 	//////////////////////////////////////////////////////////////////
 	{
 		curTime.setTimeMS(0);
@@ -290,8 +153,11 @@ int main(int argv, char* argc[])
 		list<pair<int, cv::Mat> >::iterator iter_imgList;
 		iter_imgList = imgList.begin();
 		long long numFeaturesAccum = 0;
+		long long numMatchesAccum = 0;
+		vector<cv::KeyPoint> prevKp, curKp;
+		cv::Mat prevDescriptors, curDescriptors;
 
-		fstream fs("mapResults.txt", fstream::out);
+		fstream fs("../orbResults.txt", fstream::out);
 		Time begin;
 		while(keypress != (int)'q' && iter_imgList != imgList.end())
 		{
@@ -321,7 +187,180 @@ int main(int argv, char* argc[])
 			viconTransState = matmult(rotPhoneToCam2, viconTransState);
 
 			attPrev.inject(attCur);
-			attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
+			if(useViconState)
+				attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
+			else
+				attCur.inject( createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]) );
+//				attChange.inject( matmult(attCur, transpose(attPrev)) );
+			attChange.inject( matmult(transpose(attCur), attPrev) );
+
+			/////////////////////////////////////////////////////
+			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
+			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
+
+			curKp.swap(prevKp);
+			curKp.clear();
+			featureDetector.detect(imgGray, curKp);
+			numFeaturesAccum += curKp.size();
+
+			prevDescriptors = curDescriptors;
+			curDescriptors.release();
+			curDescriptors.data = NULL;
+			cv::OrbFeatureDetector extractor(500, 2.0f, 4, 31, 0, 2, cv::ORB::HARRIS_SCORE, 31);
+			extractor.compute(imgGray, curKp, curDescriptors);
+
+			curDescriptors.convertTo(curDescriptors, CV_32F);
+
+			cv::FlannBasedMatcher matcher;
+			vector<cv::DMatch> matches;
+			matcher.match(prevDescriptors, curDescriptors, matches);
+
+			float minDist = 100;
+			for(int i=0; i<matches.size(); i++)
+				minDist = min(matches[i].distance, minDist);
+
+			vector<cv::DMatch> goodMatches(matches);
+//			for(int i=0; i<matches.size(); i++)
+//				if(matches[i].distance < 5.0*minDist) goodMatches.push_back(matches[i]);
+			numMatchesAccum += goodMatches.size();
+
+			int N1, N2;
+			N1 = N2 = goodMatches.size();
+			Array2D<double> C(N1+1, N2+1, 0.0); // the extra row and column will stay at zero
+			vector<cv::Point2f> prevPoints(N1), curPoints(N2);
+			for(int i=0; i<N1; i++)
+			{
+				C[i][i] = 1;
+
+				int idx1 = goodMatches[i].queryIdx;
+				int idx2 = goodMatches[i].trainIdx;
+				prevPoints[i] = prevKp[idx1].pt-center;
+				curPoints[i] = curKp[idx2].pt-center;
+			}
+
+			// MAP velocity and height
+			Array2D<double> mv(3,1,0.0);
+			double mz;
+			if(useViconState)
+			{
+				mv[0][0] = viconTransState[3][0];
+				mv[1][0] = viconTransState[4][0];
+				mv[2][0] = viconTransState[5][0];
+
+				mz = -viconTransState[2][0]; // in camera coords, z is flipped
+			}
+			else
+			{
+				mv[0][0] = transState[3][0];
+				mv[1][0] = transState[4][0];
+				mv[2][0] = transState[5][0];
+
+				mz = -transState[2][0]; // in camera coords, z is flipped
+			}
+
+			mz -= 0.1; // camera to vicon markers offset
+
+			double dt;
+			if(prevTime.getMS() > 0)
+				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
+			else
+				dt = 0;
+			Array2D<double> omega = logSO3(attChange, dt);
+
+			if(curPoints.size() > 0)
+			{
+				Array2D<double> vel;
+				double z;
+				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
+
+				fs << curTime.getMS() << "\t" << 98 << "\t";
+				for(int i=0; i<vel.dim1(); i++)
+					fs << vel[i][0] << "\t";
+				fs << endl;
+				fs << curTime.getMS() << "\t" << 99 << "\t" << z << endl;
+			}
+
+//			if(imgPrev.data != NULL)
+//			{
+//				cv::Mat imgMatches(img.rows,2*img.cols,img.type());
+//				cv::Mat imgL = imgPrev.clone();
+//				cv::Mat imgR = img.clone();
+//				for(int i=0; i<prevPoints.size(); i++)
+//					cv::circle(imgL, prevPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
+//				for(int j=0; j<curPoints.size(); j++)
+//					cv::circle(imgR, curPoints[j]+center, 4, cv::Scalar(0,0,255), -1);
+//				imgL.copyTo(imgMatches(cv::Rect(0,0,img.cols,img.rows)));
+//				imgR.copyTo(imgMatches(cv::Rect(img.cols,0,img.cols,img.rows)));
+////			drawMatches(imgPrev, prevKp, img, curKp, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+//				imshow("chad",imgMatches);
+//			}
+//			keypress = cv::waitKey() % 256;
+
+			imgPrev = img;
+
+//			img.release();
+//			img.data = NULL;
+		}
+
+		fs.close();
+
+		cout << "Avg num ORB features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
+		cout << "Avg num ORB matches: " << ((double)numMatchesAccum)/imgList.size() << endl;
+		cout << "ORB time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
+
+	}
+
+	cout << "//////////////////////////////////////////////////" << endl;
+
+	//////////////////////////////////////////////////////////////////
+	// Once for new algo
+	//////////////////////////////////////////////////////////////////
+	{
+		curTime.setTimeMS(0);
+		attPrev = createIdentity(3);
+		attCur = createIdentity(3);
+		attChange = createIdentity(3);
+		int imgIdx = 0;
+		double maxSigma = 30;
+		list<pair<int, cv::Mat> >::iterator iter_imgList;
+		iter_imgList = imgList.begin();
+		long long numFeaturesAccum = 0;
+		double numMatchesAccum = 0;
+
+		fstream fs("../mapResults.txt", fstream::out);
+		Time begin;
+		while(keypress != (int)'q' && iter_imgList != imgList.end())
+		{
+			imgId = iter_imgList->first;
+			img = iter_imgList->second;
+			iter_imgList++;
+			while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
+				imgIdx++;
+			if(imgIdx == imgIdList.size() )
+			{
+				cout << "imgIdx exceeded vector" << endl;
+				return 0;
+			}
+			prevTime.setTime(curTime);
+			curTime = imgIdList[imgIdx].second;
+			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
+			Array2D<double> transState = Data::interpolate(curTime, transDataList);
+			Array2D<double> errCov = Data::interpolate(curTime, errCovList);
+			Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
+			Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
+
+			// Rotate to camera coords
+			attState = matmult(rotPhoneToCam2, attState);
+			transState = matmult(rotPhoneToCam2, transState);
+			errCov = matmult(rotPhoneToCam3, errCov);
+			viconAttState = matmult(rotPhoneToCam2, viconAttState);
+			viconTransState = matmult(rotPhoneToCam2, viconTransState);
+
+			attPrev.inject(attCur);
+			if(useViconState)
+				attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
+			else
+				attCur.inject( createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]) );
 //			attChange.inject( matmult(attCur, transpose(attPrev)) );
 			attChange.inject( matmult(transpose(attCur), attPrev) );
 
@@ -329,26 +368,46 @@ int main(int argv, char* argc[])
 			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
 			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
 
-			int maxPoints= 400;
+			int maxPoints= 100;
 			double qualityLevel = 0.05;
-			double minDistance = maxSigma;
-			int blockSize = 5;
+			double minDistance = 2*maxSigma;
+			int blockSize = 3;
 			bool useHarrisDetector = false;
 			curPoints.swap(prevPoints);
-			cv::goodFeaturesToTrack(imgGray, curPoints, maxPoints, qualityLevel, minDistance, cv::noArray(), blockSize, useHarrisDetector);
+//			cv::goodFeaturesToTrack(imgGray, curPoints, maxPoints, qualityLevel, minDistance, cv::noArray(), blockSize, useHarrisDetector);
+			cv::FastFeatureDetector featureDectector;
+			vector<cv::KeyPoint> kp;
+			featureDetector.detect(imgGray, kp);
+			curPoints.clear();
+			for(int i=0; i<kp.size(); i++)
+				curPoints.push_back(kp[i].pt);
 			numFeaturesAccum += curPoints.size();
 
 			/////////////////////////////////////////////////////
 			//  Prior distributions
-			cv::Point2f center(320,240);
 			for(int i=0; i<curPoints.size(); i++)
 				curPoints[i] -= center;
 			Array2D<double> mv(3,1,0.0);
-			mv[0][0] = viconTransState[3][0];
-			mv[1][0] = viconTransState[4][0];
-			mv[2][0] = viconTransState[5][0];
-			double mz = -viconTransState[2][0]; // in camera coords, z is flipped
+			double mz;
+			if(useViconState)
+			{
+				mv[0][0] = viconTransState[3][0];
+				mv[1][0] = viconTransState[4][0];
+				mv[2][0] = viconTransState[5][0];
+
+				mz = -viconTransState[2][0]; // in camera coords, z is flipped
+			}
+			else
+			{
+				mv[0][0] = transState[3][0];
+				mv[1][0] = transState[4][0];
+				mv[2][0] = transState[5][0];
+
+				mz = -transState[2][0]; // in camera coords, z is flipped
+			}
+
 			mz -= 0.1; // camera to vicon markers offset
+
 			double dt;
 			if(prevTime.getMS() > 0)
 				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
@@ -361,6 +420,10 @@ int main(int argv, char* argc[])
 			// Correspondence
 			Array2D<double> C;
 			C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
+
+			for(int i=0; i<C.dim1()-1; i++)
+				for(int j=0; j<C.dim2()-1; j++)
+					numMatchesAccum += C[i][j];
 
 			// MAP velocity and height
 			if(prevPoints.size() > 0)
@@ -417,6 +480,7 @@ int main(int argv, char* argc[])
 		fs.close();
 
 		cout << "Avg num features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
+		cout << "Avg num matches: " << ((double)numMatchesAccum)/imgList.size() << endl;
 		cout << "New total time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
 
 	}

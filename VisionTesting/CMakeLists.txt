@@ -51,7 +51,7 @@ set (H ${H}
 	../../Rover/cpp/TNT_Utils.h
 )
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 # Executable
 add_executable (visionTest ${SRC} ${H})
