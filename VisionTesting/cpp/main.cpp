@@ -22,6 +22,7 @@
 #include "../../Rover/cpp/TNT_Utils.h"
 #include "../../Rover/cpp/Time.h"
 #include "../../Rover/cpp/constants.h"
+#include "../../Rover/cpp/QuadLogger.h"
 
 #include "mapFuncs.h"
 
@@ -43,26 +44,26 @@ void loadPcLog(String filename,
 		);
 vector<string> tokenize(string str);
 
-enum LogIDs
-{
-	LOG_ID_ACCEL = 1,
-	LOG_ID_GYRO = 2,
-	LOG_ID_MAGNOMETER = 3,
-	LOG_ID_PRESSURE = 4,
-	LOG_ID_IMAGE = 10,
-	LOG_ID_GYRO_BIAS = -1003,
-	LOG_ID_OBSV_ANG_INNOVATION = -1004,
-	LOG_ID_OPTIC_FLOW = 12345,
-	LOG_ID_OBSV_TRANS_ATT_BIAS = -710,
-	LOG_ID_OBSV_TRANS_FORCE_GAIN = -711,
-	LOG_ID_BAROMETER_HEIGHT = 1234,
-	LOG_ID_MOTOR_CMDS = -1000,
-	LOG_ID_CUR_ATT = -1002,
-	LOG_ID_CUR_TRANS_STATE = -1012,
-	LOG_ID_RECEIVE_VICON = 700,
-	LOG_ID_CAMERA_POS = 800,
-	LOG_ID_KALMAN_ERR_COV = -720,
-};
+//enum LogIDs
+//{
+//	LOG_ID_ACCEL = 1,
+//	LOG_ID_GYRO = 2,
+//	LOG_ID_MAGNOMETER = 3,
+//	LOG_ID_PRESSURE = 4,
+//	LOG_ID_IMAGE = 10,
+//	LOG_ID_GYRO_BIAS = -1003,
+//	LOG_ID_OBSV_ANG_INNOVATION = -1004,
+//	LOG_ID_OPTIC_FLOW = 12345,
+//	LOG_ID_OBSV_TRANS_ATT_BIAS = -710,
+//	LOG_ID_OBSV_TRANS_FORCE_GAIN = -711,
+//	LOG_ID_BAROMETER_HEIGHT = 1234,
+//	LOG_ID_MOTOR_CMDS = -1000,
+//	LOG_ID_CUR_ATT = -1002,
+//	LOG_ID_CUR_TRANS_STATE = -1012,
+//	LOG_ID_RECEIVE_VICON = 700,
+//	LOG_ID_CAMERA_POS = 800,
+//	LOG_ID_KALMAN_ERR_COV = -720,
+//};
 
 int main(int argv, char* argc[])
 {
@@ -157,6 +158,9 @@ int main(int argv, char* argc[])
 		vector<cv::KeyPoint> prevKp, curKp;
 		cv::Mat prevDescriptors, curDescriptors;
 
+double ts2=0;
+Time t0;
+
 		fstream fs("../orbResults.txt", fstream::out);
 		Time begin;
 		while(keypress != (int)'q' && iter_imgList != imgList.end())
@@ -198,11 +202,13 @@ int main(int argv, char* argc[])
 			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
 			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
 
+t0.setTime();
 			curKp.swap(prevKp);
 			curKp.clear();
 			featureDetector.detect(imgGray, curKp);
 			numFeaturesAccum += curKp.size();
 
+ts2 += t0.getElapsedTimeNS()/1.0e9;
 			prevDescriptors = curDescriptors;
 			curDescriptors.release();
 			curDescriptors.data = NULL;
@@ -304,6 +310,7 @@ int main(int argv, char* argc[])
 
 		fs.close();
 
+		cout << "ts2: " << ts2 << endl;
 		cout << "Avg num ORB features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
 		cout << "Avg num ORB matches: " << ((double)numMatchesAccum)/imgList.size() << endl;
 		cout << "ORB time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
@@ -368,16 +375,372 @@ int main(int argv, char* argc[])
 			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
 			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
 
-			int maxPoints= 100;
-			double qualityLevel = 0.05;
-			double minDistance = 2*maxSigma;
-			int blockSize = 3;
-			bool useHarrisDetector = false;
 			curPoints.swap(prevPoints);
+//			int maxPoints= 100;
+//			double qualityLevel = 0.05;
+//			double minDistance = 2*maxSigma;
+//			int blockSize = 3;
+//			bool useHarrisDetector = false;
 //			cv::goodFeaturesToTrack(imgGray, curPoints, maxPoints, qualityLevel, minDistance, cv::noArray(), blockSize, useHarrisDetector);
 			cv::FastFeatureDetector featureDectector;
 			vector<cv::KeyPoint> kp;
-			featureDetector.detect(imgGray, kp);
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//			featureDetector.detect(imgGray, kp);
+//			int nGrid = 2;
+//			cv::Size imgSize = imgGray.size();
+//			vector<cv::Mat> frames(nGrid*nGrid);
+//			vector<cv::Point2f> maskOffset(nGrid*nGrid);
+//			for(int i=0; i<nGrid; i++)
+//			{
+//				int left = max(0,(int)(i*imgSize.width/nGrid+0.5));
+//				int width = min(imgSize.width-left, (int)(imgSize.width/nGrid+0.5));
+//				for(int j=0; j<nGrid; j++)
+//				{
+//					int top = max(0,(int)(j*imgSize.height/nGrid+0.5));
+//					int height = min(imgSize.height-top, (int)(imgSize.height/nGrid+0.5));
+//					cv::Rect mask(left, top, width, height);
+//					cv::Point2f offset(left, top);
+//					frames[i*nGrid+j] = imgGray(mask);
+//					maskOffset[i*nGrid+j] = offset;
+//				}
+//			}
+//			vector<vector<cv::KeyPoint> > kpList(nGrid*nGrid);
+//			for(int i=0; i<kpList.size(); i++)
+//				featureDetector.detect(frames[i], kpList[i]);
+//			for(int i=0; i<kpList.size(); i++)
+//			{
+//				for(int j=0; j<kpList[i].size(); j++)
+//					kpList[i][j].pt = kpList[i][j].pt+maskOffset[i];
+//				move(kpList[i].begin(), kpList[i].end(), back_inserter(kp));
+//			}
+////////////////////////////////////////////////////////////////////////////////////////////////////
+			{
+				cv::Mat eig, tmp;
+//////////////////////////////////////////////////
+//				int blockSize = 3;
+//				cornerMinEigenVal(imgGray, eig, blockSize, 3);
+//				double maxVal = 0;
+//				minMaxLoc(eig, 0, &maxVal, 0, 0);
+//				threshold(eig, eig, maxVal*qualityLevel, 0, cv::THRESH_TOZERO);
+//				dilate(eig, tmp, cv::Mat());
+//				vector<const float*> tmpCorners;
+//
+//				cv::Size imgsize = imgGray.size();
+//
+//				// collect list of pointers to features - put them into temporary image
+//				for( int y = 1; y < imgsize.height - 1; y++ )
+//				{
+//					const float* eig_data = (const float*)eig.ptr(y);
+//					const float* tmp_data = (const float*)tmp.ptr(y);
+//
+//					for( int x = 1; x < imgsize.width - 1; x++ )
+//					{
+//						float val = eig_data[x];
+//						if( val != 0 && val == tmp_data[x]/* && (!mask_data || mask_data[x]) */)
+//							tmpCorners.push_back(eig_data + x);
+//					}
+//				}
+//
+//				sort(tmpCorners.begin(), tmpCorners.end(), [&](const float *a, const float *b) {return *a > *b;});
+//				int chad = 0;
+//////////////////////////////////////////////////
+				vector<cv::KeyPoint> tempKp;
+				FAST(imgGray, tempKp, 5, true);
+
+				double scale = (double)(1 << 2)*blockSize;
+				scale = 1.0/scale;
+				cv::Mat Dx, Dy;
+				Scharr(imgGray, Dx, CV_32F, 1, 0, scale);
+				Scharr(imgGray, Dy, CV_32F, 0, 1, scale);
+
+				eig.create(imgGray.size(), CV_32F);
+				eig = cv::Scalar(0);
+
+				for(int i=0; i<tempKp.size(); i++)
+				{
+					int y = tempKp[i].pt.x;
+					int x = tempKp[i].pt.y;
+
+					float *eig_data = (float*)(eig.data+x*eig.step);
+
+					const float *dxdata_m1, *dxdata, *dxdata_p1;
+					const float *dydata_m1, *dydata, *dydata_p1;
+					if(x > 0)
+					{
+						dxdata_m1 = (const float*)(Dx.data+(x-1)*Dx.step);
+						dydata_m1 = (const float*)(Dy.data+(x-1)*Dy.step);
+					}
+					else
+						dxdata_m1 = dydata_m1 = NULL;
+
+					dxdata = (const float*)(Dx.data+x*Dx.step);
+					dydata = (const float*)(Dy.data+x*Dy.step);
+					if(x < (imgGray.rows-1) )
+					{
+						dxdata_p1 = (const float*)(Dx.data+(x+1)*Dx.step);
+						dydata_p1 = (const float*)(Dy.data+(x+1)*Dy.step);
+					}
+					else
+						dxdata_p1 = dydata_p1 = NULL;
+
+					float a, b, c;
+					a = b = c = 0;
+
+					int kLow, kHigh;
+					if(y == 0)
+						kLow = 0;
+					else
+						kLow = -1;
+					if(y == imgGray.cols-1)
+						kHigh = 0;
+					else
+						kHigh = 1;
+					for(int k=kLow; k<=kHigh; k++)
+					{
+						double multiple = 1;
+						if(x > 0)
+						{
+							a += pow(dxdata_m1[y+k],2);
+							b += dxdata_m1[y+k]*dydata_m1[y+k];
+							c += pow(dydata_m1[y+k],2);
+						}
+						else
+							multiple = 2;
+
+						if(x < imgGray.rows-1)
+						{
+							a += pow(dxdata_p1[y+k],2);
+							b += dxdata_p1[y+k]*dydata_p1[y+k];
+							c += pow(dydata_p1[y+k],2);
+						}
+						else
+							multiple = 2;
+
+						a += multiple*pow(dxdata[y+k],2);
+						b += multiple*dxdata[y+k]*dydata[y+k];
+						c += multiple*pow(dydata[y+k],2);
+					}
+
+					a *= 0.5f;
+					c *= 0.5;
+					eig_data[y] = (float)((a+c)-sqrt((a-c)*(a-c) + b*b));
+				}
+
+
+//				for(int i=0; i<imgGray.rows; i++)
+//				{
+//					float *eig_data = (float*)(eig.data+i*eig.step);
+//
+//					const float *dxdata_m1, *dxdata, *dxdata_p1;
+//					const float *dydata_m1, *dydata, *dydata_p1;
+//					if(i > 0)
+//					{
+//						dxdata_m1 = (const float*)(Dx.data+(i-1)*Dx.step);
+//						dydata_m1 = (const float*)(Dy.data+(i-1)*Dy.step);
+//					}
+//					else
+//						dxdata_m1 = dydata_m1 = NULL;
+//
+//					dxdata = (const float*)(Dx.data+i*Dx.step);
+//					dydata = (const float*)(Dy.data+i*Dy.step);
+//					if(i < (imgGray.rows-1) )
+//					{
+//						dxdata_p1 = (const float*)(Dx.data+(i+1)*Dx.step);
+//						dydata_p1 = (const float*)(Dy.data+(i+1)*Dy.step);
+//					}
+//					else
+//						dxdata_p1 = dydata_p1 = NULL;
+//
+//					for(int j=0; j<imgGray.cols; j++)
+//					{
+//						float a, b, c;
+//						a = b = c = 0;
+//
+//						int kLow, kHigh;
+//						if(j == 0)
+//							kLow = 0;
+//						else
+//							kLow = -1;
+//						if(j == imgGray.cols-1)
+//							kHigh = 0;
+//						else
+//							kHigh = 1;
+//						for(int k=kLow; k<=kHigh; k++)
+//						{
+//							double multiple = 1;
+//							if(i > 0)
+//							{
+//								a += pow(dxdata_m1[j+k],2);
+//								b += dxdata_m1[j+k]*dydata_m1[j+k];
+//								c += pow(dydata_m1[j+k],2);
+//							}
+//							else
+//								multiple = 2;
+//
+//							if(i < imgGray.rows-1)
+//							{
+//								a += pow(dxdata_p1[j+k],2);
+//								b += dxdata_p1[j+k]*dydata_p1[j+k];
+//								c += pow(dydata_p1[j+k],2);
+//							}
+//							else
+//								multiple = 2;
+//
+//							a += multiple*pow(dxdata[j+k],2);
+//							b += multiple*dxdata[j+k]*dydata[j+k];
+//							c += multiple*pow(dydata[j+k],2);
+//						}
+//
+//						a *= 0.5f;
+//						c *= 0.5;
+//						eig_data[j] = (float)((a+c)-sqrt((a-c)*(a-c) + b*b));
+//					}
+//
+//				}
+
+//				cv::Mat cov(imgGray.size(), CV_32FC3);
+//				for(int i=0; i<imgGray.rows; i++)
+//				{
+//					float *cov_data = (float*)(cov.data+i*cov.step);
+//					const float* dxdata = (const float*)(Dx.data+i*Dx.step);
+//					const float* dydata = (const float*)(Dy.data+i*Dy.step);
+//					
+//					for(int j=0; j<imgGray.cols; j++)
+//					{
+//						float dx = dxdata[j];
+//						float dy = dydata[j];
+//
+//						cov_data[j*3] = dx*dx;
+//						cov_data[j*3+1] = dx*dy;
+//						cov_data[j*3+2] = dy*dy;
+//					}
+//				}
+//
+//				cv::boxFilter(cov, cov, cov.depth(), cv::Size(blockSize, blockSize), cv::Point(-1,-1), false);
+//				eig.create(imgGray.size(), CV_32F);
+//				// assume cov is continuous
+//				for(int i=0; i<cov.rows; i++)
+//				{
+//					const float *cv = (const float*)(cov.data+cov.step*i);
+//					float *dst = (float*)(eig.data+eig.step*i);
+//
+//					for(int j=0; j<cov.cols; j++)
+//					{
+//						float a = cv[j*3]*0.5f;
+//						float b = cv[j*3+1];
+//						float c = cv[j*3+2]*0.5;
+//						dst[j] = (float)((a+c)-sqrt((a-c)*(a-c)+b*b));
+//					}
+//				}
+
+				double maxVal = 0;
+				minMaxLoc(eig, 0, &maxVal, 0, 0);
+				threshold(eig, eig, maxVal*qualityLevel, 0, cv::THRESH_TOZERO);
+				dilate(eig, tmp, cv::Mat());
+				vector<const float*> tmpCorners;
+
+				cv::Size imgsize = imgGray.size();
+
+				// collect list of pointers to features - put them into temporary image
+				for( int y = 1; y < imgsize.height - 1; y++ )
+				{
+					const float* eig_data = (const float*)eig.ptr(y);
+					const float* tmp_data = (const float*)tmp.ptr(y);
+
+					for( int x = 1; x < imgsize.width - 1; x++ )
+					{
+						float val = eig_data[x];
+						if( val != 0 && val == tmp_data[x]/* && (!mask_data || mask_data[x]) */)
+							tmpCorners.push_back(eig_data + x);
+					}
+				}
+
+				sort(tmpCorners.begin(), tmpCorners.end(), [&](const float *a, const float *b) {return *a > *b;});
+//////////////////////////////////////////////////
+				vector<cv::Point2f> corners;
+				size_t i, j, total = tmpCorners.size(), ncorners = 0;
+				{
+					// Partition the image into larger grids
+					int w = imgGray.cols;
+					int h = imgGray.rows;
+
+					const int cell_size = cvRound(minDistance);
+					const int grid_width = (w + cell_size - 1) / cell_size;
+					const int grid_height = (h + cell_size - 1) / cell_size;
+
+					std::vector<std::vector<cv::Point2f> > grid(grid_width*grid_height);
+
+					int minDistanceSq = minDistance*minDistance;
+
+					for( i = 0; i < total; i++ )
+					{
+						int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
+						int y = (int)(ofs / eig.step);
+						int x = (int)((ofs - y*eig.step)/sizeof(float));
+
+						bool good = true;
+
+						int x_cell = x / cell_size;
+						int y_cell = y / cell_size;
+
+						int x1 = x_cell - 1;
+						int y1 = y_cell - 1;
+						int x2 = x_cell + 1;
+						int y2 = y_cell + 1;
+
+						// boundary check
+						x1 = std::max(0, x1);
+						y1 = std::max(0, y1);
+						x2 = std::min(grid_width-1, x2);
+						y2 = std::min(grid_height-1, y2);
+
+						for( int yy = y1; yy <= y2; yy++ )
+						{
+							for( int xx = x1; xx <= x2; xx++ )
+							{
+								vector <cv::Point2f> &m = grid[yy*grid_width + xx];
+
+								if( m.size() )
+								{
+									for(j = 0; j < m.size(); j++)
+									{
+										float dx = x - m[j].x;
+										float dy = y - m[j].y;
+
+										if( dx*dx + dy*dy < minDistanceSq )
+										{
+											good = false;
+											goto break_out;
+										}
+									}
+								}
+							}
+						}
+
+break_out:
+
+						if(good)
+						{
+							// printf("%d: %d %d -> %d %d, %d, %d -- %d %d %d %d, %d %d, c=%d\n",
+							//    i,x, y, x_cell, y_cell, (int)minDistance, cell_size,x1,y1,x2,y2, grid_width,grid_height,c);
+							grid[y_cell*grid_width + x_cell].push_back(cv::Point2f((float)x, (float)y));
+
+							corners.push_back(cv::Point2f((float)x, (float)y));
+							++ncorners;
+
+							if( maxCorners > 0 && (int)ncorners == maxCorners )
+								break;
+						}
+					}
+				}
+
+				kp.resize(corners.size());
+				vector<cv::Point2f>::const_iterator corner_it = corners.begin();
+				vector<cv::KeyPoint>::iterator keypoint_it = kp.begin();
+				for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
+					*keypoint_it = cv::KeyPoint( *corner_it, (float)blockSize );
+			}
+////////////////////////////////////////////////////////////////////////////////////////////////////
 			curPoints.clear();
 			for(int i=0; i<kp.size(); i++)
 				curPoints.push_back(kp[i].pt);
@@ -456,7 +819,7 @@ int main(int argv, char* argc[])
 				for(int j=0; j<D.dim1(); j++)
 					maxSigma = max(maxSigma, sqrt(D[j][j]));
 
-//				cv::Point2f pt(iter_priorDistList->first[0][0], iter_priorDistList->first[1][0]);
+//				cv::Point2f pt(priorDistList[i].first[0][0], priorDistList[i].first[1][0]);
 //				double width = 2*sqrt(D[0][0]);
 //				double height = 2*sqrt(D[1][1]);
 //				double theta = atan2(V[1][0], V[0][0]);

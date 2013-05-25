@@ -49,6 +49,7 @@ set (H ${H}
 	../../Rover/cpp/Time.h
 	../../Rover/cpp/Common.h
 	../../Rover/cpp/TNT_Utils.h
+	../../Rover/cpp/QuadLogger.h
 )
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
