@@ -130,12 +130,49 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		JAMA::Cholesky<double> chol_SaInv(SaInv);
 		Array2D<double> Sa = chol_SaInv.solve(eye2);
 
-		double fB = matmultS(transpose(md),matmult(SdInv,md));
+//		double fB = matmultS(transpose(md),matmult(SdInv,md));
+		double fB = SdInv[0][0]*md[0][0]*md[0][0] + 2.0*SdInv[0][1]*md[0][0]*md[1][0] + SdInv[1][1]*md[1][0]*md[1][0];
 		double det_Sd = Sd[0][0]*Sd[1][1] - Sd[0][1]*Sd[1][0];
 		double det_Sa = Sa[0][0]*Sa[1][1] - Sa[0][1]*Sa[1][0];
-		double coeff = sqrt(det_Sa)*2.0*ICSL::Constants::PI*sqrt(det_Sd*det_Sn);
-		double xrange = 5*sqrt(Sd[0][0]+Sn[0][0]);
-		double yrange = 5*sqrt(Sd[1][1]+Sn[1][1]);
+		double coeff = sqrt(det_Sa)*2.0*PI*sqrt(det_Sd*det_Sn);
+//		double xrange = 4*sqrt(Sd[0][0]+Sn[0][0]);
+//		double yrange = 4*sqrt(Sd[1][1]+Sn[1][1]);
+
+		double xrange, yrange;
+//		{
+//			Array2D<double> S = Sd+Sn;
+//			JAMA::Eigenvalue<double> eig_S(S);
+//			Array2D<double> D;
+//			eig_S.getD(D);
+//			xrange = 5.0*sqrt(max(D[0][0], D[1][1]));
+//			yrange = xrange;
+//		}
+		{
+			Array2D<double> S = Sd+Sn;
+			JAMA::Eigenvalue<double> eig_S(S);
+			Array2D<double> V, D;
+			eig_S.getV(V);
+			double theta1 = atan2(V[1][0], V[0][0]);
+			double theta2 = atan2(V[1][1], V[1][0]);
+//			double theta1 = 0;
+//			double theta2 = PI/2.0;
+			
+			eig_S.getD(D);
+			double r1 = 3.0*sqrt(D[0][0]);
+			double r2 = 3.0*sqrt(D[1][1]);
+
+			while(theta1 < -PI/2.0)
+				theta1 += PI;
+			while(theta1 > PI/2.0)
+				theta1 -= PI;
+			while(theta2 < 0)
+				theta2 += PI;
+			while(theta2 > PI)
+				theta2 -= PI;
+
+			xrange = max( r1*cos(theta1), r2*cos(theta2) );
+			yrange = max( r1*sin(theta1), r2*sin(theta2) );
+		}
 
 		SdInvmdList[i] = matmult(SdInv, md);
 		SaInvList[i] = SaInv.copy();
@@ -160,7 +197,11 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		mq[0][0] = x;
 		mq[1][0] = y;
 
-		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
+		Array2D<double> SnInvmq = matmult(SnInv, mq);
+
+//		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
+		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
+		
 //		for(int i=0; i<N1; i++)
 		tbb::mutex mutex_sum;
 		tbb::parallel_for(0, N1, [&](int i)
@@ -169,10 +210,11 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 
 			if(abs(x-md[0][0]) < xRangeList[i] && abs(y-md[1][0]) < yRangeList[i] )
 			{
-//				mutex_list.lock();
-				Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+matmult(SnInv,mq));
-				double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
-//				mutex_list.unlock();
+				Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
+//				double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
+				Array2D<double> SaInv = SaInvList[i];
+				double f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
+							+ fBList[i] + fC;
 				C[i][j] = coeffList[i]*exp(-0.5*f);
 				mutex_sum.lock();
 				colSum[j] += C[i][j];
