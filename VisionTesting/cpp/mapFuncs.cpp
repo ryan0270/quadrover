@@ -21,6 +21,7 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 	double svz = sqrt(Sv[2][2]);
 	double sz = sqrt(varz);
 	double f = focalLength;
+	double fInv = 1.0/f;
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
 	vector<Array2D<double> > mDeltaList(points.size()), SDeltaList(points.size());
@@ -70,7 +71,6 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 	}
 
 	// calc distribution moments
-//	list<pair<Array2D<double>, Array2D<double> > > priorDistList;
 	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(mDeltaList.size());
 //	for(int i=0; i<mDeltaList.size(); i++)
 	tbb::parallel_for(0, (int)mDeltaList.size(), [&](int i)
@@ -85,8 +85,8 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 		double y = points[i].y;
 
 		Array2D<double> Lw(2,3);
-		Lw[0][0] = 1.0/f*x*y; 		Lw[0][1] = -1.0/f*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = 1.0/f*(1+y*y);	Lw[1][1] = -1.0/f*x*y;		Lw[1][2] = -x;
+		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -fInv*(1+x*x); 	Lw[0][2] = y;
+		Lw[1][0] = fInv*(1+y*y);	Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
 		md = md+dt*matmult(Lw, omega);
 
 		md[0][0] += x;
@@ -139,14 +139,6 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 //		double yrange = 4*sqrt(Sd[1][1]+Sn[1][1]);
 
 		double xrange, yrange;
-//		{
-//			Array2D<double> S = Sd+Sn;
-//			JAMA::Eigenvalue<double> eig_S(S);
-//			Array2D<double> D;
-//			eig_S.getD(D);
-//			xrange = 5.0*sqrt(max(D[0][0], D[1][1]));
-//			yrange = xrange;
-//		}
 		{
 			Array2D<double> S = Sd+Sn;
 			JAMA::Eigenvalue<double> eig_S(S);
@@ -285,6 +277,7 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 	int N1 = prevPoints.size();
 	int N2 = curPoints.size();
 	double f = focalLength;
+	double fInv = 1.0/focalLength;
 
 	JAMA::Cholesky<double> chol_Sv(Sv), chol_Sn(Sn);
 	Array2D<double> SvInv = chol_Sv.solve(createIdentity(3));
@@ -308,8 +301,8 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 		LvList[i] = Lv.copy();
 
 		Array2D<double> Lw(2,3);
-		Lw[0][0] = 1.0/f*x*y; 		Lw[0][1] = -1.0/f*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = 1.0/f*(1+y*y);	Lw[1][1] = -1.0/f*x*y;		Lw[1][2] = -x;
+		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -fInv*(1+x*x); 	Lw[0][2] = y;
+		Lw[1][0] = fInv*(1+y*y);	Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
 
 		Array2D<double> q1(2,1);
 		q1[0][0] = x;
@@ -327,7 +320,13 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 		for(int i=0; i<N1; i++)
 		{
 			if(C[i][j] > 0.01)
-				Aj += C[i][j]*LvList[i];
+			{
+//				Aj += C[i][j]*LvList[i];
+				Aj[0][0] += C[i][j]*LvList[i][0][0];
+				Aj[0][2] += C[i][j]*LvList[i][0][2];
+				Aj[1][1] += C[i][j]*LvList[i][1][1];
+				Aj[1][2] += C[i][j]*LvList[i][1][2];
+			}
 		}
 		Aj = dt*Aj;
 
@@ -360,12 +359,14 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 				}
 			}
 	
-			Array2D<double> temp2 = matmult(SnInv, Aj);
-			mutex_S.lock();
-			double 			ds0   = (1-C[N1][j])*matmultS(transpose(temp1), matmult(SnInv, temp1));
-			Array2D<double>	ds1_T = (1-C[N1][j])*matmult(transpose(temp1), temp2);
-			Array2D<double>	dS2   = (1-C[N1][j])*matmult(Aj_T, temp2);
-			mutex_S.unlock();
+//			Array2D<double> temp2 = matmult(SnInv, Aj);
+			Array2D<double> temp2(2,3);
+			temp2[0][0] = SnInv[0][0]*Aj[0][0]; temp2[0][1] = 0; 					temp2[0][2] = SnInv[0][0]*Aj[0][2];
+			temp2[1][0] = 0;					temp2[1][1] = SnInv[1][1]*Aj[1][1];	temp2[1][2] = SnInv[1][1]*Aj[1][2];
+//			double 			ds0   = (1.0-C[N1][j])*matmultS(transpose(temp1), matmult(SnInv, temp1));
+			double 			ds0   = (1.0-C[N1][j])*(SnInv[0][0]*temp1[0][0]*temp1[0][0] + SnInv[1][1]*temp1[1][0]*temp1[1][0]); // assumes Sn diagnoal
+			Array2D<double>	ds1_T = (1.0-C[N1][j])*matmult(transpose(temp1), temp2);
+			Array2D<double>	dS2   = (1.0-C[N1][j])*matmult(Aj_T, temp2);
 
 			mutex_S.lock();
 			s0   += ds0;
@@ -452,10 +453,6 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
-
-//for(int i=0; i<3; i++)
-//	cout << velMAP[i][0] << "\t";
-//cout << endl;
 }
 
 }
