@@ -8,6 +8,16 @@ viconStateIndices = find(viconData(:,2) == 1);
 viconStateTime = viconData(viconStateIndices,1)'/1000;
 viconState = viconData(viconStateIndices,3:14)';
 
+phoneFile = '../log.txt';
+phoneData = importdata(phoneFile,'\t');
+phoneData = phoneData(1:end-1,:);
+
+syncIndex = find(phoneData(:,2) == -500,1,'last');
+LOG_ID_CUR_TRANS_STATE=-1012;
+tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
+tranStateTime = phoneData(tranStateIndices,1)'/1000;
+tranState = phoneData(tranStateIndices,3:8)';
+
 orbFile = '../orbResults.txt';
 orbData = importdata(orbFile,'\t',0);
 
@@ -48,30 +58,34 @@ R2 = RotViconToQuad*RotQuadToPhone*RotPhoneToCam;
 % R = R*diag([1 -1 -1]);
 viconState(1:6,:) = blkdiag(R1,R1)*viconState(1:6,:);
 viconState(7:12,:) = blkdiag(R2, R2)*viconState(7:12,:);
+tranState = blkdiag(RotPhoneToCam, RotPhoneToCam)*tranState;
 
 %%
-viconStateInterporb = interp1(viconStateTime,viconState',orbVelTime)';
+viconStateInterpOrb = interp1(viconStateTime,viconState',orbVelTime)';
 viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime)';
+viconStateInterpKF = interp1(viconStateTime,viconState',tranStateTime,[],'extrap')';
 
 %% mean shift
-orbVel = orbVel+diag(mean(viconStateInterporb(10:12,:)-orbVel,2))*ones(size(orbVel));
-orbHeight = orbHeight+diag(mean(-viconStateInterporb(9,:)-orbHeight,2))*ones(size(orbHeight));
+orbVel = orbVel+diag(mean(viconStateInterpOrb(10:12,:)-orbVel,2))*ones(size(orbVel));
+orbHeight = orbHeight+diag(mean(-viconStateInterpOrb(9,:)-orbHeight,2))*ones(size(orbHeight));
 
 mapVel = mapVel+diag(mean(viconStateInterpMap(10:12,:)-mapVel,2))*ones(size(mapVel));
 mapHeight = mapHeight+diag(mean(-viconStateInterpMap(9,:)-mapHeight,2))*ones(size(mapHeight));
 
-
 %%
-rmsOrbVel = rms(viconStateInterporb(10:12,:)-orbVel,2);
+rmsOrbVel = rms(viconStateInterpOrb(10:12,:)-orbVel,2);
 rmsMapVel = rms(viconStateInterpMap(10:12,:)-mapVel,2);
-rmsOrbHeight = rms(-viconStateInterporb(9,:)-orbHeight);
+rmsKFVel = rms(viconStateInterpKF(10:12,:)-tranState(4:6,:),2);
+
+rmsOrbHeight = rms(-viconStateInterpOrb(9,:)-orbHeight);
 rmsMapHeight = rms(-viconStateInterpMap(9,:)-mapHeight);
+rmsKFHeight = rms(viconStateInterpKF(9,:)-tranState(3,:));
 
 disp('vel:')
-disp([rmsOrbVel rmsMapVel]);
+disp([rmsKFVel rmsOrbVel rmsMapVel]);
 
 disp('height:')
-disp([rmsOrbHeight rmsMapHeight]);
+disp([rmsKFHeight rmsOrbHeight rmsMapHeight]);
 
 
 %%
@@ -85,6 +99,7 @@ for st=1:3
 	plot(viconStateTime, viconState(st+9,:)); hold all
 	plot(orbVelTime, orbVel(st,:),'.'); hold all
 	plot(mapVelTime, mapVel(st,:),'.'); hold all
+% 	plot(tranStateTime, tranState(st+3,:),'.'); hold all
 	ax = axis;
 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
 	xlabel('Time [s]');
@@ -96,6 +111,7 @@ legend('Vicon','ORB','MAP');
 % plot(viconStateTime, -viconState(9,:)); hold all
 % plot(orbHeightTime, orbHeight, '.'); hold all
 % plot(mapHeightTime, mapHeight, '.'); hold all
+% plot(tranStateTime, -tranState(3,:), '.'); hold all
 % xlabel('Time [s]');
 % ylabel('Height [m]');
 % legend('Vicon','ORB','MAP');
