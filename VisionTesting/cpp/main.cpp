@@ -108,7 +108,7 @@ int main(int argv, char* argc[])
 	Sn[0][0] = Sn[1][1] = 2*pow(5,2);
 	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
 
-	cv::Point2f center(330,240);
+	cv::Point2f center(320,240);
 
 	tbb::task_scheduler_init init;
 
@@ -489,7 +489,7 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //			for(int i=0; i<curPoints.size(); i++)
 //				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
 //			imshow("chad",img);
-	
+//  
 //			keypress = cv::waitKey() % 256;
 
 			img.release();
@@ -509,7 +509,6 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		cout << "\tts5: " << ts5 << endl;
 		cout << "\tts6: " << ts6 << endl;
 		cout << "\tts7: " << ts7 << endl;
-		cout << "\tts1: " << ts1 << endl;
 
 	}
 
@@ -678,8 +677,13 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 	vector<cv::KeyPoint> tempKp;
 	FAST(img, tempKp, 4, true);
 
-	sort(tempKp.begin(), tempKp.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
-	int maxScore = tempKp[0].response;
+	float maxScore = 0;
+	for(int i=0; i<tempKp.size(); i++)
+		maxScore = max(tempKp[i].response, maxScore);
+
+	// sorting at this point is taking too long
+//	sort(tempKp.begin(), tempKp.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
+//	float maxScore = tempKp[0].response;
 
 	// group points into grid
 	const int cellSize = minDistance+0.5;
@@ -688,39 +692,50 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 
 	vector<vector<int> > grids(nGridX*nGridY); // stores index of keypoints in each grid
 	vector<int> gridId;
-	int kpId = 0;
-	while(tempKp[kpId].response > qualityLevel*maxScore && kpId < tempKp.size())
+	gridId.reserve(tempKp.size()*nGridY);
+	float threshold = qualityLevel*maxScore;
+	for(int kpId=0; kpId < tempKp.size(); kpId++)
 	{
 		int xGrid = tempKp[kpId].pt.x / cellSize;
 		int yGrid = tempKp[kpId].pt.y / cellSize;
 		int gid = yGrid*nGridX+xGrid;
 		grids[gid].push_back(kpId);
 		gridId.push_back(gid);
-
-		kpId++;
 	}
 
 	// Now pick the strongest points 
 	// Right now, for reduced computation, it is using a minDistance x minDistance box for exclusion rather
 	// than a minDistance radius circle
 	vector<bool> isActive(gridId.size(), true);
+//	vector<bool> isActive(tempKp.size(), true);
 	pts.clear();
 	for(int i=0; i<gridId.size(); i++)
 	{
 		if(!isActive[i])
 			continue;
 
-		// since tempKp is sorted already, the current point is the strongest
-		// remaining point
-		pts.push_back(tempKp[i]);
+		float curResponse = tempKp[i].response;
 
 		// turn off other points in this grid
 		int gid = gridId[i];
-		for(int j=0; j<grids[gid].size(); j++)
+		bool isStrongest = true;;
+//		for(int j=0; j<grids[gid].size(); j++)
+		int j=0;
+		while(isStrongest && j < grids[gid].size() )
 		{
 			int kpId = grids[gid][j];
-			if(kpId != i)
+			if(kpId != i && curResponse >= tempKp[kpId].response)
 				isActive[kpId] = false;
+			else if(kpId != i && isActive[kpId])
+				isStrongest = false;
+
+			j++;
+		}
+
+		if(!isStrongest)
+		{
+			isActive[i] = false;
+			continue;
 		}
 
 		// need to check neighbor grids too
@@ -730,24 +745,68 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 		cv::Point2f *curPt = &tempKp[i].pt;
 		int neighborOffsetX[] = {-1, 0, 1, -1, 1, -1, 0, 1};
 		int neighborOffsetY[] = {-1, -1, -1, 0, 0, 1, 1, 1};
-		for(int j=0; j<8; j++)
+//		for(int j=0; j<8; j++)
+		j = 0;
+		while(isStrongest && j < 8)
 		{
 			int nx = xGrid+neighborOffsetX[j];
 			int ny = yGrid+neighborOffsetY[j];
 			if(nx < 0 || nx > nGridX-1 || ny < 0 || ny > nGridY-1)
+			{
+				j++;
 				continue;
+			}
 
 			int ngid = ny*nGridX+nx;
-			for(int k=0; k<grids[ngid].size(); k++)
+//			for(int k=0; k<grids[ngid].size(); k++)
+			int k=0;
+			while(isStrongest && k < grids[ngid].size() )
 			{
 				int kpId = grids[ngid][k];
 				if(!isActive[kpId])
+				{
+					k++;
 					continue;
+				}
 
 				cv::Point2f *pt = &tempKp[kpId].pt;
 				if(abs(pt->x - curPt->x) <= minDistance && abs(pt->y - curPt->y) <= minDistance)
-					isActive[kpId] = false;
+				{
+					if(kpId != i && curResponse >= tempKp[kpId].response)
+						isActive[kpId] = false;
+					else if(kpId != i && isActive[kpId])
+						isStrongest = false;
+				}
+
+				k++;
 			}
+
+			j++;
 		}
+
+		if(!isStrongest)
+		{
+			isActive[i] = false;
+			continue;
+		}
+
+//		double minD = 0xFFFFFF;
+//		double minJ = 0;
+//		for(int j=0; j<tempKp.size(); j++)
+//		{
+//			if(j == i || !isActive[j])
+//				continue;
+//			cv::Point2f *pt = &tempKp[j].pt;
+//			double dist = sqrt( pow(curPt->x - pt->x, 2) + pow(curPt->y - pt->y,2));
+//			if(dist < minD)
+//			{
+//				minD = dist;
+//				minJ =j;
+//			}
+//		}
+
+		pts.push_back(tempKp[i]);
 	}
+
+	sort(pts.begin(), pts.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
 }
