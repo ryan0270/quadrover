@@ -44,6 +44,8 @@ void loadPcLog(String filename,
 		);
 vector<string> tokenize(string str);
 
+void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k);
+
 //enum LogIDs
 //{
 //	LOG_ID_ACCEL = 1,
@@ -132,7 +134,7 @@ int main(int argv, char* argc[])
 
 //	cv::FastFeatureDetector featureDetector;
 	int maxCorners = 1000;
-	double qualityLevel = 0.01;
+	double qualityLevel = 0.02;
 	double minDistance = 30;
 	int blockSize = 3;
 	bool useHarrisDetector = false;
@@ -158,9 +160,6 @@ int main(int argv, char* argc[])
 		vector<cv::KeyPoint> prevKp, curKp;
 		cv::Mat prevDescriptors, curDescriptors;
 
-double ts2=0;
-Time t0;
-
 		fstream fs("../orbResults.txt", fstream::out);
 		Time begin;
 		while(keypress != (int)'q' && iter_imgList != imgList.end())
@@ -179,14 +178,22 @@ Time t0;
 			curTime = imgIdList[imgIdx].second;
 			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
 			Array2D<double> transState = Data::interpolate(curTime, transDataList);
-			Array2D<double> errCov = Data::interpolate(curTime, errCovList);
 			Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
 			Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
+
+			Array2D<double> errCov1 = Data::interpolate(curTime, errCovList);
+			Array2D<double> errCov(6,6,0.0);
+			for(int i=0; i<3; i++)
+			{
+				errCov[i][i] = errCov1[i][0];
+				errCov[i][i+3] = errCov1[i+3][0];
+				errCov[i+3][i+3] = errCov1[i+6][0];
+			}
 
 			// Rotate to camera coords
 			attState = matmult(rotPhoneToCam2, attState);
 			transState = matmult(rotPhoneToCam2, transState);
-			errCov = matmult(rotPhoneToCam3, errCov);
+			errCov = matmult(rotPhoneToCam2, matmult(errCov, transpose(rotPhoneToCam2)));
 			viconAttState = matmult(rotPhoneToCam2, viconAttState);
 			viconTransState = matmult(rotPhoneToCam2, viconTransState);
 
@@ -202,13 +209,11 @@ Time t0;
 			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
 			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
 
-t0.setTime();
 			curKp.swap(prevKp);
 			curKp.clear();
 			featureDetector.detect(imgGray, curKp);
 			numFeaturesAccum += curKp.size();
 
-ts2 += t0.getElapsedTimeNS()/1.0e9;
 			prevDescriptors = curDescriptors;
 			curDescriptors.release();
 			curDescriptors.data = NULL;
@@ -273,6 +278,11 @@ ts2 += t0.getElapsedTimeNS()/1.0e9;
 				dt = 0;
 			Array2D<double> omega = logSO3(attChange, dt);
 
+			sz = sqrt( errCov[2][2]);
+			Sv[0][0] = errCov[3][3];
+			Sv[1][1] = errCov[4][4];
+			Sv[2][2] = errCov[5][5];
+
 			if(curPoints.size() > 0)
 			{
 				Array2D<double> vel;
@@ -310,7 +320,6 @@ ts2 += t0.getElapsedTimeNS()/1.0e9;
 
 		fs.close();
 
-		cout << "ts2: " << ts2 << endl;
 		cout << "Avg num ORB features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
 		cout << "Avg num ORB matches: " << ((double)numMatchesAccum)/imgList.size() << endl;
 		cout << "ORB time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
@@ -352,14 +361,22 @@ ts2 += t0.getElapsedTimeNS()/1.0e9;
 			curTime = imgIdList[imgIdx].second;
 			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
 			Array2D<double> transState = Data::interpolate(curTime, transDataList);
-			Array2D<double> errCov = Data::interpolate(curTime, errCovList);
 			Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
 			Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
+
+			Array2D<double> errCov1 = Data::interpolate(curTime, errCovList);
+			Array2D<double> errCov(6,6,0.0);
+			for(int i=0; i<3; i++)
+			{
+				errCov[i][i] = errCov1[i][0];
+				errCov[i][i+3] = errCov1[i+3][0];
+				errCov[i+3][i+3] = errCov1[i+6][0];
+			}
 
 			// Rotate to camera coords
 			attState = matmult(rotPhoneToCam2, attState);
 			transState = matmult(rotPhoneToCam2, transState);
-			errCov = matmult(rotPhoneToCam3, errCov);
+			errCov = matmult(rotPhoneToCam2, matmult(errCov, transpose(rotPhoneToCam2)));
 			viconAttState = matmult(rotPhoneToCam2, viconAttState);
 			viconTransState = matmult(rotPhoneToCam2, viconTransState);
 
@@ -414,9 +431,8 @@ ts2 += t0.getElapsedTimeNS()/1.0e9;
 //				move(kpList[i].begin(), kpList[i].end(), back_inserter(kp));
 //			}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-			{
-				cv::Mat eig, tmp;
-//////////////////////////////////////////////////
+//			{
+//				cv::Mat eig, tmp;
 //				int blockSize = 3;
 //				cornerMinEigenVal(imgGray, eig, blockSize, 3);
 //				double maxVal = 0;
@@ -443,307 +459,175 @@ ts2 += t0.getElapsedTimeNS()/1.0e9;
 //
 //				sort(tmpCorners.begin(), tmpCorners.end(), [&](const float *a, const float *b) {return *a > *b;});
 //				int chad = 0;
-//////////////////////////////////////////////////
-				vector<cv::KeyPoint> tempKp;
-				FAST(imgGray, tempKp, 5, true);
 
-				double scale = (double)(1 << 2)*blockSize;
-				scale = 1.0/scale;
-				cv::Mat Dx, Dy;
-				Scharr(imgGray, Dx, CV_32F, 1, 0, scale);
-				Scharr(imgGray, Dy, CV_32F, 0, 1, scale);
-
-				eig.create(imgGray.size(), CV_32F);
-				eig = cv::Scalar(0);
-
-				for(int i=0; i<tempKp.size(); i++)
-				{
-					int y = tempKp[i].pt.x;
-					int x = tempKp[i].pt.y;
-
-					float *eig_data = (float*)(eig.data+x*eig.step);
-
-					const float *dxdata_m1, *dxdata, *dxdata_p1;
-					const float *dydata_m1, *dydata, *dydata_p1;
-					if(x > 0)
-					{
-						dxdata_m1 = (const float*)(Dx.data+(x-1)*Dx.step);
-						dydata_m1 = (const float*)(Dy.data+(x-1)*Dy.step);
-					}
-					else
-						dxdata_m1 = dydata_m1 = NULL;
-
-					dxdata = (const float*)(Dx.data+x*Dx.step);
-					dydata = (const float*)(Dy.data+x*Dy.step);
-					if(x < (imgGray.rows-1) )
-					{
-						dxdata_p1 = (const float*)(Dx.data+(x+1)*Dx.step);
-						dydata_p1 = (const float*)(Dy.data+(x+1)*Dy.step);
-					}
-					else
-						dxdata_p1 = dydata_p1 = NULL;
-
-					float a, b, c;
-					a = b = c = 0;
-
-					int kLow, kHigh;
-					if(y == 0)
-						kLow = 0;
-					else
-						kLow = -1;
-					if(y == imgGray.cols-1)
-						kHigh = 0;
-					else
-						kHigh = 1;
-					for(int k=kLow; k<=kHigh; k++)
-					{
-						double multiple = 1;
-						if(x > 0)
-						{
-							a += pow(dxdata_m1[y+k],2);
-							b += dxdata_m1[y+k]*dydata_m1[y+k];
-							c += pow(dydata_m1[y+k],2);
-						}
-						else
-							multiple = 2;
-
-						if(x < imgGray.rows-1)
-						{
-							a += pow(dxdata_p1[y+k],2);
-							b += dxdata_p1[y+k]*dydata_p1[y+k];
-							c += pow(dydata_p1[y+k],2);
-						}
-						else
-							multiple = 2;
-
-						a += multiple*pow(dxdata[y+k],2);
-						b += multiple*dxdata[y+k]*dydata[y+k];
-						c += multiple*pow(dydata[y+k],2);
-					}
-
-					a *= 0.5f;
-					c *= 0.5;
-					eig_data[y] = (float)((a+c)-sqrt((a-c)*(a-c) + b*b));
-				}
-
-
-//				for(int i=0; i<imgGray.rows; i++)
+//				vector<cv::Point2f> corners;
+//				size_t i, j, total = tmpCorners.size(), ncorners = 0;
 //				{
-//					float *eig_data = (float*)(eig.data+i*eig.step);
+//					// Partition the image into larger grids
+//					int w = imgGray.cols;
+//					int h = imgGray.rows;
 //
-//					const float *dxdata_m1, *dxdata, *dxdata_p1;
-//					const float *dydata_m1, *dydata, *dydata_p1;
-//					if(i > 0)
+//					const int cell_size = cvRound(minDistance);
+//					const int grid_width = (w + cell_size - 1) / cell_size;
+//					const int grid_height = (h + cell_size - 1) / cell_size;
+//
+//					std::vector<std::vector<cv::Point2f> > grid(grid_width*grid_height);
+//
+//					int minDistanceSq = minDistance*minDistance;
+//
+//					for( i = 0; i < total; i++ )
 //					{
-//						dxdata_m1 = (const float*)(Dx.data+(i-1)*Dx.step);
-//						dydata_m1 = (const float*)(Dy.data+(i-1)*Dy.step);
-//					}
-//					else
-//						dxdata_m1 = dydata_m1 = NULL;
+//						int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
+//						int y = (int)(ofs / eig.step);
+//						int x = (int)((ofs - y*eig.step)/sizeof(float));
 //
-//					dxdata = (const float*)(Dx.data+i*Dx.step);
-//					dydata = (const float*)(Dy.data+i*Dy.step);
-//					if(i < (imgGray.rows-1) )
-//					{
-//						dxdata_p1 = (const float*)(Dx.data+(i+1)*Dx.step);
-//						dydata_p1 = (const float*)(Dy.data+(i+1)*Dy.step);
-//					}
-//					else
-//						dxdata_p1 = dydata_p1 = NULL;
+//						bool good = true;
 //
-//					for(int j=0; j<imgGray.cols; j++)
-//					{
-//						float a, b, c;
-//						a = b = c = 0;
+//						int x_cell = x / cell_size;
+//						int y_cell = y / cell_size;
 //
-//						int kLow, kHigh;
-//						if(j == 0)
-//							kLow = 0;
-//						else
-//							kLow = -1;
-//						if(j == imgGray.cols-1)
-//							kHigh = 0;
-//						else
-//							kHigh = 1;
-//						for(int k=kLow; k<=kHigh; k++)
+//						int x1 = x_cell - 1;
+//						int y1 = y_cell - 1;
+//						int x2 = x_cell + 1;
+//						int y2 = y_cell + 1;
+//
+//						// boundary check
+//						x1 = std::max(0, x1);
+//						y1 = std::max(0, y1);
+//						x2 = std::min(grid_width-1, x2);
+//						y2 = std::min(grid_height-1, y2);
+//
+//						for( int yy = y1; yy <= y2; yy++ )
 //						{
-//							double multiple = 1;
-//							if(i > 0)
+//							for( int xx = x1; xx <= x2; xx++ )
 //							{
-//								a += pow(dxdata_m1[j+k],2);
-//								b += dxdata_m1[j+k]*dydata_m1[j+k];
-//								c += pow(dydata_m1[j+k],2);
-//							}
-//							else
-//								multiple = 2;
+//								vector <cv::Point2f> &m = grid[yy*grid_width + xx];
 //
-//							if(i < imgGray.rows-1)
-//							{
-//								a += pow(dxdata_p1[j+k],2);
-//								b += dxdata_p1[j+k]*dydata_p1[j+k];
-//								c += pow(dydata_p1[j+k],2);
-//							}
-//							else
-//								multiple = 2;
+//								if( m.size() )
+//								{
+//									for(j = 0; j < m.size(); j++)
+//									{
+//										float dx = x - m[j].x;
+//										float dy = y - m[j].y;
 //
-//							a += multiple*pow(dxdata[j+k],2);
-//							b += multiple*dxdata[j+k]*dydata[j+k];
-//							c += multiple*pow(dydata[j+k],2);
+//										if( dx*dx + dy*dy < minDistanceSq )
+//										{
+//											good = false;
+//											goto break_out;
+//										}
+//									}
+//								}
+//							}
 //						}
 //
-//						a *= 0.5f;
-//						c *= 0.5;
-//						eig_data[j] = (float)((a+c)-sqrt((a-c)*(a-c) + b*b));
-//					}
+//break_out:
 //
-//				}
-
-//				cv::Mat cov(imgGray.size(), CV_32FC3);
-//				for(int i=0; i<imgGray.rows; i++)
-//				{
-//					float *cov_data = (float*)(cov.data+i*cov.step);
-//					const float* dxdata = (const float*)(Dx.data+i*Dx.step);
-//					const float* dydata = (const float*)(Dy.data+i*Dy.step);
-//					
-//					for(int j=0; j<imgGray.cols; j++)
-//					{
-//						float dx = dxdata[j];
-//						float dy = dydata[j];
+//						if(good)
+//						{
+//							// printf("%d: %d %d -> %d %d, %d, %d -- %d %d %d %d, %d %d, c=%d\n",
+//							//    i,x, y, x_cell, y_cell, (int)minDistance, cell_size,x1,y1,x2,y2, grid_width,grid_height,c);
+//							grid[y_cell*grid_width + x_cell].push_back(cv::Point2f((float)x, (float)y));
 //
-//						cov_data[j*3] = dx*dx;
-//						cov_data[j*3+1] = dx*dy;
-//						cov_data[j*3+2] = dy*dy;
+//							corners.push_back(cv::Point2f((float)x, (float)y));
+//							++ncorners;
+//
+//							if( maxCorners > 0 && (int)ncorners == maxCorners )
+//								break;
+//						}
 //					}
 //				}
 //
-//				cv::boxFilter(cov, cov, cov.depth(), cv::Size(blockSize, blockSize), cv::Point(-1,-1), false);
-//				eig.create(imgGray.size(), CV_32F);
-//				// assume cov is continuous
-//				for(int i=0; i<cov.rows; i++)
-//				{
-//					const float *cv = (const float*)(cov.data+cov.step*i);
-//					float *dst = (float*)(eig.data+eig.step*i);
-//
-//					for(int j=0; j<cov.cols; j++)
-//					{
-//						float a = cv[j*3]*0.5f;
-//						float b = cv[j*3+1];
-//						float c = cv[j*3+2]*0.5;
-//						dst[j] = (float)((a+c)-sqrt((a-c)*(a-c)+b*b));
-//					}
-//				}
-
-				double maxVal = 0;
-				minMaxLoc(eig, 0, &maxVal, 0, 0);
-				threshold(eig, eig, maxVal*qualityLevel, 0, cv::THRESH_TOZERO);
-				dilate(eig, tmp, cv::Mat());
-				vector<const float*> tmpCorners;
-
-				cv::Size imgsize = imgGray.size();
-
-				// collect list of pointers to features - put them into temporary image
-				for( int y = 1; y < imgsize.height - 1; y++ )
-				{
-					const float* eig_data = (const float*)eig.ptr(y);
-					const float* tmp_data = (const float*)tmp.ptr(y);
-
-					for( int x = 1; x < imgsize.width - 1; x++ )
-					{
-						float val = eig_data[x];
-						if( val != 0 && val == tmp_data[x]/* && (!mask_data || mask_data[x]) */)
-							tmpCorners.push_back(eig_data + x);
-					}
-				}
-
-				sort(tmpCorners.begin(), tmpCorners.end(), [&](const float *a, const float *b) {return *a > *b;});
-//////////////////////////////////////////////////
-				vector<cv::Point2f> corners;
-				size_t i, j, total = tmpCorners.size(), ncorners = 0;
-				{
-					// Partition the image into larger grids
-					int w = imgGray.cols;
-					int h = imgGray.rows;
-
-					const int cell_size = cvRound(minDistance);
-					const int grid_width = (w + cell_size - 1) / cell_size;
-					const int grid_height = (h + cell_size - 1) / cell_size;
-
-					std::vector<std::vector<cv::Point2f> > grid(grid_width*grid_height);
-
-					int minDistanceSq = minDistance*minDistance;
-
-					for( i = 0; i < total; i++ )
-					{
-						int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
-						int y = (int)(ofs / eig.step);
-						int x = (int)((ofs - y*eig.step)/sizeof(float));
-
-						bool good = true;
-
-						int x_cell = x / cell_size;
-						int y_cell = y / cell_size;
-
-						int x1 = x_cell - 1;
-						int y1 = y_cell - 1;
-						int x2 = x_cell + 1;
-						int y2 = y_cell + 1;
-
-						// boundary check
-						x1 = std::max(0, x1);
-						y1 = std::max(0, y1);
-						x2 = std::min(grid_width-1, x2);
-						y2 = std::min(grid_height-1, y2);
-
-						for( int yy = y1; yy <= y2; yy++ )
-						{
-							for( int xx = x1; xx <= x2; xx++ )
-							{
-								vector <cv::Point2f> &m = grid[yy*grid_width + xx];
-
-								if( m.size() )
-								{
-									for(j = 0; j < m.size(); j++)
-									{
-										float dx = x - m[j].x;
-										float dy = y - m[j].y;
-
-										if( dx*dx + dy*dy < minDistanceSq )
-										{
-											good = false;
-											goto break_out;
-										}
-									}
-								}
-							}
-						}
-
-break_out:
-
-						if(good)
-						{
-							// printf("%d: %d %d -> %d %d, %d, %d -- %d %d %d %d, %d %d, c=%d\n",
-							//    i,x, y, x_cell, y_cell, (int)minDistance, cell_size,x1,y1,x2,y2, grid_width,grid_height,c);
-							grid[y_cell*grid_width + x_cell].push_back(cv::Point2f((float)x, (float)y));
-
-							corners.push_back(cv::Point2f((float)x, (float)y));
-							++ncorners;
-
-							if( maxCorners > 0 && (int)ncorners == maxCorners )
-								break;
-						}
-					}
-				}
-
-				kp.resize(corners.size());
-				vector<cv::Point2f>::const_iterator corner_it = corners.begin();
-				vector<cv::KeyPoint>::iterator keypoint_it = kp.begin();
-				for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
-					*keypoint_it = cv::KeyPoint( *corner_it, (float)blockSize );
-			}
+//				kp.resize(corners.size());
+//				vector<cv::Point2f>::const_iterator corner_it = corners.begin();
+//				vector<cv::KeyPoint>::iterator keypoint_it = kp.begin();
+//				for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
+//					*keypoint_it = cv::KeyPoint( *corner_it, (float)blockSize );
+//			}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-			curPoints.clear();
-			for(int i=0; i<kp.size(); i++)
-				curPoints.push_back(kp[i].pt);
+				vector<cv::KeyPoint> tempKp;
+				FAST(imgGray, tempKp, 4, true);
+//				int blkSize = 7;
+//				int harris_k = 0.04f;
+//				HarrisResponses(imgGray, tempKp, blkSize, blkSize);
+
+				sort(tempKp.begin(), tempKp.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
+				int maxScore = tempKp[0].response;
+
+				// group points into grid
+				const int cellSize = minDistance+0.5;
+				const int nGridX= (img.cols+cellSize-1)/cellSize;
+				const int nGridY= (img.rows+cellSize-1)/cellSize;
+
+				vector<vector<int> > grids(nGridX*nGridY); // stores index of keypoints in each grid
+				vector<int> gridId;
+				int kpId = 0;
+				while(tempKp[kpId].response > qualityLevel*maxScore && kpId < tempKp.size())
+				{
+					int xGrid = tempKp[kpId].pt.x / cellSize;
+					int yGrid = tempKp[kpId].pt.y / cellSize;
+					int gid = yGrid*nGridX+xGrid;
+					grids[gid].push_back(kpId);
+					gridId.push_back(gid);
+
+					kpId++;
+				}
+
+				// Now pick the strongest points 
+				// Right now, for reduced computation, it is using a minDistance x minDistance box for exclusion rather
+				// than a minDistance radius circle
+				vector<bool> isActive(gridId.size(), true);
+				curPoints.clear();
+				for(int i=0; i<gridId.size(); i++)
+				{
+					if(!isActive[i])
+						continue;
+
+					// since tempKp is sorted already, the current point is the strongest
+					// remaining point
+					curPoints.push_back(tempKp[i].pt);
+
+					// turn off other points in this grid
+					int gid = gridId[i];
+					for(int j=0; j<grids[gid].size(); j++)
+					{
+						int kpId = grids[gid][j];
+						if(kpId != i)
+							isActive[kpId] = false;
+					}
+
+					// need to check neighbor grids too
+					int xGrid = gid % nGridX;
+					int yGrid = gid / nGridX;
+
+					cv::Point2f *curPt = &tempKp[i].pt;
+					int neighborOffsetX[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+					int neighborOffsetY[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+					for(int j=0; j<8; j++)
+					{
+						int nx = xGrid+neighborOffsetX[j];
+						int ny = yGrid+neighborOffsetY[j];
+						if(nx < 0 || nx > nGridX-1 || ny < 0 || ny > nGridY-1)
+							continue;
+
+						int ngid = ny*nGridX+nx;
+						for(int k=0; k<grids[ngid].size(); k++)
+						{
+							int kpId = grids[ngid][k];
+							if(!isActive[kpId])
+								continue;
+
+							cv::Point2f *pt = &tempKp[kpId].pt;
+							if(abs(pt->x - curPt->x) <= minDistance && abs(pt->y - curPt->y) <= minDistance)
+								isActive[kpId] = false;
+						}
+					}
+				}
+				
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//			curPoints.clear();
+//			for(int i=0; i<kp.size(); i++)
+//				curPoints.push_back(kp[i].pt);
 			numFeaturesAccum += curPoints.size();
 
 			/////////////////////////////////////////////////////
@@ -787,6 +671,11 @@ break_out:
 			for(int i=0; i<C.dim1()-1; i++)
 				for(int j=0; j<C.dim2()-1; j++)
 					numMatchesAccum += C[i][j];
+
+			sz = sqrt( errCov[2][2]);
+			Sv[0][0] = errCov[3][3];
+			Sv[1][1] = errCov[4][4];
+			Sv[2][2] = errCov[5][5];
 
 			// MAP velocity and height
 			if(prevPoints.size() > 0)
@@ -833,7 +722,7 @@ break_out:
 //			for(int i=0; i<curPoints.size(); i++)
 //				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
 //			imshow("chad",img);
-//	
+	
 //			keypress = cv::waitKey() % 256;
 
 			img.release();
@@ -999,4 +888,45 @@ void loadPcLog(String filename,
 	}
 	else
 		cout << "Couldn't find " << filename.c_str() << endl;
+}
+
+// Taken from the OpenCV ORB implementation
+void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k)
+{
+    size_t ptidx, ptsize = pts.size();
+
+    const uchar* ptr00 = img.ptr<uchar>();
+    int step = (int)(img.step/img.elemSize1());
+    int r = blockSize/2;
+
+    float scale = (1 << 2) * blockSize * 255.0f;
+    scale = 1.0f / scale;
+    float scale_sq_sq = scale * scale * scale * scale;
+
+	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
+    int* ofs = ofsbuf;
+    for( int i = 0; i < blockSize; i++ )
+        for( int j = 0; j < blockSize; j++ )
+            ofs[i*blockSize + j] = (int)(i*step + j);
+
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+    {
+        int x0 = cvRound(pts[ptidx].pt.x - r);
+        int y0 = cvRound(pts[ptidx].pt.y - r);
+
+        const uchar* ptr0 = ptr00 + y0*step + x0;
+        int a = 0, b = 0, c = 0;
+
+        for( int k = 0; k < blockSize*blockSize; k++ )
+        {
+            const uchar* ptr = ptr0 + ofs[k];
+            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
+            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
+            a += Ix*Ix;
+            b += Iy*Iy;
+            c += Ix*Iy;
+        }
+        pts[ptidx].response = ((float)a * b - (float)c * c -
+                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+    }
 }
