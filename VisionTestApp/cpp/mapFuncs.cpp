@@ -21,6 +21,7 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 	double svz = sqrt(Sv[2][2]);
 	double sz = sqrt(varz);
 	double f = focalLength;
+	double fInv = 1.0/f;
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
 	vector<Array2D<double> > mDeltaList(points.size()), SDeltaList(points.size());
@@ -70,7 +71,6 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 	}
 
 	// calc distribution moments
-//	list<pair<Array2D<double>, Array2D<double> > > priorDistList;
 	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(mDeltaList.size());
 //	for(int i=0; i<mDeltaList.size(); i++)
 	tbb::parallel_for(0, (int)mDeltaList.size(), [&](int i)
@@ -85,8 +85,8 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 		double y = points[i].y;
 
 		Array2D<double> Lw(2,3);
-		Lw[0][0] = 1.0/f*x*y; 		Lw[0][1] = -1.0/f*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = 1.0/f*(1+y*y);	Lw[1][1] = -1.0/f*x*y;		Lw[1][2] = -x;
+		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -fInv*(1+x*x); 	Lw[0][2] = y;
+		Lw[1][0] = fInv*(1+y*y);	Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
 		md = md+dt*matmult(Lw, omega);
 
 		md[0][0] += x;
@@ -130,12 +130,41 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		JAMA::Cholesky<double> chol_SaInv(SaInv);
 		Array2D<double> Sa = chol_SaInv.solve(eye2);
 
-		double fB = matmultS(transpose(md),matmult(SdInv,md));
+//		double fB = matmultS(transpose(md),matmult(SdInv,md));
+		double fB = SdInv[0][0]*md[0][0]*md[0][0] + 2.0*SdInv[0][1]*md[0][0]*md[1][0] + SdInv[1][1]*md[1][0]*md[1][0];
 		double det_Sd = Sd[0][0]*Sd[1][1] - Sd[0][1]*Sd[1][0];
 		double det_Sa = Sa[0][0]*Sa[1][1] - Sa[0][1]*Sa[1][0];
-		double coeff = sqrt(det_Sa)*2.0*ICSL::Constants::PI*sqrt(det_Sd*det_Sn);
-		double xrange = 5*sqrt(Sd[0][0]+Sn[0][0]);
-		double yrange = 5*sqrt(Sd[1][1]+Sn[1][1]);
+		double coeff = sqrt(det_Sa)*2.0*PI*sqrt(det_Sd*det_Sn);
+//		double xrange = 4*sqrt(Sd[0][0]+Sn[0][0]);
+//		double yrange = 4*sqrt(Sd[1][1]+Sn[1][1]);
+
+		double xrange, yrange;
+		{
+			Array2D<double> S = Sd+Sn;
+			JAMA::Eigenvalue<double> eig_S(S);
+			Array2D<double> V, D;
+			eig_S.getV(V);
+			double theta1 = atan2(V[1][0], V[0][0]);
+			double theta2 = atan2(V[1][1], V[1][0]);
+//			double theta1 = 0;
+//			double theta2 = PI/2.0;
+			
+			eig_S.getD(D);
+			double r1 = 3.0*sqrt(D[0][0]);
+			double r2 = 3.0*sqrt(D[1][1]);
+
+			while(theta1 < -PI/2.0)
+				theta1 += PI;
+			while(theta1 > PI/2.0)
+				theta1 -= PI;
+			while(theta2 < 0)
+				theta2 += PI;
+			while(theta2 > PI)
+				theta2 -= PI;
+
+			xrange = max( r1*cos(theta1), r2*cos(theta2) );
+			yrange = max( r1*sin(theta1), r2*sin(theta2) );
+		}
 
 		SdInvmdList[i] = matmult(SdInv, md);
 		SaInvList[i] = SaInv.copy();
@@ -160,7 +189,11 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		mq[0][0] = x;
 		mq[1][0] = y;
 
-		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
+		Array2D<double> SnInvmq = matmult(SnInv, mq);
+
+//		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
+		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
+		
 //		for(int i=0; i<N1; i++)
 		tbb::mutex mutex_sum;
 		tbb::parallel_for(0, N1, [&](int i)
@@ -169,10 +202,11 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 
 			if(abs(x-md[0][0]) < xRangeList[i] && abs(y-md[1][0]) < yRangeList[i] )
 			{
-//				mutex_list.lock();
-				Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+matmult(SnInv,mq));
-				double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
-//				mutex_list.unlock();
+				Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
+//				double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
+				Array2D<double> SaInv = SaInvList[i];
+				double f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
+							+ fBList[i] + fC;
 				C[i][j] = coeffList[i]*exp(-0.5*f);
 				mutex_sum.lock();
 				colSum[j] += C[i][j];
@@ -243,6 +277,7 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 	int N1 = prevPoints.size();
 	int N2 = curPoints.size();
 	double f = focalLength;
+	double fInv = 1.0/focalLength;
 
 	JAMA::Cholesky<double> chol_Sv(Sv), chol_Sn(Sn);
 	Array2D<double> SvInv = chol_Sv.solve(createIdentity(3));
@@ -266,8 +301,8 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 		LvList[i] = Lv.copy();
 
 		Array2D<double> Lw(2,3);
-		Lw[0][0] = 1.0/f*x*y; 		Lw[0][1] = -1.0/f*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = 1.0/f*(1+y*y);	Lw[1][1] = -1.0/f*x*y;		Lw[1][2] = -x;
+		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -fInv*(1+x*x); 	Lw[0][2] = y;
+		Lw[1][0] = fInv*(1+y*y);	Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
 
 		Array2D<double> q1(2,1);
 		q1[0][0] = x;
@@ -285,7 +320,13 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 		for(int i=0; i<N1; i++)
 		{
 			if(C[i][j] > 0.01)
-				Aj += C[i][j]*LvList[i];
+			{
+//				Aj += C[i][j]*LvList[i];
+				Aj[0][0] += C[i][j]*LvList[i][0][0];
+				Aj[0][2] += C[i][j]*LvList[i][0][2];
+				Aj[1][1] += C[i][j]*LvList[i][1][1];
+				Aj[1][2] += C[i][j]*LvList[i][1][2];
+			}
 		}
 		Aj = dt*Aj;
 
@@ -318,12 +359,14 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 				}
 			}
 	
-			Array2D<double> temp2 = matmult(SnInv, Aj);
-			mutex_S.lock();
-			double 			ds0   = (1-C[N1][j])*matmultS(transpose(temp1), matmult(SnInv, temp1));
-			Array2D<double>	ds1_T = (1-C[N1][j])*matmult(transpose(temp1), temp2);
-			Array2D<double>	dS2   = (1-C[N1][j])*matmult(Aj_T, temp2);
-			mutex_S.unlock();
+//			Array2D<double> temp2 = matmult(SnInv, Aj);
+			Array2D<double> temp2(2,3);
+			temp2[0][0] = SnInv[0][0]*Aj[0][0]; temp2[0][1] = 0; 					temp2[0][2] = SnInv[0][0]*Aj[0][2];
+			temp2[1][0] = 0;					temp2[1][1] = SnInv[1][1]*Aj[1][1];	temp2[1][2] = SnInv[1][1]*Aj[1][2];
+//			double 			ds0   = (1.0-C[N1][j])*matmultS(transpose(temp1), matmult(SnInv, temp1));
+			double 			ds0   = (1.0-C[N1][j])*(SnInv[0][0]*temp1[0][0]*temp1[0][0] + SnInv[1][1]*temp1[1][0]*temp1[1][0]); // assumes Sn diagnoal
+			Array2D<double>	ds1_T = (1.0-C[N1][j])*matmult(transpose(temp1), temp2);
+			Array2D<double>	dS2   = (1.0-C[N1][j])*matmult(Aj_T, temp2);
 
 			mutex_S.lock();
 			s0   += ds0;
@@ -410,10 +453,6 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
-
-//for(int i=0; i<3; i++)
-//	cout << velMAP[i][0] << "\t";
-//cout << endl;
 }
 
 }

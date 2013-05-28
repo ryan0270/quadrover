@@ -103,9 +103,6 @@ int main(int argv, char* argc[])
 
 	Array2D<double> Sv(3,3,0.0);
 	double sz;
-//	Array2D<double> Sv = pow(0.2,2)*createIdentity(3);
-//	double sz = 0.01;
-//		double sz = errCov[2][0];
 	double focalLength = 3.7*640/5.76;
 	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
 	Sn[0][0] = Sn[1][1] = 2*pow(5,2);
@@ -118,7 +115,7 @@ int main(int argv, char* argc[])
 	cout << "//////////////////////////////////////////////////" << endl;
 
 	float qualityLevel = 0.01;
-	float minDistance = 30;
+	float minDistance = 20;
 
 //	int maxCorners = 1000;
 //	double qualityLevel = 0.02;
@@ -147,6 +144,12 @@ int main(int argv, char* argc[])
 		vector<cv::KeyPoint> prevKp, curKp;
 		cv::Mat prevDescriptors, curDescriptors;
 
+		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
+		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
+
+		Array2D<double> mv(3,1), omega(3,1), vel;
+		double mz, dt, z;
+
 		fstream fs("../orbResults.txt", fstream::out);
 		Time begin;
 		while(keypress != (int)'q' && iter_imgList != imgList.end())
@@ -163,13 +166,12 @@ int main(int argv, char* argc[])
 			}
 			prevTime.setTime(curTime);
 			curTime = imgIdList[imgIdx].second;
-			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
-			Array2D<double> transState = Data::interpolate(curTime, transDataList);
-			Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
-			Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
+			attState.inject(Data::interpolate(curTime, attDataList));
+			transState.inject(Data::interpolate(curTime, transDataList));
+			viconAttState.inject(Data::interpolate(curTime, viconAttDataList));
+			viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
 
-			Array2D<double> errCov1 = Data::interpolate(curTime, errCovList);
-			Array2D<double> errCov(6,6,0.0);
+			errCov1.inject(Data::interpolate(curTime, errCovList));
 			for(int i=0; i<3; i++)
 			{
 				errCov[i][i] = errCov1[i][0];
@@ -195,6 +197,7 @@ int main(int argv, char* argc[])
 			/////////////////////////////////////////////////////
 			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
 			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
+//			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
 
 			curKp.swap(prevKp);
 			curKp.clear();
@@ -215,7 +218,7 @@ int main(int argv, char* argc[])
 			vector<cv::DMatch> matches;
 			matcher.match(prevDescriptors, curDescriptors, matches);
 
-			float minDist = 100;
+			float minDist = 1000;
 			for(int i=0; i<matches.size(); i++)
 				minDist = min(matches[i].distance, minDist);
 
@@ -239,8 +242,6 @@ int main(int argv, char* argc[])
 			}
 
 			// MAP velocity and height
-			Array2D<double> mv(3,1,0.0);
-			double mz;
 			if(useViconState)
 			{
 				mv[0][0] = viconTransState[3][0];
@@ -274,8 +275,6 @@ int main(int argv, char* argc[])
 
 			if(curPoints.size() > 0)
 			{
-				Array2D<double> vel;
-				double z;
 				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
 
 				fs << curTime.getMS() << "\t" << 98 << "\t";
@@ -395,6 +394,7 @@ ts0 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			/////////////////////////////////////////////////////
 			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
 			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
+//			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
 
 ts1 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			curPoints.swap(prevPoints);
@@ -678,7 +678,13 @@ void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDi
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel)
 {
 	vector<cv::KeyPoint> tempKp1;
-	FAST(img, tempKp1, 10, true);
+	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(10));
+	int maxKp = 1000;
+	int gridRows = 3;
+	int gridCols = 3;
+	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
+	detector.detect(img, tempKp1);
+//	FAST(img, tempKp1, 10, true);
 //	HarrisResponses(img, tempKp, 7, 0.04f);
 	EigenValResponses(img, tempKp1, 5);
 
@@ -716,23 +722,20 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 	const int nGridY= (img.rows+cellSize-1)/cellSize;
 
 	vector<vector<int> > grids(nGridX*nGridY); // stores index of keypoints in each grid
-	vector<int> gridId;
-	gridId.reserve(tempKp.size()*nGridY);
-//	float threshold = qualityLevel*maxScore;
+	vector<int> gridId(tempKp.size());
 	for(int kpId=0; kpId < tempKp.size(); kpId++)
 	{
 		int xGrid = tempKp[kpId].pt.x / cellSize;
 		int yGrid = tempKp[kpId].pt.y / cellSize;
 		int gid = yGrid*nGridX+xGrid;
 		grids[gid].push_back(kpId);
-		gridId.push_back(gid);
+		gridId[kpId] = gid;
 	}
 
 	// Now pick the strongest points 
 	// Right now, for reduced computation, it is using a minDistance x minDistance box for exclusion rather
 	// than a minDistance radius circle
 	vector<bool> isActive(gridId.size(), true);
-//	vector<bool> isActive(tempKp.size(), true);
 	pts.clear();
 	for(int i=0; i<gridId.size(); i++)
 	{
