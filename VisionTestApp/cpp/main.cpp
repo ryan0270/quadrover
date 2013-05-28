@@ -73,6 +73,12 @@ void loadPcLog(String filename,
 		);
 vector<string> tokenize(string str);
 
+void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDistance, float const &qualityLevel);
+void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel);
+
+static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k);
+static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
+
 enum LogIDs
 {
 	LOG_ID_ACCEL = 1,
@@ -338,7 +344,7 @@ void android_main(struct android_app* state) {
 	// preload all images
 	list<pair<int, cv::Mat> > imgList;
 	int imgId = 1700;
-	for(int i=0; i<50; i++)
+	for(int i=0; i<100; i++)
 	{
 		cv::Mat img;
 		while(img.data == NULL)
@@ -370,29 +376,30 @@ void android_main(struct android_app* state) {
 	Time prevTime, curTime;
 	Array2D<double> attPrev, attCur, attChange;
 
-	Array2D<double> Sv = pow(0.2,2)*createIdentity(3);
-	double sz = 0.01;
-//		double sz = errCov[2][0];
+	Array2D<double> Sv(3,3,0.0);
+	double sz;
 	double focalLength = 3.7*640/5.76;
 	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
 	Sn[0][0] = Sn[1][1] = 2*pow(5,2);
 	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
 
-	cv::Point2f center(330,240);
+	cv::Point2f center(320,240);
 
-//	tbb::task_scheduler_init init;
-	tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic);
+	tbb::task_scheduler_init init;
+
 
 	Log::alert("////////////////////////////////////////////////////////////////////////////////////////////////////");
 
-//	cv::FastFeatureDetector featureDetector;
-	int maxCorners = 1000;
-	double qualityLevel = 0.2;
-	double minDistance = 30;
-	int blockSize = 3;
-	bool useHarrisDetector = false;
-	double k=0.04;
-	cv::GoodFeaturesToTrackDetector featureDetector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
+	float qualityLevel = 0.01;
+	float minDistance = 20;
+
+//	int maxCorners = 1000;
+//	double qualityLevel = 0.02;
+//	double minDistance = 30;
+//	int blockSize = 3;
+//	bool useHarrisDetector = false;
+//	double k=0.04;
+//	cv::GoodFeaturesToTrackDetector featureDetector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
 
 	bool useViconState = false;
 
@@ -413,313 +420,13 @@ void android_main(struct android_app* state) {
 		vector<cv::KeyPoint> prevKp, curKp;
 		cv::Mat prevDescriptors, curDescriptors;
 
-		Array2D<double> attState(6,1);
-		Array2D<double> transState(6,1);
-		Array2D<double> errCov(6,1);
-		Array2D<double> viconAttState(6,1);
-		Array2D<double> viconTransState(6,1);
-		Array2D<double> mv(3,1);
-		Array2D<double> vel(3,1);
+		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
+		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
+
+		Array2D<double> mv(3,1), omega(3,1), vel;
 		double mz, dt, z;
 
-double ts0, ts1, ts2, ts3, ts4, ts5, ts6;
-ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = 0;
-Time start;
-
-//		fstream fs("../orbResults.txt", fstream::out);
-		Time begin;
-		while(iter_imgList != imgList.end())
-		{
-start.setTime();
-			imgId = iter_imgList->first;
-			img = iter_imgList->second;
-			iter_imgList++;
-			while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
-				imgIdx++;
-			if(imgIdx == imgIdList.size() )
-			{
-				Log::alert("imgIdx exceeded vector");
-				return;
-			}
-			prevTime.setTime(curTime);
-			curTime.setTime(imgIdList[imgIdx].second);
-			attState .inject(Data::interpolate(curTime, attDataList));
-			transState.inject(Data::interpolate(curTime, transDataList));
-			errCov.inject(Data::interpolate(curTime, errCovList));
-			viconAttState.inject(Data::interpolate(curTime, viconAttDataList));
-			viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
-
-			// Rotate to camera coords
-			attState = matmult(rotPhoneToCam2, attState);
-			transState = matmult(rotPhoneToCam2, transState);
-			errCov = matmult(rotPhoneToCam3, errCov);
-			viconAttState = matmult(rotPhoneToCam2, viconAttState);
-			viconTransState = matmult(rotPhoneToCam2, viconTransState);
-
-			attPrev.inject(attCur);
-			if(useViconState)
-				attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
-			else
-				attCur.inject( createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]) );
-//				attChange.inject( matmult(attCur, transpose(attPrev)) );
-			attChange.inject( matmult(transpose(attCur), attPrev) );
-
-ts0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-			/////////////////////////////////////////////////////
-			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
-			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
-
-ts1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-			curKp.swap(prevKp);
-			curKp.clear();
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//			int nGrid = 3;
-//			cv::Size imgSize = imgGray.size();
-//			vector<cv::Mat> frames(nGrid*nGrid);
-//			vector<cv::Point2f> maskOffset(nGrid*nGrid);
-//			for(int i=0; i<nGrid; i++)
-//			{
-//				int left = max(0,(int)(i*imgSize.width/nGrid+0.5));
-//				int width = min(imgSize.width-left, (int)(imgSize.width/nGrid+0.5));
-//				for(int j=0; j<nGrid; j++)
-//				{
-//					int top = max(0,(int)(j*imgSize.height/nGrid+0.5));
-//					int height = min(imgSize.height-top, (int)(imgSize.height/nGrid+0.5));
-//					cv::Rect mask(left, top, width, height);
-//					cv::Point2f offset(left, top);
-//					frames[i*nGrid+j] = imgGray(mask);
-//					maskOffset[i*nGrid+j] = offset;
-//				}
-//			}
-//			vector<vector<cv::KeyPoint> > kpList(nGrid*nGrid);
-////			for(int i=0; i<kpList.size(); i++)
-//			tbb::parallel_for(size_t(0), size_t(kpList.size()), [&](size_t i){
-//				featureDetector.detect(frames[i], kpList[i]);
-//			});
-//			for(int i=0; i<kpList.size(); i++)
-//			{
-//				for(int j=0; j<kpList[i].size(); j++)
-//					kpList[i][j].pt = kpList[i][j].pt+maskOffset[i];
-//				move(kpList[i].begin(), kpList[i].end(), back_inserter(curKp));
-//			}
-////////////////////////////////////////////////////////////////////////////////////////////////////
-			{
-				cv::Mat eig, tmp;
-				int blockSize = 3;
-				cornerMinEigenVal(imgGray, eig, blockSize, 3);
-				double maxVal = 0;
-				minMaxLoc(eig, 0, &maxVal, 0, 0);
-				threshold(eig, eig, maxVal*qualityLevel, 0, cv::THRESH_TOZERO);
-				dilate(eig, tmp, cv::Mat());
-				vector<const float*> tmpCorners;
-
-				cv::Size imgsize = imgGray.size();
-
-				// collect list of pointers to features - put them into temporary image
-				for( int y = 1; y < imgsize.height - 1; y++ )
-				{
-					const float* eig_data = (const float*)eig.ptr(y);
-					const float* tmp_data = (const float*)tmp.ptr(y);
-
-					for( int x = 1; x < imgsize.width - 1; x++ )
-					{
-						float val = eig_data[x];
-						if( val != 0 && val == tmp_data[x]/* && (!mask_data || mask_data[x]) */)
-							tmpCorners.push_back(eig_data + x);
-					}
-				}
-
-				sort(tmpCorners.begin(), tmpCorners.end(), [&](const float *a, const float *b) {return *a > *b;});
-				vector<cv::Point2f> corners;
-				size_t i, j, total = tmpCorners.size(), ncorners = 0;
-				{
-					// Partition the image into larger grids
-					int w = imgGray.cols;
-					int h = imgGray.rows;
-
-					const int cell_size = cvRound(minDistance);
-					const int grid_width = (w + cell_size - 1) / cell_size;
-					const int grid_height = (h + cell_size - 1) / cell_size;
-
-					std::vector<std::vector<cv::Point2f> > grid(grid_width*grid_height);
-
-					int minDistanceSq = minDistance*minDistance;
-
-					for( i = 0; i < total; i++ )
-					{
-						int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
-						int y = (int)(ofs / eig.step);
-						int x = (int)((ofs - y*eig.step)/sizeof(float));
-
-						bool good = true;
-
-						int x_cell = x / cell_size;
-						int y_cell = y / cell_size;
-
-						int x1 = x_cell - 1;
-						int y1 = y_cell - 1;
-						int x2 = x_cell + 1;
-						int y2 = y_cell + 1;
-
-						// boundary check
-						x1 = std::max(0, x1);
-						y1 = std::max(0, y1);
-						x2 = std::min(grid_width-1, x2);
-						y2 = std::min(grid_height-1, y2);
-
-						for( int yy = y1; yy <= y2; yy++ )
-						{
-							for( int xx = x1; xx <= x2; xx++ )
-							{
-								vector <cv::Point2f> &m = grid[yy*grid_width + xx];
-
-								if( m.size() )
-								{
-									for(j = 0; j < m.size(); j++)
-									{
-										float dx = x - m[j].x;
-										float dy = y - m[j].y;
-
-										if( dx*dx + dy*dy < minDistanceSq )
-										{
-											good = false;
-											goto break_out;
-										}
-									}
-								}
-							}
-						}
-
-break_out:
-
-						if(good)
-						{
-							// printf("%d: %d %d -> %d %d, %d, %d -- %d %d %d %d, %d %d, c=%d\n",
-							//    i,x, y, x_cell, y_cell, (int)minDistance, cell_size,x1,y1,x2,y2, grid_width,grid_height,c);
-							grid[y_cell*grid_width + x_cell].push_back(cv::Point2f((float)x, (float)y));
-
-							corners.push_back(cv::Point2f((float)x, (float)y));
-							++ncorners;
-
-							if( maxCorners > 0 && (int)ncorners == maxCorners )
-								break;
-						}
-					}
-				}
-
-				curKp.resize(corners.size());
-				vector<cv::Point2f>::const_iterator corner_it = corners.begin();
-				vector<cv::KeyPoint>::iterator keypoint_it = curKp.begin();
-				for( ; corner_it != corners.end(); ++corner_it, ++keypoint_it )
-					*keypoint_it = cv::KeyPoint( *corner_it, (float)blockSize );
-			}
-////////////////////////////////////////////////////////////////////////////////////////////////////
-			numFeaturesAccum += curKp.size();
-
-ts2 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-			prevDescriptors = curDescriptors;
-			curDescriptors.release();
-			curDescriptors.data = NULL;
-			cv::OrbFeatureDetector extractor(500, 2.0f, 4, 31, 0, 2, cv::ORB::HARRIS_SCORE, 31);
-			extractor.compute(imgGray, curKp, curDescriptors);
-
-			curDescriptors.convertTo(curDescriptors, CV_32F);
-
-ts3 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-			cv::FlannBasedMatcher matcher;
-			vector<cv::DMatch> matches;
-			matcher.match(prevDescriptors, curDescriptors, matches);
-			numMatchesAccum += matches.size();
-
-ts4 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-			int N1, N2;
-			N1 = N2 = matches.size();
-			Array2D<double> C(N1+1, N2+1, 0.0); // the extra row and column will stay at zero
-			vector<cv::Point2f> prevPoints(N1), curPoints(N2);
-			for(int i=0; i<N1; i++)
-			{
-				C[i][i] = 1;
-
-				int idx1 = matches[i].queryIdx;
-				int idx2 = matches[i].trainIdx;
-				prevPoints[i] = prevKp[idx1].pt-center;
-				curPoints[i] = curKp[idx2].pt-center;
-			}
-
-			// MAP velocity and height
-			if(useViconState)
-			{
-				mv[0][0] = viconTransState[3][0];
-				mv[1][0] = viconTransState[4][0];
-				mv[2][0] = viconTransState[5][0];
-
-				mz = -viconTransState[2][0]; // in camera coords, z is flipped
-			}
-			else
-			{
-				mv[0][0] = transState[3][0];
-				mv[1][0] = transState[4][0];
-				mv[2][0] = transState[5][0];
-
-				mz = -transState[2][0]; // in camera coords, z is flipped
-			}
-
-			mz -= 0.1; // camera to vicon markers offset
-
-ts5 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-			if(prevTime.getMS() > 0)
-				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
-			else
-				dt = 0;
-			Array2D<double> omega = logSO3(attChange, dt);
-
-			if(curPoints.size() > 0)
-			{
-				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
-
-//				fs << curTime.getMS() << "\t" << 98 << "\t";
-//				for(int i=0; i<vel.dim1(); i++)
-//					fs << vel[i][0] << "\t";
-//				fs << endl;
-//				fs << curTime.getMS() << "\t" << 99 << "\t" << z << endl;
-			}
-			imgPrev = img;
-ts6 += start.getElapsedTimeNS()/1.0e9;
-		}
-
-//		fs.close();
-
-Log::alert(String() + "ts0: " + ts0);
-Log::alert(String() + "ts1: " + ts1);
-Log::alert(String() + "ts2: " + ts2);
-Log::alert(String() + "ts3: " + ts3);
-Log::alert(String() + "ts4: " + ts4);
-Log::alert(String() + "ts5: " + ts5);
-Log::alert(String() + "ts6: " + ts6);
-		Log::alert(String() + "Avg num ORB features: " + ((double)numFeaturesAccum)/imgList.size());
-		Log::alert(String() + "Avg num ORB matches: " + ((double)numMatchesAccum)/imgList.size());
-		Log::alert(String() + "ORB time: " + begin.getElapsedTimeMS()/1.0e3);
-
-	}
-
-	Log::alert("////////////////////////////////////////////////////////////////////////////////////////////////////");
-
-	//////////////////////////////////////////////////////////////////
-	// Once for new algo
-	//////////////////////////////////////////////////////////////////
-	{
-		curTime.setTimeMS(0);
-		attPrev = createIdentity(3);
-		attCur = createIdentity(3);
-		attChange = createIdentity(3);
-		int imgIdx = 0;
-		double maxSigma = 30;
-		list<pair<int, cv::Mat> >::iterator iter_imgList;
-		iter_imgList = imgList.begin();
-		long long numFeaturesAccum = 0;
-		double numMatchesAccum = 0;
-
-		fstream fs("../mapResults.txt", fstream::out);
+		fstream fs("../orbResults.txt", fstream::out);
 		Time begin;
 		while(iter_imgList != imgList.end())
 		{
@@ -735,16 +442,23 @@ Log::alert(String() + "ts6: " + ts6);
 			}
 			prevTime.setTime(curTime);
 			curTime = imgIdList[imgIdx].second;
-			Array2D<double> attState  = Data::interpolate(curTime, attDataList);
-			Array2D<double> transState = Data::interpolate(curTime, transDataList);
-			Array2D<double> errCov = Data::interpolate(curTime, errCovList);
-			Array2D<double> viconAttState = Data::interpolate(curTime, viconAttDataList);
-			Array2D<double> viconTransState = Data::interpolate(curTime, viconTransDataList);
+			attState.inject(Data::interpolate(curTime, attDataList));
+			transState.inject(Data::interpolate(curTime, transDataList));
+			viconAttState.inject(Data::interpolate(curTime, viconAttDataList));
+			viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
+
+			errCov1.inject(Data::interpolate(curTime, errCovList));
+			for(int i=0; i<3; i++)
+			{
+				errCov[i][i] = errCov1[i][0];
+				errCov[i][i+3] = errCov1[i+3][0];
+				errCov[i+3][i+3] = errCov1[i+6][0];
+			}
 
 			// Rotate to camera coords
 			attState = matmult(rotPhoneToCam2, attState);
 			transState = matmult(rotPhoneToCam2, transState);
-			errCov = matmult(rotPhoneToCam3, errCov);
+			errCov = matmult(rotPhoneToCam2, matmult(errCov, transpose(rotPhoneToCam2)));
 			viconAttState = matmult(rotPhoneToCam2, viconAttState);
 			viconTransState = matmult(rotPhoneToCam2, viconTransState);
 
@@ -753,34 +467,58 @@ Log::alert(String() + "ts6: " + ts6);
 				attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
 			else
 				attCur.inject( createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]) );
-//			attChange.inject( matmult(attCur, transpose(attPrev)) );
+//				attChange.inject( matmult(attCur, transpose(attPrev)) );
 			attChange.inject( matmult(transpose(attCur), attPrev) );
 
 			/////////////////////////////////////////////////////
 			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
 			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
 
-			int maxPoints= 100;
-			double qualityLevel = 0.05;
-//			double minDistance = 2*maxSigma;
-			int blockSize = 3;
-			bool useHarrisDetector = false;
-			curPoints.swap(prevPoints);
-//			cv::goodFeaturesToTrack(imgGray, curPoints, maxPoints, qualityLevel, minDistance, cv::noArray(), blockSize, useHarrisDetector);
-			cv::FastFeatureDetector featureDectector;
-			vector<cv::KeyPoint> kp;
-			featureDetector.detect(imgGray, kp);
-			curPoints.clear();
-			for(int i=0; i<kp.size(); i++)
-				curPoints.push_back(kp[i].pt);
-			numFeaturesAccum += curPoints.size();
+//			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
 
-			/////////////////////////////////////////////////////
-			//  Prior distributions
-			for(int i=0; i<curPoints.size(); i++)
-				curPoints[i] -= center;
-			Array2D<double> mv(3,1,0.0);
-			double mz;
+			curKp.swap(prevKp);
+			curKp.clear();
+//			featureDetector.detect(imgGray, curKp);
+			findPoints(imgGray, curKp, minDistance, qualityLevel);
+
+			numFeaturesAccum += curKp.size();
+
+			prevDescriptors = curDescriptors;
+			curDescriptors.release();
+			curDescriptors.data = NULL;
+			cv::OrbFeatureDetector extractor(500, 2.0f, 4, 31, 0, 2, cv::ORB::HARRIS_SCORE, 31);
+			extractor.compute(imgGray, curKp, curDescriptors);
+
+			curDescriptors.convertTo(curDescriptors, CV_32F);
+
+			cv::FlannBasedMatcher matcher;
+			vector<cv::DMatch> matches;
+			matcher.match(prevDescriptors, curDescriptors, matches);
+
+			float minDist = 1000;
+			for(int i=0; i<matches.size(); i++)
+				minDist = min(matches[i].distance, minDist);
+
+			vector<cv::DMatch> goodMatches(matches);
+//			for(int i=0; i<matches.size(); i++)
+//				if(matches[i].distance < 5.0*minDist) goodMatches.push_back(matches[i]);
+			numMatchesAccum += goodMatches.size();
+
+			int N1, N2;
+			N1 = N2 = goodMatches.size();
+			Array2D<double> C(N1+1, N2+1, 0.0); // the extra row and column will stay at zero
+			vector<cv::Point2f> prevPoints(N1), curPoints(N2);
+			for(int i=0; i<N1; i++)
+			{
+				C[i][i] = 1;
+
+				int idx1 = goodMatches[i].queryIdx;
+				int idx2 = goodMatches[i].trainIdx;
+				prevPoints[i] = prevKp[idx1].pt-center;
+				curPoints[i] = curKp[idx2].pt-center;
+			}
+
+			// MAP velocity and height
 			if(useViconState)
 			{
 				mv[0][0] = viconTransState[3][0];
@@ -806,23 +544,175 @@ Log::alert(String() + "ts6: " + ts6);
 			else
 				dt = 0;
 			Array2D<double> omega = logSO3(attChange, dt);
-			vector<pair<Array2D<double>, Array2D<double> > > priorDistList;
+
+			sz = sqrt( errCov[2][2]);
+			Sv[0][0] = errCov[3][3];
+			Sv[1][1] = errCov[4][4];
+			Sv[2][2] = errCov[5][5];
+
+			if(curPoints.size() > 0)
+			{
+				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
+
+//				fs << curTime.getMS() << "\t" << 98 << "\t";
+//				for(int i=0; i<vel.dim1(); i++)
+//					fs << vel[i][0] << "\t";
+//				fs << endl;
+//				fs << curTime.getMS() << "\t" << 99 << "\t" << z << endl;
+			}
+			imgPrev = img;
+
+//			img.release();
+//			img.data = NULL;
+		}
+
+//		fs.close();
+
+		Log::alert(String() + "Avg num ORB features: " + ((double)numFeaturesAccum)/imgList.size());
+		Log::alert(String() + "Avg num ORB matches: " + ((double)numMatchesAccum)/imgList.size());
+		Log::alert(String() + "ORB time: " + begin.getElapsedTimeMS()/1.0e3);
+
+	}
+
+	Log::alert("////////////////////////////////////////////////////////////////////////////////////////////////////");
+
+	//////////////////////////////////////////////////////////////////
+	// Once for new algo
+	//////////////////////////////////////////////////////////////////
+	{
+		curTime.setTimeMS(0);
+		attPrev = createIdentity(3);
+		attCur = createIdentity(3);
+		attChange = createIdentity(3);
+		int imgIdx = 0;
+		double maxSigma = 30;
+		list<pair<int, cv::Mat> >::iterator iter_imgList;
+		iter_imgList = imgList.begin();
+		long long numFeaturesAccum = 0;
+		double numMatchesAccum = 0;
+
+		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
+		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
+
+		Array2D<double> mv(3,1), omega(3,1), vel;
+		double mz, dt, z;
+
+		vector<pair<Array2D<double>, Array2D<double> > > priorDistList;
+
+		Array2D<double> C;
+
+double ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
+ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = ts7 = 0;
+Time t0;
+
+		fstream fs("../mapResults.txt", fstream::out);
+		Time begin;
+		while(iter_imgList != imgList.end())
+		{
+t0.setTime();
+			imgId = iter_imgList->first;
+			img = iter_imgList->second;
+			iter_imgList++;
+			while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
+				imgIdx++;
+			if(imgIdx == imgIdList.size() )
+			{
+				Log::alert("imgIdx exceeded vector");
+				return;
+			}
+			prevTime.setTime(curTime);
+			curTime = imgIdList[imgIdx].second;
+			attState.inject(Data::interpolate(curTime, attDataList));
+			transState.inject(Data::interpolate(curTime, transDataList));
+			viconAttState.inject(Data::interpolate(curTime, viconAttDataList));
+			viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
+
+			errCov1.inject(Data::interpolate(curTime, errCovList));
+			for(int i=0; i<3; i++)
+			{
+				errCov[i][i] = errCov1[i][0];
+				errCov[i][i+3] = errCov1[i+3][0];
+				errCov[i+3][i+3] = errCov1[i+6][0];
+			}
+
+			// Rotate to camera coords
+			attState = matmult(rotPhoneToCam2, attState);
+			transState = matmult(rotPhoneToCam2, transState);
+			errCov = matmult(rotPhoneToCam2, matmult(errCov, transpose(rotPhoneToCam2)));
+			viconAttState = matmult(rotPhoneToCam2, viconAttState);
+			viconTransState = matmult(rotPhoneToCam2, viconTransState);
+
+			attPrev.inject(attCur);
+			if(useViconState)
+				attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
+			else
+				attCur.inject( createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]) );
+//			attChange.inject( matmult(attCur, transpose(attPrev)) );
+			attChange.inject( matmult(transpose(attCur), attPrev) );
+
+ts0 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+			/////////////////////////////////////////////////////
+			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
+			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
+
+//			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
+
+ts1 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+			curPoints.swap(prevPoints);
+			findPoints(imgGray, curPoints, minDistance, qualityLevel);
+			numFeaturesAccum += curPoints.size();
+
+ts2 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+			/////////////////////////////////////////////////////
+			//  Prior distributions
+			for(int i=0; i<curPoints.size(); i++)
+				curPoints[i] -= center;
+			if(useViconState)
+			{
+				mv[0][0] = viconTransState[3][0];
+				mv[1][0] = viconTransState[4][0];
+				mv[2][0] = viconTransState[5][0];
+
+				mz = -viconTransState[2][0]; // in camera coords, z is flipped
+			}
+			else
+			{
+				mv[0][0] = transState[3][0];
+				mv[1][0] = transState[4][0];
+				mv[2][0] = transState[5][0];
+
+				mz = -transState[2][0]; // in camera coords, z is flipped
+			}
+
+			mz -= 0.1; // camera to vicon markers offset
+
+			if(prevTime.getMS() > 0)
+				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
+			else
+				dt = 0;
+			omega.inject(logSO3(attChange, dt));
+			priorDistList.clear();
 			priorDistList = calcPriorDistributions(prevPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
 
+ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			// Correspondence
-			Array2D<double> C;
 			C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
 
+ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			for(int i=0; i<C.dim1()-1; i++)
 				for(int j=0; j<C.dim2()-1; j++)
 					numMatchesAccum += C[i][j];
 
+			sz = sqrt( errCov[2][2]);
+			Sv[0][0] = errCov[3][3];
+			Sv[1][1] = errCov[4][4];
+			Sv[2][2] = errCov[5][5];
+
 			// MAP velocity and height
 			if(prevPoints.size() > 0)
 			{
-				Array2D<double> vel;
-				double z;
 				computeMAPEstimate(vel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
+ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 
 				fs << curTime.getMS() << "\t" << 98 << "\t";
 				for(int i=0; i<vel.dim1(); i++)
@@ -831,30 +721,31 @@ Log::alert(String() + "ts6: " + ts6);
 				fs << curTime.getMS() << "\t" << 99 << "\t" << z << endl;
 			}
 
+ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			//////////////////////////////////////////////////
 			//Drawing
 			// prior distributions
-			if(priorDistList.size() > 0)
-				maxSigma = 0;
+//			if(priorDistList.size() > 0)
+//				maxSigma = 0;
 //			cv::Mat overlay = img.clone();
-			for(int i=0; i<priorDistList.size(); i++)
-			{
-				Array2D<double> Sd = priorDistList[i].second;
-				JAMA::Eigenvalue<double> eig_Sd(Sd);
-				Array2D<double> V, D;
-				eig_Sd.getV(V);
-				eig_Sd.getD(D);
+//			for(int i=0; i<priorDistList.size(); i++)
+//			{
+//				Array2D<double> Sd = priorDistList[i].second;
+//				JAMA::Eigenvalue<double> eig_Sd(Sd);
+//				Array2D<double> V, D;
+//				eig_Sd.getV(V);
+//				eig_Sd.getD(D);
+//
+//				for(int j=0; j<D.dim1(); j++)
+//					maxSigma = max(maxSigma, sqrt(D[j][j]));
 
-				for(int j=0; j<D.dim1(); j++)
-					maxSigma = max(maxSigma, sqrt(D[j][j]));
-
-//				cv::Point2f pt(iter_priorDistList->first[0][0], iter_priorDistList->first[1][0]);
+//				cv::Point2f pt(priorDistList[i].first[0][0], priorDistList[i].first[1][0]);
 //				double width = 2*sqrt(D[0][0]);
 //				double height = 2*sqrt(D[1][1]);
 //				double theta = atan2(V[1][0], V[0][0]);
 //				cv::RotatedRect rect(pt+center, cv::Size(width, height), theta);
 //				cv::ellipse(overlay, rect, cv::Scalar(255,0,0), -1);
-			}
+//			}
 //			double opacity = 0.3;
 //			cv::addWeighted(overlay, opacity, img, 1-opacity, 0, img);
 
@@ -862,7 +753,7 @@ Log::alert(String() + "ts6: " + ts6);
 //			for(int i=0; i<curPoints.size(); i++)
 //				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
 //			imshow("chad",img);
-//	
+  
 //			keypress = cv::waitKey() % 256;
 
 			img.release();
@@ -874,6 +765,14 @@ Log::alert(String() + "ts6: " + ts6);
 		Log::alert(String()+"Avg num features: " + ((double)numFeaturesAccum)/imgList.size());
 		Log::alert(String()+"Avg num matches: " + ((double)numMatchesAccum)/imgList.size());
 		Log::alert(String()+"New total time: " + begin.getElapsedTimeMS()/1.0e3);
+		Log::alert(String()+"\tts0: " + ts0);
+		Log::alert(String()+"\tts1: " + ts1);
+		Log::alert(String()+"\tts2: " + ts2);
+		Log::alert(String()+"\tts3: " + ts3);
+		Log::alert(String()+"\tts4: " + ts4);
+		Log::alert(String()+"\tts5: " + ts5);
+		Log::alert(String()+"\tts6: " + ts6);
+		Log::alert(String()+"\tts7: " + ts7);
 
 	}
 
@@ -1082,5 +981,271 @@ void loadPcLog(String filename,
 	}
 	else
 		Log::alert("Couldn't find " + filename);
+}
+
+void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDistance, float const &qualityLevel)
+{
+	vector<cv::KeyPoint> kp;
+	findPoints(img, kp, minDistance, qualityLevel);
+	cv::KeyPoint::convert(kp, pts);
+}
+
+void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel)
+{
+	vector<cv::KeyPoint> tempKp1;
+	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(10));
+	int maxKp = 1000;
+	int gridRows = 3;
+	int gridCols = 3;
+	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
+	detector.detect(img, tempKp1);
+//	FAST(img, tempKp1, 10, true);
+//	HarrisResponses(img, tempKp, 7, 0.04f);
+	EigenValResponses(img, tempKp1, 5);
+
+	float maxScore = -0xFFFFFFF;
+	for(int i=0; i<tempKp1.size(); i++)
+		maxScore = max(maxScore, tempKp1[i].response);
+
+	vector<cv::KeyPoint> tempKp;
+	tempKp.reserve(tempKp1.size());
+	float threshold = qualityLevel*maxScore;
+	for(int i=0; i<tempKp1.size(); i++)
+		if(tempKp1[i].response > threshold)
+			tempKp.push_back(tempKp1[i]);
+
+//	cv::Mat eig;
+//	eig.create(img.size(), CV_32F);
+//	int MINEIGVAL = 0;
+//	int HARRIS = 1;
+//	cornerMinEigenVal(img, eig, 7, 3, MINEIGVAL);
+//	for(int i=0; i<tempKp.size(); i++)
+//	{
+//		int x = tempKp[i].pt.x;
+//		int y = tempKp[i].pt.y;
+//		const float* row = (const float*)(eig.data + y*eig.step);
+//		float eig = row[x];
+//cout << "loc: (" << x << ", " << y << ")" << endl;
+//cout << "point " << i << " eig 1: " << eig << endl;
+//cout << "point " << i << " eig 2: " << tempKp[i].response << endl;
+//cout << "----------------------------------" << endl;
+//	}
+
+	// group points into grid
+	const int cellSize = minDistance+0.5;
+	const int nGridX= (img.cols+cellSize-1)/cellSize;
+	const int nGridY= (img.rows+cellSize-1)/cellSize;
+
+	vector<vector<int> > grids(nGridX*nGridY); // stores index of keypoints in each grid
+	vector<int> gridId(tempKp.size());
+	for(int kpId=0; kpId < tempKp.size(); kpId++)
+	{
+		int xGrid = tempKp[kpId].pt.x / cellSize;
+		int yGrid = tempKp[kpId].pt.y / cellSize;
+		int gid = yGrid*nGridX+xGrid;
+		grids[gid].push_back(kpId);
+		gridId[kpId] = gid;
+	}
+
+	// Now pick the strongest points 
+	// Right now, for reduced computation, it is using a minDistance x minDistance box for exclusion rather
+	// than a minDistance radius circle
+	vector<bool> isActive(gridId.size(), true);
+	pts.clear();
+	for(int i=0; i<gridId.size(); i++)
+	{
+		if(!isActive[i])
+			continue;
+
+		float curResponse = tempKp[i].response;
+		cv::Point2f *curPt = &tempKp[i].pt;
+
+		// turn off other points in this grid
+		int gid = gridId[i];
+		bool isStrongest = true;;
+//		for(int j=0; j<grids[gid].size(); j++)
+		int j=0;
+		while(isStrongest && j < grids[gid].size() )
+		{
+			int kpId = grids[gid][j];
+			if(kpId != i && curResponse >= tempKp[kpId].response)
+				isActive[kpId] = false;
+			else if(kpId != i && isActive[kpId])
+				isStrongest = false;
+
+			j++;
+		}
+
+		if(!isStrongest)
+		{
+			isActive[i] = false;
+			continue;
+		}
+
+		// need to check neighbor grids too
+		int xGrid = gid % nGridX;
+		int yGrid = gid / nGridX;
+
+		int neighborOffsetX[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+		int neighborOffsetY[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+//		for(int j=0; j<8; j++)
+		j = 0;
+		while(isStrongest && j < 8)
+		{
+			int nx = xGrid+neighborOffsetX[j];
+			int ny = yGrid+neighborOffsetY[j];
+			if(nx < 0 || nx > nGridX-1 || ny < 0 || ny > nGridY-1)
+			{
+				j++;
+				continue;
+			}
+
+			int ngid = ny*nGridX+nx;
+//			for(int k=0; k<grids[ngid].size(); k++)
+			int k=0;
+			while(isStrongest && k < grids[ngid].size() )
+			{
+				int kpId = grids[ngid][k];
+				if(!isActive[kpId])
+				{
+					k++;
+					continue;
+				}
+
+				cv::Point2f *pt = &tempKp[kpId].pt;
+				if(abs(pt->x - curPt->x) <= minDistance && abs(pt->y - curPt->y) <= minDistance)
+				{
+					if(kpId != i && curResponse >= tempKp[kpId].response)
+						isActive[kpId] = false;
+					else if(kpId != i && isActive[kpId])
+						isStrongest = false;
+				}
+
+				k++;
+			}
+
+			j++;
+		}
+
+		if(!isStrongest)
+		{
+			isActive[i] = false;
+			continue;
+		}
+
+//		double minD = 0xFFFFFF;
+//		double minJ = 0;
+//		for(int j=0; j<tempKp.size(); j++)
+//		{
+//			if(j == i || !isActive[j])
+//				continue;
+//			cv::Point2f *pt = &tempKp[j].pt;
+//			double dist = sqrt( pow(curPt->x - pt->x, 2) + pow(curPt->y - pt->y,2));
+//			if(dist < minD)
+//			{
+//				minD = dist;
+//				minJ =j;
+//			}
+//		}
+
+		pts.push_back(tempKp[i]);
+	}
+
+//	sort(pts.begin(), pts.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
+}
+
+// taken from OpenCV ORB code
+static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k)
+{
+    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+
+    size_t ptidx, ptsize = pts.size();
+
+    const uchar* ptr00 = img.ptr<uchar>();
+    int step = (int)(img.step/img.elemSize1());
+    int r = blockSize/2;
+
+    float scale = (1 << 2) * blockSize * 255.0f;
+    scale = 1.0f / scale;
+    float scale_sq_sq = scale * scale * scale * scale;
+
+	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
+    int* ofs = ofsbuf;
+    for( int i = 0; i < blockSize; i++ )
+        for( int j = 0; j < blockSize; j++ )
+            ofs[i*blockSize + j] = (int)(i*step + j);
+
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+    {
+        int x0 = cvRound(pts[ptidx].pt.x - r);
+        int y0 = cvRound(pts[ptidx].pt.y - r);
+
+        const uchar* ptr0 = ptr00 + y0*step + x0;
+        int a = 0, b = 0, c = 0;
+
+        for( int k = 0; k < blockSize*blockSize; k++ )
+        {
+            const uchar* ptr = ptr0 + ofs[k];
+            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
+            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
+            a += Ix*Ix;
+            b += Iy*Iy;
+            c += Ix*Iy;
+        }
+        pts[ptidx].response = ((float)a * b - (float)c * c -
+                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+    }
+}
+
+static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize)
+{
+    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+
+    size_t ptidx, ptsize = pts.size();
+
+    const uchar* ptr00 = img.ptr<uchar>();
+    int step = (int)(img.step/img.elemSize1());
+    int r = blockSize/2;
+
+    float scale = (1 << 2) * blockSize * 255.0f;
+    scale = 1.0f / scale;
+    float scale_sq = scale * scale;
+
+	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
+    int* ofs = ofsbuf;
+    for( int i = 0; i < blockSize; i++ )
+        for( int j = 0; j < blockSize; j++ )
+            ofs[i*blockSize + j] = (int)(i*step + j);
+
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+    {
+        int x0 = cvRound(pts[ptidx].pt.x - r);
+        int y0 = cvRound(pts[ptidx].pt.y - r);
+
+        const uchar* ptr0 = ptr00 + y0*step + x0;
+        int a = 0, b = 0, c = 0;
+
+        for( int k = 0; k < blockSize*blockSize; k++ )
+        {
+            const uchar* ptr = ptr0 + ofs[k];
+			// this is sobel
+//            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
+//            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
+			// this is Scharr
+            int Ix = (ptr[1] - ptr[-1])*10 + (ptr[-step+1] - ptr[-step-1])*3 + (ptr[step+1] - ptr[step-1])*3;
+            int Iy = (ptr[step] - ptr[-step])*10 + (ptr[step-1] - ptr[-step-1])*3 + (ptr[step+1] - ptr[-step+1])*3;
+            a += Ix*Ix;
+            b += Iy*Iy;
+            c += Ix*Iy;
+        }
+
+		double  m00 = 0.5*a*scale_sq;
+		double  m01 =     c*scale_sq;
+		double m11 = 0.5*b*scale_sq;
+        pts[ptidx].response = m00 + m11 - sqrt( (m00-m11)*(m00-m11) + m01*m01);
+		
+//cout << pts[ptidx].response << endl;
+		int chad = 0;
+    }
 }
 //END_INCLUDE(all)
