@@ -47,6 +47,9 @@ vector<string> tokenize(string str);
 void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDistance, float const &qualityLevel);
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel);
 
+static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k);
+static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
+
 int main(int argv, char* argc[])
 {
 	cout << "start chadding" << endl;
@@ -114,7 +117,7 @@ int main(int argv, char* argc[])
 
 	cout << "//////////////////////////////////////////////////" << endl;
 
-	float qualityLevel = 0.1;
+	float qualityLevel = 0.01;
 	float minDistance = 30;
 
 //	int maxCorners = 1000;
@@ -489,7 +492,7 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //			for(int i=0; i<curPoints.size(); i++)
 //				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
 //			imshow("chad",img);
-//  
+  
 //			keypress = cv::waitKey() % 256;
 
 			img.release();
@@ -674,16 +677,38 @@ void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDi
 
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel)
 {
+	vector<cv::KeyPoint> tempKp1;
+	FAST(img, tempKp1, 10, true);
+//	HarrisResponses(img, tempKp, 7, 0.04f);
+	EigenValResponses(img, tempKp1, 5);
+
+	float maxScore = -0xFFFFFFF;
+	for(int i=0; i<tempKp1.size(); i++)
+		maxScore = max(maxScore, tempKp1[i].response);
+
 	vector<cv::KeyPoint> tempKp;
-	FAST(img, tempKp, 4, true);
+	tempKp.reserve(tempKp1.size());
+	float threshold = qualityLevel*maxScore;
+	for(int i=0; i<tempKp1.size(); i++)
+		if(tempKp1[i].response > threshold)
+			tempKp.push_back(tempKp1[i]);
 
-	float maxScore = 0;
-	for(int i=0; i<tempKp.size(); i++)
-		maxScore = max(tempKp[i].response, maxScore);
-
-	// sorting at this point is taking too long
-//	sort(tempKp.begin(), tempKp.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
-//	float maxScore = tempKp[0].response;
+//	cv::Mat eig;
+//	eig.create(img.size(), CV_32F);
+//	int MINEIGVAL = 0;
+//	int HARRIS = 1;
+//	cornerMinEigenVal(img, eig, 7, 3, MINEIGVAL);
+//	for(int i=0; i<tempKp.size(); i++)
+//	{
+//		int x = tempKp[i].pt.x;
+//		int y = tempKp[i].pt.y;
+//		const float* row = (const float*)(eig.data + y*eig.step);
+//		float eig = row[x];
+//cout << "loc: (" << x << ", " << y << ")" << endl;
+//cout << "point " << i << " eig 1: " << eig << endl;
+//cout << "point " << i << " eig 2: " << tempKp[i].response << endl;
+//cout << "----------------------------------" << endl;
+//	}
 
 	// group points into grid
 	const int cellSize = minDistance+0.5;
@@ -693,7 +718,7 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 	vector<vector<int> > grids(nGridX*nGridY); // stores index of keypoints in each grid
 	vector<int> gridId;
 	gridId.reserve(tempKp.size()*nGridY);
-	float threshold = qualityLevel*maxScore;
+//	float threshold = qualityLevel*maxScore;
 	for(int kpId=0; kpId < tempKp.size(); kpId++)
 	{
 		int xGrid = tempKp[kpId].pt.x / cellSize;
@@ -715,6 +740,7 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 			continue;
 
 		float curResponse = tempKp[i].response;
+		cv::Point2f *curPt = &tempKp[i].pt;
 
 		// turn off other points in this grid
 		int gid = gridId[i];
@@ -742,7 +768,6 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 		int xGrid = gid % nGridX;
 		int yGrid = gid / nGridX;
 
-		cv::Point2f *curPt = &tempKp[i].pt;
 		int neighborOffsetX[] = {-1, 0, 1, -1, 1, -1, 0, 1};
 		int neighborOffsetY[] = {-1, -1, -1, 0, 0, 1, 1, 1};
 //		for(int j=0; j<8; j++)
@@ -809,4 +834,99 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 	}
 
 	sort(pts.begin(), pts.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
+}
+
+// taken from OpenCV ORB code
+static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k)
+{
+    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+
+    size_t ptidx, ptsize = pts.size();
+
+    const uchar* ptr00 = img.ptr<uchar>();
+    int step = (int)(img.step/img.elemSize1());
+    int r = blockSize/2;
+
+    float scale = (1 << 2) * blockSize * 255.0f;
+    scale = 1.0f / scale;
+    float scale_sq_sq = scale * scale * scale * scale;
+
+	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
+    int* ofs = ofsbuf;
+    for( int i = 0; i < blockSize; i++ )
+        for( int j = 0; j < blockSize; j++ )
+            ofs[i*blockSize + j] = (int)(i*step + j);
+
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+    {
+        int x0 = cvRound(pts[ptidx].pt.x - r);
+        int y0 = cvRound(pts[ptidx].pt.y - r);
+
+        const uchar* ptr0 = ptr00 + y0*step + x0;
+        int a = 0, b = 0, c = 0;
+
+        for( int k = 0; k < blockSize*blockSize; k++ )
+        {
+            const uchar* ptr = ptr0 + ofs[k];
+            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
+            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
+            a += Ix*Ix;
+            b += Iy*Iy;
+            c += Ix*Iy;
+        }
+        pts[ptidx].response = ((float)a * b - (float)c * c -
+                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+    }
+}
+
+static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize)
+{
+    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+
+    size_t ptidx, ptsize = pts.size();
+
+    const uchar* ptr00 = img.ptr<uchar>();
+    int step = (int)(img.step/img.elemSize1());
+    int r = blockSize/2;
+
+    float scale = (1 << 2) * blockSize * 255.0f;
+    scale = 1.0f / scale;
+    float scale_sq = scale * scale;
+
+	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
+    int* ofs = ofsbuf;
+    for( int i = 0; i < blockSize; i++ )
+        for( int j = 0; j < blockSize; j++ )
+            ofs[i*blockSize + j] = (int)(i*step + j);
+
+    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+    {
+        int x0 = cvRound(pts[ptidx].pt.x - r);
+        int y0 = cvRound(pts[ptidx].pt.y - r);
+
+        const uchar* ptr0 = ptr00 + y0*step + x0;
+        int a = 0, b = 0, c = 0;
+
+        for( int k = 0; k < blockSize*blockSize; k++ )
+        {
+            const uchar* ptr = ptr0 + ofs[k];
+			// this is sobel
+//            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
+//            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
+			// this is Scharr
+            int Ix = (ptr[1] - ptr[-1])*10 + (ptr[-step+1] - ptr[-step-1])*3 + (ptr[step+1] - ptr[step-1])*3;
+            int Iy = (ptr[step] - ptr[-step])*10 + (ptr[step-1] - ptr[-step-1])*3 + (ptr[step+1] - ptr[-step+1])*3;
+            a += Ix*Ix;
+            b += Iy*Iy;
+            c += Ix*Iy;
+        }
+
+		double  m00 = 0.5*a*scale_sq;
+		double  m01 =     c*scale_sq;
+		double m11 = 0.5*b*scale_sq;
+        pts[ptidx].response = m00 + m11 - sqrt( (m00-m11)*(m00-m11) + m01*m01);
+		
+//cout << pts[ptidx].response << endl;
+		int chad = 0;
+    }
 }
