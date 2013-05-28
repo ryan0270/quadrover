@@ -40,6 +40,10 @@ mapVelIndices = find(mapData(:,2) == 98);
 mapVelTime = mapData(mapVelIndices,1)'/1000;
 mapVel = mapData(mapVelIndices,3:5)';
 
+mapKfStateIndices = find(mapData(:,2) == 100);
+mapKfStateTime = mapData(mapKfStateIndices,1)'/1000;
+mapKfState = mapData(mapKfStateIndices,3:8)';
+
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
 RotQuadToPhone = createRotMat(3,-pi/4)*...
@@ -58,12 +62,14 @@ R2 = RotViconToQuad*RotQuadToPhone*RotPhoneToCam;
 % R = R*diag([1 -1 -1]);
 viconState(1:6,:) = blkdiag(R1,R1)*viconState(1:6,:);
 viconState(7:12,:) = blkdiag(R2, R2)*viconState(7:12,:);
+
 tranState = blkdiag(RotPhoneToCam, RotPhoneToCam)*tranState;
+mapKfState = blkdiag(RotPhoneToCam, RotPhoneToCam)*mapKfState;
 
 %%
 viconStateInterpOrb = interp1(viconStateTime,viconState',orbVelTime)';
 viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime)';
-viconStateInterpKF = interp1(viconStateTime,viconState',tranStateTime,[],'extrap')';
+viconStateInterpKF = interp1(viconStateTime,viconState',mapKfStateTime,[],'extrap')';
 
 %% mean shift
 orbVel = orbVel+diag(mean(viconStateInterpOrb(10:12,:)-orbVel,2))*ones(size(orbVel));
@@ -75,11 +81,11 @@ mapHeight = mapHeight+diag(mean(-viconStateInterpMap(9,:)-mapHeight,2))*ones(siz
 %%
 rmsOrbVel = rms(viconStateInterpOrb(10:12,:)-orbVel,2);
 rmsMapVel = rms(viconStateInterpMap(10:12,:)-mapVel,2);
-rmsKFVel = rms(viconStateInterpKF(10:12,:)-tranState(4:6,:),2);
+rmsKFVel = rms(viconStateInterpKF(10:12,:)-mapKfState(4:6,:),2);
 
 rmsOrbHeight = rms(-viconStateInterpOrb(9,:)-orbHeight);
 rmsMapHeight = rms(-viconStateInterpMap(9,:)-mapHeight);
-rmsKFHeight = rms(viconStateInterpKF(9,:)-tranState(3,:));
+rmsKFHeight = rms(viconStateInterpKF(9,:)-mapKfState(3,:));
 
 disp('vel:')
 disp([rmsKFVel rmsOrbVel rmsMapVel]);
@@ -99,13 +105,13 @@ for st=1:3
 	plot(viconStateTime, viconState(st+9,:)); hold all
 	plot(orbVelTime, orbVel(st,:),'.'); hold all
 	plot(mapVelTime, mapVel(st,:),'.'); hold all
-% 	plot(tranStateTime, tranState(st+3,:),'.'); hold all
+	plot(mapKfStateTime, mapKfState(st+3,:),'.'); hold all
 	ax = axis;
 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
 	xlabel('Time [s]');
 	ylabel(stateLabels{st})
 end
-legend('Vicon','ORB','MAP');
+legend('Vicon','ORB','MAP','MAP KF');
 
 % figure(2); clf
 % plot(viconStateTime, -viconState(9,:)); hold all

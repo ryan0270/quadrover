@@ -184,9 +184,10 @@ namespace Quadrotor{
 			thrust = 0;
 			if(mMotorCmdsBuffer.size() > 0)
 				for(int i=0; i<4; i++)
-					thrust += mForceGain*mMotorCmdsBuffer.back()->data[i][0];
+					thrust += mMotorCmdsBuffer.back()->data[i][0];
 			else
 				thrust = 0;
+			thrust *= mForceGain;
 			mMutex_adaptation.unlock(); mMutex_cmds.unlock();
 
 			shared_ptr<Data> thrustData(new Data());
@@ -208,7 +209,9 @@ namespace Quadrotor{
 				mMutex_att.unlock();
 
 				accel.inject(thrust/mMass*r);
-				accel[2][0] -= GRAVITY;
+//				accel[2][0] -= GRAVITY;
+// TODO: NEED TO TEST
+accel += GRAVITY*mCurGravDir;
 			}
 			else 
 			{
@@ -229,7 +232,7 @@ namespace Quadrotor{
 
 			// optical flow
 			if(mNewImageResultsReady && mFlowCalcDone
-//					&& mMotorOn // sometimes the blurry images when sitting close to the ground creates artificial matches
+//					&& mMotorOn // sometimes the blurry images when sitting close to the ground create artificial matches
 					)
 			{
 				// if we're here then the previous thread should already be finished
