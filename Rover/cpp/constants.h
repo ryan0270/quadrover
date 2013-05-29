@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 
 #ifndef ICSL_CONSTANTS
 #define ICSL_CONSTANTS

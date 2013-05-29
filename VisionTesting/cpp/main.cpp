@@ -52,12 +52,12 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k);
 static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
 
-void doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov);
+void doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &measCov, Array2D<double> const &dynCov);
 void doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov);
 void doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov);
 Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
 				Array2D<double> &kfState, Array2D<double> &kfErrCov, Array2D<double> const &kfMeasCov, Array2D<double> const &kfDynCov,
-				double &curThrust, Array2D<double> &curThrustDir, Array2D<double> &curGravDir, 
+				double &curThrust, Array2D<double> &curThrustDir,
 				double const &mass);
 
 int main(int argv, char* argc[])
@@ -125,21 +125,26 @@ int main(int argv, char* argc[])
 	Array2D<double> kfState(6,1,0.0), kfErrCov(6,6,0.0);
 	Array2D<double> kfA = createIdentity(6);
 	Array2D<double> kfB(6,3,0.0);
-	Array2D<double> kfDynCov = 0.02*0.02*createIdentity(6);
+//	Array2D<double> kfDynCov(6,6,0.0);
+//	kfDynCov[0][0] = kfDynCov[1][1] = kfDynCov[2][2] = 0.005*0.005;
+//	kfDynCov[3][3] = kfDynCov[4][4] = 0.005;
+//	kfDynCov[5][5] = 0.1*0.1;
+	Array2D<double> kfDynCov(6,6,0.0);
+	kfDynCov[0][0] = kfDynCov[1][1] = kfDynCov[2][2] = 0.01*0.01;
+	kfDynCov[3][3] = kfDynCov[4][4] = 0.1*0.1;
+	kfDynCov[5][5] = 0.2*0.2;
 	Array2D<double> kfMeasCov(6,6,0.0);
-	kfMeasCov[0][0] = kfMeasCov[1][1] = kfMeasCov[2][2] = 0.001*0.001;
-	kfMeasCov[3][3] = kfMeasCov[4][4] = 0.1*0.1;
-	kfMeasCov[5][5] = 0.5*0.5;
+	kfMeasCov[0][0] = kfMeasCov[1][1] = 0.005*0.005;
+	kfMeasCov[2][2] = 0.001;
+	kfMeasCov[3][3] = kfMeasCov[4][4] = 0.1;
+	kfMeasCov[5][5] = 0.1;
 	Array2D<double> kfPosMeasCov = submat(kfMeasCov,0,2,0,2);
 	Array2D<double> kfVelMeasCov = submat(kfMeasCov,3,5,3,5);
 	double mass = 1.1; // kg
 	double thrust = mass*GRAVITY;
 	Array2D<double> accel(3,1,0.0);
-	Array2D<double> attBias(3,1);
-	attBias[0][0] = 0.004; attBias[1][0] = 0.018; attBias[2][0] = 0.00;
-	Array2D<double> e3(3,1,0.0);
-	e3[2][0] = 1;
-	Array2D<double> curGravDir = -1.0*e3.copy();
+//	Array2D<double> attBias(3,1);
+//	attBias[0][0] = 0.004; attBias[1][0] = 0.018; attBias[2][0] = 0.00;
 	Array2D<double> thrustDir(3,1,0.0);
 	thrustDir[2][0] = 1;
 	Array2D<double> motorCmds(4,1);
@@ -148,7 +153,7 @@ int main(int argv, char* argc[])
 	cout << "//////////////////////////////////////////////////" << endl;
 
 	float qualityLevel = 0.01;
-	float minDistance = 30;
+	float minDistance = 20;
 
 //	int maxCorners = 1000;
 //	double qualityLevel = 0.02;
@@ -342,13 +347,13 @@ int main(int argv, char* argc[])
 //		fs.close();
 //
 //		cout << "Avg num ORB features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
-//		cout << "Avg num ORB matches: " << ((double)numMatchesAccum)/imgList.size() << endl;
+//		cout << "Avg num ORB matches: " << ((double)numMatchesAccum)/(imgList.size()-1) << endl;
 //		cout << "ORB time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
 //
 //	}
 
 	cout << "//////////////////////////////////////////////////" << endl;
-
+int cnt = 0;
 	//////////////////////////////////////////////////////////////////
 	// Once for new algo
 	//////////////////////////////////////////////////////////////////
@@ -367,8 +372,9 @@ int main(int argv, char* argc[])
 		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
 		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
 
-		errCov[0][0] = errCov[1][1] = errCov[2][2] = 0.01*0.01;
-		errCov[3][3] = errCov[4][4] = errCov[5][5] = 0.1*0.1;
+		kfErrCov[0][0] = kfErrCov[1][1] = kfErrCov[2][2] = 0.005*0.005;
+		kfErrCov[3][3] = kfErrCov[4][4] = 0.001;
+		kfErrCov[5][5] = 0.002;
 
 		Array2D<double> mv(3,1), omega(3,1), vel;
 		double mz, dt, z;
@@ -449,34 +455,41 @@ t0.setTime();
 			{
 				updateTime = applyData(updateTime, events.front(), 
 										kfState, kfErrCov, kfMeasCov, kfDynCov, 
-										thrust, thrustDir, curGravDir, 
+										thrust, thrustDir,
 										mass);
 				events.pop_front();
 			}
 
+			JAMA::Eigenvalue<double> eig_kfErrCov(kfErrCov);
+			Array2D<double> eigs;
+			eig_kfErrCov.getD(eigs);
+			for(int i=0; i<eigs.dim1(); i++)
+				if(eigs[i][i] <= 0)
+					cout << "crap! kfErrCov is not definite" << endl;
+
 			// remaining time update
 //			thrustDir.inject( Data::interpolate(curTime, thrustDirDataList) );
 			accel.inject(thrust/mass*thrustDir);
-//			curGravDir.inject(-1.0*matmult(transpose(attCur), e3));
-			accel += GRAVITY*curGravDir;
+			accel[2][0] -= GRAVITY;
 			double dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
-			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
+			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfMeasCov, kfDynCov);
 
 			// KF measurement update
-			if(lastMeasTime.getElapsedTimeMS() > 1)
+			if( Time::calcDiffMS(lastMeasTime, curTime) > 1000)
 			{
-				lastMeasTime.setTime(curTime);
-//				viconAttState.inject(Data::interpolate(curTime, viconAttDataList));
-				viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
-				doMeasUpdateKF_posOnly( submat(viconTransState,0,2,0,0), kfPosMeasCov, kfState, kfErrCov);
-				doMeasUpdateKF_velOnly( submat(viconTransState,3,5,0,0), kfPosMeasCov, kfState, kfErrCov);
+//cout << "gotcha" << endl;
+//				lastMeasTime.setTime(curTime);
+//				viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
+//				doMeasUpdateKF_posOnly( submat(viconTransState,0,2,0,0), kfPosMeasCov, kfState, kfErrCov);
+//				doMeasUpdateKF_velOnly( submat(viconTransState,3,5,0,0), kfVelMeasCov, kfState, kfErrCov);
 			}
 
 			// Rotate to camera coords
 			attState.inject(matmult(rotPhoneToCam2, attState));
 			transState.inject(matmult(rotPhoneToCam2, kfState));
-			errCov.inject(matmult(rotPhoneToCam2, matmult(kfErrCov, rotCamToPhone)));
+			errCov.inject(matmult(rotPhoneToCam2, matmult(kfErrCov, rotCamToPhone2)));
 //			viconAttState = matmult(rotPhoneToCam2, viconAttState);
+
 
 			attPrev.inject(attCur);
 			if(useViconState)
@@ -507,7 +520,12 @@ ts2 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			mv[2][0] = transState[5][0];
 
 			mz = -transState[2][0]; // in camera coords, z is flipped
-			mz -= 0.1; // camera to vicon markers offset
+			mz -= 0.050; // camera to vicon markers offset
+
+			sz = sqrt( errCov[2][2]);
+			Sv[0][0] = errCov[3][3];
+			Sv[1][1] = errCov[4][4];
+			Sv[2][2] = errCov[5][5];
 
 			omega.inject(logSO3(attChange, dt));
 			priorDistList.clear();
@@ -521,12 +539,12 @@ ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			for(int i=0; i<C.dim1()-1; i++)
 				for(int j=0; j<C.dim2()-1; j++)
 					numMatchesAccum += C[i][j];
-
-			sz = sqrt( errCov[2][2]);
-			Sv[0][0] = errCov[3][3];
-			Sv[1][1] = errCov[4][4];
-			Sv[2][2] = errCov[5][5];
-
+cout << "step " << cnt++ << "\tnumMatchesAccum: " << numMatchesAccum << endl;
+if( !(numMatchesAccum >= 0) )
+{
+	printArray("C\n",C);
+	cout << "bad chad" << endl;
+}
 			// MAP velocity and height
 			if(prevPoints.size() > 0)
 			{
@@ -544,7 +562,26 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				for(int i=0; i<kfState.dim1(); i++)
 					fs << kfState[i][0] << "\t";
 				fs << endl;
+
+				// Apply measurement to the state estimate
+				vel = matmult(rotCamToPhone, vel);
+				doMeasUpdateKF_velOnly(vel, kfVelMeasCov, kfState, kfErrCov);
+
+				// HACKKKKKKK
+				Array2D<double> pos(3,1);
+				pos[0][0] = kfState[0][0];
+				pos[1][0] = kfState[1][0];
+				pos[2][0] = z;
+				Array2D<double> measCov(3,3,0.0);
+				measCov[0][0] = kfPosMeasCov[0][0];
+				measCov[1][1] = kfPosMeasCov[1][1];
+				measCov[2][2] = 0.1*0.1;
+				doMeasUpdateKF_posOnly(pos, measCov, kfState, kfErrCov);
+
+				int chad = 0;
 			}
+
+
 
 ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			//////////////////////////////////////////////////
@@ -561,9 +598,6 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //				eig_Sd.getV(V);
 //				eig_Sd.getD(D);
 //
-//				for(int j=0; j<D.dim1(); j++)
-//					maxSigma = max(maxSigma, sqrt(D[j][j]));
-
 //				cv::Point2f pt(priorDistList[i].first[0][0], priorDistList[i].first[1][0]);
 //				double width = 2*sqrt(D[0][0]);
 //				double height = 2*sqrt(D[1][1]);
@@ -573,12 +607,12 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //			}
 //			double opacity = 0.3;
 //			cv::addWeighted(overlay, opacity, img, 1-opacity, 0, img);
-
-			// current points
+//
+//			// current points
 //			for(int i=0; i<curPoints.size(); i++)
 //				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
 //			imshow("chad",img);
-  
+//
 //			keypress = cv::waitKey() % 256;
 
 			img.release();
@@ -588,7 +622,7 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		fs.close();
 
 		cout << "Avg num features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
-		cout << "Avg num matches: " << ((double)numMatchesAccum)/imgList.size() << endl;
+		cout << "Avg num matches: " << ((double)numMatchesAccum)/(imgList.size()-1) << endl;
 		cout << "New total time: " << begin.getElapsedTimeMS()/1.0e3 << endl;
 		cout << "\tts0: " << ts0 << endl;
 		cout << "\tts1: " << ts1 << endl;
@@ -1056,47 +1090,59 @@ static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int
     }
 }
 
-void doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
+void doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &measCov, Array2D<double> const &dynCov)
 {
 	for(int i=0; i<3; i++)
 		state[i][0] += dt*state[i+3][0];
 	for(int i=3; i<6; i++)
 		state[i][0] += dt*accel[i-3][0];
-	for(int i=0; i<3; i++)
-	{
-		errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dt*dt+dynCov[i][i];
-		errCov[i][i+3] += errCov[i+3][i+3]*dt+dynCov[i][i+3];
-		errCov[i+3][i] += errCov[i+3][i+3]*dt+dynCov[i+3][i];
-	}
-	for(int i=3; i<6; i++)
-		errCov[i][i] += dynCov[i][i];
+
+	// This is based on the discrete time formulation
+//	for(int i=0; i<3; i++)
+//	{
+//		errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dt*dt+dynCov[i][i];
+//		errCov[i][i+3] += errCov[i+3][i+3]*dt+dynCov[i][i+3];
+//		errCov[i+3][i] += errCov[i+3][i+3]*dt+dynCov[i+3][i];
+//	}
+//	for(int i=3; i<6; i++)
+//		errCov[i][i] += dynCov[i][i];
+
+	// This is based on the continuous time formulation (with Euler time integration)
+	Array2D<double> A(6,6,0.0), A_T(6,6,0.0);
+	A[0][3] = A[1][4] = A[2][5] = 1;
+	A_T[3][0] = A_T[4][1] = A_T[5][2] = 1; 
+	Array2D<double> Winv(6,6,0.0);
+	Array2D<double> Pdot(6,6);
+	Pdot = matmult(A, errCov) + matmult(errCov, A_T) + dynCov;
+
+	errCov = errCov+dt*Pdot;
 }
 
 void doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
 {
-	Array2D<double> gainKF(6,3,0.0);
-	for(int i=0; i<3; i++)
-	{
-		gainKF[i][i] = errCov[i][i]/(errCov[i][i]+measCov[i][i]);
-		gainKF[i+3][i] = errCov[i][i+3]/(errCov[i][i]+measCov[i][i]);
-	}
-
-	// \hat{x} = \hat{x} + K (meas - C \hat{x})
-	Array2D<double> err2= meas-submat(state,0,2,0,0);
-	for(int i=0; i<3; i++)
-		state[i][0] += gainKF[i][i]*err2[i][0];
-	for(int i=3; i<6; i++)
-		state[i][0] += gainKF[i][i-3]*err2[i-3][0];
-
-	// S = (I-KC) S
-	for(int i=3; i<6; i++)
-		errCov[i][i] -= gainKF[i][i-3]*errCov[i-3][i];
-	for(int i=0; i<3; i++)
-	{
-		errCov[i][i] -= gainKF[i][i]*errCov[i][i];
-		errCov[i][i+3] -= gainKF[i][i]*errCov[i][i+3];
-		errCov[i+3][i] = errCov[i][i+3];
-	}
+//	Array2D<double> gainKF(6,3,0.0);
+//	for(int i=0; i<3; i++)
+//	{
+//		gainKF[i][i] = errCov[i][i]/(errCov[i][i]+measCov[i][i]);
+//		gainKF[i+3][i] = errCov[i][i+3]/(errCov[i][i]+measCov[i][i]);
+//	}
+//
+//	// \hat{x} = \hat{x} + K (meas - C \hat{x})
+//	Array2D<double> err2= meas-submat(state,0,2,0,0);
+//	for(int i=0; i<3; i++)
+//		state[i][0] += gainKF[i][i]*err2[i][0];
+//	for(int i=3; i<6; i++)
+//		state[i][0] += gainKF[i][i-3]*err2[i-3][0];
+//
+//	// S = (I-KC) S
+//	for(int i=3; i<6; i++)
+//		errCov[i][i] -= gainKF[i][i-3]*errCov[i-3][i];
+//	for(int i=0; i<3; i++)
+//	{
+//		errCov[i][i] -= gainKF[i][i]*errCov[i][i];
+//		errCov[i][i+3] -= gainKF[i][i]*errCov[i][i+3];
+//		errCov[i+3][i] = errCov[i][i+3];
+//	}
 }
 
 void doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
@@ -1127,19 +1173,18 @@ void doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &
 	}
 	for(int i=3; i<6; i++)
 		errCov[i][i] -= gainKF[i][i-3]*errCov[i][i];
-
 }
 
 Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
 				Array2D<double> &kfState, Array2D<double> &kfErrCov, Array2D<double> const &kfMeasCov, Array2D<double> const &kfDynCov,
-				double &thrust, Array2D<double> &thrustDir, Array2D<double> &curGravDir, 
+				double &thrust, Array2D<double> &thrustDir,
 				double const &mass)
 {
 	Time dataTime = data->timestamp;
 	Array2D<double> accel = thrust/mass*thrustDir;
-	accel += GRAVITY*curGravDir;
+	accel[2][0] -= GRAVITY;
 	double dt = Time::calcDiffNS(curTime, dataTime)/1.0e9;
-	doTimeUpdateKF(accel, dt, kfState, kfErrCov, kfDynCov);
+	doTimeUpdateKF(accel, dt, kfState, kfErrCov, kfMeasCov, kfDynCov);
 
 	switch(data->type)
 	{
@@ -1160,17 +1205,13 @@ Time applyData(Time const &curTime, shared_ptr<Data> const &data,
 				Array2D<double> attState = static_pointer_cast<DataVector>(data)->data;
 				Array2D<double> attSO3 = createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]);
 				Array2D<double> attBias(3,1);
-				attBias[0][0] = 0.004; attBias[1][0] = 0.018; attBias[2][0] = 0.00;
+				attBias[0][0] = 0.00; attBias[1][0] = 0.00; attBias[2][0] = 0.00;
 				double s1 = sin(attState[2][0]); double c1 = cos(attState[2][0]);
 				double s2 = sin(attState[1][0]-attBias[1][0]); double c2 = cos(attState[1][0]-attBias[1][0]);
 				double s3 = sin(attState[0][0]-attBias[0][0]); double c3 = cos(attState[0][0]-attBias[0][0]);
 				thrustDir[0][0] = s1*s3+c1*c3*s2;
 				thrustDir[1][0] = c3*s1*s2-c1*s3;
 				thrustDir[2][0] = c2*c3;
-
-				curGravDir[0][0] = -attSO3[2][0];
-				curGravDir[1][0] = -attSO3[2][1];
-				curGravDir[2][0] = -attSO3[2][2];
 			}
 			break;
 		case DATA_TYPE_MOTOR_CMDS:
@@ -1179,13 +1220,14 @@ Time applyData(Time const &curTime, shared_ptr<Data> const &data,
 				thrust = 0;
 				for(int i=0; i<4; i++)
 					thrust += cmds[i][0];
-				double forceGain = 0.002;
+				double forceGain = 0.00235;
 				thrust *= forceGain;
 			}
 			break;
 		default:
 			Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
 	}
+
 
 	return dataTime;
 }

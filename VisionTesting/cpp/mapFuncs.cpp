@@ -70,10 +70,15 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 		}
 	}
 
+	// E(Zinv^2) should always be >= E(Z)^2
+	// This is needed since Zinv isn't actually normally distributed
+	// so the subsequent calculations can sometimes cause problems.
+	mz2Inv = max(mz2Inv, mz1Inv*mz1Inv);
+
 	// calc distribution moments
 	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(mDeltaList.size());
-//	for(int i=0; i<mDeltaList.size(); i++)
-	tbb::parallel_for(0, (int)mDeltaList.size(), [&](int i)
+	for(int i=0; i<mDeltaList.size(); i++)
+//	tbb::parallel_for(0, (int)mDeltaList.size(), [&](int i)
 	{
 		Array2D<double> mDelta = mDeltaList[i];
 		Array2D<double> SDelta = SDeltaList[i];
@@ -97,9 +102,16 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
+		if(Sd[0][0] <= 0 || Sd[1][1] <= 0)
+		{
+			printArray("mDelta:\t",mDelta);
+			printArray("SDelta:\n",SDelta);
+			cout << "bad chad 4" << endl;
+		}
+
 		priorDistList[i] = pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy());
 	}
-	);
+//	);
 
 	return priorDistList;
 }
@@ -117,8 +129,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	vector<double> fBList(N1), coeffList(N1), xRangeList(N1), yRangeList(N1);
 	Array2D<double> eye2 = createIdentity(2);
 	double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
-//	for(int i=0; i<N1; i++)
-	tbb::parallel_for(0, N1, [&](int i)
+	for(int i=0; i<N1; i++)
+//	tbb::parallel_for(0, N1, [&](int i)
 	{
 		Array2D<double> md = priorDistList[i].first;
 		Array2D<double> Sd = priorDistList[i].second;
@@ -170,11 +182,13 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		SaInvList[i] = SaInv.copy();
 		SaList[i] = Sa.copy();
 		fBList[i] = fB;
+		if(std::isnan(fB))
+			cout << "bad chad 3" << endl;
 		coeffList[i] = coeff;
 		xRangeList[i] = xrange;
 		yRangeList[i] = yrange;
 	}
-	);
+//	);
 
 	Array2D<double> C(N1+1, N2+1);
 	vector<double> colSum(N2,0.0);
@@ -194,9 +208,9 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 //		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
 		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
 		
-//		for(int i=0; i<N1; i++)
 		tbb::mutex mutex_sum;
-		tbb::parallel_for(0, N1, [&](int i)
+		for(int i=0; i<N1; i++)
+//		tbb::parallel_for(0, N1, [&](int i)
 		{
 			Array2D<double> md = priorDistList[i].first;
 
@@ -211,11 +225,14 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 				mutex_sum.lock();
 				colSum[j] += C[i][j];
 				mutex_sum.unlock();
+
+				if( !(C[i][j] >= 0) )
+					cout << "bad chad 2" << endl;
 			}
 			else
 				C[i][j] = 0;
 		}
-		);
+//		);
 
 		C[N1][j] = probNoCorr;
 //		mutex_sum.lock();

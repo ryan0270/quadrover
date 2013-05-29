@@ -72,11 +72,11 @@ viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime)';
 viconStateInterpKF = interp1(viconStateTime,viconState',mapKfStateTime,[],'extrap')';
 
 %% mean shift
-orbVel = orbVel+diag(mean(viconStateInterpOrb(10:12,:)-orbVel,2))*ones(size(orbVel));
-orbHeight = orbHeight+diag(mean(-viconStateInterpOrb(9,:)-orbHeight,2))*ones(size(orbHeight));
-
-mapVel = mapVel+diag(mean(viconStateInterpMap(10:12,:)-mapVel,2))*ones(size(mapVel));
-mapHeight = mapHeight+diag(mean(-viconStateInterpMap(9,:)-mapHeight,2))*ones(size(mapHeight));
+% orbVel = orbVel+diag(mean(viconStateInterpOrb(10:12,:)-orbVel,2))*ones(size(orbVel));
+% orbHeight = orbHeight+diag(mean(-viconStateInterpOrb(9,:)-orbHeight,2))*ones(size(orbHeight));
+% 
+% mapVel = mapVel+diag(mean(viconStateInterpMap(10:12,:)-mapVel,2))*ones(size(mapVel));
+% mapHeight = mapHeight+diag(mean(-viconStateInterpMap(9,:)-mapHeight,2))*ones(size(mapHeight));
 
 %%
 rmsOrbVel = rms(viconStateInterpOrb(10:12,:)-orbVel,2);
@@ -105,9 +105,10 @@ for st=1:3
 	plot(viconStateTime, viconState(st+9,:)); hold all
 	plot(orbVelTime, orbVel(st,:),'.'); hold all
 	plot(mapVelTime, mapVel(st,:),'.'); hold all
-	plot(mapKfStateTime, mapKfState(st+3,:),'.'); hold all
+	plot(mapKfStateTime, mapKfState(st+3,:)); hold all
 	ax = axis;
-	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
+% 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
+	axis([orbVelTime(1) orbVelTime(end) -1 1]);
 	xlabel('Time [s]');
 	ylabel(stateLabels{st})
 end

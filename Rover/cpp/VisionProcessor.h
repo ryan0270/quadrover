@@ -2,7 +2,7 @@
 #define VISIONPROCESSOR_H
 #include <memory>
 #include <sched.h>
-#include <math.h>
+#include <cmath>
 #include <list>
 
 #include <toadlet/egg.h>

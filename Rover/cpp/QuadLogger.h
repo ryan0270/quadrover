@@ -8,7 +8,7 @@
 
 #include "mxml.h"
 
-#include <math.h>
+#include <cmath>
 #include <toadlet/egg.h>
 #include "Common.h"
 #include "Time.h"
