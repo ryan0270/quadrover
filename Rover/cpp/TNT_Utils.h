@@ -4,7 +4,7 @@
 #define TNT_UTILS_h
 
 #include "TNT/tnt.h"
-#include <math.h>
+#include <cmath>
 #include <toadlet/egg.h>
 
 namespace TNT{
@@ -299,7 +299,8 @@ using namespace toadlet::egg;
 			{
 				for(int j=0; j<m.dim2(); j++)
 					str = str+m[i][j]+"\t";
-				str = str+"\n";
+				if(i+1 < m.dim1())
+					str = str+"\n";
 			}
 		}
 		Log::alert(str);
