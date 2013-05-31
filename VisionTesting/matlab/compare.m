@@ -29,6 +29,10 @@ orbVelIndices = find(orbData(:,2) == 98);
 orbVelTime = orbData(orbVelIndices,1)'/1000;
 orbVel = orbData(orbVelIndices,3:5)';
 
+lsVelIndices = find(orbData(:,2) == 101);
+lsVelTime = orbData(lsVelIndices,1)'/1000;
+lsVel = orbData(lsVelIndices,3:5)';
+
 mapFile = '../mapResults.txt';
 mapData = importdata(mapFile,'\t',0);
 
@@ -84,6 +88,7 @@ timeMaskOrb = find(orbVelTime > 30);
 timeMaskMap = find(mapVelTime > 30);
 timeMaskKF = find(mapKfStateTime > 30);
 rmsOrbVel = rms(viconStateInterpOrb(10:12,timeMaskOrb)-orbVel(:,timeMaskOrb),2);
+rmsLSVel = rms(viconStateInterpOrb(10:12, timeMaskOrb)-lsVel(:,timeMaskOrb),2);
 rmsMapVel = rms(viconStateInterpMap(10:12,timeMaskMap)-mapVel(:,timeMaskMap),2);
 rmsKFVel = rms(viconStateInterpKF(10:12,timeMaskKF)-mapKfState(4:6,timeMaskKF),2);
 
@@ -91,8 +96,8 @@ rmsOrbHeight = rms(-viconStateInterpOrb(9,:)-orbHeight);
 rmsMapHeight = rms(-viconStateInterpMap(9,:)-mapHeight);
 rmsKFHeight = rms(viconStateInterpKF(9,:)-mapKfState(3,:));
 
-disp('vel:')
-disp([rmsKFVel rmsOrbVel rmsMapVel]);
+disp('    LS Vel    KF vel    ORB vel   MAP vel')
+disp([rmsLSVel rmsKFVel rmsOrbVel rmsMapVel]);
 
 disp('height:')
 disp([rmsKFHeight rmsOrbHeight rmsMapHeight]);
@@ -108,8 +113,9 @@ for st=1:3
 	subplot(3,1,st)
 	plot(viconStateTime, viconState(st+9,:)); hold all
 % 	plot(orbVelTime, orbVel(st,:),'.'); hold all
-	plot(mapVelTime, mapVel(st,:),'.'); hold all
-	plot(mapKfStateTime, mapKfState(st+3,:)); hold all
+% 	plot(mapVelTime, mapVel(st,:),'.'); hold all
+% 	plot(mapKfStateTime, mapKfState(st+3,:)); hold all
+	plot(lsVelTime, lsVel(st,:),'.'); hold all
 	hold off
 	ax = axis;
 % 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
@@ -117,7 +123,7 @@ for st=1:3
 	xlabel('Time [s]');
 	ylabel(stateLabels{st})
 end
-% legend('Vicon','ORB','MAP','MAP KF');
+% legend('Vicon','ORB','MAP','MAP KF', 'LS');
 
 % figure(2); clf
 % plot(viconStateTime, -viconState(9,:)); hold all
