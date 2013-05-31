@@ -52,33 +52,47 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 	double del2LnOld = 0xFFFFFFFF;
 	double del1Ln = 0;
 	double del2Ln = 0;
+	double del1, del2;
 	double fact;
-	for(int k=1; k<10; k++)
+	int stopK = 0;
+	for(int k=1; k<2; k++)
 	{
 		fact = fact2ln(k);
 		del1Ln = 2*k*log_sz+fact-(2*k+1)*log_mz;
 		del2Ln = log(2*k+1)+2*k*log_sz+fact-(2*k+2)*log_mz;
-		if(del1Ln < del1LnOld)
-		{
-			mz1Inv = mz1Inv+exp(del1Ln);
-			del1LnOld = del1Ln;
-		}
-		if(del2Ln < del2LnOld)
-		{
-			mz2Inv = mz2Inv+exp(del2Ln);
-			del2LnOld = del2Ln;
-		}
-	}
+		if(del1Ln > del1LnOld || del2Ln > del2LnOld)
+			break;
 
+		del1 = exp(del1Ln);
+		del2 = exp(del2Ln);
+
+//		if( mz2Inv < pow(mz1Inv+del1,2))
+//			break;
+
+		mz1Inv = mz1Inv+del1;
+		del1LnOld = del1Ln;
+
+		mz2Inv = mz2Inv+del2;
+		del2LnOld = del2Ln;
+
+		stopK = k;
+	}
+	if(stopK == 1)
+	{
+		mz1Inv = 1.0/mz;
+		mz2Inv = 1.0/mz/mz+sz*sz/pow(mz,4);
+	}
 	// E(Zinv^2) should always be >= E(Z)^2
 	// This is needed since Zinv isn't actually normally distributed
 	// so the subsequent calculations can sometimes cause problems.
-	mz2Inv = max(mz2Inv, mz1Inv*mz1Inv);
+//	mz2Inv = max(mz2Inv, mz1Inv*mz1Inv);
+	if(mz2Inv < mz1Inv*mz1Inv)
+		cout << "crap, mz2Inv >= mz1Inv*mz1Inv" << endl;
 
 	// calc distribution moments
 	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(mDeltaList.size());
-	for(int i=0; i<mDeltaList.size(); i++)
-//	tbb::parallel_for(0, (int)mDeltaList.size(), [&](int i)
+//	for(int i=0; i<mDeltaList.size(); i++)
+	tbb::parallel_for(0, (int)mDeltaList.size(), [&](int i)
 	{
 		Array2D<double> mDelta = mDeltaList[i];
 		Array2D<double> SDelta = SDeltaList[i];
@@ -90,8 +104,8 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 		double y = points[i].y;
 
 		Array2D<double> Lw(2,3);
-		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -fInv*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = fInv*(1+y*y);	Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
+		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -(f+fInv*x*x); 	Lw[0][2] = y;
+		Lw[1][0] = f+fInv*y*y;		Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
 		md = md+dt*matmult(Lw, omega);
 
 		md[0][0] += x;
@@ -102,16 +116,9 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
-		if(Sd[0][0] <= 0 || Sd[1][1] <= 0)
-		{
-			printArray("mDelta:\t",mDelta);
-			printArray("SDelta:\n",SDelta);
-			cout << "bad chad 4" << endl;
-		}
-
 		priorDistList[i] = pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy());
 	}
-//	);
+	);
 
 	return priorDistList;
 }
@@ -129,8 +136,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	vector<double> fBList(N1), coeffList(N1), xRangeList(N1), yRangeList(N1);
 	Array2D<double> eye2 = createIdentity(2);
 	double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
-	for(int i=0; i<N1; i++)
-//	tbb::parallel_for(0, N1, [&](int i)
+//	for(int i=0; i<N1; i++)
+	tbb::parallel_for(0, N1, [&](int i)
 	{
 		Array2D<double> md = priorDistList[i].first;
 		Array2D<double> Sd = priorDistList[i].second;
@@ -182,13 +189,11 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		SaInvList[i] = SaInv.copy();
 		SaList[i] = Sa.copy();
 		fBList[i] = fB;
-		if(std::isnan(fB))
-			cout << "bad chad 3" << endl;
 		coeffList[i] = coeff;
 		xRangeList[i] = xrange;
 		yRangeList[i] = yrange;
 	}
-//	);
+	);
 
 	Array2D<double> C(N1+1, N2+1);
 	vector<double> colSum(N2,0.0);
@@ -209,8 +214,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
 		
 		tbb::mutex mutex_sum;
-		for(int i=0; i<N1; i++)
-//		tbb::parallel_for(0, N1, [&](int i)
+//		for(int i=0; i<N1; i++)
+		tbb::parallel_for(0, N1, [&](int i)
 		{
 			Array2D<double> md = priorDistList[i].first;
 
@@ -225,14 +230,11 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 				mutex_sum.lock();
 				colSum[j] += C[i][j];
 				mutex_sum.unlock();
-
-				if( !(C[i][j] >= 0) )
-					cout << "bad chad 2" << endl;
 			}
 			else
 				C[i][j] = 0;
 		}
-//		);
+		);
 
 		C[N1][j] = probNoCorr;
 //		mutex_sum.lock();
