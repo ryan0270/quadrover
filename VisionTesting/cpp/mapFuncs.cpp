@@ -77,7 +77,7 @@ vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<c
 
 		stopK = k;
 	}
-	if(stopK == 1)
+	if(stopK == 1 || mz2Inv < mz1Inv*mz1Inv)
 	{
 		mz1Inv = 1.0/mz;
 		mz2Inv = 1.0/mz/mz+sz*sz/pow(mz,4);
@@ -320,13 +320,15 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 		LvList[i] = Lv.copy();
 
 		Array2D<double> Lw(2,3);
-		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -fInv*(1+x*x); 	Lw[0][2] = y;
-		Lw[1][0] = fInv*(1+y*y);	Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
+//		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -fInv*(1+x*x); 	Lw[0][2] = y;
+//		Lw[1][0] = fInv*(1+y*y);	Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
+		Lw[0][0] = fInv*x*y; 		Lw[0][1] = -(f+fInv*x*x); 	Lw[0][2] = y;
+		Lw[1][0] = f+fInv*y*y;		Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
 
 		Array2D<double> q1(2,1);
 		q1[0][0] = x;
 		q1[1][0] = y;
-		Array2D<double> q1Hat = q1 + matmult(Lw, omega);
+		Array2D<double> q1Hat = q1 + dt*matmult(Lw, omega);
 		q1HatList[i] = q1Hat.copy();
 	}
 	);
