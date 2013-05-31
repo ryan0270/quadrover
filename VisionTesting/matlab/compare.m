@@ -71,7 +71,7 @@ tranState = blkdiag(RotPhoneToCam, RotPhoneToCam)*tranState;
 mapKfState = blkdiag(RotPhoneToCam, RotPhoneToCam)*mapKfState;
 
 %%
-viconStateTime = viconStateTime-0.25;
+viconStateTime = viconStateTime+0.15;
 viconStateInterpOrb = interp1(viconStateTime,viconState',orbVelTime)';
 viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime)';
 viconStateInterpKF = interp1(viconStateTime,viconState',mapKfStateTime,[],'extrap')';
@@ -113,9 +113,9 @@ for st=1:3
 	subplot(3,1,st)
 	plot(viconStateTime, viconState(st+9,:)); hold all
 % 	plot(orbVelTime, orbVel(st,:),'.'); hold all
-% 	plot(mapVelTime, mapVel(st,:),'.'); hold all
-% 	plot(mapKfStateTime, mapKfState(st+3,:)); hold all
-	plot(lsVelTime, lsVel(st,:),'.'); hold all
+	plot(mapVelTime, mapVel(st,:),'.'); hold all
+	plot(mapKfStateTime, mapKfState(st+3,:)); hold all
+% 	plot(lsVelTime, lsVel(st,:),'.'); hold all
 	hold off
 	ax = axis;
 % 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
