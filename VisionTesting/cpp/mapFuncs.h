@@ -39,6 +39,18 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel
 						Array2D<double> const &Sn, // feature measurement covariance
 						double const &focalLength, double const &dt, Array2D<double> const &omega);
 
+void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+						vector<cv::Point2f> const &prevPoints,
+						vector<cv::Point2f> const &curPoints, 
+						Array2D<double> const &C, // correspondence matrix
+						Array2D<double> const &mv, // velocity mean
+						Array2D<double> const &Sv, // velocity covariance
+						double const &mz, // height mean
+						double const &vz, // height variance
+						Array2D<double> const &Sn, // feature measurement covariance
+						double const &focalLength, double const &dt, Array2D<double> const &omega,
+						int maxPointCnt);
+
 template<typename T>
 TNT::Array2D<T> logSO3(TNT::Array2D<T> const &R, double theta)
 {
