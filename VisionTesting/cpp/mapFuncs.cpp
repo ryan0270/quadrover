@@ -153,7 +153,7 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		double fB = SdInv[0][0]*md[0][0]*md[0][0] + 2.0*SdInv[0][1]*md[0][0]*md[1][0] + SdInv[1][1]*md[1][0]*md[1][0];
 		double det_Sd = Sd[0][0]*Sd[1][1] - Sd[0][1]*Sd[1][0];
 		double det_Sa = Sa[0][0]*Sa[1][1] - Sa[0][1]*Sa[1][0];
-		double coeff = sqrt(det_Sa)*2.0*PI*sqrt(det_Sd*det_Sn);
+		double coeff = sqrt(det_Sa)/2.0/PI/sqrt(det_Sd*det_Sn);
 //		double xrange = 4*sqrt(Sd[0][0]+Sn[0][0]);
 //		double yrange = 4*sqrt(Sd[1][1]+Sn[1][1]);
 
@@ -197,10 +197,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 
 	Array2D<double> C(N1+1, N2+1);
 	vector<double> colSum(N2,0.0);
-	double probNoCorr = 1.0/640.0/480.0;
+	double peakCoeff = 0;
 	for(int j=0; j<N2; j++)
-	// parallelizing at this level is causing memory curruption, but not sure why
-//	tbb::parallel_for(0, N2, [&](int j)
 	{
 		double x = curPointList[j].x;
 		double y = curPointList[j].y;
@@ -227,6 +225,7 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 				double f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
 							+ fBList[i] + fC;
 				C[i][j] = coeffList[i]*exp(-0.5*f);
+				peakCoeff = max(peakCoeff,coeffList[i]);
 				mutex_sum.lock();
 				colSum[j] += C[i][j];
 				mutex_sum.unlock();
@@ -236,12 +235,15 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		}
 		);
 
-		C[N1][j] = probNoCorr;
-//		mutex_sum.lock();
-		colSum[j] += probNoCorr;
-//		mutex_sum.unlock();
 	}
-//	);
+//	double probNoCorr = 1.0/640.0/480.0;
+//probNoCorr *= 20.0;
+	double probNoCorr = 0.1*peakCoeff;
+	for(int j=0; j<N2; j++)
+	{
+		C[N1][j] = probNoCorr;
+		colSum[j] += probNoCorr;
+	}
 
 	C[N1][N2] = 0;
 
@@ -249,7 +251,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	for(int j=0; j<N2; j++)
 	{
 		for(int i=0; i<N1+1; i++)
-			C[i][j] /= colSum[j];
+			if(C[i][j] != 0)
+				C[i][j] /= colSum[j];
 	}
 
 	// Now check if any of the rows sum to over 1
@@ -262,7 +265,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		if(rowSum > 1)
 		{
 			for(int j=0; j<N2; j++)
-				C[i][j] /= rowSum;
+				if(C[i][j] != 0)
+					C[i][j] /= rowSum;
 
 			C[i][N2] = 0;
 		}
@@ -292,6 +296,21 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel
 						double const &vz, // height variance
 						Array2D<double> const &Sn, // feature measurement covariance
 						double const &focalLength, double const &dt, Array2D<double> const &omega)
+{
+	computeMAPEstimate(velMAP, covVel, heightMAP, prevPoints, curPoints, C, mv, Sv, mz, vz, Sn, focalLength, dt, omega, -1);
+}
+
+void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+						vector<cv::Point2f> const &prevPoints,
+						vector<cv::Point2f> const &curPoints, 
+						Array2D<double> const &C, // correspondence matrix
+						Array2D<double> const &mv, // velocity mean
+						Array2D<double> const &Sv, // velocity covariance
+						double const &mz, // height mean
+						double const &vz, // height variance
+						Array2D<double> const &Sn, // feature measurement covariance
+						double const &focalLength, double const &dt, Array2D<double> const &omega,
+						int maxPointCnt)
 {
 	int N1 = prevPoints.size();
 	int N2 = curPoints.size();
@@ -412,6 +431,11 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel
 
 	// unique solution for optimal vel, given z
 	auto solveVel =  [&](double const &z){
+		if( maxPointCnt > 0)
+		{
+			s1 = ((float)min(maxPointCnt,N1))/N1*s1;
+			S2 = ((float)min(maxPointCnt,N1))/N1*S2;
+		}
 		Array2D<double> temp1 = 1.0/z*s1+matmult(SvInv,mv);
 		Array2D<double> temp2 = 1.0/z/z*S2+SvInv;
 		JAMA::Cholesky<double> chol_temp2(temp2);
