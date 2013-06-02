@@ -77,7 +77,7 @@ mapKfState = blkdiag(RotPhoneToCam, RotPhoneToCam)*mapKfState;
 orbKfState = blkdiag(RotPhoneToCam, RotPhoneToCam)*orbKfState;
 
 %%
-viconStateTime = viconStateTime-0.15;
+% viconStateTime = viconStateTime-0.05;
 viconStateInterpOrb = interp1(viconStateTime,viconState',orbVelTime)';
 viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime)';
 viconStateInterpKF = interp1(viconStateTime,viconState',mapKfStateTime,[],'extrap')';
