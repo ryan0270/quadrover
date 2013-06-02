@@ -282,7 +282,7 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	return C;
 }
 
-void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out*/,
+void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 						vector<cv::Point2f> const &prevPoints,
 						vector<cv::Point2f> const &curPoints, 
 						Array2D<double> const &C, // correspondence matrix
@@ -303,7 +303,7 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 	Array2D<double> SnInv = chol_Sn.solve(createIdentity(2));
 
 	double sz = sqrt(vz);
-	
+
 	///////////////////////////////////////////////////////////////
 	// Build up constant matrices
 	///////////////////////////////////////////////////////////////
@@ -474,6 +474,22 @@ void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out
 
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
+
+	// Compute distribution
+	Array2D<double> covTemp = 1.0/heightMAP/heightMAP*min(1,N1)/N1*S2+SvInv;
+	JAMA::Cholesky<double> chol_covTemp(covTemp);
+	Array2D<double> covTempInv = chol_covTemp.solve(createIdentity(3));
+	covVel = matmult(transpose(covTempInv), matmult(1.0/heightMAP/heightMAP*S2, covTempInv));
+
+//printArray("	mv:\t",mv);
+//printArray("velMAP:\t",velMAP);
+////printArray("Sv:\n", Sv);
+////printArray("S2:\n", S2);
+////printArray("covTemp:\n",covTemp);
+////printArray("covVel:\n", covVel);
+////printArray("velMAP:\t", velMAP);
+//int chad = 0;
+
 }
 
 }
