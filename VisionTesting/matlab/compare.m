@@ -71,7 +71,7 @@ tranState = blkdiag(RotPhoneToCam, RotPhoneToCam)*tranState;
 mapKfState = blkdiag(RotPhoneToCam, RotPhoneToCam)*mapKfState;
 
 %%
-viconStateTime = viconStateTime+0.15;
+viconStateTime = viconStateTime;
 viconStateInterpOrb = interp1(viconStateTime,viconState',orbVelTime)';
 viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime)';
 viconStateInterpKF = interp1(viconStateTime,viconState',mapKfStateTime,[],'extrap')';
@@ -100,7 +100,7 @@ disp('    LS Vel    KF vel    ORB vel   MAP vel')
 disp([rmsLSVel rmsKFVel rmsOrbVel rmsMapVel]);
 
 disp('height:')
-disp([rmsKFHeight rmsOrbHeight rmsMapHeight]);
+disp([0.0000 rmsKFHeight rmsOrbHeight rmsMapHeight]);
 
 
 %%
@@ -115,7 +115,7 @@ for st=1:3
 % 	plot(orbVelTime, orbVel(st,:),'.'); hold all
 	plot(mapVelTime, mapVel(st,:),'.'); hold all
 	plot(mapKfStateTime, mapKfState(st+3,:)); hold all
-% 	plot(lsVelTime, lsVel(st,:),'.'); hold all
+	plot(lsVelTime, lsVel(st,:),'.'); hold all
 	hold off
 	ax = axis;
 % 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
@@ -125,15 +125,15 @@ for st=1:3
 end
 % legend('Vicon','ORB','MAP','MAP KF', 'LS');
 
-% figure(2); clf
-% plot(viconStateTime, -viconState(9,:)); hold all
-% % plot(orbHeightTime, orbHeight, '.'); hold all
-% plot(mapHeightTime, mapHeight, '.'); hold all
-% plot(mapKfStateTime, -mapKfState(3,:), '.'); hold all
-% hold off
-% xlabel('Time [s]');
-% ylabel('Height [m]');
-% % legend('Vicon','ORB','MAP');
+figure(2); clf
+plot(viconStateTime, -viconState(9,:)); hold all
+% plot(orbHeightTime, orbHeight, '.'); hold all
+plot(mapHeightTime, mapHeight, '.'); hold all
+plot(mapKfStateTime, -mapKfState(3,:), '.'); hold all
+hold off
+xlabel('Time [s]');
+ylabel('Height [m]');
+% legend('Vicon','ORB','MAP');
 
 
 %%

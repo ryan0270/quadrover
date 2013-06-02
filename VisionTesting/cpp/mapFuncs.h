@@ -28,7 +28,7 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 									Array2D<double> const &Sn, 
 									Array2D<double> const &SnInv);
 
-void computeMAPEstimate(Array2D<double> &velMAP /*out*/, double &heightMAP /*out*/,
+void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 						vector<cv::Point2f> const &prevPoints,
 						vector<cv::Point2f> const &curPoints, 
 						Array2D<double> const &C, // correspondence matrix
