@@ -403,7 +403,10 @@ void Rover::transmitDataUDP()
 	if(mImageMatchData != NULL)
 	{
 		mImageMatchData->lock();
-		pNumFeatures.dataInt32.push_back(mImageMatchData->featurePoints[0].size());
+		if(mImageMatchData->featurePoints.size() > 0)
+			pNumFeatures.dataInt32.push_back(mImageMatchData->featurePoints[0].size());
+		else
+			pNumFeatures.dataInt32.push_back(0);
 		mImageMatchData->unlock();
 	}
 	else

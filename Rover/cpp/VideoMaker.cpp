@@ -74,7 +74,9 @@ namespace Quadrotor {
 
 	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const data)
 	{
-		if(mLastImgTime.getElapsedTimeMS() > 50 && mMotorOn)
+		if(mLastImgTime.getElapsedTimeMS() > 10 
+				&& mMotorOn
+				)
 		{
 			mLastImgTime.setTime();
 			mMutex_imgQueue.lock();

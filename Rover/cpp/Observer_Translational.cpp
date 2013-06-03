@@ -209,9 +209,7 @@ namespace Quadrotor{
 				mMutex_att.unlock();
 
 				accel.inject(thrust/mMass*r);
-//				accel[2][0] -= GRAVITY;
-// TODO: NEED TO TEST
-accel += GRAVITY*mCurGravDir;
+				accel[2][0] -= GRAVITY;
 			}
 			else 
 			{
@@ -291,6 +289,8 @@ accel += GRAVITY*mCurGravDir;
 	// See eqn 98 in the Feb 25, 2013 notes
 	void  Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
 	{
+mFlowCalcDone = true;
+return;
 		if(matchData->featurePoints[0].size() < 5)
 		{
 			String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW_INSUFFICIENT_POINTS+"\t";

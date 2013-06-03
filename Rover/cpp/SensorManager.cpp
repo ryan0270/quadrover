@@ -568,7 +568,8 @@ Log::alert("sensor manager - shutdown 5");
 		data->img = imgBGR;
 		data->imgFormat = IMG_FORMAT_BGR;
 		data->cap = NULL;
-		data->focalLength = 3.7*imgBGR->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+//		data->focalLength = 3.7*imgBGR->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+		data->focalLength = 524; // from calibration for a 640x480 image
 
 		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)
