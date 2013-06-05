@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 #include <list>
-#include <csignal>
+#include <random>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -68,11 +68,11 @@ int main(int argv, char* argc[])
 {
 	cout << "start chadding" << endl;
 
-	string imgDir = "../video";
+	string imgDir = "../video_Jun5_3";
 
 	vector<pair<int, Time> > imgIdList;
 	list<shared_ptr<DataVector> > attDataListOrig, transDataListOrig, errCovDataListOrig, motorCmdsDataListOrig, thrustDirDataListOrig;
-	loadPhoneLog("../log.txt", imgIdList, attDataListOrig, transDataListOrig, errCovDataListOrig, motorCmdsDataListOrig, thrustDirDataListOrig);
+	loadPhoneLog(String(imgDir.c_str())+String("/log.txt"), imgIdList, attDataListOrig, transDataListOrig, errCovDataListOrig, motorCmdsDataListOrig, thrustDirDataListOrig);
 	if(imgIdList.size() == 0)
 	{
 		cout << "Failed loading data" << endl;
@@ -81,8 +81,8 @@ int main(int argv, char* argc[])
 
 	// preload all images
 	list<pair<int, cv::Mat> > imgList;
-	int imgId = 1700;//1765;
-	for(int i=0; i<500; i++)
+	int imgId = 700;//1765;
+	for(int i=0; i<900; i++)
 	{
 		cv::Mat img;
 		while(img.data == NULL)
@@ -96,7 +96,7 @@ int main(int argv, char* argc[])
 	}
 
 	list<shared_ptr<DataVector> > viconAttDataList, viconTransDataList;
-	loadPcLog("../pcData_fullState.txt", viconAttDataList, viconTransDataList);
+	loadPcLog(String(imgDir.c_str())+String("/pcData_fullState.txt"), viconAttDataList, viconTransDataList);
 
 	Array2D<double> rotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI), createRotMat(0,(double)PI));
 	Array2D<double> rotCamToPhone2 = blkdiag(rotCamToPhone, rotCamToPhone);
@@ -123,7 +123,7 @@ int main(int argv, char* argc[])
 
 	int focalLength = 524; // from camera calibration
 //	int focalLength = 700;
-	double camOffset = 0.1;
+	float camOffset = 0.05;
 
 	tbb::task_scheduler_init init;
 
@@ -133,9 +133,9 @@ int main(int argv, char* argc[])
 	Array2D<double> kfA = createIdentity(6);
 	Array2D<double> kfB(6,3,0.0);
 	Array2D<double> kfDynCov(6,6,0.0);
-	kfDynCov[0][0] = kfDynCov[1][1] = kfDynCov[2][2] = 0.005*0.005;
-	kfDynCov[3][3] = kfDynCov[4][4] = 0.6*0.6;
-	kfDynCov[5][5] = 0.1*0.1;
+	kfDynCov[0][0] = kfDynCov[1][1] = kfDynCov[2][2] = 0.01*0.01;
+	kfDynCov[3][3] = kfDynCov[4][4] = 0.5*0.5;
+	kfDynCov[5][5] = 0.5*0.5;
 	Array2D<double> kfViconPosMeasCov(3,3,0.0), kfViconVelMeasCov(3,3,0.0);
 	kfViconPosMeasCov[0][0] = kfViconPosMeasCov[1][1] = kfViconPosMeasCov[2][2] = 0.005*0.005;
 	kfViconVelMeasCov[0][0] = kfViconVelMeasCov[1][1] = kfViconVelMeasCov[2][2] = 0.1*0.1;
@@ -151,16 +151,22 @@ int main(int argv, char* argc[])
 	Array2D<double> thrustDir(3,1,0.0);
 	thrustDir[2][0] = 1;
 	Array2D<double> motorCmds(4,1);
+
+	Array2D<double> kfErrCovStart(6,6,0.0);
+	kfErrCovStart[0][0] = kfErrCovStart[1][1] = kfErrCovStart[2][2] = 0.005*0.005;
+	kfErrCovStart[3][3] = kfErrCovStart[4][4] = 0.1*0.1;
+	kfErrCovStart[5][5] = 0.2*0.2;
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	cout << "//////////////////////////////////////////////////" << endl;
 
 	float qualityLevel = 0.01;
-	float minDistance = 5;
+	float minDistance = 10;
 
 	bool useViconState = false;
 
-	double viconUpdateDT = 500;
+	double viconUpdateDT = 100;
 
 	//////////////////////////////////////////////////////////////////
 	// using ORB descriptors
@@ -181,10 +187,8 @@ int main(int argv, char* argc[])
 		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
 		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
 
-		kfErrCov[0][0] = kfErrCov[1][1] = kfErrCov[2][2] = 0.005*0.005;
-		kfErrCov[3][3] = kfErrCov[4][4] = 0.1*0.1;
-		kfErrCov[5][5] = 0.2*0.2;
-	
+		kfErrCov.inject(kfErrCovStart);
+
 		Array2D<double> mv(3,1), omega(3,1), vel;
 		double mz, dt, z;
 	
@@ -343,7 +347,7 @@ int main(int argv, char* argc[])
 			curDescriptors.convertTo(curDescriptors, CV_32F);
 	
 			cv::BFMatcher matcher(cv::NORM_L2, true);
-//			cv::BFMatcher matcher(cv::NORM_HAMMING2, true); // L2 norms seems to be doing best both for quality and speed
+//			cv::BFMatcher matcher(cv::NORM_HAMMING2, true); // L2 norm seems to be doing best both for quality and speed
 			vector<cv::DMatch> matches;
 			if(prevDescriptors.rows> 0 && curDescriptors.rows > 0)
 				matcher.match(prevDescriptors, curDescriptors, matches);
@@ -360,11 +364,14 @@ int main(int argv, char* argc[])
 	
 			// Save the best matches
 			// this sorts the list so the elements 0-splitIndex are less than or equal to elements splitIndex+1-end
-			int splitIndex= 0.50*matches.size();
-			nth_element(matches.begin(), matches.begin()+splitIndex, matches.end(), 
-							[&](cv::DMatch const &a, cv::DMatch const &b){return a.distance < b.distance;});
+//			int splitIndex= 0.50*matches.size();
+//			nth_element(matches.begin(), matches.begin()+splitIndex, matches.end(), 
+//							[&](cv::DMatch const &a, cv::DMatch const &b){return a.distance < b.distance;});
+///			vector<cv::DMatch> goodMatches;
+//			move(matches.begin(), matches.begin()+splitIndex, back_inserter(goodMatches));
+
 			vector<cv::DMatch> goodMatches;
-			move(matches.begin(), matches.begin()+splitIndex, back_inserter(goodMatches));
+			matches.swap(goodMatches);
 	
 			if(goodMatches.size() > 0)
 			{
@@ -385,8 +392,9 @@ int main(int argv, char* argc[])
 				nth_element(distancesCopy.begin(), distancesCopy.begin()+medIndex, distancesCopy.end(),
 						[&](float const &a, float const &b){return a < b;});
 				float medDist = distancesCopy[medIndex];
-				float lowEnd = min(0.5*medDist,medDist-20.0);
-				float highEnd = max(1.5*medDist,medDist+20.0);
+				float maxDelta = 40;
+				float lowEnd = min(0.5f*medDist,medDist-maxDelta);
+				float highEnd = max(1.5f*medDist,medDist+maxDelta);
 				for(int i=0; i<tempMatches.size(); i++)
 					if( lowEnd < distances[i] && distances[i] < highEnd)
 						goodMatches.push_back(tempMatches[i]);
@@ -484,8 +492,8 @@ int main(int argv, char* argc[])
 				// Apply measurement to the state estimate
 				vel = matmult(rotCamToPhone, vel);
 //				covVel = matmult(rotCamToPhone, matmult(covVel, rotPhoneToCam));
-//				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
-//				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
+				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
+				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
 
 				fs << curTime.getMS() << "\t" << 101 << "\t";
 				for(int i=0; i<velLS.dim1(); i++)
@@ -495,9 +503,9 @@ int main(int argv, char* argc[])
 				int chad = 0;
 			}
 	
-//				if(imgPrev.data != NULL)
-//				{
-//					cv::Mat imgMatches(img.rows,2*img.cols,img.type());
+//			if(imgPrev.data != NULL)
+//			{
+//				cv::Mat imgMatches(img.rows,2*img.cols,img.type());
 ////				cv::Mat imgL = imgPrev.clone();
 ////				cv::Mat imgR = img.clone();
 ////				for(int i=0; i<prevPoints.size(); i++)
@@ -506,15 +514,15 @@ int main(int argv, char* argc[])
 ////					cv::circle(imgR, curPoints[j]+center, 4, cv::Scalar(0,0,255), -1);
 ////				imgL.copyTo(imgMatches(cv::Rect(0,0,img.cols,img.rows)));
 ////				imgR.copyTo(imgMatches(cv::Rect(img.cols,0,img.cols,img.rows)));
-//					drawMatches(imgPrev, prevKp, img, curKp, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-//					imshow("chad",imgMatches);
-//				}
-//				keypress = cv::waitKey() % 256;
+//				drawMatches(imgPrev, prevKp, img, curKp, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+//				imshow("chad",imgMatches);
+//			}
+//			keypress = cv::waitKey() % 256;
+//	
+//			imgPrev = img;
 	
-				imgPrev = img;
-	
-//				img.release();
-//				img.data = NULL;
+//			img.release();
+//			img.data = NULL;
 		}
 	
 		fs.close();
@@ -543,10 +551,7 @@ int main(int argv, char* argc[])
 		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
 		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
 
-		kfErrCov = Array2D<double>(6,6,0.0);
-		kfErrCov[0][0] = kfErrCov[1][1] = kfErrCov[2][2] = 0.005*0.005;
-		kfErrCov[3][3] = kfErrCov[4][4] = 0.1*0.1;
-		kfErrCov[5][5] = 0.2*0.2;
+		kfErrCov.inject(kfErrCovStart);
 
 		Array2D<double> mv(3,1), omega(3,1), vel;
 		double mz, dt, z;
@@ -650,6 +655,7 @@ int main(int argv, char* argc[])
 			while(minEig <= 0)
 			{
 				cout << "crap! kfErrCov is not definite" << endl;
+				printArray("kfErrCov:\n",kfErrCov);
 
 				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity(6);
 
@@ -802,10 +808,11 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //			if(imgPrev.data != NULL)
 //				imgPrev.copyTo(dblImg(cv::Rect(0,0,img.cols,img.rows)));
 //			img.copyTo(dblImg(cv::Rect(img.cols,0,img.cols,img.rows)));
+//			cout << "imgID: " << imgId << endl;
 //			imshow("chad",dblImg);
 //
 //			keypress = cv::waitKey() % 256;
-
+//
 			imgPrev.release();
 			imgPrev = img;
 		}
@@ -958,6 +965,12 @@ void loadPcLog(String filename,
 	Array2D<double> rotQuadToPhone2 = blkdiag(rotQuadToPhone, rotQuadToPhone);
 	Array2D<double> rotViconToPhone2 = blkdiag(rotViconToPhone, rotViconToPhone);
 
+	Array2D<double> transStateNoiseStd(6,1,0.0);
+	transStateNoiseStd[0][0] = transStateNoiseStd[1][0] = 0.01;
+	transStateNoiseStd[2][0] = 0.005;
+	default_random_engine randGenerator;
+	normal_distribution<float> stdGaussDist(0,1);
+
 	string line;
 	ifstream file(filename.c_str());
 	if(file.is_open())
@@ -971,7 +984,6 @@ void loadPcLog(String filename,
 			double time;
 			int type;
 			ss >> time >> type;
-//time -= 250;
 time -= 0;
 
 			// This file is assumed to be all state data
@@ -981,6 +993,10 @@ time -= 0;
 			for(int i=0; i<6; i++)
 				ss >> transState[i][0];
 
+			// add noise
+			for(int i=0; i<6; i++)
+				transState[i][0] += transStateNoiseStd[i][0]*stdGaussDist(randGenerator);
+			
 			angleState = matmult(rotQuadToPhone2, angleState);
 			transState = matmult(rotViconToPhone2, transState);
 

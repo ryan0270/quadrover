@@ -49,9 +49,9 @@ end
 filename = 'runData/pcData_fullState.txt';
 fid = fopen(filename,'w');
 for i=1:length(viconStateTime)
-	line = sprintf('%i\t1\t',viconStateTime(i)*1000);
+	line = sprintf('%i\t1',viconStateTime(i)*1000);
 	for st=1:12
-		line = sprintf('%s\t%f\t',line, viconState(st,i));
+		line = sprintf('%s\t%f',line, viconState(st,i));
 	end
 	fprintf(fid,'%s\n',line);
 end

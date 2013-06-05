@@ -171,6 +171,8 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 			eig_S.getD(D);
 			double r1 = 3.0*sqrt(D[0][0]);
 			double r2 = 3.0*sqrt(D[1][1]);
+//			double r1 = 1.0*sqrt(D[0][0]);
+//			double r2 = 1.0*sqrt(D[1][1]);
 
 			while(theta1 < -PI/2.0)
 				theta1 += PI;
