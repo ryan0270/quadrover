@@ -1,14 +1,15 @@
 disp('start chadding')
 
 %%
-viconFile = '../pcData_fullState.txt';
+imgDir = '../video_Jun5_3';
+viconFile = [imgDir '/pcData_fullState.txt'];
 viconData = importdata(viconFile,'\t',0);
 
 viconStateIndices = find(viconData(:,2) == 1);
 viconStateTime = viconData(viconStateIndices,1)'/1000;
 viconState = viconData(viconStateIndices,3:14)';
 
-phoneFile = '../log.txt';
+phoneFile = [imgDir '/log.txt'];
 phoneData = importdata(phoneFile,'\t');
 phoneData = phoneData(1:end-1,:);
 
@@ -28,7 +29,6 @@ orbHeight = orbData(orbHeightIndices,3)';
 orbVelIndices = find(orbData(:,2) == 98);
 orbVelTime = orbData(orbVelIndices,1)'/1000;
 orbVel = orbData(orbVelIndices,3:5)';
-
 
 orbKfStateIndices = find(orbData(:,2) == 100);
 orbKfStateTime = orbData(orbKfStateIndices,1)'/1000;
@@ -78,13 +78,13 @@ orbKfState = blkdiag(RotPhoneToCam, RotPhoneToCam)*orbKfState;
 
 %%
 % viconStateTime = viconStateTime-0.05;
-viconStateInterpOrb = interp1(viconStateTime,viconState',orbVelTime)';
-viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime)';
+viconStateInterpOrb = interp1(viconStateTime,viconState',orbVelTime,[],'extrap')';
+viconStateInterpMap = interp1(viconStateTime,viconState',mapVelTime,[],'extrap')';
 viconStateInterpKF = interp1(viconStateTime,viconState',mapKfStateTime,[],'extrap')';
 
 %%
-timeL = 30;
-timeR = 100;
+timeL = 26;
+timeR = inf;
 timeMaskOrb = find((orbVelTime > timeL) .* (orbVelTime < timeR));
 timeMaskOrbKF = find((orbKfStateTime > timeL) .* (orbKfStateTime < timeR));
 timeMaskMap = find((mapVelTime > timeL) .* (mapVelTime < timeR));
