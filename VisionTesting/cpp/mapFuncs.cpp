@@ -206,52 +206,42 @@ s0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 	Array2D<double> C(N1+1, N2+1);
 	vector<double> colSum(N2,0.0);
 	double peakCoeff = 0;
-	vector<pair<int, int> > indices; indices.reserve(5*(N1+N2));
-	// build list of points that are of significance
+	double x, y, fC, f;
+	Array2D<double> mq(2,1), SnInvmq(2,1), ma(2,1), md, SaInv, temp1;
 	for(int j=0; j<N2; j++)
 	{
-		double x = curPointList[j].x;
-		double y = curPointList[j].y;
-		Array2D<double> mq(2,1);
+		x = curPointList[j].x;
+		y = curPointList[j].y;
 		mq[0][0] = x;
 		mq[1][0] = y;
 
+//		Array2D<double> SnInvmq = matmult(SnInv, mq);
+		SnInvmq[0][0] = SnInv[0][0]*mq[0][0]; // assumes Sn diagonal
+		SnInvmq[1][0] = SnInv[1][1]*mq[1][0];
+
+//		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
+		fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
+		
 		for(int i=0; i<N1; i++)
 		{
-			Array2D<double> md = priorDistList[i].first;
+			md = priorDistList[i].first;
 			if(abs(x-md[0][0]) < xRangeList[i] && abs(y-md[1][0]) < yRangeList[i] )
-				indices.push_back(make_pair(i,j));
+			{
+//				ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
+				temp1 = SdInvmdList[i]+SnInvmq;
+				ma[0][0] = SaList[i][0][0]*temp1[0][0] + SaList[i][0][1]*temp1[1][0];
+				ma[1][0] = SaList[i][1][0]*temp1[0][0] + SaList[i][1][1]*temp1[1][0];
+//				double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
+				SaInv = SaInvList[i];
+				f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
+							+ fBList[i] + fC;
+				C[i][j] = coeffList[i]*exp(-0.5*f);
+				peakCoeff = max(peakCoeff,coeffList[i]);
+			}
 			else
 				C[i][j] = 0;
 		}
 	}
-
-	// Now calculate for points of interest
-	for(int idx=0; idx<indices.size(); idx++)
-//	tbb::parallel_for(size_t(0), size_t(indices.size()), [&](size_t idx)
-	{
-		int i = indices[idx].first;
-		int j = indices[idx].second;
-		double x = curPointList[j].x;
-		double y = curPointList[j].y;
-		Array2D<double> mq(2,1);
-		mq[0][0] = x;
-		mq[1][0] = y;
-
-		Array2D<double> SnInvmq = matmult(SnInv, mq);
-
-//		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
-		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
-		
-		Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
-//		double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
-		Array2D<double> SaInv = SaInvList[i];
-		double f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
-					+ fBList[i] + fC;
-		C[i][j] = coeffList[i]*exp(-0.5*f);
-		peakCoeff = max(peakCoeff,coeffList[i]);
-	}
-//	);
 s1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 
 //	double probNoCorr = 1.0/640.0/480.0;
