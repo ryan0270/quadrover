@@ -227,12 +227,9 @@ s0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 	}
 
 	// Now calculate for points of interest
-	vector<Array2D<double> > SnInvmqList(indices.size(), Array2D<double>(2,1,0.0));
-	tbb::mutex m1;
-//	for(int idx=0; idx<indices.size(); idx++)
-	tbb::parallel_for(size_t(0), size_t(indices.size()), [&](size_t idx)
+	for(int idx=0; idx<indices.size(); idx++)
+//	tbb::parallel_for(size_t(0), size_t(indices.size()), [&](size_t idx)
 	{
-m1.lock();
 		int i = indices[idx].first;
 		int j = indices[idx].second;
 		double x = curPointList[j].x;
@@ -241,28 +238,20 @@ m1.lock();
 		mq[0][0] = x;
 		mq[1][0] = y;
 
-m1.unlock();
-//		Array2D<double> SnInvmq = matmult(SnInv, mq);
-//		Array2D<double> SnInvmq(2,1,0.0);
-//		SnInvmq[0][0] = s00*mq[0][0] + s01*mq[1][0];
-//		SnInvmq[1][0] = s10*mq[0][0] + s11*mq[1][0];
-		SnInvmqList[idx][0][0] = SnInv[0][0]*mq[0][0] + SnInv[0][1]*mq[1][0];
-		SnInvmqList[idx][1][0] = SnInv[1][0]*mq[0][0] + SnInv[1][1]*mq[1][0];
+		Array2D<double> SnInvmq = matmult(SnInv, mq);
 
-m1.lock();
 //		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
 		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
 		
-		Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+SnInvmqList[idx]);
+		Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
 //		double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
 		Array2D<double> SaInv = SaInvList[i];
 		double f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
 					+ fBList[i] + fC;
 		C[i][j] = coeffList[i]*exp(-0.5*f);
 		peakCoeff = max(peakCoeff,coeffList[i]);
-m1.unlock();
 	}
-	);
+//	);
 s1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 
 //	double probNoCorr = 1.0/640.0/480.0;
