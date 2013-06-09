@@ -109,49 +109,49 @@ disp([0 rmsOrbKFHeight rmsMapKFHeight rmsOrbHeight rmsMapHeight]);
 
 
 %%
-figure(1); clf
-% set(gcf,'Units','Inches');
-% curPos = get(gcf,'Position'); figSize = [5 5];
-% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-stateLabels = {'x [m]', 'y [m]', 'z [m]', 'x vel [m/s]', 'y vel [m/s]', 'z vel [m/s]'};
-for st=4:6
-	subplot(3,1,st-3)
-	plot(viconStateTime, viconState(st+6,:)); hold all
-% 	plot(orbVelTime, orbVel(st,:),'.'); hold all
-% 	plot(mapVelTime, mapVel(st,:),'.'); hold all
-	plot(orbKfStateTime, orbKfState(st,:),'.'); hold all
-	plot(mapKfStateTime, mapKfState(st,:),'.'); hold all
-% 	plot(lsVelTime, lsVel(st,:),'.'); hold all
-	hold off
-	ax = axis;
-% 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
-	axis([orbVelTime(1) orbVelTime(end) -1 1]);
-	xlabel('Time [s]');
-	ylabel(stateLabels{st})
-end
-% legend('Vicon','ORB','MAP','MAP KF', 'LS');
-
-figure(2); clf
-plot(viconStateTime, -viconState(9,:)); hold all
-% plot(orbHeightTime, orbHeight, '.'); hold all
-% plot(mapHeightTime, mapHeight, '.'); hold all
-plot(orbKfStateTime, -orbKfState(3,:), '.'); hold all
-plot(mapKfStateTime, -mapKfState(3,:), '.'); hold all
-hold off
-xlabel('Time [s]');
-ylabel('Height [m]');
-% legend('Vicon','ORB','MAP');
-
-% figure(3); clf
+% figure(1); clf
+% % set(gcf,'Units','Inches');
+% % curPos = get(gcf,'Position'); figSize = [5 5];
+% % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% stateLabels = {'x [m]', 'y [m]', 'z [m]', 'x vel [m/s]', 'y vel [m/s]', 'z vel [m/s]'};
 % for st=4:6
 % 	subplot(3,1,st-3)
-% 	plot(orbKfStateTime, orbKfState(st,:) - viconStateInterpOrb(st+6,:), '.', 'Color',[0 0.5 0]); hold all
-% 	plot(mapKfStateTime, mapKfState(st,:) - viconStateInterpMap(st+6,:), '.r'); hold all
+% 	plot(viconStateTime, viconState(st+6,:)); hold all
+% % 	plot(orbVelTime, orbVel(st,:),'.'); hold all
+% % 	plot(mapVelTime, mapVel(st,:),'.'); hold all
+% 	plot(orbKfStateTime, orbKfState(st,:),'.'); hold all
+% 	plot(mapKfStateTime, mapKfState(st,:),'.'); hold all
+% % 	plot(lsVelTime, lsVel(st,:),'.'); hold all
 % 	hold off
-% 	axis([orbVelTime(1) orbVelTime(end) -0.5 0.5]);
+% 	ax = axis;
+% % 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
+% 	axis([orbVelTime(1) orbVelTime(end) -1 1]);
 % 	xlabel('Time [s]');
-% 	ylabel(stateLabels{st});
+% 	ylabel(stateLabels{st})
 % end
+% % legend('Vicon','ORB','MAP','MAP KF', 'LS');
+% 
+% figure(2); clf
+% plot(viconStateTime, -viconState(9,:)); hold all
+% % plot(orbHeightTime, orbHeight, '.'); hold all
+% % plot(mapHeightTime, mapHeight, '.'); hold all
+% plot(orbKfStateTime, -orbKfState(3,:), '.'); hold all
+% plot(mapKfStateTime, -mapKfState(3,:), '.'); hold all
+% hold off
+% xlabel('Time [s]');
+% ylabel('Height [m]');
+% % legend('Vicon','ORB','MAP');
+% 
+% % figure(3); clf
+% % for st=4:6
+% % 	subplot(3,1,st-3)
+% % 	plot(orbKfStateTime, orbKfState(st,:) - viconStateInterpOrb(st+6,:), '.', 'Color',[0 0.5 0]); hold all
+% % 	plot(mapKfStateTime, mapKfState(st,:) - viconStateInterpMap(st+6,:), '.r'); hold all
+% % 	hold off
+% % 	axis([orbVelTime(1) orbVelTime(end) -0.5 0.5]);
+% % 	xlabel('Time [s]');
+% % 	ylabel(stateLabels{st});
+% % end
 
 
 %%
