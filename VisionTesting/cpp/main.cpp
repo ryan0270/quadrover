@@ -181,7 +181,7 @@ cout << "final image: " << imgId << endl;
 	// Vicon measurment randomization
 	Array2D<double> transStateNoiseStd(3,1,0.0);
 	transStateNoiseStd[0][0] = transStateNoiseStd[1][0] = 0.01;
-	transStateNoiseStd[2][0] = 0.005;
+	transStateNoiseStd[2][0] = 0.01;
 	default_random_engine randGenerator;
 	normal_distribution<float> stdGaussDist(0,1);
 
