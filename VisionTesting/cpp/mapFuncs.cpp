@@ -7,6 +7,9 @@
 namespace ICSL {
 namespace Rover {
 
+double s0, s1, s2, s3, s4, s5;
+//s0 = s1 = s2 = 0;
+
 vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
 							Array2D<double> const &mv, Array2D<double> const &Sv, 
 							double const &mz, double const &varz, 
@@ -131,6 +134,7 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	if(N1 == 0 || N2 == 0)
 		return Array2D<double>();
 
+Time start;
 	// Precompute some things
 	vector<Array2D<double> > SdInvmdList(N1), SaInvList(N1), SaList(N1);
 	vector<double> fBList(N1), coeffList(N1), xRangeList(N1), yRangeList(N1);
@@ -197,9 +201,13 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 	}
 	);
 
+s0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
+
 	Array2D<double> C(N1+1, N2+1);
 	vector<double> colSum(N2,0.0);
 	double peakCoeff = 0;
+	vector<pair<int, int> > indices; indices.reserve(5*(N1+N2));
+	// build list of points that are of significance
 	for(int j=0; j<N2; j++)
 	{
 		double x = curPointList[j].x;
@@ -208,53 +216,73 @@ Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> 
 		mq[0][0] = x;
 		mq[1][0] = y;
 
-		Array2D<double> SnInvmq = matmult(SnInv, mq);
-
-//		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
-		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
-		
-		tbb::mutex mutex_sum;
-//		for(int i=0; i<N1; i++)
-		tbb::parallel_for(0, N1, [&](int i)
+		for(int i=0; i<N1; i++)
 		{
 			Array2D<double> md = priorDistList[i].first;
-
 			if(abs(x-md[0][0]) < xRangeList[i] && abs(y-md[1][0]) < yRangeList[i] )
-			{
-				Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
-//				double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
-				Array2D<double> SaInv = SaInvList[i];
-				double f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
-							+ fBList[i] + fC;
-				C[i][j] = coeffList[i]*exp(-0.5*f);
-				peakCoeff = max(peakCoeff,coeffList[i]);
-				mutex_sum.lock();
-				colSum[j] += C[i][j];
-				mutex_sum.unlock();
-			}
+				indices.push_back(make_pair(i,j));
 			else
 				C[i][j] = 0;
 		}
-		);
-
 	}
+
+	// Now calculate for points of interest
+	vector<Array2D<double> > SnInvmqList(indices.size(), Array2D<double>(2,1,0.0));
+	tbb::mutex m1;
+//	for(int idx=0; idx<indices.size(); idx++)
+	tbb::parallel_for(size_t(0), size_t(indices.size()), [&](size_t idx)
+	{
+m1.lock();
+		int i = indices[idx].first;
+		int j = indices[idx].second;
+		double x = curPointList[j].x;
+		double y = curPointList[j].y;
+		Array2D<double> mq(2,1);
+		mq[0][0] = x;
+		mq[1][0] = y;
+
+m1.unlock();
+//		Array2D<double> SnInvmq = matmult(SnInv, mq);
+//		Array2D<double> SnInvmq(2,1,0.0);
+//		SnInvmq[0][0] = s00*mq[0][0] + s01*mq[1][0];
+//		SnInvmq[1][0] = s10*mq[0][0] + s11*mq[1][0];
+		SnInvmqList[idx][0][0] = SnInv[0][0]*mq[0][0] + SnInv[0][1]*mq[1][0];
+		SnInvmqList[idx][1][0] = SnInv[1][0]*mq[0][0] + SnInv[1][1]*mq[1][0];
+
+m1.lock();
+//		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
+		double fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
+		
+		Array2D<double> ma = matmult(SaList[i],SdInvmdList[i]+SnInvmqList[idx]);
+//		double f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
+		Array2D<double> SaInv = SaInvList[i];
+		double f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
+					+ fBList[i] + fC;
+		C[i][j] = coeffList[i]*exp(-0.5*f);
+		peakCoeff = max(peakCoeff,coeffList[i]);
+m1.unlock();
+	}
+	);
+s1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
+
 //	double probNoCorr = 1.0/640.0/480.0;
 //probNoCorr *= 20.0;
 	double probNoCorr = 0.1*peakCoeff;
 	for(int j=0; j<N2; j++)
-	{
 		C[N1][j] = probNoCorr;
-		colSum[j] += probNoCorr;
-	}
 
 	C[N1][N2] = 0;
 
 	// Scale colums to unit sum
 	for(int j=0; j<N2; j++)
 	{
+		double colSum = 0;
+		for(int i=0; i<N1+1; i++)
+			colSum += C[i][j];
+
 		for(int i=0; i<N1+1; i++)
 			if(C[i][j] != 0)
-				C[i][j] /= colSum[j];
+				C[i][j] /= colSum;
 	}
 
 	// Now check if any of the rows sum to over 1
