@@ -68,6 +68,8 @@ TNT::Array2D<T> logSO3(TNT::Array2D<T> const &R, double theta)
 	return w;
 }
 
+extern double s0, s1, s2, s3, s4, s5;
+
 
 }
 }
