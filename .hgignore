@@ -30,5 +30,6 @@ Leash/runData/*
 
 Rover/video/*
 
-VisionTesting/video/*
+VisionTesting/video*/*
+VisionTesting/backup*/*
 

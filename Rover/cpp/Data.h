@@ -49,7 +49,7 @@ enum DataType
 	DATA_TYPE_ANGULAR_VEL,
 };
 
-class DataVector; 
+template<class T> class DataVector; 
 class Data
 {
 	public:
@@ -76,19 +76,25 @@ class Data
 	DataType type;
 
 	static double interpolate(Time const &t, Data const &d1, Data const &d2);
-	static TNT::Array2D<double> interpolate(Time const &t, DataVector const &d1, DataVector const &d2);
 	static double interpolate(Time const &t, std::list<shared_ptr<Data> > const &d);
-	static TNT::Array2D<double> interpolate(Time const &t, std::list<shared_ptr<DataVector> > const &d);
+	template <class T1, class T2>
+	static TNT::Array2D<T1> interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2);
+	template <class T>
+	static TNT::Array2D<T> interpolate(Time const &t, std::list<shared_ptr<DataVector<T> > > const &d);
+//	static TNT::Array2D<float> interpolate(Time const &t, std::list<shared_ptr<DataVector<float> > > const &d);
 
 	// ideally, the list would be passed in const here but then the returned iterator has to be const and I
 	// couldn't do some things with it (like modify the list based on the returned iterator)
 	static std::list<std::shared_ptr<Data> >::iterator findIndex(Time const &t, std::list<std::shared_ptr<Data> > &d);
 	static std::list<std::shared_ptr<Data> >::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<Data> > &d);
-	static std::list<std::shared_ptr<DataVector> >::iterator findIndex(Time const &t, std::list<std::shared_ptr<DataVector> > &d);
-	static std::list<std::shared_ptr<DataVector> >::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<DataVector> > &d);
+	template <class T>
+	static typename std::list<std::shared_ptr<DataVector<T> > >::iterator findIndex(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
+	template <class T>
+	static typename std::list<std::shared_ptr<DataVector<T> > >::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
 
 	static std::list<std::shared_ptr<Data> >::iterator truncate(Time const &t, std::list<std::shared_ptr<Data> > &d);
-	static void truncate(Time const &t, std::list<std::shared_ptr<DataVector> > &d);
+	template <class T>
+	static void truncate(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
 
 	static bool timeSortPredicate(shared_ptr<Data> const &d1, shared_ptr<Data> const &d2){return d1->timestamp < d2->timestamp;}
 
@@ -96,6 +102,7 @@ class Data
 	toadlet::egg::Mutex mMutex;
 };
 
+template <class T>
 class DataVector : public Data
 {
 	public:
@@ -114,7 +121,7 @@ class DataVector : public Data
 		d.unlock();
 		unlock();
 	}
-	TNT::Array2D<double> data, dataCalibrated;
+	TNT::Array2D<T> data, dataCalibrated;
 };
 
 class DataImage : public Data
@@ -211,6 +218,129 @@ class ImageTargetFindData
 	protected:
 	toadlet::egg::Mutex mMutex;
 };
+
+//////////////////////////////////////////// Template implementations //////////////////////////////////////
+// the list is assumed to be sorted in increasing time order
+template <class T>
+TNT::Array2D<T> Data::interpolate(Time const &t, list<shared_ptr<DataVector<T> > > const &d)
+{
+	if(d.size() == 0)
+		return TNT::Array2D<T>();
+
+	TNT::Array2D<T> interp;
+
+	if(t <= d.front()->timestamp)
+	{
+		interp = d.front()->data.copy();
+	}
+	else if(t >= d.back()->timestamp)
+	{
+		interp = d.back()->data.copy();
+	}
+	else
+	{
+		shared_ptr<DataVector<T> > d1, d2;
+		typename list<shared_ptr<DataVector<T> > >::const_iterator iter = d.begin();
+		while(iter != d.end() && (*iter)->timestamp < t)
+		{
+			d1 = *iter;
+			iter++;
+		}
+		if(iter != d.end())
+		{
+			d2 = *iter;
+			double a = Time::calcDiffUS(d1->timestamp,t);
+			double b = Time::calcDiffUS(t, d2->timestamp);
+			interp= b/(a+b)*d1->data + a/(a+b)*d2->data;
+		}
+		else
+		{
+			interp = d1->data.copy();
+		}
+	}
+
+	return interp;
+}
+
+template <class T>
+typename list<shared_ptr<DataVector<T> > >::iterator Data::findIndex(Time const &t, list<shared_ptr<DataVector<T> > > &d)
+{
+	typename list<shared_ptr<DataVector<T> > >::iterator i = d.begin();
+	while(i != d.end() && (*i)->timestamp < t)
+		i++;
+	return i;
+}
+
+template <class T>
+typename list<shared_ptr<DataVector<T> > >::iterator Data::findIndexReverse(Time const &t, list<shared_ptr<DataVector<T> > > &d)
+{
+	typename list<shared_ptr<DataVector<T> > >::iterator i = d.end();
+	if(d.size() == 0)
+		return i;
+
+	i--;
+	while(i != d.begin() && (*i)->timestamp > t)
+		i--;
+	return i;
+}
+
+template <class T>
+void Data::truncate(Time const &t, list<shared_ptr<DataVector<T> > > &d)
+{
+	if(d.size() == 0)
+	{
+		return;
+	}
+	if(t > d.back()->timestamp)
+	{
+		return;
+	}
+	if(t < d.front()->timestamp)
+	{
+		d.clear();
+		return;
+	}
+
+	typename list<shared_ptr<DataVector<T> > >::iterator iter = d.end();
+	iter--;
+	while(t < (*iter)->timestamp && iter != d.begin())
+	{
+		iter--;
+		d.pop_back();
+	}
+}
+
+template <class T1, class T2>
+TNT::Array2D<T1> Data::interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2)
+{
+	TNT::Array2D<double> interp;
+
+	DataVector<T1> const *d1p, *d2p;
+	if(d1.timestamp < d2.timestamp)
+	{
+		d1p = &d1;
+		d2p = &d2;
+	}
+	else
+	{
+		d1p = &d2;
+		d2p = &d1;
+	}
+
+	if(t < d1p->timestamp)
+		interp= d1p->data.copy();
+	else if(t > d2p->timestamp)
+		interp= d2p->data.copy();
+	else
+	{
+		double a = Time::calcDiffUS(d1p->timestamp,t);
+		double b = Time::calcDiffUS(t, d2p->timestamp);
+		interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
+	}
+
+	return interp;
+}
+
 
 
 } // namespace Quadrotor
