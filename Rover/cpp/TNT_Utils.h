@@ -56,9 +56,10 @@ using namespace toadlet::egg;
 		return tr;
 	}
 
-	inline Array2D<double> scalarMult(double scalar, Array2D<double> const &mat)
+	template <class T1, class T2>
+	inline Array2D<T1> scalarMult(T2 scalar, Array2D<T1> const &mat)
 	{
-		Array2D<double> result(mat.dim1(), mat.dim2());
+		Array2D<T1> result(mat.dim1(), mat.dim2());
 
 		for(int i=0; i<mat.dim1(); i++)
 			for(int j=0; j<mat.dim2(); j++)
@@ -67,17 +68,14 @@ using namespace toadlet::egg;
 		return result;
 	}
 
-	inline Array2D<double> scalarMult(Array2D<double> const &mat, double scalar)
+	template <class T1, class T2>
+	inline Array2D<T1> operator*(T2 scalar, Array2D<T1> const &mat)
 	{
 		return scalarMult(scalar, mat);
 	}
 
-	inline Array2D<double> operator*(double scalar, Array2D<double> const &mat)
-	{
-		return scalarMult(scalar, mat);
-	}
-
-	inline Array2D<double> operator*(Array2D<double> const &mat, double scalar)
+	template <class T1, class T2>
+	inline Array2D<T1> operator*(Array2D<T1> const &mat, T2 scalar)
 	{
 		return scalarMult(scalar, mat);
 	}
@@ -86,10 +84,10 @@ using namespace toadlet::egg;
 	  requires a 1D vector
 	  */
 	template <class T>
-	inline double norm2(Array2D<T> const &mat)
+	inline T norm2(Array2D<T> const &mat)
 	{
 		assert(mat.dim1() == 1 || mat.dim2() == 1);
-		double result = 0;
+		T result = 0;
 		if(mat.dim1()==1)
 			for(int i=0; i<mat.dim2(); i++)
 				result += pow(mat[0][i],2);
@@ -100,7 +98,8 @@ using namespace toadlet::egg;
 		return sqrt(result);
 	}
 
-	inline double matmultS(Array2D<double> const &mat1, Array2D<double> const &mat2)
+	template <class T>
+	inline T matmultS(Array2D<T> const &mat1, Array2D<T> const &mat2)
 	{
 		assert(mat1.dim1() == 1 && mat2.dim2() == 1);
 		return matmult(mat1, mat2)[0][0];
@@ -124,7 +123,8 @@ using namespace toadlet::egg;
 	/*!
 	  \param mat is modified to have its rows replaces
 	  */
-	inline void assignRows(Array2D<double> &mat, int rowStart, int rowStop, Array2D<double> const &rows)
+	template <class T>
+	inline void assignRows(Array2D<T> &mat, int rowStart, int rowStop, Array2D<T> const &rows)
 	{
 		assert(rowStart >= 0 && rowStop < mat.dim1() &&
 				rows.dim1() == rowStop-rowStart+1 && rows.dim2() == mat.dim2());
@@ -137,7 +137,8 @@ using namespace toadlet::egg;
 	/*!
 	  \param mat is modified to have its rows replaces
 	  */
-	inline void assignRows(Array2D<double> &mat, int rowStart, int rowStop, double val)
+	template <class T>
+	inline void assignRows(Array2D<T> &mat, int rowStart, int rowStop, T val)
 	{
 		assert(rowStart >= 0 && rowStop < mat.dim1());
 
@@ -149,7 +150,8 @@ using namespace toadlet::egg;
 	/*!
 	  \param mat is modified to have its cols replaces
 	  */
-	inline void assignColumns(Array2D<double> &mat, int colStart, int colStop, Array2D<double> const &cols)
+	template <class T>
+	inline void assignColumns(Array2D<T> &mat, int colStart, int colStop, Array2D<T> const &cols)
 	{
 		assert(colStart >= 0 && colStop < mat.dim2() &&
 				cols.dim2() == colStop-colStart+1 && cols.dim1() == mat.dim1());
@@ -164,7 +166,8 @@ using namespace toadlet::egg;
 	/*!
 	  \param mat is modified to have its cols replaces
 	  */
-	inline void assignColumns(Array2D<double> &mat, int colStart, int colStop, double val)
+	template <class T>
+	inline void assignColumns(Array2D<T> &mat, int colStart, int colStop, T val)
 	{
 		assert(colStart >= 0 && colStop < mat.dim2());
 
@@ -173,45 +176,49 @@ using namespace toadlet::egg;
 				mat[r][c] = val;
 	}
 
-	inline Array2D<double> stackVertical(Array2D<double> const &matTop, Array2D<double> const &matBottom)
+	template <class T>
+	inline Array2D<T> stackVertical(Array2D<T> const &matTop, Array2D<T> const &matBottom)
 	{
 		assert(matTop.dim2() == matBottom.dim2());
 		//	if(matTop.dim2() != matBottom.dim2())
 		//		throw("TNT::stackVertical error - matrix dimensions do not match");
 
-		Array2D<double> matNew(matTop.dim1()+matBottom.dim1(), matTop.dim2());
+		Array2D<T> matNew(matTop.dim1()+matBottom.dim1(), matTop.dim2());
 		assignRows(matNew,0,matTop.dim1()-1,matTop);
 		assignRows(matNew,matTop.dim1(),matNew.dim1()-1,matBottom);
 
 		return matNew;
 	}
 
-	inline Array2D<double> stackVertical(Array2D<double> const &matTop, double val)
+	template <class T>
+	inline Array2D<T> stackVertical(Array2D<T> const &matTop, T val)
 	{
 		assert(matTop.dim2() == 1);
 		//	if(matTop.dim2() != 1)
 		//		throw("TNT::stackVertical error - matTop.dim2() != 1");
 
-		return stackVertical(matTop, Array2D<double>(1,1,val));
+		return stackVertical(matTop, Array2D<T>(1,1,val));
 	}
 
-	inline Array2D<double> stackHorizontal(Array2D<double> const &matLeft, Array2D<double> const &matRight)
+	template <class T>
+	inline Array2D<T> stackHorizontal(Array2D<T> const &matLeft, Array2D<T> const &matRight)
 	{
 		assert(matLeft.dim1() == matRight.dim1());
 
-		Array2D<double> matNew(matLeft.dim1(), matLeft.dim2()+matRight.dim2());
+		Array2D<T> matNew(matLeft.dim1(), matLeft.dim2()+matRight.dim2());
 		assignColumns(matNew, 0, matLeft.dim2()-1, matLeft);
 		assignColumns(matNew, matLeft.dim2(), matNew.dim2()-1, matRight);
 
 		return matNew;
 	}
 
-	inline Array2D<double> cross(Array2D<double> const &matLeft, Array2D<double> const &matRight)
+	template <class T>
+	inline Array2D<T> cross(Array2D<T> const &matLeft, Array2D<T> const &matRight)
 	{
 		assert(matLeft.dim1() == 3 && matRight.dim1() == 3 && 
 				matLeft.dim2() == 1 && matRight.dim2() == 1);
 
-		Array2D<double> matNew(3,1);
+		Array2D<T> matNew(3,1);
 		matNew[0][0] = matLeft[1][0]*matRight[2][0]-matLeft[2][0]*matRight[1][0];
 		matNew[1][0] = matLeft[2][0]*matRight[0][0]-matLeft[0][0]*matRight[2][0];
 		matNew[2][0] = matLeft[0][0]*matRight[1][0]-matLeft[1][0]*matRight[0][0];
@@ -219,22 +226,24 @@ using namespace toadlet::egg;
 		return matNew;
 	}
 
-	inline Array2D<double> extractDiagonal(Array2D<double> const &mat)
+	template <class T>
+	inline Array2D<T> extractDiagonal(Array2D<T> const &mat)
 	{
 		assert(mat.dim1() == mat.dim2());
 
-		Array2D<double> matNew(mat.dim1(),1);
+		Array2D<T> matNew(mat.dim1(),1);
 		for(int i=0; i<mat.dim1(); i++)
 			matNew[i][0] = mat[i][i];
 
 		return matNew;
 	}
 
-	inline Array2D<double> createIdentity(int n)
+	template <class T>
+	inline Array2D<T> createIdentity(T n)
 	{
 		assert(n > 0);
 
-		Array2D<double> matNew(n,n,0.0);
+		Array2D<T> matNew(n,n,0.0);
 		for(int i=0; i<n; i++)
 			matNew[i][i] = 1.0;
 
@@ -245,8 +254,8 @@ using namespace toadlet::egg;
 	inline Array2D<T> createRotMat(int axis, T angleInRad)
 	{
 		Array2D<T> rotMat(3,3,0.0);
-		double c = cos(angleInRad);
-		double s = sin(angleInRad);
+		T c = cos(angleInRad);
+		T s = sin(angleInRad);
 		switch(axis)
 		{
 			case 0:

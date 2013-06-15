@@ -28,58 +28,64 @@
 
 #include "mapFuncs.h"
 
+
+typedef float DTYPE;
+
 using namespace std;
 using namespace ICSL::Rover;
 using namespace ICSL::Quadrotor;
 using namespace ICSL::Constants;
 using namespace TNT;
 
+template <class T>
 void loadPhoneLog(String filename, 
 				vector<pair<int, Time> > &imgIdList,
-				list<shared_ptr<DataVector> > &angleStateList,
-				list<shared_ptr<DataVector> > &transStateList,
-				list<shared_ptr<DataVector> > &errCovDataList,
-				list<shared_ptr<DataVector> > &motorCmdsDataList,
-				list<shared_ptr<DataVector> > &thrustDirDataList
+				list<shared_ptr<DataVector<T> > > &angleStateList,
+				list<shared_ptr<DataVector<T> > > &transStateList,
+				list<shared_ptr<DataVector<T> > > &errCovDataList,
+				list<shared_ptr<DataVector<T> > > &motorCmdsDataList,
+				list<shared_ptr<DataVector<T> > > &thrustDirDataList
 				);
+template <class T>
 void loadPcLog(String filename,
-				list<shared_ptr<DataVector> > &angleStateList,
-				list<shared_ptr<DataVector> > &transStateList
+				list<shared_ptr<DataVector<T> > > &angleStateList,
+				list<shared_ptr<DataVector<T> > > &transStateList
 		);
 vector<string> tokenize(string str);
 
 void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDistance, float const &qualityLevel);
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel);
 
-static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k);
+//static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k);
 static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
 
-void doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov);
-void doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov);
-void doMeasUpdateKF_heightOnly(double const &meas, double const &measCov, Array2D<double> &state, Array2D<double> &errCov);
-void doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov);
+void doTimeUpdateKF(Array2D<DTYPE> const &accel, float const &dt, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov, Array2D<DTYPE> const &dynCov);
+void doMeasUpdateKF_posOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
+void doMeasUpdateKF_heightOnly(float const &meas, float const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
+void doMeasUpdateKF_velOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
 Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
-				Array2D<double> &kfState, Array2D<double> &kfErrCov, 
-				Array2D<double> const &kfPosMeasCov, Array2D<double> const &kfVelMeasCov, Array2D<double> const &kfDynCov,
-				double &thrust, Array2D<double> &thrustDir,
-				double const &mass);
+				Array2D<DTYPE> &kfState, Array2D<DTYPE> &kfErrCov, 
+				Array2D<DTYPE> const &kfPosMeasCov, Array2D<DTYPE> const &kfVelMeasCov, Array2D<DTYPE> const &kfDynCov,
+				float &thrust, Array2D<DTYPE> &thrustDir,
+				float const &mass);
 
-extern double ICSL::Rover::s0, 
-	   		  ICSL::Rover::s1, 
-			  ICSL::Rover::s2,
-			  ICSL::Rover::s3,
-			  ICSL::Rover::s4,
-			  ICSL::Rover::s5;
+extern float ICSL::Rover::rs0, 
+	   		  ICSL::Rover::rs1, 
+			  ICSL::Rover::rs2,
+			  ICSL::Rover::rs3,
+			  ICSL::Rover::rs4,
+			  ICSL::Rover::rs5;
 int main(int argv, char* argc[])
 {
 	cout << "start chadding" << endl;
 
-	s0 = s1 = s2 = s3 = s4 = s5 = 0;
+	rs0 = rs1 = rs2 = rs3 = rs4 = rs5 = 0;
 
 	string imgDir = "../video_Jun5_3";
+//	string imgDir = "../video_Jun10_1";
 
 	vector<pair<int, Time> > imgIdList;
-	list<shared_ptr<DataVector> > attDataListOrig, transDataListOrig, errCovDataListOrig, motorCmdsDataListOrig, thrustDirDataListOrig;
+	list<shared_ptr<DataVector<DTYPE> > > attDataListOrig, transDataListOrig, errCovDataListOrig, motorCmdsDataListOrig, thrustDirDataListOrig;
 	loadPhoneLog(String(imgDir.c_str())+String("/log.txt"), imgIdList, attDataListOrig, transDataListOrig, errCovDataListOrig, motorCmdsDataListOrig, thrustDirDataListOrig);
 	if(imgIdList.size() == 0)
 	{
@@ -90,6 +96,7 @@ int main(int argv, char* argc[])
 	// preload all images
 	list<pair<int, cv::Mat> > imgList;
 	int imgId = 750;
+//	int imgId = 5800;
 	for(int i=0; i<900; i++)
 	{
 		cv::Mat img;
@@ -105,14 +112,14 @@ int main(int argv, char* argc[])
 
 cout << "final image: " << imgId << endl;
 
-	list<shared_ptr<DataVector> > viconAttDataList, viconTransDataList;
+	list<shared_ptr<DataVector<float> > > viconAttDataList, viconTransDataList;
 	loadPcLog(String(imgDir.c_str())+String("/pcData_fullState.txt"), viconAttDataList, viconTransDataList);
 
-	Array2D<double> rotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI), createRotMat(0,(double)PI));
-	Array2D<double> rotCamToPhone2 = blkdiag(rotCamToPhone, rotCamToPhone);
+	Array2D<DTYPE> rotCamToPhone = matmult(createRotMat(2,(float)(-0.5*PI)), createRotMat(0,(float)PI));
+	Array2D<DTYPE> rotCamToPhone2 = blkdiag(rotCamToPhone, rotCamToPhone);
 
-	Array2D<double> rotPhoneToCam = transpose(rotCamToPhone);
-	Array2D<double> rotPhoneToCam2 = transpose(rotCamToPhone2);
+	Array2D<DTYPE> rotPhoneToCam = transpose(rotCamToPhone);
+	Array2D<DTYPE> rotPhoneToCam2 = transpose(rotCamToPhone2);
 
 	int keypress = 0;
 	cv::namedWindow("chad",1);
@@ -121,11 +128,11 @@ cout << "final image: " << imgId << endl;
 	cv::Mat img, imgGray, imgGrayRaw, imgPrev;
 	vector<cv::Point2f> prevPoints, curPoints;
 	Time prevTime, curTime;
-	Array2D<double> attPrev, attCur, attChange;
+	Array2D<DTYPE> attPrev, attCur, attChange;
 
-	Array2D<double> Sv(3,3,0.0);
-	double sz;
-	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
+	Array2D<DTYPE> Sv(3,3,0.0);
+	float sz;
+	Array2D<DTYPE> Sn(2,2,0.0), SnInv(2,2,0.0);
 	Sn[0][0] = Sn[1][1] = 2*pow(5,2);
 	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
 
@@ -139,31 +146,31 @@ cout << "final image: " << imgId << endl;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	// KF vars
-	Array2D<double> kfState(6,1,0.0), kfErrCov(6,6,0.0);
-	Array2D<double> kfA = createIdentity(6);
-	Array2D<double> kfB(6,3,0.0);
-	Array2D<double> kfDynCov(6,6,0.0);
+	Array2D<DTYPE> kfState(6,1,0.0), kfErrCov(6,6,0.0);
+	Array2D<DTYPE> kfA = createIdentity(6.0f);
+	Array2D<DTYPE> kfB(6,3,0.0);
+	Array2D<DTYPE> kfDynCov(6,6,0.0);
 	kfDynCov[0][0] = kfDynCov[1][1] = kfDynCov[2][2] = 0.01*0.01;
 	kfDynCov[3][3] = kfDynCov[4][4] = 0.5*0.5;
 	kfDynCov[5][5] = 0.5*0.5;
-	Array2D<double> kfViconPosMeasCov(3,3,0.0), kfViconVelMeasCov(3,3,0.0);
+	Array2D<DTYPE> kfViconPosMeasCov(3,3,0.0), kfViconVelMeasCov(3,3,0.0);
 	kfViconPosMeasCov[0][0] = kfViconPosMeasCov[1][1] = 0.01*0.01;
 	kfViconPosMeasCov[2][2] = 0.005*0.005;
 	kfViconVelMeasCov[0][0] = kfViconVelMeasCov[1][1] = kfViconVelMeasCov[2][2] = 0.1*0.1;
-	Array2D<double> kfImageVelMeasCov(3,3,0.0);
+	Array2D<DTYPE> kfImageVelMeasCov(3,3,0.0);
 	kfImageVelMeasCov[0][0] = kfImageVelMeasCov[1][1] = 0.2*0.2;
 	kfImageVelMeasCov[2][2] =0.2*0.2;
-	double kfImageHeightMeasCov = 0.1*0.1;
-	double mass = 1.1; // kg
-	double thrust = mass*GRAVITY;
-	Array2D<double> accel(3,1,0.0);
-	//	Array2D<double> attBias(3,1);
+	float kfImageHeightMeasCov = 0.1*0.1;
+	float mass = 1.1; // kg
+	float thrust = mass*GRAVITY;
+	Array2D<DTYPE> accel(3,1,0.0);
+	//	Array2D<DTYPE> attBias(3,1);
 	//	attBias[0][0] = 0.004; attBias[1][0] = 0.018; attBias[2][0] = 0.00;
-	Array2D<double> thrustDir(3,1,0.0);
+	Array2D<DTYPE> thrustDir(3,1,0.0);
 	thrustDir[2][0] = 1;
-	Array2D<double> motorCmds(4,1);
+	Array2D<DTYPE> motorCmds(4,1);
 
-	Array2D<double> kfErrCovStart(6,6,0.0);
+	Array2D<DTYPE> kfErrCovStart(6,6,0.0);
 	kfErrCovStart[0][0] = kfErrCovStart[1][1] = kfErrCovStart[2][2] = 0.005*0.005;
 	kfErrCovStart[3][3] = kfErrCovStart[4][4] = 0.1*0.1;
 	kfErrCovStart[5][5] = 0.2*0.2;
@@ -175,17 +182,25 @@ cout << "final image: " << imgId << endl;
 
 	bool useViconState = false;
 
-	double viconUpdateDT = 100;
+	float viconUpdateDT = 100;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// Vicon measurment randomization
-	Array2D<double> transStateNoiseStd(3,1,0.0);
+	Array2D<DTYPE> transStateNoiseStd(3,1,0.0);
 	transStateNoiseStd[0][0] = transStateNoiseStd[1][0] = 0.01;
 	transStateNoiseStd[2][0] = 0.01;
+	srand(1);
 	default_random_engine randGenerator;
-	normal_distribution<float> stdGaussDist(0,1);
+	normal_distribution<DTYPE> stdGaussDist(0,1);
 
-	int sRandSeed = 1;
+	vector<Array2D<DTYPE> > measNoise(imgId);
+	for(int i=0; i<imgId; i++)
+	{
+		Array2D<DTYPE> noise(3,1);
+		for(int j=0; j<3; j++)
+			noise[j][0] = transStateNoiseStd[j][0]*stdGaussDist(randGenerator);
+		measNoise[i] = noise.copy();
+	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -194,11 +209,10 @@ cout << "final image: " << imgId << endl;
 	// using ORB descriptors
 	//////////////////////////////////////////////////////////////////
 	{
-		srand(sRandSeed);
 		curTime.setTimeMS(0);
-		attPrev = createIdentity(3);
-		attCur = createIdentity(3);
-		attChange = createIdentity(3);
+		attPrev = createIdentity(3.0f);
+		attCur = createIdentity(3.0f);
+		attChange = createIdentity(3.0f);
 		int imgIdx = 0;
 		list<pair<int, cv::Mat> >::iterator iter_imgList;
 		iter_imgList = imgList.begin();
@@ -207,15 +221,15 @@ cout << "final image: " << imgId << endl;
 		vector<cv::KeyPoint> prevKp, curKp;
 		cv::Mat prevDescriptors, curDescriptors;
 	
-		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
-		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
+		Array2D<DTYPE> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
+		Array2D<DTYPE> errCov1(9,1), errCov(6,6,0.0);
 
 		kfErrCov.inject(kfErrCovStart);
 
-		Array2D<double> mv(3,1), omega(3,1), vel;
-		double mz, dt, z;
+		Array2D<DTYPE> mv(3,1), omega(3,1), vel;
+		float mz, dt, z;
 	
-		Array2D<double> velLS(3,1,0.0);
+		Array2D<DTYPE> velLS(3,1,0.0);
 
 		imgId = iter_imgList->first;
 		while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
@@ -227,14 +241,14 @@ cout << "final image: " << imgId << endl;
 		Time lastMeasTime(curTime);
 
 		// Make local copy of data
-		list<shared_ptr<DataVector> > attDataList(attDataListOrig);
-		list<shared_ptr<DataVector> > transDataList(transDataListOrig);
-		list<shared_ptr<DataVector> > errCovDataList(errCovDataListOrig);
-		list<shared_ptr<DataVector> > motorCmdsDataList(motorCmdsDataListOrig);
-		list<shared_ptr<DataVector> > thrustDirDataList;(thrustDirDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > attDataList(attDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > transDataList(transDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > errCovDataList(errCovDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > motorCmdsDataList(motorCmdsDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > thrustDirDataList;(thrustDirDataListOrig);
 
 		// truncate the lists to the current start time
-		shared_ptr<DataVector> attData, transData, errCovData, motorCmdsData, thrustDirData;
+		shared_ptr<DataVector<DTYPE> > attData, transData, errCovData, motorCmdsData, thrustDirData;
 		while(attDataList.size() > 0 && attDataList.front()->timestamp < curTime)
 		{ attData= attDataList.front(); attDataList.pop_front(); }
 		while(transDataList.size() > 0 && transDataList.front()->timestamp < curTime)
@@ -246,7 +260,7 @@ cout << "final image: " << imgId << endl;
 		while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
 		{ thrustDirData= thrustDirDataList.front(); thrustDirDataList.pop_front(); }
 	
-		double ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
+		float ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
 		ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = ts7 = 0;
 		Time t0;
 
@@ -265,12 +279,12 @@ cout << "final image: " << imgId << endl;
 				imgIdx++;
 			if(imgIdx == imgIdList.size() )
 			{
-				cout << "imgIdx exceeded vector" << endl;
+				cout << "imgIdx exceeded vector" << endl;;
 				return 0;
 			}
 			prevTime.setTime(curTime);
 			curTime = imgIdList[imgIdx].second;
-			double dt;
+			float dt;
 			if(prevTime.getMS() > 0)
 				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
 			else
@@ -303,19 +317,19 @@ cout << "final image: " << imgId << endl;
 			}
 
 			// Checking to make sure we haven't broken the error covariance
-			JAMA::Eigenvalue<double> eig_kfErrCov(kfErrCov);
-			Array2D<double> eigs;
+			JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
+			Array2D<DTYPE> eigs;
 			eig_kfErrCov.getD(eigs);
 			float minEig = eigs[0][0];
 			for(int i=1; i<eigs.dim1(); i++)
 				minEig = min(minEig, (float)eigs[i][i]);
 			while(minEig <= 0)
 			{
-				cout << "crap! kfErrCov is not definite" << endl;
+				cout << "crap! kfErrCov is not definite" << endl;;
 
-				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity(6);
+				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity(6.0f);
 
-				JAMA::Eigenvalue<double> eig_kfErrCov(kfErrCov);
+				JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
 				eig_kfErrCov.getD(eigs);
 				minEig = eigs[0][0];
 				for(int i=1; i<eigs.dim1(); i++)
@@ -326,7 +340,7 @@ cout << "final image: " << imgId << endl;
 //			thrustDir.inject( Data::interpolate(curTime, thrustDirDataList) );
 			accel.inject(thrust/mass*thrustDir);
 			accel[2][0] -= GRAVITY;
-			double dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
+			float dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
 			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
 
 			// KF measurement update
@@ -334,11 +348,10 @@ cout << "final image: " << imgId << endl;
 			if( Time::calcDiffMS(lastMeasTime, curTime) > viconUpdateDT)
 			{
 				// add noise
-				Array2D<double> meas = submat(viconTransState,0,2,0,0);
-				for(int i=0; i<3; i++)
-					meas[i][0] += transStateNoiseStd[i][0]*stdGaussDist(randGenerator);
+				Array2D<DTYPE> meas = submat(viconTransState,0,2,0,0);
+				meas += measNoise[imgId];
 
-				double dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
+				float dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
 				lastMeasTime.setTime(curTime);
 				doMeasUpdateKF_posOnly( meas, kfViconPosMeasCov, kfState, kfErrCov);
 			}
@@ -389,20 +402,6 @@ ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //			for(int i=0; i<matches.size(); i++)
 //				minDist = min(matches[i].distance, minDist);
 //			// filter out low quality matches
-//			vector<cv::DMatch> goodMatches;
-//			goodMatches.reserve(matches.size());
-//			for(int i=0; i<matches.size(); i++)
-//				if(matches[i].distance < 30*minDist)
-//					goodMatches.push_back(matches[i]);
-	
-			// Save the best matches
-			// this sorts the list so the elements 0-splitIndex are less than or equal to elements splitIndex+1-end
-//			int splitIndex= 0.50*matches.size();
-//			nth_element(matches.begin(), matches.begin()+splitIndex, matches.end(), 
-//							[&](cv::DMatch const &a, cv::DMatch const &b){return a.distance < b.distance;});
-///			vector<cv::DMatch> goodMatches;
-//			move(matches.begin(), matches.begin()+splitIndex, back_inserter(goodMatches));
-
 			vector<cv::DMatch> goodMatches;
 			matches.swap(goodMatches);
 	
@@ -412,7 +411,7 @@ ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				vector<cv::DMatch> tempMatches;
 				goodMatches.swap(tempMatches);
 	
-				vector<float> distances(tempMatches.size());
+				vector<DTYPE> distances(tempMatches.size());
 				for(int i=0; i<tempMatches.size(); i++)
 				{
 					cv::Point2f p1 = prevKp[tempMatches[i].queryIdx].pt;
@@ -420,7 +419,7 @@ ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 					distances[i] = sqrt( pow(p1.x-p2.x,2) + pow(p1.y-p2.y,2));
 				}
 				int medIndex = distances.size()/2;
-				vector<float> distancesCopy(distances);
+				vector<DTYPE> distancesCopy(distances);
 				// this finds the median
 				nth_element(distancesCopy.begin(), distancesCopy.begin()+medIndex, distancesCopy.end(),
 						[&](float const &a, float const &b){return a < b;});
@@ -434,10 +433,9 @@ ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				numMatchesAccum += goodMatches.size();
 			}
 	
-ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			int N1, N2;
 			N1 = N2 = goodMatches.size();
-			Array2D<double> C(N1+1, N2+1, 0.0); // the extra row and column will stay at zero
+			Array2D<DTYPE> C(N1+1, N2+1, 0.0); // the extra row and column will stay at zero
 			vector<cv::Point2f> prevPoints(N1), curPoints(N2);
 			for(int i=0; i<N1; i++)
 			{
@@ -449,27 +447,28 @@ ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				curPoints[i] = curKp[idx2].pt-center;
 			}
 	
+ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			if(N1 > 0)
 			{
 				// LS Estimate
-				Array2D<double> deltaStack, LvStack;
-				double f = focalLength;
-				double fInv = 1.0/f;
+				Array2D<DTYPE> deltaStack, LvStack;
+				float f = focalLength;
+				float fInv = 1.0/f;
 				for(int i=0; i<N1; i++)
 				{
-					double x = prevPoints[i].x;
-					double y = prevPoints[i].y;
+					float x = prevPoints[i].x;
+					float y = prevPoints[i].y;
 	
-					Array2D<double> Lv(2,3), Lw(2,3);
+					Array2D<DTYPE> Lv(2,3), Lw(2,3);
 					Lv[0][0] = -f; Lv[0][1] = 0;  Lv[0][2] = x;
 					Lv[1][0] = 0;  Lv[1][1] = -f; Lv[1][2] = y;
 					Lw[0][0] = fInv*x*y; 		Lw[0][1] = -(f+fInv*x*x); 	Lw[0][2] = y;
 					Lw[1][0] = f+fInv*y*y;		Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
 	
-					Array2D<double> q1(2,1), q2(2,1);
+					Array2D<DTYPE> q1(2,1), q2(2,1);
 					q1[0][0] = prevPoints[i].x; q1[1][0] = prevPoints[i].y;
 					q2[0][0] = curPoints[i].x;  q2[1][0] = curPoints[i].y;
-					Array2D<double> delta = q2-q1-dt*matmult(Lw, omega);
+					Array2D<DTYPE> delta = q2-q1-dt*matmult(Lw, omega);
 					if(deltaStack.dim1() == 0)
 					{
 						deltaStack = delta;
@@ -481,11 +480,11 @@ ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 						LvStack = stackVertical(LvStack, Lv);
 					}
 				}
-				double z = viconTransState[2][0]-camOffset;
-//				double z = -transState[2][0]-camOffset;
-				Array2D<double> temp1 = dt/z*matmult(transpose(LvStack), LvStack);
-				JAMA::LU<double> lu_temp1(temp1);
-				Array2D<double> temp2 = matmult(transpose(LvStack), deltaStack);
+				float z = viconTransState[2][0]-camOffset;
+//				float z = -transState[2][0]-camOffset;
+				Array2D<DTYPE> temp1 = dt/z*matmult(transpose(LvStack), LvStack);
+				JAMA::LU<DTYPE> lu_temp1(temp1);
+				Array2D<DTYPE> temp2 = matmult(transpose(LvStack), deltaStack);
 				if(LvStack.dim1() > 2)
 					velLS = lu_temp1.solve(temp2);
 				else
@@ -508,7 +507,7 @@ ts5 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 	
 			if(N1 > 5)
 			{
-				Array2D<double> covVel;
+				Array2D<DTYPE> covVel;
 				int maxPointCnt = 15;
 				computeMAPEstimate(vel, covVel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega, maxPointCnt);
 ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
@@ -566,11 +565,18 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		cout << "Avg num ORB features: " << ((double)numFeaturesAccum)/imgList.size() << endl;
 		cout << "Avg num ORB matches: " << ((double)numMatchesAccum)/(imgList.size()-1) << endl;
 		cout << "ORB time: " << orbStartTime.getElapsedTimeMS()/1.0e3 << endl;
+		cout << "\tts0: " << ts0 << endl;
+		cout << "\tts1: " << ts1 << endl;
+		cout << "\tts2: " << ts2 << endl;
+		cout << "\tts3: " << ts3 << endl;
+		cout << "\tts4: " << ts4 << endl;
+		cout << "\tts5: " << ts5 << endl;
+		cout << "\tts6: " << ts6 << endl;
+		cout << "\tts7: " << ts7 << endl;
 
-		double avgCalcTime = orbStartTime.getElapsedTimeNS()/1.0e9 - ts0;
+		double avgCalcTime = orbStartTime.getElapsedTimeNS()/1.0e9 - ts0 - ts5;
 		avgCalcTime /= imgList.size()-1;
 		cout << "ORB avg calc time: " << avgCalcTime << endl;
-	
 	}
 
 	cout << "//////////////////////////////////////////////////" << endl;
@@ -578,24 +584,23 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 	// Once for new algo
 	//////////////////////////////////////////////////////////////////
 	{
-		srand(sRandSeed);
 		curTime.setTimeMS(0);
-		attPrev = createIdentity(3);
-		attCur = createIdentity(3);
-		attChange = createIdentity(3);
+		attPrev = createIdentity(3.0f);
+		attCur = createIdentity(3.0f);
+		attChange = createIdentity(3.0f);
 		int imgIdx = 0;
 		list<pair<int, cv::Mat> >::iterator iter_imgList;
 		iter_imgList = imgList.begin();
 		long long numFeaturesAccum = 0;
-		double numMatchesAccum = 0;
+		float numMatchesAccum = 0;
 
-		Array2D<double> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
-		Array2D<double> errCov1(9,1), errCov(6,6,0.0);
+		Array2D<DTYPE> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
+		Array2D<DTYPE> errCov1(9,1), errCov(6,6,0.0);
 
 		kfErrCov.inject(kfErrCovStart);
 
-		Array2D<double> mv(3,1), omega(3,1), vel;
-		double mz, dt, z;
+		Array2D<DTYPE> mv(3,1), omega(3,1), vel;
+		float mz, dt, z;
 
 		imgId = iter_imgList->first;
 		while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
@@ -607,14 +612,14 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		Time lastMeasTime(curTime);
 
 		// Make local copy of data
-		list<shared_ptr<DataVector> > attDataList(attDataListOrig);
-		list<shared_ptr<DataVector> > transDataList(transDataListOrig);
-		list<shared_ptr<DataVector> > errCovDataList(errCovDataListOrig);
-		list<shared_ptr<DataVector> > motorCmdsDataList(motorCmdsDataListOrig);
-		list<shared_ptr<DataVector> > thrustDirDataList;(thrustDirDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > attDataList(attDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > transDataList(transDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > errCovDataList(errCovDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > motorCmdsDataList(motorCmdsDataListOrig);
+		list<shared_ptr<DataVector<DTYPE> > > thrustDirDataList;(thrustDirDataListOrig);
 
 		// truncate the lists to the current start time
-		shared_ptr<DataVector> attData, transData, errCovData, motorCmdsData, thrustDirData;
+		shared_ptr<DataVector<DTYPE> > attData, transData, errCovData, motorCmdsData, thrustDirData;
 		while(attDataList.size() > 0 && attDataList.front()->timestamp < curTime)
 		{ attData= attDataList.front(); attDataList.pop_front(); }
 		while(transDataList.size() > 0 && transDataList.front()->timestamp < curTime)
@@ -626,15 +631,15 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
 		{ thrustDirData= thrustDirDataList.front(); thrustDirDataList.pop_front(); }
 
-		vector<pair<Array2D<double>, Array2D<double> > > priorDistList;
+		vector<pair<Array2D<DTYPE>, Array2D<DTYPE> > > priorDistList;
 
-		Array2D<double> C;
+		Array2D<DTYPE> C;
 
-		double ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
+		float ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
 		ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = ts7 = 0;
 		Time t0;
 
-		Array2D<double> lastViconPos;
+		Array2D<DTYPE> lastViconPos;
 		fstream fs("../mapResults.txt", fstream::out);
 		for(int i=0; i<10; i++)
 			fs << i << "\t";
@@ -687,8 +692,8 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			}
 
 			// Checking to make sure we haven't broken the error covariance
-			JAMA::Eigenvalue<double> eig_kfErrCov(kfErrCov);
-			Array2D<double> eigs;
+			JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
+			Array2D<DTYPE> eigs;
 			eig_kfErrCov.getD(eigs);
 			float minEig = eigs[0][0];
 			for(int i=1; i<eigs.dim1(); i++)
@@ -698,9 +703,9 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				cout << "crap! kfErrCov is not definite" << endl;
 				printArray("kfErrCov:\n",kfErrCov);
 
-				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity(6);
+				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity(6.0f);
 
-				JAMA::Eigenvalue<double> eig_kfErrCov(kfErrCov);
+				JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
 				eig_kfErrCov.getD(eigs);
 				minEig = eigs[0][0];
 				for(int i=1; i<eigs.dim1(); i++)
@@ -711,7 +716,7 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //			thrustDir.inject( Data::interpolate(curTime, thrustDirDataList) );
 			accel.inject(thrust/mass*thrustDir);
 			accel[2][0] -= GRAVITY;
-			double dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
+			float dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
 			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
 
 			// KF measurement update
@@ -719,11 +724,10 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			{
 				viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
 				// add noise
-				Array2D<double> meas = submat(viconTransState,0,2,0,0);
-				for(int i=0; i<3; i++)
-					meas[i][0] += transStateNoiseStd[i][0]*stdGaussDist(randGenerator);
+				Array2D<DTYPE> meas = submat(viconTransState,0,2,0,0);
+				meas += measNoise[imgId];
 
-				double dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
+				float dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
 				lastMeasTime.setTime(curTime);
 				doMeasUpdateKF_posOnly( meas, kfViconPosMeasCov, kfState, kfErrCov);
 			}
@@ -788,7 +792,7 @@ ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			// MAP velocity and height
 			if(prevPoints.size() > 0)
 			{
-				Array2D<double> covVel;
+				Array2D<DTYPE> covVel;
 				computeMAPEstimate(vel, covVel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
 ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				z += camOffset;
@@ -866,17 +870,17 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		cout << "\tts5: " << ts5 << endl;
 		cout << "\tts6: " << ts6 << endl;
 		cout << "\tts7: " << ts7 << endl;
-		cout << "--------------------" << endl;
-		cout << "\ts0: " << s0 << endl;
-		cout << "\ts1: " << s1 << endl;
-//		cout << "\ts2: " << s2 << endl;
-//		cout << "\ts3: " << s3 << endl;
-//		cout << "\ts4: " << s4 << endl;
-//		cout << "\ts5: " << s5 << endl;
+//		cout << "--------------------" << endl;
+//		cout << "\trs0: " << rs0 << endl;
+//		cout << "\trs1: " << rs1 << endl;
+//		cout << "\trs2: " << rs2 << endl;
+//		cout << "\trs3: " << rs3 << endl;
+//		cout << "\trs4: " << rs4 << endl;
+//		cout << "\trs5: " << rs5 << endl;
 
-		double avgCalcTime = mapStartTime.getElapsedTimeNS()/1.0e9 - ts0;
+		float avgCalcTime = mapStartTime.getElapsedTimeNS()/1.0e9 - ts0;
 		avgCalcTime /= imgList.size()-1;
-		cout << "ORB avg calc time: " << avgCalcTime << endl;
+		cout << "NEW avg calc time: " << avgCalcTime << endl;
 	}
 
     return 0;
@@ -890,13 +894,14 @@ vector<string> tokenize(string str)
 	return tokens;
 }
 
+template <class T>
 void loadPhoneLog(String filename, 
 				vector<pair<int, Time> > &imgIdList,
-				list<shared_ptr<DataVector> > &angleStateList,
-				list<shared_ptr<DataVector> > &transStateList,
-				list<shared_ptr<DataVector> > &errCovDataList,
-				list<shared_ptr<DataVector> > &motorCmdsDataList,
-				list<shared_ptr<DataVector> > &thrustDirDataList
+				list<shared_ptr<DataVector<T> > > &angleStateList,
+				list<shared_ptr<DataVector<T> > > &transStateList,
+				list<shared_ptr<DataVector<T> > > &errCovDataList,
+				list<shared_ptr<DataVector<T> > > &motorCmdsDataList,
+				list<shared_ptr<DataVector<T> > > &thrustDirDataList
 				)
 {
 	imgIdList.clear();
@@ -917,7 +922,7 @@ void loadPhoneLog(String filename,
 		{
 			getline(file, line);
 			stringstream ss(line);
-			double time;
+			float time;
 			int type;
 			ss >> time >> type;
 			switch(type)
@@ -935,11 +940,11 @@ void loadPhoneLog(String filename,
 					break;
 				case LOG_ID_CUR_ATT:
 					{
-						Array2D<double> attState(6,1);
+						Array2D<DTYPE> attState(6,1);
 						for(int i=0; i<6; i++)
 							ss >> attState[i][0];
 
-						shared_ptr<DataVector> data(new DataVector());
+						shared_ptr<DataVector<T> > data(new DataVector<T> ());
 						data->timestamp.setTimeMS(time);
 						data->data = attState.copy();
 						data->type = DATA_TYPE_ATTITUDE;
@@ -948,11 +953,11 @@ void loadPhoneLog(String filename,
 					break;
 				case LOG_ID_CUR_TRANS_STATE:
 					{
-						Array2D<double> transState(6,1);
+						Array2D<DTYPE> transState(6,1);
 						for(int i=0; i<6; i++)
 							ss >> transState[i][0];
 
-						shared_ptr<DataVector> data(new DataVector());
+						shared_ptr<DataVector<T> > data(new DataVector<T> ());
 						data->timestamp.setTimeMS(time);
 						data->data = transState.copy();
 						data->type = DATA_TYPE_STATE_TRAN;
@@ -961,11 +966,11 @@ void loadPhoneLog(String filename,
 					break;
 				case LOG_ID_KALMAN_ERR_COV:
 					{
-						Array2D<double> errCov(9,1);
+						Array2D<DTYPE> errCov(9,1);
 						for(int i=0; i<9; i++)
 							ss >> errCov[i][0];
 
-						shared_ptr<DataVector> data(new DataVector());
+						shared_ptr<DataVector<T> > data(new DataVector<T> ());
 						data->timestamp.setTimeMS(time);
 						data->data = errCov.copy();
 						data->type = DATA_TYPE_KF_ERR_COV;
@@ -975,10 +980,10 @@ void loadPhoneLog(String filename,
 					break;
 				case LOG_ID_MOTOR_CMDS:
 					{
-						Array2D<double> motorCmds(4,1);
+						Array2D<DTYPE> motorCmds(4,1);
 						for(int i=0; i<4; i++)
 							ss >> motorCmds[i][0];
-						shared_ptr<DataVector> data(new DataVector());
+						shared_ptr<DataVector<T> > data(new DataVector<T> ());
 						data->timestamp.setTimeMS(time);
 						data->data = motorCmds.copy();
 						data->type = DATA_TYPE_MOTOR_CMDS;
@@ -994,28 +999,29 @@ void loadPhoneLog(String filename,
 		cout << "Couldn't find " << filename.c_str() << endl;
 }
 
+template <class T>
 void loadPcLog(String filename, 
-				list<shared_ptr<DataVector> > &angleStateList,
-				list<shared_ptr<DataVector> > &transStateList
+				list<shared_ptr<DataVector<T> > > &angleStateList,
+				list<shared_ptr<DataVector<T> > > &transStateList
 				)
 {
 	angleStateList.clear();
 	transStateList.clear();
 
-	Array2D<double> rotViconToQuad = createRotMat(0, (double)PI);
-	Array2D<double> rotQuadToPhone = matmult(createRotMat(2,-0.25*PI), createRotMat(0,(double)PI));
-	Array2D<double> rotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI), createRotMat(0,(double)PI));
-	Array2D<double> rotPhoneToCam = transpose(rotCamToPhone);
-	Array2D<double> rotViconToPhone = matmult(rotQuadToPhone, rotViconToQuad);
+	Array2D<DTYPE> rotViconToQuad = createRotMat(0, (float)PI);
+	Array2D<DTYPE> rotQuadToPhone = matmult(createRotMat(2,(float)(-0.25*PI)), createRotMat(0,(float)PI));
+	Array2D<DTYPE> rotCamToPhone = matmult(createRotMat(2,(float)(-0.5*PI)), createRotMat(0,(float)PI));
+	Array2D<DTYPE> rotPhoneToCam = transpose(rotCamToPhone);
+	Array2D<DTYPE> rotViconToPhone = matmult(rotQuadToPhone, rotViconToQuad);
 
-	Array2D<double> rotQuadToPhone2 = blkdiag(rotQuadToPhone, rotQuadToPhone);
-	Array2D<double> rotViconToPhone2 = blkdiag(rotViconToPhone, rotViconToPhone);
+	Array2D<DTYPE> rotQuadToPhone2 = blkdiag(rotQuadToPhone, rotQuadToPhone);
+	Array2D<DTYPE> rotViconToPhone2 = blkdiag(rotViconToPhone, rotViconToPhone);
 
-//	Array2D<double> transStateNoiseStd(6,1,0.0);
+//	Array2D<DTYPE> transStateNoiseStd(6,1,0.0);
 //	transStateNoiseStd[0][0] = transStateNoiseStd[1][0] = 0.01;
 //	transStateNoiseStd[2][0] = 0.005;
 //	default_random_engine randGenerator;
-//	normal_distribution<float> stdGaussDist(0,1);
+//	normal_distribution<DTYPE> stdGaussDist(0,1);
 
 	string line;
 	ifstream file(filename.c_str());
@@ -1027,13 +1033,13 @@ void loadPcLog(String filename,
 		{
 			getline(file, line);
 			stringstream ss(line);
-			double time;
+			float time;
 			int type;
 			ss >> time >> type;
 time -= 0;
 
 			// This file is assumed to be all state data
-			Array2D<double> angleState(6,1), transState(6,1);
+			Array2D<DTYPE> angleState(6,1), transState(6,1);
 			for(int i=0; i<6; i++)
 				ss >> angleState[i][0];
 			for(int i=0; i<6; i++)
@@ -1046,7 +1052,7 @@ time -= 0;
 			angleState = matmult(rotQuadToPhone2, angleState);
 			transState = matmult(rotViconToPhone2, transState);
 
-			shared_ptr<DataVector> dataAngle(new DataVector()), dataTrans(new DataVector());;
+			shared_ptr<DataVector<T> > dataAngle(new DataVector<T> ()), dataTrans(new DataVector<T> ());;
 			dataAngle->timestamp.setTimeMS(time);
 			dataAngle->data = angleState.copy();
 
@@ -1074,13 +1080,14 @@ void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDi
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel)
 {
 	vector<cv::KeyPoint> tempKp1;
-//	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(20));
-//	int maxKp = 1000;
-//	int gridRows = 3;
-//	int gridCols = 3;
-//	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
-//	detector.detect(img, tempKp1);
-	FAST(img, tempKp1, 10, true);
+	int fastFeatureThreshold = 25;
+	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastFeatureThreshold));
+	int maxKp = 1000;
+	int gridRows = 3;
+	int gridCols = 3;
+	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
+	detector.detect(img, tempKp1);
+//	FAST(img, tempKp1, fastFeatureThreshold, true);
 	EigenValResponses(img, tempKp1, 5);
 
 	float maxScore = -0xFFFFFFF;
@@ -1132,12 +1139,15 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 	// than a minDistance radius circle
 	vector<bool> isActive(gridId.size(), true);
 	pts.clear();
+	float curResponse;
+	int neighborOffsetX[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+	int neighborOffsetY[] = {-1, -1, -1, 0, 0, 1, 1, 1};
 	for(int i=0; i<gridId.size(); i++)
 	{
 		if(!isActive[i])
 			continue;
 
-		float curResponse = tempKp[i].response;
+		curResponse = tempKp[i].response;
 		cv::Point2f *curPt = &tempKp[i].pt;
 
 		// turn off other points in this grid
@@ -1166,8 +1176,6 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 		int xGrid = gid % nGridX;
 		int yGrid = gid / nGridX;
 
-		int neighborOffsetX[] = {-1, 0, 1, -1, 1, -1, 0, 1};
-		int neighborOffsetY[] = {-1, -1, -1, 0, 0, 1, 1, 1};
 //		for(int j=0; j<8; j++)
 		j = 0;
 		while(isStrongest && j < 8)
@@ -1213,14 +1221,14 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 			continue;
 		}
 
-//		double minD = 0xFFFFFF;
-//		double minJ = 0;
+//		float minD = 0xFFFFFF;
+//		float minJ = 0;
 //		for(int j=0; j<tempKp.size(); j++)
 //		{
 //			if(j == i || !isActive[j])
 //				continue;
 //			cv::Point2f *pt = &tempKp[j].pt;
-//			double dist = sqrt( pow(curPt->x - pt->x, 2) + pow(curPt->y - pt->y,2));
+//			float dist = sqrt( pow(curPt->x - pt->x, 2) + pow(curPt->y - pt->y,2));
 //			if(dist < minD)
 //			{
 //				minD = dist;
@@ -1235,54 +1243,53 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 }
 
 // taken from OpenCV ORB code
-static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k)
-{
-    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
-
-    size_t ptidx, ptsize = pts.size();
-
-    const uchar* ptr00 = img.ptr<uchar>();
-    int step = (int)(img.step/img.elemSize1());
-    int r = blockSize/2;
-
-    float scale = (1 << 2) * blockSize * 255.0f;
-    scale = 1.0f / scale;
-    float scale_sq_sq = scale * scale * scale * scale;
-
-	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
-    int* ofs = ofsbuf;
-    for( int i = 0; i < blockSize; i++ )
-        for( int j = 0; j < blockSize; j++ )
-            ofs[i*blockSize + j] = (int)(i*step + j);
-
-    for( ptidx = 0; ptidx < ptsize; ptidx++ )
-    {
-        int x0 = cvRound(pts[ptidx].pt.x - r);
-        int y0 = cvRound(pts[ptidx].pt.y - r);
-
-        const uchar* ptr0 = ptr00 + y0*step + x0;
-        int a = 0, b = 0, c = 0;
-
-        for( int k = 0; k < blockSize*blockSize; k++ )
-        {
-            const uchar* ptr = ptr0 + ofs[k];
-            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
-            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
-            a += Ix*Ix;
-            b += Iy*Iy;
-            c += Ix*Iy;
-        }
-        pts[ptidx].response = ((float)a * b - (float)c * c -
-                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
-    }
-}
+//static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k)
+//{
+//    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+//
+//    size_t ptidx, ptsize = pts.size();
+//
+//    const uchar* ptr00 = img.ptr<uchar>();
+//    int step = (int)(img.step/img.elemSize1());
+//    int r = blockSize/2;
+//
+//    float scale = (1 << 2) * blockSize * 255.0f;
+//    scale = 1.0f / scale;
+//    float scale_sq_sq = scale * scale * scale * scale;
+//
+//	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
+//    int* ofs = ofsbuf;
+//    for( int i = 0; i < blockSize; i++ )
+//        for( int j = 0; j < blockSize; j++ )
+//            ofs[i*blockSize + j] = (int)(i*step + j);
+//
+//    for( ptidx = 0; ptidx < ptsize; ptidx++ )
+//    {
+//        int x0 = cvRound(pts[ptidx].pt.x - r);
+//        int y0 = cvRound(pts[ptidx].pt.y - r);
+//
+//        const uchar* ptr0 = ptr00 + y0*step + x0;
+//        int a = 0, b = 0, c = 0;
+//
+//        for( int k = 0; k < blockSize*blockSize; k++ )
+//        {
+//            const uchar* ptr = ptr0 + ofs[k];
+//            int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
+//            int Iy = (ptr[step] - ptr[-step])*2 + (ptr[step-1] - ptr[-step-1]) + (ptr[step+1] - ptr[-step+1]);
+//            a += Ix*Ix;
+//            b += Iy*Iy;
+//            c += Ix*Iy;
+//        }
+//        pts[ptidx].response = ((float)a * b - (float)c * c -
+//                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+//    }
+//}
 
 static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize)
 {
     CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
 
     size_t ptidx, ptsize = pts.size();
-
     const uchar* ptr00 = img.ptr<uchar>();
     int step = (int)(img.step/img.elemSize1());
     int r = blockSize/2;
@@ -1297,6 +1304,7 @@ static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int
         for( int j = 0; j < blockSize; j++ )
             ofs[i*blockSize + j] = (int)(i*step + j);
 
+	float m00, m01, m11;
     for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
         int x0 = cvRound(pts[ptidx].pt.x - r);
@@ -1319,9 +1327,9 @@ static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int
             c += Ix*Iy;
         }
 
-		double  m00 = 0.5*a*scale_sq;
-		double  m01 =     c*scale_sq;
-		double m11 = 0.5*b*scale_sq;
+		m00 = 0.5*a*scale_sq;
+		m01 =     c*scale_sq;
+		m11 = 0.5*b*scale_sq;
         pts[ptidx].response = m00 + m11 - sqrt( (m00-m11)*(m00-m11) + m01*m01);
 		
 //cout << pts[ptidx].response << endl;
@@ -1329,7 +1337,7 @@ static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int
     }
 }
 
-void doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
+void doTimeUpdateKF(Array2D<DTYPE> const &accel, float const &dt, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov, Array2D<DTYPE> const &dynCov)
 {
 	for(int i=0; i<3; i++)
 		state[i][0] += dt*state[i+3][0];
@@ -1347,19 +1355,19 @@ void doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<doub
 //		errCov[i][i] += dynCov[i][i];
 
 	// This is based on the continuous time formulation (with Euler time integration)
-	Array2D<double> A(6,6,0.0), A_T(6,6,0.0);
+	Array2D<DTYPE> A(6,6,0.0), A_T(6,6,0.0);
 	A[0][3] = A[1][4] = A[2][5] = 1;
 	A_T[3][0] = A_T[4][1] = A_T[5][2] = 1; 
-	Array2D<double> Winv(6,6,0.0);
-	Array2D<double> Pdot(6,6);
+	Array2D<DTYPE> Winv(6,6,0.0);
+	Array2D<DTYPE> Pdot(6,6);
 	Pdot = matmult(A, errCov) + matmult(errCov, A_T) + dynCov;
 
 	errCov = errCov+dt*Pdot;
 }
 
-void doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
+void doMeasUpdateKF_posOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov)
 {
-	Array2D<double> gainKF(6,3,0.0);
+	Array2D<DTYPE> gainKF(6,3,0.0);
 	for(int i=0; i<3; i++)
 	{
 		gainKF[i][i] = errCov[i][i]/(errCov[i][i]+measCov[i][i]);
@@ -1367,7 +1375,7 @@ void doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &
 	}
 
 	// \hat{x} = \hat{x} + K (meas - C \hat{x})
-	Array2D<double> err2= meas-submat(state,0,2,0,0);
+	Array2D<DTYPE> err2= meas-submat(state,0,2,0,0);
 	for(int i=0; i<3; i++)
 		state[i][0] += gainKF[i][i]*err2[i][0];
 	for(int i=3; i<6; i++)
@@ -1384,14 +1392,14 @@ void doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &
 	}
 }
 
-void doMeasUpdateKF_heightOnly(double const &meas, double const &measCov, Array2D<double> &state, Array2D<double> &errCov)
+void doMeasUpdateKF_heightOnly(float const &meas, float const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov)
 {
-	Array2D<double> gainKF(6,1,0.0);
+	Array2D<DTYPE> gainKF(6,1,0.0);
 	gainKF[2][0] = errCov[2][2]/(errCov[2][2]+measCov);
 	gainKF[5][0] = errCov[2][5]/(errCov[2][2]+measCov);
 
 	// \hat{x} = \hat{x} + K (meas - C \hat{x})
-	double err = meas-state[2][0];
+	float err = meas-state[2][0];
 	state[2][0] += gainKF[2][0]*err;
 	state[5][0] += gainKF[5][0]*err;
 
@@ -1402,12 +1410,12 @@ void doMeasUpdateKF_heightOnly(double const &meas, double const &measCov, Array2
 	errCov[5][2] = errCov[2][5];
 }
 
-void doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
+void doMeasUpdateKF_velOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov)
 {
 	if(norm2(meas) > 10)
 		return; // screwy measuremnt
 
-	Array2D<double> gainKF(6,3,0.0);
+	Array2D<DTYPE> gainKF(6,3,0.0);
 	for(int i=0; i<3; i++)
 	{
 		gainKF[i][i] = errCov[i][i+3]/(errCov[i+3][i+3]+measCov[i][i]);
@@ -1415,7 +1423,7 @@ void doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &
 	}
 
 	// \hat{x} = \hat{x} + K (meas - C \hat{x})
-	Array2D<double> err = meas-submat(state,3,5,0,0);
+	Array2D<DTYPE> err = meas-submat(state,3,5,0,0);
 	for(int i=0; i<3; i++)
 		state[i][0] += gainKF[i][i]*err[i][0];
 	for(int i=3; i<6; i++)
@@ -1433,41 +1441,41 @@ void doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &
 }
 
 Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
-				Array2D<double> &kfState, Array2D<double> &kfErrCov, 
-				Array2D<double> const &kfPosMeasCov, Array2D<double> const &kfVelMeasCov, Array2D<double> const &kfDynCov,
-				double &thrust, Array2D<double> &thrustDir,
-				double const &mass)
+				Array2D<DTYPE> &kfState, Array2D<DTYPE> &kfErrCov, 
+				Array2D<DTYPE> const &kfPosMeasCov, Array2D<DTYPE> const &kfVelMeasCov, Array2D<DTYPE> const &kfDynCov,
+				float &thrust, Array2D<DTYPE> &thrustDir,
+				float const &mass)
 {
 	Time dataTime = data->timestamp;
-	Array2D<double> accel = thrust/mass*thrustDir;
+	Array2D<DTYPE> accel = thrust/mass*thrustDir;
 	accel[2][0] -= GRAVITY;
-	double dt = Time::calcDiffNS(curTime, dataTime)/1.0e9;
+	float dt = Time::calcDiffNS(curTime, dataTime)/1.0e9;
 	doTimeUpdateKF(accel, dt, kfState, kfErrCov, kfDynCov);
 
 	switch(data->type)
 	{
 		case DATA_TYPE_VICON_POS:
-			doMeasUpdateKF_posOnly(static_pointer_cast<DataVector>(data)->data, submat(kfPosMeasCov,0,2,0,2), kfState, kfErrCov);
+			doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<DTYPE> >(data)->data, submat(kfPosMeasCov,0,2,0,2), kfState, kfErrCov);
 			break;
 		case DATA_TYPE_VICON_VEL:
 			cout << "Doing vicon vel" << endl;
-			doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(data)->data, submat(kfVelMeasCov,3,5,3,5), kfState, kfErrCov);
+			doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<DTYPE> >(data)->data, submat(kfVelMeasCov,3,5,3,5), kfState, kfErrCov);
 			break;
 		case DATA_TYPE_OPTIC_FLOW_VEL:
-			doMeasUpdateKF_velOnly(static_pointer_cast<DataVector>(data)->data, submat(kfVelMeasCov,3,5,3,5), kfState, kfErrCov);
+			doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<DTYPE> >(data)->data, submat(kfVelMeasCov,3,5,3,5), kfState, kfErrCov);
 			break;
 		case DATA_TYPE_THRUST_DIR:
-			thrustDir.inject( static_pointer_cast<DataVector>(data)->data );
+			thrustDir.inject( static_pointer_cast<DataVector<DTYPE> >(data)->data );
 			break;
 		case DATA_TYPE_ATTITUDE:
 			{
-				Array2D<double> attState = static_pointer_cast<DataVector>(data)->data;
-				Array2D<double> attSO3 = createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]);
-				Array2D<double> attBias(3,1);
+				Array2D<DTYPE> attState = static_pointer_cast<DataVector<DTYPE> >(data)->data;
+				Array2D<DTYPE> attSO3 = createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]);
+				Array2D<DTYPE> attBias(3,1);
 				attBias[0][0] = 0.005; attBias[1][0] = 0.01; attBias[2][0] = 0.00;
-				double s1 = sin(attState[2][0]); double c1 = cos(attState[2][0]);
-				double s2 = sin(attState[1][0]-attBias[1][0]); double c2 = cos(attState[1][0]-attBias[1][0]);
-				double s3 = sin(attState[0][0]-attBias[0][0]); double c3 = cos(attState[0][0]-attBias[0][0]);
+				float s1 = sin(attState[2][0]); float c1 = cos(attState[2][0]);
+				float s2 = sin(attState[1][0]-attBias[1][0]); float c2 = cos(attState[1][0]-attBias[1][0]);
+				float s3 = sin(attState[0][0]-attBias[0][0]); float c3 = cos(attState[0][0]-attBias[0][0]);
 				thrustDir[0][0] = s1*s3+c1*c3*s2;
 				thrustDir[1][0] = c3*s1*s2-c1*s3;
 				thrustDir[2][0] = c2*c3;
@@ -1475,16 +1483,16 @@ Time applyData(Time const &curTime, shared_ptr<Data> const &data,
 			break;
 		case DATA_TYPE_MOTOR_CMDS:
 			{
-				Array2D<double> cmds = static_pointer_cast<DataVector>(data)->data;
+				Array2D<DTYPE> cmds = static_pointer_cast<DataVector<DTYPE> >(data)->data;
 				thrust = 0;
 				for(int i=0; i<4; i++)
 					thrust += cmds[i][0];
-				double forceGain = 0.00235;
+				float forceGain = 0.00235;
 				thrust *= forceGain;
 			}
 			break;
 		default:
-			Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
+			cout << "Observer_Translational::applyData() --> Unknown data type: " << data->type << endl;
 	}
 
 

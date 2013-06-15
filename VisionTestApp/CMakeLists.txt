@@ -1,6 +1,6 @@
 # Standard setup
 cmake_minimum_required (VERSION 2.6)
-project (VisionTestApp CXX C)
+project (VisionTestApp_native CXX C)
 
 
 # need to set this varaible that OpenCV is expecting to indicate the processor type
@@ -22,9 +22,10 @@ find_package (toadlet REQUIRED)
 
 # Includes
 set (INC ${INC}
-	${VisionTestApp_SOURCE_DIR}/cpp
+	${VisionTestApp_native_SOURCE_DIR}/cpp
 	${TOADLET_INCLUDE_DIR}
 	${OpenCV_INCLUDE_DIRS}
+	${MXML_DIR}/include
 	${TBB_DIR}/include # note that the TBB lib comes in with OpenCV libs
 	${ANDROID_NDK}/sources/android
 	)
@@ -35,15 +36,12 @@ foreach(dir ${INC})
 	message(${dir})
 endforeach()
 
-message("OpenCV libs: ")
-foreach(lib ${OpenCV_LIBS_OPT})
-	message(${lib})
-endforeach()
 
 # Libraries
-set (LIBS 
+set (LIBS  ${LIBS}
 	${TOADLET_EGG_LIB} 
-	${OpenCV_LIBS_OPT} 
+	${OpenCV_LIBS} 
+	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
 #	${TBB_DIR}/libs/${NDK_NAME_ARCH}/libtbb.a
 	-lgnustl_static # this is already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
 	-lz -llog -ldl EGL GLESv1_CM android -lm
@@ -71,8 +69,17 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti  -std=c++11")
 
 set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 
+message("libs: ")
+foreach(lib ${LIBS})
+	message(${lib})
+endforeach()
+
+message("shared libs: ")
+foreach(lib ${SHARED_LIBS})
+	message(${lib})
+endforeach()
 
 # Executable
-add_library (VisionTestApp SHARED ${SRC} ${H})
-target_link_libraries (VisionTestApp ${LIBS})
-install (TARGETS VisionTestApp DESTINATION ${VisionTestApp_SOURCE_DIR}/libs/${NDK_NAME_ARCH})
+add_library (VisionTestApp_native SHARED ${SRC} ${H})
+target_link_libraries (VisionTestApp_native ${LIBS})
+install (TARGETS VisionTestApp_native DESTINATION ${VisionTestApp_native_SOURCE_DIR}/libs/${NDK_NAME_ARCH})

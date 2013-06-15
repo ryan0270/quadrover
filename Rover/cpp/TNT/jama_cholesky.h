@@ -53,6 +53,7 @@ public:
 
 	Cholesky();
 	Cholesky(const Array2D<Real> &A);
+	void factorNewMatrix(const Array2D<Real> &A);
 	Array2D<Real> getL() const;
 	Array1D<Real> solve(const Array1D<Real> &B);
 	Array2D<Real> solve(const Array2D<Real> &B);
@@ -82,6 +83,12 @@ Array2D<Real> Cholesky<Real>::getL() const
 	return L_;
 }
 
+template <class Real>
+Cholesky<Real>::Cholesky(const Array2D<Real> &A)
+{
+	factorNewMatrix(A);
+}
+
 /**
 	Constructs a lower triangular matrix L, such that L*L'= A.
 	If A is not symmetric positive-definite (SPD), only a
@@ -89,10 +96,9 @@ Array2D<Real> Cholesky<Real>::getL() const
 	evalutate true (1) then the factorizaiton was successful.
 */
 template <class Real>
-Cholesky<Real>::Cholesky(const Array2D<Real> &A)
+//Cholesky<Real>::Cholesky(const Array2D<Real> &A)
+void Cholesky<Real>::factorNewMatrix(const Array2D<Real> &A)
 {
-
-
    	int m = A.dim1();
 	int n = A.dim2();
 	
@@ -104,8 +110,8 @@ Cholesky<Real>::Cholesky(const Array2D<Real> &A)
 		return;
 	}
 
-	L_ = Array2D<Real>(n,n);
-
+	if(L_.dim1() != n)
+		L_ = Array2D<Real>(n,n);
 
       // Main loop.
      for (int j = 0; j < n; j++) 
