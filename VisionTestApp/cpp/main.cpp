@@ -830,6 +830,7 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		Log::alert(String()+"\tts5: " + ts5 );
 		Log::alert(String()+"\tts6: " + ts6 );
 		Log::alert(String()+"\tts7: " + ts7 );
+		Log::alert(String()+ts0+"\t"+ts1+"\t"+ts2+"\t"+ts3+"\t"+ts4+"\t"+ts5+"\t"+ts6+"\t"+ts7);
 	
 		float avgCalcTime = orbStartTime.getElapsedTimeNS()/1.0e9 - ts0 - ts5;
 		avgCalcTime /= imgList.size()-1;
@@ -1095,6 +1096,7 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		Log::alert(String()+"\tts5: " + ts5 );
 		Log::alert(String()+"\tts6: " + ts6 );
 		Log::alert(String()+"\tts7: " + ts7 );
+		Log::alert(String()+ts0+"\t"+ts1+"\t"+ts2+"\t"+ts3+"\t"+ts4+"\t"+ts5+"\t"+ts6+"\t"+ts7);
 //		Log::alert(String()+"--------------------");
 //		Log::alert(String()+"\trs0: " + rs0 );
 //		Log::alert(String()+"\trs1: " + rs1 );
@@ -1356,7 +1358,7 @@ void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDi
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel)
 {
 	vector<cv::KeyPoint> tempKp1;
-	int fastFeatureThreshold = 25;
+	int fastFeatureThreshold = 5;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastFeatureThreshold));
 	int maxKp = 1000;
 	int gridRows = 3;
