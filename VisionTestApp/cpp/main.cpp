@@ -50,6 +50,7 @@
 #include "../../Rover/cpp/constants.h"
 #include "../../Rover/cpp/QuadLogger.h"
 
+#include "types.h"
 #include "mapFuncs.h"
 
 #include <android/sensor.h>
@@ -59,7 +60,6 @@
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "VisionTestApp", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "VisionTestApp", __VA_ARGS__))
 
-typedef float DTYPE;
 
 using namespace std;
 using namespace ICSL::Rover;
@@ -86,23 +86,23 @@ void loadPcLog(String filename,
 		);
 vector<string> tokenize(string str);
 
-void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDistance, float const &qualityLevel);
-void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel);
+void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel);
+void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel);
 
-//static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k);
+//static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, DTYPE harris_k);
 static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
 
-void doTimeUpdateKF(Array2D<DTYPE> const &accel, float const &dt, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov, Array2D<DTYPE> const &dynCov);
+void doTimeUpdateKF(Array2D<DTYPE> const &accel, DTYPE const &dt, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov, Array2D<DTYPE> const &dynCov);
 void doMeasUpdateKF_posOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
-void doMeasUpdateKF_heightOnly(float const &meas, float const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
+void doMeasUpdateKF_heightOnly(DTYPE const &meas, DTYPE const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
 void doMeasUpdateKF_velOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
 Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
 				Array2D<DTYPE> &kfState, Array2D<DTYPE> &kfErrCov, 
 				Array2D<DTYPE> const &kfPosMeasCov, Array2D<DTYPE> const &kfVelMeasCov, Array2D<DTYPE> const &kfDynCov,
-				float &thrust, Array2D<DTYPE> &thrustDir,
-				float const &mass);
+				DTYPE &thrust, Array2D<DTYPE> &thrustDir,
+				DTYPE const &mass);
 
-extern float ICSL::Rover::rs0, 
+extern DTYPE ICSL::Rover::rs0, 
 	   		  ICSL::Rover::rs1, 
 			  ICSL::Rover::rs2,
 			  ICSL::Rover::rs3,
@@ -113,7 +113,7 @@ extern float ICSL::Rover::rs0,
  * Our saved state data.
  */
 struct saved_state {
-    float angle;
+    DTYPE angle;
     int32_t x;
     int32_t y;
 };
@@ -216,8 +216,8 @@ static void engine_draw_frame(struct engine* engine)
     }
 
     // Just fill the screen with a color.
-    glClearColor(((float)engine->state.x)/engine->width, engine->state.angle,
-            ((float)engine->state.y)/engine->height, 1);
+    glClearColor(((DTYPE)engine->state.x)/engine->width, engine->state.angle,
+            ((DTYPE)engine->state.y)/engine->height, 1);
     glClear(GL_COLOR_BUFFER_BIT);
 
     eglSwapBuffers(engine->display, engine->surface);
@@ -339,8 +339,12 @@ void android_main(struct android_app* state) {
 	Log::alert("start chadding");
 
 	rs0 = rs1 = rs2 = rs3 = rs4 = rs5 = 0;
-//	string imgDir = "/sdcard/VisionTestApp/video";
-	string imgDir = "/sdcard/VisionTestApp/video_Jun5_3";
+	int testType = 1;
+	string imgDir;
+	if(testType == 0)
+		imgDir = "/sdcard/VisionTestApp/video_Jun5_3";
+	else
+		imgDir = "/sdcard/VisionTestApp/video_Jun10_1";
 
 	Log::alert("Loading log");
 	vector<pair<int, Time> > imgIdList;
@@ -354,8 +358,19 @@ void android_main(struct android_app* state) {
 
 	// preload all images
 	list<pair<int, cv::Mat> > imgList;
-	int imgId = 750;
-	for(int i=0; i<900; i++)
+	int imgId;
+	// 0 cluttered objects
+	// 1 moving robot
+	if(testType == 0)
+		imgId = 750;
+	else
+		imgId = 5925;
+	int numImages;
+	if(testType == 0)
+		numImages = 900;
+	else
+		numImages = 1300;
+	for(int i=0; i<numImages; i++)
 	{
 		cv::Mat img;
 		while(img.data == NULL)
@@ -366,13 +381,16 @@ void android_main(struct android_app* state) {
 		}
 
 		imgList.push_back(pair<int, cv::Mat>(imgId, img));
+
+		if(i%100 == 0)
+			Log::alert(String()+"Loaded image "+i);
 	}
 
 	Log::alert("Loading vicon data");
 	list<shared_ptr<DataVector<DTYPE> > > viconAttDataList, viconTransDataList;
 	loadPcLog(String(imgDir.c_str())+String("/pcData_fullState.txt"), viconAttDataList, viconTransDataList);
 
-	Array2D<DTYPE> rotCamToPhone = matmult(createRotMat(2,(float)(-0.5*PI)), createRotMat(0,(float)PI));
+	Array2D<DTYPE> rotCamToPhone = matmult(createRotMat(2,(DTYPE)(-0.5*PI)), createRotMat(0,(DTYPE)PI));
 	Array2D<DTYPE> rotCamToPhone2 = blkdiag(rotCamToPhone, rotCamToPhone);
 
 	Array2D<DTYPE> rotPhoneToCam = transpose(rotCamToPhone);
@@ -386,7 +404,7 @@ void android_main(struct android_app* state) {
 	Array2D<DTYPE> attPrev, attCur, attChange;
 
 	Array2D<DTYPE> Sv(3,3,0.0);
-	float sz;
+	DTYPE sz;
 	Array2D<DTYPE> Sn(2,2,0.0), SnInv(2,2,0.0);
 	Sn[0][0] = Sn[1][1] = 2*pow(5,2);
 	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
@@ -395,14 +413,14 @@ void android_main(struct android_app* state) {
 
 	int focalLength = 524; // from camera calibration
 //	int focalLength = 700;
-	float camOffset = 0.05;
+	DTYPE camOffset = 0.05;
 
 	tbb::task_scheduler_init init;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	// KF vars
 	Array2D<DTYPE> kfState(6,1,0.0), kfErrCov(6,6,0.0);
-	Array2D<DTYPE> kfA = createIdentity(6.0f);
+	Array2D<DTYPE> kfA = createIdentity((DTYPE)6.0);
 	Array2D<DTYPE> kfB(6,3,0.0);
 	Array2D<DTYPE> kfDynCov(6,6,0.0);
 	kfDynCov[0][0] = kfDynCov[1][1] = kfDynCov[2][2] = 0.01*0.01;
@@ -415,9 +433,9 @@ void android_main(struct android_app* state) {
 	Array2D<DTYPE> kfImageVelMeasCov(3,3,0.0);
 	kfImageVelMeasCov[0][0] = kfImageVelMeasCov[1][1] = 0.2*0.2;
 	kfImageVelMeasCov[2][2] =0.2*0.2;
-	float kfImageHeightMeasCov = 0.1*0.1;
-	float mass = 1.1; // kg
-	float thrust = mass*GRAVITY;
+	DTYPE kfImageHeightMeasCov = 0.1*0.1;
+	DTYPE mass = 1.1; // kg
+	DTYPE thrust = mass*GRAVITY;
 	Array2D<DTYPE> accel(3,1,0.0);
 	//	Array2D<DTYPE> attBias(3,1);
 	//	attBias[0][0] = 0.004; attBias[1][0] = 0.018; attBias[2][0] = 0.00;
@@ -432,12 +450,12 @@ void android_main(struct android_app* state) {
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	float qualityLevel = 0.01;
-	float minDistance = 10;
+	DTYPE qualityLevel = 0.01;
+	DTYPE minDistance = 10;
 
 	bool useViconState = false;
 
-	float viconUpdateDT = 100;
+	DTYPE viconUpdateDT = 100;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 	// Vicon measurment randomization
@@ -465,9 +483,9 @@ void android_main(struct android_app* state) {
 	//////////////////////////////////////////////////////////////////
 	{
 		curTime.setTimeMS(0);
-		attPrev = createIdentity(3.0f);
-		attCur = createIdentity(3.0f);
-		attChange = createIdentity(3.0f);
+		attPrev = createIdentity((DTYPE)3.0);
+		attCur = createIdentity((DTYPE)3.0);
+		attChange = createIdentity((DTYPE)3.0);
 		int imgIdx = 0;
 		list<pair<int, cv::Mat> >::iterator iter_imgList;
 		iter_imgList = imgList.begin();
@@ -482,7 +500,7 @@ void android_main(struct android_app* state) {
 		kfErrCov.inject(kfErrCovStart);
 
 		Array2D<DTYPE> mv(3,1), omega(3,1), vel;
-		float mz, dt, z;
+		DTYPE mz, dt, z;
 	
 		Array2D<DTYPE> velLS(3,1,0.0);
 
@@ -515,7 +533,7 @@ void android_main(struct android_app* state) {
 		while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
 		{ thrustDirData= thrustDirDataList.front(); thrustDirDataList.pop_front(); }
 	
-		float ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
+		DTYPE ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
 		ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = ts7 = 0;
 		Time t0;
 
@@ -543,7 +561,7 @@ void android_main(struct android_app* state) {
 			}
 			prevTime.setTime(curTime);
 			curTime = imgIdList[imgIdx].second;
-			float dt;
+			DTYPE dt;
 			if(prevTime.getMS() > 0)
 				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
 			else
@@ -579,27 +597,27 @@ void android_main(struct android_app* state) {
 			JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
 			Array2D<DTYPE> eigs;
 			eig_kfErrCov.getD(eigs);
-			float minEig = eigs[0][0];
+			DTYPE minEig = eigs[0][0];
 			for(int i=1; i<eigs.dim1(); i++)
-				minEig = min(minEig, (float)eigs[i][i]);
+				minEig = min(minEig, (DTYPE)eigs[i][i]);
 			while(minEig <= 0)
 			{
 				Log::alert(String()+"crap! kfErrCov is not definite");
 
-				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity(6.0f);
+				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity((DTYPE)6.0);
 
 				JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
 				eig_kfErrCov.getD(eigs);
 				minEig = eigs[0][0];
 				for(int i=1; i<eigs.dim1(); i++)
-					minEig = min(minEig, (float)eigs[i][i]);
+					minEig = min(minEig, (DTYPE)eigs[i][i]);
 			}
 
 			// remaining time update
 //			thrustDir.inject( Data::interpolate(curTime, thrustDirDataList) );
 			accel.inject(thrust/mass*thrustDir);
 			accel[2][0] -= GRAVITY;
-			float dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
+			DTYPE dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
 			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
 
 			// KF measurement update
@@ -610,7 +628,7 @@ void android_main(struct android_app* state) {
 				Array2D<DTYPE> meas = submat(viconTransState,0,2,0,0);
 				meas += measNoise[imgId];
 
-				float dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
+				DTYPE dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
 				lastMeasTime.setTime(curTime);
 				doMeasUpdateKF_posOnly( meas, kfViconPosMeasCov, kfState, kfErrCov);
 			}
@@ -657,7 +675,7 @@ ts2 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				matcher.match(prevDescriptors, curDescriptors, matches);
 	
 ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-//			float minDist = 10000;
+//			DTYPE minDist = 10000;
 //			for(int i=0; i<matches.size(); i++)
 //				minDist = min(matches[i].distance, minDist);
 //			// filter out low quality matches
@@ -695,11 +713,11 @@ ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				vector<DTYPE> distancesCopy(distances);
 				// this finds the median
 				nth_element(distancesCopy.begin(), distancesCopy.begin()+medIndex, distancesCopy.end(),
-						[&](float const &a, float const &b){return a < b;});
-				float medDist = distancesCopy[medIndex];
-				float maxDelta = 40;
-				float lowEnd = min(0.5f*medDist,medDist-maxDelta);
-				float highEnd = max(1.5f*medDist,medDist+maxDelta);
+						[&](DTYPE const &a, DTYPE const &b){return a < b;});
+				DTYPE medDist = distancesCopy[medIndex];
+				DTYPE maxDelta = 40;
+				DTYPE lowEnd = min(0.5f*medDist,medDist-maxDelta);
+				DTYPE highEnd = max(1.5f*medDist,medDist+maxDelta);
 				for(int i=0; i<tempMatches.size(); i++)
 					if( lowEnd < distances[i] && distances[i] < highEnd)
 						goodMatches.push_back(tempMatches[i]);
@@ -725,12 +743,12 @@ ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			{
 				// LS Estimate
 				Array2D<DTYPE> deltaStack, LvStack;
-				float f = focalLength;
-				float fInv = 1.0/f;
+				DTYPE f = focalLength;
+				DTYPE fInv = 1.0/f;
 				for(int i=0; i<N1; i++)
 				{
-					float x = prevPoints[i].x;
-					float y = prevPoints[i].y;
+					DTYPE x = prevPoints[i].x;
+					DTYPE y = prevPoints[i].y;
 	
 					Array2D<DTYPE> Lv(2,3), Lw(2,3);
 					Lv[0][0] = -f; Lv[0][1] = 0;  Lv[0][2] = x;
@@ -753,8 +771,8 @@ ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 						LvStack = stackVertical(LvStack, Lv);
 					}
 				}
-				float z = viconTransState[2][0]-camOffset;
-//				float z = -transState[2][0]-camOffset;
+				DTYPE z = viconTransState[2][0]-camOffset;
+//				DTYPE z = -transState[2][0]-camOffset;
 				Array2D<DTYPE> temp1 = dt/z*matmult(transpose(LvStack), LvStack);
 				JAMA::LU<DTYPE> lu_temp1(temp1);
 				Array2D<DTYPE> temp2 = matmult(transpose(LvStack), deltaStack);
@@ -789,8 +807,8 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				// Apply measurement to the state estimate
 				vel = matmult(rotCamToPhone, vel);
 //				covVel = matmult(rotCamToPhone, matmult(covVel, rotPhoneToCam));
-				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
-				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
+//				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
+//				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
 			}
 
 			// save data
@@ -819,8 +837,8 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 	
 		fs->close();
 	
-		Log::alert(String()+"Avg num ORB features: " + ((float)numFeaturesAccum)/imgList.size() );
-		Log::alert(String()+"Avg num ORB matches: " + ((float)numMatchesAccum)/(imgList.size()-1) );
+		Log::alert(String()+"Avg num ORB features: " + ((DTYPE)numFeaturesAccum)/imgList.size() );
+		Log::alert(String()+"Avg num ORB matches: " + ((DTYPE)numMatchesAccum)/(imgList.size()-1) );
 		Log::alert(String()+"ORB time: " + orbStartTime.getElapsedTimeMS()/1.0e3 );
 		Log::alert(String()+"\tts0: " + ts0 );
 		Log::alert(String()+"\tts1: " + ts1 );
@@ -830,9 +848,9 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		Log::alert(String()+"\tts5: " + ts5 );
 		Log::alert(String()+"\tts6: " + ts6 );
 		Log::alert(String()+"\tts7: " + ts7 );
-		Log::alert(String()+ts0+"\t"+ts1+"\t"+ts2+"\t"+ts3+"\t"+ts4+"\t"+ts5+"\t"+ts6+"\t"+ts7);
+		Log::alert(String()+ts0+" & "+ts1+" & "+ts2+" & "+ts3+" & "+ts4+" & "+ts5+" & "+ts6+" & "+ts7);
 	
-		float avgCalcTime = orbStartTime.getElapsedTimeNS()/1.0e9 - ts0 - ts5;
+		DTYPE avgCalcTime = orbStartTime.getElapsedTimeNS()/1.0e9 - ts0 - ts5;
 		avgCalcTime /= imgList.size()-1;
 		Log::alert(String()+"ORB avg calc time: " + avgCalcTime );
 	}
@@ -844,14 +862,14 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 	//////////////////////////////////////////////////////////////////
 	{
 		curTime.setTimeMS(0);
-		attPrev = createIdentity(3.0f);
-		attCur = createIdentity(3.0f);
-		attChange = createIdentity(3.0f);
+		attPrev = createIdentity((DTYPE)3.0);
+		attCur = createIdentity((DTYPE)3.0);
+		attChange = createIdentity((DTYPE)3.0);
 		int imgIdx = 0;
 		list<pair<int, cv::Mat> >::iterator iter_imgList;
 		iter_imgList = imgList.begin();
 		long long numFeaturesAccum = 0;
-		float numMatchesAccum = 0;
+		DTYPE numMatchesAccum = 0;
 
 		Array2D<DTYPE> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
 		Array2D<DTYPE> errCov1(9,1), errCov(6,6,0.0);
@@ -859,7 +877,7 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		kfErrCov.inject(kfErrCovStart);
 
 		Array2D<DTYPE> mv(3,1), omega(3,1), vel;
-		float mz, dt, z;
+		DTYPE mz, dt, z;
 
 		imgId = iter_imgList->first;
 		while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
@@ -894,7 +912,7 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 
 		Array2D<DTYPE> C;
 
-		float ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
+		DTYPE ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
 		ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = ts7 = 0;
 		Time t0;
 
@@ -956,28 +974,28 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
 			Array2D<DTYPE> eigs;
 			eig_kfErrCov.getD(eigs);
-			float minEig = eigs[0][0];
+			DTYPE minEig = eigs[0][0];
 			for(int i=1; i<eigs.dim1(); i++)
-				minEig = min(minEig, (float)eigs[i][i]);
+				minEig = min(minEig, (DTYPE)eigs[i][i]);
 			while(minEig <= 0)
 			{
 				cout << "crap! kfErrCov is not definite" << endl;
 				printArray("kfErrCov:\n",kfErrCov);
 
-				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity(6.0f);
+				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity((DTYPE)6.0);
 
 				JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
 				eig_kfErrCov.getD(eigs);
 				minEig = eigs[0][0];
 				for(int i=1; i<eigs.dim1(); i++)
-					minEig = min(minEig, (float)eigs[i][i]);
+					minEig = min(minEig, (DTYPE)eigs[i][i]);
 			}
 
 			// remaining time update
 //			thrustDir.inject( Data::interpolate(curTime, thrustDirDataList) );
 			accel.inject(thrust/mass*thrustDir);
 			accel[2][0] -= GRAVITY;
-			float dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
+			DTYPE dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
 			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
 
 			// KF measurement update
@@ -988,7 +1006,7 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				Array2D<DTYPE> meas = submat(viconTransState,0,2,0,0);
 				meas += measNoise[imgId];
 
-				float dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
+				DTYPE dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
 				lastMeasTime.setTime(curTime);
 				doMeasUpdateKF_posOnly( meas, kfViconPosMeasCov, kfState, kfErrCov);
 			}
@@ -1085,8 +1103,8 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		fs->close();
 //		fs.close();
 
-		Log::alert(String()+"Avg num features: " + ((float)numFeaturesAccum)/imgList.size() );
-		Log::alert(String()+"Avg num matches: " + ((float)numMatchesAccum)/(imgList.size()-1) );
+		Log::alert(String()+"Avg num features: " + ((DTYPE)numFeaturesAccum)/imgList.size() );
+		Log::alert(String()+"Avg num matches: " + ((DTYPE)numMatchesAccum)/(imgList.size()-1) );
 		Log::alert(String()+"New total time: " + mapStartTime.getElapsedTimeMS()/1.0e3 );
 		Log::alert(String()+"\tts0: " + ts0 );
 		Log::alert(String()+"\tts1: " + ts1 );
@@ -1096,7 +1114,7 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 		Log::alert(String()+"\tts5: " + ts5 );
 		Log::alert(String()+"\tts6: " + ts6 );
 		Log::alert(String()+"\tts7: " + ts7 );
-		Log::alert(String()+ts0+"\t"+ts1+"\t"+ts2+"\t"+ts3+"\t"+ts4+"\t"+ts5+"\t"+ts6+"\t"+ts7);
+		Log::alert(String()+ts0+" & "+ts1+" & "+ts2+" & "+ts3+" & "+ts4+" & "+ts5+" & "+ts6+" & "+ts7);
 //		Log::alert(String()+"--------------------");
 //		Log::alert(String()+"\trs0: " + rs0 );
 //		Log::alert(String()+"\trs1: " + rs1 );
@@ -1104,7 +1122,7 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 //		Log::alert(String()+"\trs3: " + rs3 );
 //		Log::alert(String()+"\trs4: " + rs4 );
 
-		float avgCalcTime = mapStartTime.getElapsedTimeNS()/1.0e9 - ts0;
+		DTYPE avgCalcTime = mapStartTime.getElapsedTimeNS()/1.0e9 - ts0;
 		avgCalcTime /= imgList.size()-1;
 		Log::alert(String()+"NEW avg calc time: " + avgCalcTime );
 	}
@@ -1200,7 +1218,7 @@ void loadPhoneLog(String filename,
 		{
 			getline(file, line);
 			stringstream ss(line);
-			float time;
+			DTYPE time;
 			int type;
 			ss >> time >> type;
 			switch(type)
@@ -1286,9 +1304,9 @@ void loadPcLog(String filename,
 	angleStateList.clear();
 	transStateList.clear();
 
-	Array2D<DTYPE> rotViconToQuad = createRotMat(0, (float)PI);
-	Array2D<DTYPE> rotQuadToPhone = matmult(createRotMat(2,(float)(-0.25*PI)), createRotMat(0,(float)PI));
-	Array2D<DTYPE> rotCamToPhone = matmult(createRotMat(2,(float)(-0.5*PI)), createRotMat(0,(float)PI));
+	Array2D<DTYPE> rotViconToQuad = createRotMat(0, (DTYPE)PI);
+	Array2D<DTYPE> rotQuadToPhone = matmult(createRotMat(2,(DTYPE)(-0.25*PI)), createRotMat(0,(DTYPE)PI));
+	Array2D<DTYPE> rotCamToPhone = matmult(createRotMat(2,(DTYPE)(-0.5*PI)), createRotMat(0,(DTYPE)PI));
 	Array2D<DTYPE> rotPhoneToCam = transpose(rotCamToPhone);
 	Array2D<DTYPE> rotViconToPhone = matmult(rotQuadToPhone, rotViconToQuad);
 
@@ -1311,7 +1329,7 @@ void loadPcLog(String filename,
 		{
 			getline(file, line);
 			stringstream ss(line);
-			float time;
+			DTYPE time;
 			int type;
 			ss >> time >> type;
 time -= 0;
@@ -1348,17 +1366,17 @@ time -= 0;
 		Log::alert("Couldn't find " + filename);
 }
 
-void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, float const &minDistance, float const &qualityLevel)
+void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel)
 {
 	vector<cv::KeyPoint> kp;
 	findPoints(img, kp, minDistance, qualityLevel);
 	cv::KeyPoint::convert(kp, pts);
 }
 
-void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minDistance, float const &qualityLevel)
+void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel)
 {
 	vector<cv::KeyPoint> tempKp1;
-	int fastFeatureThreshold = 5;
+	int fastFeatureThreshold = 60;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastFeatureThreshold));
 	int maxKp = 1000;
 	int gridRows = 3;
@@ -1368,13 +1386,13 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 //	FAST(img, tempKp1, fastFeatureThreshold, true);
 	EigenValResponses(img, tempKp1, 5);
 
-	float maxScore = -0xFFFFFFF;
+	DTYPE maxScore = -0xFFFFFFF;
 	for(int i=0; i<tempKp1.size(); i++)
-		maxScore = max(maxScore, tempKp1[i].response);
+		maxScore = max(maxScore, (DTYPE) tempKp1[i].response);
 
 	vector<cv::KeyPoint> tempKp;
 	tempKp.reserve(tempKp1.size());
-	float threshold = qualityLevel*maxScore;
+	DTYPE threshold = qualityLevel*maxScore;
 	for(int i=0; i<tempKp1.size(); i++)
 		if(tempKp1[i].response > threshold)
 			tempKp.push_back(tempKp1[i]);
@@ -1388,8 +1406,8 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 //	{
 //		int x = tempKp[i].pt.x;
 //		int y = tempKp[i].pt.y;
-//		const float* row = (const float*)(eig.data + y*eig.step);
-//		float eig = row[x];
+//		const DTYPE* row = (const DTYPE*)(eig.data + y*eig.step);
+//		DTYPE eig = row[x];
 //cout << "loc: (" << x << ", " << y << ")" << endl;
 //cout << "point " << i << " eig 1: " << eig << endl;
 //cout << "point " << i << " eig 2: " << tempKp[i].response << endl;
@@ -1417,7 +1435,7 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 	// than a minDistance radius circle
 	vector<bool> isActive(gridId.size(), true);
 	pts.clear();
-	float curResponse;
+	DTYPE curResponse;
 	int neighborOffsetX[] = {-1, 0, 1, -1, 1, -1, 0, 1};
 	int neighborOffsetY[] = {-1, -1, -1, 0, 0, 1, 1, 1};
 	for(int i=0; i<gridId.size(); i++)
@@ -1499,14 +1517,14 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 			continue;
 		}
 
-//		float minD = 0xFFFFFF;
-//		float minJ = 0;
+//		DTYPE minD = 0xFFFFFF;
+//		DTYPE minJ = 0;
 //		for(int j=0; j<tempKp.size(); j++)
 //		{
 //			if(j == i || !isActive[j])
 //				continue;
 //			cv::Point2f *pt = &tempKp[j].pt;
-//			float dist = sqrt( pow(curPt->x - pt->x, 2) + pow(curPt->y - pt->y,2));
+//			DTYPE dist = sqrt( pow(curPt->x - pt->x, 2) + pow(curPt->y - pt->y,2));
 //			if(dist < minD)
 //			{
 //				minD = dist;
@@ -1521,7 +1539,7 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 }
 
 // taken from OpenCV ORB code
-//static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, float harris_k)
+//static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, DTYPE harris_k)
 //{
 //    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
 //
@@ -1531,9 +1549,9 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 //    int step = (int)(img.step/img.elemSize1());
 //    int r = blockSize/2;
 //
-//    float scale = (1 << 2) * blockSize * 255.0f;
+//    DTYPE scale = (1 << 2) * blockSize * 255.0f;
 //    scale = 1.0f / scale;
-//    float scale_sq_sq = scale * scale * scale * scale;
+//    DTYPE scale_sq_sq = scale * scale * scale * scale;
 //
 //	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
 //    int* ofs = ofsbuf;
@@ -1558,8 +1576,8 @@ void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, float const &minD
 //            b += Iy*Iy;
 //            c += Ix*Iy;
 //        }
-//        pts[ptidx].response = ((float)a * b - (float)c * c -
-//                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+//        pts[ptidx].response = ((DTYPE)a * b - (DTYPE)c * c -
+//                               harris_k * ((DTYPE)a + b) * ((DTYPE)a + b))*scale_sq_sq;
 //    }
 //}
 
@@ -1572,9 +1590,9 @@ static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int
     int step = (int)(img.step/img.elemSize1());
     int r = blockSize/2;
 
-    float scale = (1 << 2) * blockSize * 255.0f;
+    DTYPE scale = (1 << 2) * blockSize * 255.0f;
     scale = 1.0f / scale;
-    float scale_sq = scale * scale;
+    DTYPE scale_sq = scale * scale;
 
 	cv::AutoBuffer<int> ofsbuf(blockSize*blockSize);
     int* ofs = ofsbuf;
@@ -1582,7 +1600,7 @@ static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int
         for( int j = 0; j < blockSize; j++ )
             ofs[i*blockSize + j] = (int)(i*step + j);
 
-	float m00, m01, m11;
+	DTYPE m00, m01, m11;
     for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
         int x0 = cvRound(pts[ptidx].pt.x - r);
@@ -1615,7 +1633,7 @@ static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int
     }
 }
 
-void doTimeUpdateKF(Array2D<DTYPE> const &accel, float const &dt, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov, Array2D<DTYPE> const &dynCov)
+void doTimeUpdateKF(Array2D<DTYPE> const &accel, DTYPE const &dt, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov, Array2D<DTYPE> const &dynCov)
 {
 	for(int i=0; i<3; i++)
 		state[i][0] += dt*state[i+3][0];
@@ -1670,14 +1688,14 @@ void doMeasUpdateKF_posOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &me
 	}
 }
 
-void doMeasUpdateKF_heightOnly(float const &meas, float const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov)
+void doMeasUpdateKF_heightOnly(DTYPE const &meas, DTYPE const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov)
 {
 	Array2D<DTYPE> gainKF(6,1,0.0);
 	gainKF[2][0] = errCov[2][2]/(errCov[2][2]+measCov);
 	gainKF[5][0] = errCov[2][5]/(errCov[2][2]+measCov);
 
 	// \hat{x} = \hat{x} + K (meas - C \hat{x})
-	float err = meas-state[2][0];
+	DTYPE err = meas-state[2][0];
 	state[2][0] += gainKF[2][0]*err;
 	state[5][0] += gainKF[5][0]*err;
 
@@ -1721,13 +1739,13 @@ void doMeasUpdateKF_velOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &me
 Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
 				Array2D<DTYPE> &kfState, Array2D<DTYPE> &kfErrCov, 
 				Array2D<DTYPE> const &kfPosMeasCov, Array2D<DTYPE> const &kfVelMeasCov, Array2D<DTYPE> const &kfDynCov,
-				float &thrust, Array2D<DTYPE> &thrustDir,
-				float const &mass)
+				DTYPE &thrust, Array2D<DTYPE> &thrustDir,
+				DTYPE const &mass)
 {
 	Time dataTime = data->timestamp;
 	Array2D<DTYPE> accel = thrust/mass*thrustDir;
 	accel[2][0] -= GRAVITY;
-	float dt = Time::calcDiffNS(curTime, dataTime)/1.0e9;
+	DTYPE dt = Time::calcDiffNS(curTime, dataTime)/1.0e9;
 	doTimeUpdateKF(accel, dt, kfState, kfErrCov, kfDynCov);
 
 	switch(data->type)
@@ -1751,9 +1769,9 @@ Time applyData(Time const &curTime, shared_ptr<Data> const &data,
 				Array2D<DTYPE> attSO3 = createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]);
 				Array2D<DTYPE> attBias(3,1);
 				attBias[0][0] = 0.005; attBias[1][0] = 0.01; attBias[2][0] = 0.00;
-				float s1 = sin(attState[2][0]); float c1 = cos(attState[2][0]);
-				float s2 = sin(attState[1][0]-attBias[1][0]); float c2 = cos(attState[1][0]-attBias[1][0]);
-				float s3 = sin(attState[0][0]-attBias[0][0]); float c3 = cos(attState[0][0]-attBias[0][0]);
+				DTYPE s1 = sin(attState[2][0]); DTYPE c1 = cos(attState[2][0]);
+				DTYPE s2 = sin(attState[1][0]-attBias[1][0]); DTYPE c2 = cos(attState[1][0]-attBias[1][0]);
+				DTYPE s3 = sin(attState[0][0]-attBias[0][0]); DTYPE c3 = cos(attState[0][0]-attBias[0][0]);
 				thrustDir[0][0] = s1*s3+c1*c3*s2;
 				thrustDir[1][0] = c3*s1*s2-c1*s3;
 				thrustDir[2][0] = c2*c3;
@@ -1765,7 +1783,7 @@ Time applyData(Time const &curTime, shared_ptr<Data> const &data,
 				thrust = 0;
 				for(int i=0; i<4; i++)
 					thrust += cmds[i][0];
-				float forceGain = 0.00235;
+				DTYPE forceGain = 0.00235;
 				thrust *= forceGain;
 			}
 			break;

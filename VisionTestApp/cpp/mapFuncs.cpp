@@ -7,28 +7,28 @@
 namespace ICSL {
 namespace Rover {
 
-float rs0, rs1, rs2, rs3, rs4, rs5;
+DTYPE rs0, rs1, rs2, rs3, rs4, rs5;
 
-vector<pair<Array2D<float>, Array2D<float> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
-							Array2D<float> const &mv, Array2D<float> const &Sv, 
-							float const &mz, float const &varz, 
-							float const &focalLength, float const &dt, 
-							Array2D<float> const &omega)
+vector<pair<Array2D<DTYPE>, Array2D<DTYPE> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
+							Array2D<DTYPE> const &mv, Array2D<DTYPE> const &Sv, 
+							DTYPE const &mz, DTYPE const &varz, 
+							DTYPE const &focalLength, DTYPE const &dt, 
+							Array2D<DTYPE> const &omega)
 {
-	float mvx = mv[0][0];
-	float mvy = mv[1][0];
-	float mvz = mv[2][0];
-	float svx = sqrt(Sv[0][0]);
-	float svy = sqrt(Sv[1][1]);
-	float svz = sqrt(Sv[2][2]);
-	float sz = sqrt(varz);
-	float f = focalLength;
-	float fInv = 1.0/f;
+	DTYPE mvx = mv[0][0];
+	DTYPE mvy = mv[1][0];
+	DTYPE mvz = mv[2][0];
+	DTYPE svx = sqrt(Sv[0][0]);
+	DTYPE svy = sqrt(Sv[1][1]);
+	DTYPE svz = sqrt(Sv[2][2]);
+	DTYPE sz = sqrt(varz);
+	DTYPE f = focalLength;
+	DTYPE fInv = 1.0/f;
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
-	vector<Array2D<float> > mDeltaList(points.size()), SDeltaList(points.size());
-	float x, y;
-	Array2D<float> mDelta(2,1), SDelta(2,2,0.0);
+	vector<Array2D<DTYPE> > mDeltaList(points.size()), SDeltaList(points.size());
+	DTYPE x, y;
+	Array2D<DTYPE> mDelta(2,1), SDelta(2,2,0.0);
 	for(int i=0; i<points.size(); i++)
 	{
 		x = points[i].x;
@@ -45,16 +45,16 @@ vector<pair<Array2D<float>, Array2D<float> > > calcPriorDistributions(vector<cv:
 	}
 
 	// calc distribution of Z^-1
-	float mz1Inv = 1.0/mz;
-	float mz2Inv = 1.0/mz/mz;
-	float log_sz = log(sz);
-	float log_mz = log(mz);
-	float del1LnOld = 0xFFFFFFFF;
-	float del2LnOld = 0xFFFFFFFF;
-	float del1Ln = 0;
-	float del2Ln = 0;
-	float del1, del2;
-	float fact;
+	DTYPE mz1Inv = 1.0/mz;
+	DTYPE mz2Inv = 1.0/mz/mz;
+	DTYPE log_sz = log(sz);
+	DTYPE log_mz = log(mz);
+	DTYPE del1LnOld = 0xFFFFFFFF;
+	DTYPE del2LnOld = 0xFFFFFFFF;
+	DTYPE del1Ln = 0;
+	DTYPE del2Ln = 0;
+	DTYPE del1, del2;
+	DTYPE fact;
 	int stopK = 0;
 	for(int k=1; k<2; k++)
 	{
@@ -88,8 +88,8 @@ vector<pair<Array2D<float>, Array2D<float> > > calcPriorDistributions(vector<cv:
 		Log::alert(String()+"crap, mz2Inv >= mz1Inv*mz1Inv");
 
 	// calc distribution moments
-	vector<pair<Array2D<float>, Array2D<float> > > priorDistList(mDeltaList.size());
-	Array2D<float> md(2,1), Sd(2,2,0.0), Lw(2,3);
+	vector<pair<Array2D<DTYPE>, Array2D<DTYPE> > > priorDistList(mDeltaList.size());
+	Array2D<DTYPE> md(2,1), Sd(2,2,0.0), Lw(2,3);
 	for(int i=0; i<mDeltaList.size(); i++)
 	{
 		mDelta = mDeltaList[i];
@@ -112,32 +112,32 @@ vector<pair<Array2D<float>, Array2D<float> > > calcPriorDistributions(vector<cv:
 
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
-		priorDistList[i] = pair<Array2D<float>, Array2D<float> >(md.copy(), Sd.copy());
+		priorDistList[i] = pair<Array2D<DTYPE>, Array2D<DTYPE> >(md.copy(), Sd.copy());
 	}
 
 	return priorDistList;
 }
 
-Array2D<float> calcCorrespondence(vector<pair<Array2D<float>, Array2D<float> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<float> const &Sn, Array2D<float> const &SnInv)
+Array2D<DTYPE> calcCorrespondence(vector<pair<Array2D<DTYPE>, Array2D<DTYPE> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<DTYPE> const &Sn, Array2D<DTYPE> const &SnInv)
 {
 	int N1 = priorDistList.size();
 	int N2 = curPointList.size();
 
 	if(N1 == 0 || N2 == 0)
-		return Array2D<float>();
+		return Array2D<DTYPE>();
 
 Time start;
 	// Precompute some things
-	vector<Array2D<float> > SdInvmdList(N1), SaInvList(N1), SaList(N1);
-	vector<float> fBList(N1), coeffList(N1), xRangeList(N1), yRangeList(N1);
-	Array2D<float> eye2 = createIdentity(2.0f);
-	float det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
-	Array2D<float> md(2,1), Sd(2,2), SdInv(2,2), Sa(2,2), SaInv(2,2);
-	Array2D<float> S(2,2), V(2,2,0.0), D(2,2,0.0);
-	float den;
-	float fB, det_Sd, det_Sa, coeff, xrange, yrange;
-	float theta1, theta2, r1, r2;
-	float eigMid, eigOffset;
+	vector<Array2D<DTYPE> > SdInvmdList(N1), SaInvList(N1), SaList(N1);
+	vector<DTYPE> fBList(N1), coeffList(N1), xRangeList(N1), yRangeList(N1);
+	Array2D<DTYPE> eye2 = createIdentity((DTYPE)2.0);
+	DTYPE det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
+	Array2D<DTYPE> md(2,1), Sd(2,2), SdInv(2,2), Sa(2,2), SaInv(2,2);
+	Array2D<DTYPE> S(2,2), V(2,2,0.0), D(2,2,0.0);
+	DTYPE den;
+	DTYPE fB, det_Sd, det_Sa, coeff, xrange, yrange;
+	DTYPE theta1, theta2, r1, r2;
+	DTYPE eigMid, eigOffset;
 	for(int i=0; i<N1; i++)
 	{
 		md.inject(priorDistList[i].first);
@@ -195,9 +195,9 @@ Time start;
 	}
 
 rs0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-	Array2D<float> C(N1+1, N2+1);
+	Array2D<DTYPE> C(N1+1, N2+1);
 	vector<pair<int, int> > chad;
-	float x, y, fC, f;
+	DTYPE x, y, fC, f;
 	for(int j=0; j<N2; j++)
 	{
 		x = curPointList[j].x;
@@ -212,8 +212,8 @@ rs0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 		}
 	}
 
-	float peakCoeff = 0;
-	Array2D<float> mq(2,1), SnInvmq(2,1), ma(2,1), temp1(2,1);
+	DTYPE peakCoeff = 0;
+	Array2D<DTYPE> mq(2,1), SnInvmq(2,1), ma(2,1), temp1(2,1);
 	for(int idx=0; idx<chad.size(); idx++)
 	{
 		int i=chad[idx].first;
@@ -224,7 +224,7 @@ rs0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 		SnInvmq[0][0] = SnInv[0][0]*mq[0][0]; // assumes Sn diagonal
 		SnInvmq[1][0] = SnInv[1][1]*mq[1][0];
 
-//		float fC = matmultS(transpose(mq),matmult(SnInv,mq));
+//		DTYPE fC = matmultS(transpose(mq),matmult(SnInv,mq));
 		fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
 		
 		md.inject(priorDistList[i].first);
@@ -232,7 +232,7 @@ rs0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 		temp1.inject(SdInvmdList[i]+SnInvmq);
 		ma[0][0] = SaList[i][0][0]*temp1[0][0] + SaList[i][0][1]*temp1[1][0];
 		ma[1][0] = SaList[i][1][0]*temp1[0][0] + SaList[i][1][1]*temp1[1][0];
-//		float f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
+//		DTYPE f = -1.0*matmultS(transpose(ma),matmult(SaInvList[i],ma))+fBList[i]+fC;
 		SaInv.inject(SaInvList[i]);
 		f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
 			+ fBList[i] + fC;
@@ -241,7 +241,7 @@ rs0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 	}
 
 rs1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-	float probNoCorr = 0.1*peakCoeff;
+	DTYPE probNoCorr = 0.1*peakCoeff;
 	for(int j=0; j<N2; j++)
 		C[N1][j] = probNoCorr;
 
@@ -250,7 +250,7 @@ rs1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 	// Scale colums to unit sum
 	for(int j=0; j<N2; j++)
 	{
-		float colSum = 0;
+		DTYPE colSum = 0;
 		for(int i=0; i<N1+1; i++)
 			colSum += C[i][j];
 
@@ -262,7 +262,7 @@ rs1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 	// Now check if any of the rows sum to over 1
 	for(int i=0; i<N1; i++)
 	{
-		float rowSum = 0;
+		DTYPE rowSum = 0;
 		for(int j=0; j<N2; j++)
 			rowSum += C[i][j];
 
@@ -281,7 +281,7 @@ rs1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 	// and, finally, reset the virtual point correspondence so columns sum to 1 again
 	for(int j=0; j<N2; j++)
 	{
-		float colSum = 0;
+		DTYPE colSum = 0;
 		for(int i=0; i<N1; i++)
 			colSum += C[i][j];
 		C[N1][j] = 1-colSum;
@@ -291,50 +291,50 @@ rs2 += start.getElapsedTimeNS()/1.0e9; start.setTime();
 	return C;
 }
 
-void computeMAPEstimate(Array2D<float> &velMAP /*out*/, Array2D<float> &covVel /*out*/, float &heightMAP /*out*/,
+void computeMAPEstimate(Array2D<DTYPE> &velMAP /*out*/, Array2D<DTYPE> &covVel /*out*/, DTYPE &heightMAP /*out*/,
 						vector<cv::Point2f> const &prevPoints,
 						vector<cv::Point2f> const &curPoints, 
-						Array2D<float> const &C, // correspondence matrix
-						Array2D<float> const &mv, // velocity mean
-						Array2D<float> const &Sv, // velocity covariance
-						float const &mz, // height mean
-						float const &vz, // height variance
-						Array2D<float> const &Sn, // feature measurement covariance
-						float const &focalLength, float const &dt, Array2D<float> const &omega)
+						Array2D<DTYPE> const &C, // correspondence matrix
+						Array2D<DTYPE> const &mv, // velocity mean
+						Array2D<DTYPE> const &Sv, // velocity covariance
+						DTYPE const &mz, // height mean
+						DTYPE const &vz, // height variance
+						Array2D<DTYPE> const &Sn, // feature measurement covariance
+						DTYPE const &focalLength, DTYPE const &dt, Array2D<DTYPE> const &omega)
 {
 	computeMAPEstimate(velMAP, covVel, heightMAP, prevPoints, curPoints, C, mv, Sv, mz, vz, Sn, focalLength, dt, omega, -1);
 }
 
-void computeMAPEstimate(Array2D<float> &velMAP /*out*/, Array2D<float> &covVel /*out*/, float &heightMAP /*out*/,
+void computeMAPEstimate(Array2D<DTYPE> &velMAP /*out*/, Array2D<DTYPE> &covVel /*out*/, DTYPE &heightMAP /*out*/,
 						vector<cv::Point2f> const &prevPoints,
 						vector<cv::Point2f> const &curPoints, 
-						Array2D<float> const &C, // correspondence matrix
-						Array2D<float> const &mv, // velocity mean
-						Array2D<float> const &Sv, // velocity covariance
-						float const &mz, // height mean
-						float const &vz, // height variance
-						Array2D<float> const &Sn, // feature measurement covariance
-						float const &focalLength, float const &dt, Array2D<float> const &omega,
+						Array2D<DTYPE> const &C, // correspondence matrix
+						Array2D<DTYPE> const &mv, // velocity mean
+						Array2D<DTYPE> const &Sv, // velocity covariance
+						DTYPE const &mz, // height mean
+						DTYPE const &vz, // height variance
+						Array2D<DTYPE> const &Sn, // feature measurement covariance
+						DTYPE const &focalLength, DTYPE const &dt, Array2D<DTYPE> const &omega,
 						int maxPointCnt)
 {
 Time start;
 	int N1 = prevPoints.size();
 	int N2 = curPoints.size();
-	float f = focalLength;
-	float fInv = 1.0/focalLength;
+	DTYPE f = focalLength;
+	DTYPE fInv = 1.0/focalLength;
 
-	JAMA::Cholesky<float> chol_Sv(Sv), chol_Sn(Sn);
-	Array2D<float> SvInv = chol_Sv.solve(createIdentity(3.0f));
-	Array2D<float> SnInv = chol_Sn.solve(createIdentity(2.0f));
+	JAMA::Cholesky<DTYPE> chol_Sv(Sv), chol_Sn(Sn);
+	Array2D<DTYPE> SvInv = chol_Sv.solve(createIdentity((DTYPE)3.0));
+	Array2D<DTYPE> SnInv = chol_Sn.solve(createIdentity((DTYPE)2.0));
 
-	float sz = sqrt(vz);
+	DTYPE sz = sqrt(vz);
 
 	///////////////////////////////////////////////////////////////
 	// Build up constant matrices
 	///////////////////////////////////////////////////////////////
-	vector<Array2D<float> > LvList(N1), q1HatList(N1);
-	Array2D<float> Lv(2,3), Lw(2,3), q1(2,1);
-	float x, y;
+	vector<Array2D<DTYPE> > LvList(N1), q1HatList(N1);
+	Array2D<DTYPE> Lv(2,3), Lw(2,3), q1(2,1);
+	DTYPE x, y;
 	for(int i=0; i<N1; i++)
 	{
 		x = prevPoints[i].x;
@@ -353,8 +353,8 @@ Time start;
 	}
 
 //rs0 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-	vector<Array2D<float> > AjList(N2);
-	Array2D<float> Aj(2,3);
+	vector<Array2D<DTYPE> > AjList(N2);
+	Array2D<DTYPE> Aj(2,3);
 	for(int j=0; j<N2; j++)
 	{
 		for(int i=0; i<Aj.dim1(); i++)
@@ -377,11 +377,11 @@ Time start;
 	}
 
 //rs1 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-	float s0 = 0;
-	Array2D<float> s1_T(1,3,0.0), S2(3,3,0.0);
-	Array2D<float> q2(2,1), ds1_T(1,3), dS2(3,3);
-	Array2D<float> temp1(2,1), temp2(2,3);
-	float ds0;
+	DTYPE s0 = 0;
+	Array2D<DTYPE> s1_T(1,3,0.0), S2(3,3,0.0);
+	Array2D<DTYPE> q2(2,1), ds1_T(1,3), dS2(3,3);
+	Array2D<DTYPE> temp1(2,1), temp2(2,3);
+	DTYPE ds0;
 	for(int j=0; j<N2; j++)
 	{
 		if( (1-C[N1][j]) > 1e-2)
@@ -408,12 +408,12 @@ Time start;
 			temp2 = (1.0-C[N1][j])*temp2;
 			ds0 = (1.0-C[N1][j])*(SnInv[0][0]*temp1[0][0]*temp1[0][0] + SnInv[1][1]*temp1[1][0]*temp1[1][0]); // assumes Sn diagnoal
 
-//			Array2D<float>	ds1_T = matmult(transpose(temp1), temp2);
+//			Array2D<DTYPE>	ds1_T = matmult(transpose(temp1), temp2);
 			ds1_T[0][0] = temp1[0][0]*temp2[0][0];
 			ds1_T[0][1] = temp1[1][0]*temp2[1][1];
 			ds1_T[0][2] = temp1[0][0]*temp2[0][2]+temp1[1][0]*temp2[1][2];
 			
-//			Array2D<float>	dS2   = matmult(transpose(Aj), temp2);
+//			Array2D<DTYPE>	dS2   = matmult(transpose(Aj), temp2);
 			dS2[0][0] = Aj[0][0]*temp2[0][0]; 	dS2[0][1] = 0; 						dS2[0][2] = Aj[0][0]*temp2[0][2];
 			dS2[1][0] = 0; 						dS2[1][1] = Aj[1][1]*temp2[1][1];	dS2[1][2] = Aj[1][1]*temp2[1][2];
 			dS2[2][0] = Aj[0][2]*temp2[0][0];	dS2[2][1] = Aj[1][2]*temp2[1][1];	dS2[2][2] = Aj[0][2]*temp2[0][2]+Aj[1][2]*temp2[1][2]; 
@@ -425,10 +425,10 @@ Time start;
 	}
 
 //rs2 += start.getElapsedTimeNS()/1.0e9; start.setTime();
-	Array2D<float> s1 = transpose(s1_T);
+	Array2D<DTYPE> s1 = transpose(s1_T);
 
 	// For easy evaluation of the objective function
-	auto scoreFunc = [&](Array2D<float> const &vel, float const &z){ return -0.5*(
+	auto scoreFunc = [&](Array2D<DTYPE> const &vel, DTYPE const &z){ return -0.5*(
 							s0
 							-2.0/z*matmultS(s1_T, vel)
 							+1.0/z/z*matmultS(transpose(vel), matmult(S2, vel))
@@ -437,26 +437,26 @@ Time start;
 							);};
 
 	// unique solution for optimal vel, given z
-	auto solveVel =  [&](float const &z){
+	auto solveVel =  [&](DTYPE const &z){
 		if( maxPointCnt > 0)
 		{
-			s1 = ((float)min(maxPointCnt,N1))/N1*s1;
-			S2 = ((float)min(maxPointCnt,N1))/N1*S2;
+			s1 = ((DTYPE)min(maxPointCnt,N1))/N1*s1;
+			S2 = ((DTYPE)min(maxPointCnt,N1))/N1*S2;
 		}
-		Array2D<float> temp1 = 1.0/z*s1+matmult(SvInv,mv);
-		Array2D<float> temp2 = 1.0/z/z*S2+SvInv;
-		JAMA::Cholesky<float> chol_temp2(temp2);
+		Array2D<DTYPE> temp1 = 1.0/z*s1+matmult(SvInv,mv);
+		Array2D<DTYPE> temp2 = 1.0/z/z*S2+SvInv;
+		JAMA::Cholesky<DTYPE> chol_temp2(temp2);
 		return chol_temp2.solve(temp1);
 	};
 
 	///////////////////////////////////////////////////////////////
 	// Find a good starting point
 	///////////////////////////////////////////////////////////////
-	float scoreBest = -0xFFFFFF;
-	Array2D<float> velBest(3,1), velTemp(3,1);
-	float zBest, score;
-	float interval = 6.0*sz/10.0;
-	for(float zTemp=mz-3*sz; zTemp < mz+3.1*sz; zTemp += interval )
+	DTYPE scoreBest = -0xFFFFFF;
+	Array2D<DTYPE> velBest(3,1), velTemp(3,1);
+	DTYPE zBest, score;
+	DTYPE interval = 6.0*sz/10.0;
+	for(DTYPE zTemp=mz-3*sz; zTemp < mz+3.1*sz; zTemp += interval )
 	{
 		velTemp.inject(solveVel(zTemp));
 		score = scoreFunc(velTemp, zTemp);
@@ -472,15 +472,15 @@ Time start;
 	///////////////////////////////////////////////////////////////
 	// Line search to find the optimum
 	///////////////////////////////////////////////////////////////
-	float zL= zBest-interval;
-	float zR= zBest+interval;
-	Array2D<float> velL = solveVel(zL);
-	Array2D<float> velR = solveVel(zR);
-	Array2D<float> vel1, vel2;
-	float z1, z2;
-	float score1, score2;
-	float offset;
-	float range = zR-zL;
+	DTYPE zL= zBest-interval;
+	DTYPE zR= zBest+interval;
+	Array2D<DTYPE> velL = solveVel(zL);
+	Array2D<DTYPE> velR = solveVel(zR);
+	Array2D<DTYPE> vel1, vel2;
+	DTYPE z1, z2;
+	DTYPE score1, score2;
+	DTYPE offset;
+	DTYPE range = zR-zL;
 	while(range > 1e-3)
 	{
 		offset = 0.618*range;
@@ -508,9 +508,9 @@ Time start;
 	heightMAP = 0.5*(zL+zR);
 
 	// Compute distribution
-//	Array2D<float> covTemp = 1.0/heightMAP/heightMAP*min(1,N1)/N1*S2+SvInv;
-//	JAMA::Cholesky<float> chol_covTemp(covTemp);
-//	Array2D<float> covTempInv = chol_covTemp.solve(createIdentity(3.0f));
+//	Array2D<DTYPE> covTemp = 1.0/heightMAP/heightMAP*min(1,N1)/N1*S2+SvInv;
+//	JAMA::Cholesky<DTYPE> chol_covTemp(covTemp);
+//	Array2D<DTYPE> covTempInv = chol_covTemp.solve(createIdentity((DTYPE)3.0));
 //	covVel = matmult(transpose(covTempInv), matmult(1.0/heightMAP/heightMAP*S2, covTempInv));
 
 //printArray("	mv:\t",mv);
