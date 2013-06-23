@@ -1,8 +1,8 @@
 disp('start chadding')
 
 %%
-imgDir = '../video_Jun5_3';
-% imgDir = '../video_Jun10_1';
+% imgDir = '../video_Jun5_3';
+imgDir = '../video_Jun10_1';
 viconFile = [imgDir '/pcData_fullState.txt'];
 viconData = importdata(viconFile,'\t',0);
 
@@ -113,35 +113,39 @@ fprintf('MAP\t%1.4f & %1.4f & %1.4f & %1.4f & \n', rmsMapKFVel(1), rmsMapKFVel(2
 
 
 %%
-figure(1); clf
+% figure(1); clf
 % set(gcf,'Units','Inches');
 % curPos = get(gcf,'Position'); figSize = [5 5];
 % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-stateLabels = {'x [m]', 'y [m]', 'z [m]', 'x vel [m/s]', 'y vel [m/s]', 'z vel [m/s]'};
-for st=4:6
-	subplot(3,1,st-3)
-	plot(viconStateTime, viconState(st+6,:)); hold all
-% 	plot(orbVelTime, orbVel(st,:),'.'); hold all
-% 	plot(mapVelTime, mapVel(st,:),'.'); hold all
-	plot(orbKfStateTime, orbKfState(st,:),'.'); hold all
-	plot(mapKfStateTime, mapKfState(st,:),'.'); hold all
-% 	plot(lsVelTime, lsVel(st,:),'.'); hold all
-	hold off
-	ax = axis;
-% 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
-	axis([orbVelTime(1) orbVelTime(end) -1 1]);
-	xlabel('Time [s]');
-	ylabel(stateLabels{st})
-end
-% legend('Vicon','ORB','MAP','MAP KF', 'LS');
-
+% stateLabels = {'x [m]', 'y [m]', 'z [m]', 'x vel [m/s]', 'y vel [m/s]', 'z vel [m/s]'};
+% for st=4:6
+% 	subplot(3,1,st-3)
+% 	plot(viconStateTime, viconState(st+6,:)); hold all
+% % 	plot(orbVelTime, orbVel(st,:),'.'); hold all
+% % 	plot(mapVelTime, mapVel(st,:),'.'); hold all
+% 	plot(orbKfStateTime, orbKfState(st,:),'.'); hold all
+% 	plot(mapKfStateTime, mapKfState(st,:),'.'); hold all
+% % 	plot(lsVelTime, lsVel(st,:),'.'); hold all
+% 	hold off
+% 	ax = axis;
+% % 	axis([orbVelTime(1) orbVelTime(end) ax(3) ax(4)]);
+% 	axis([orbVelTime(1) orbVelTime(end) -1 1]);
+% 	xlabel('Time [s]');
+% 	ylabel(stateLabels{st})
+% end
+% % legend('Vicon','ORB','MAP','MAP KF', 'LS');
+% 
 % figure(2); clf
+% set(gcf,'Units','Inches');
+% curPos = get(gcf,'Position'); figSize = [5 5];
+% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 % plot(viconStateTime, -viconState(9,:)); hold all
 % % plot(orbHeightTime, orbHeight, '.'); hold all
 % % plot(mapHeightTime, mapHeight, '.'); hold all
 % plot(orbKfStateTime, -orbKfState(3,:), '.'); hold all
 % plot(mapKfStateTime, -mapKfState(3,:), '.'); hold all
 % hold off
+% % axis([orbVelTime(1) orbVelTime(end) 0 1.1]);
 % xlabel('Time [s]');
 % ylabel('Height [m]');
 % % legend('Vicon','ORB','MAP');
@@ -157,100 +161,3 @@ end
 % % 	ylabel(stateLabels{st});
 % % end
 
-%%
-% clear
-% numPoints = [3.5 7.2 18 45 80 108 162 209 271];
-% 
-% rmsErrKF(3,:) = 129/10000*ones(size(numPoints));
-% rmsErrKF(4,:) = 843/10000*ones(size(numPoints));
-% rmsErrKF(5,:) = 927/10000*ones(size(numPoints));
-% rmsErrKF(6,:) = 1107/10000*ones(size(numPoints));
-% 
-% rmsErrORB(3,:) = [127 126 120 152 120 121 121 121 121]/1e4;
-% rmsErrORB(4,:) = [854 844 1047 753 720 724 718 715 710]/1e4;
-% rmsErrORB(5,:) = [928 887 867 1188 852 884 841 832 824]/1e4;
-% rmsErrORB(6,:) = [1077 1059 1005 2045 1008 1064 1011 1019 1015]/1e4;
-% 
-% rmsErrNEW3s(3,:) = [123 121 118 116 115 114 114 114 115]/1e4;
-% rmsErrNEW3s(4,:) = [703 672 666 684 680 674 659 647 647]/1e4;
-% rmsErrNEW3s(5,:) = [792 754 747 741 740 736 730 735 734]/1e4;
-% rmsErrNEW3s(6,:) = [1018 999 958 925 904 884 885 897 903]/1e4;
-% 
-% rmsErrNEW2s(3,:) = [123 121 119 116 115 114 114 115 115]/1e4;
-% rmsErrNEW2s(4,:) = [705 677 670 682 684 679 667 657 654]/1e4;
-% rmsErrNEW2s(5,:) = [808 768 764 746 747 749 743 743 744]/1e4;
-% rmsErrNEW2s(6,:) = [1020 1005 970 930 911 892 893 901 908]/1e4;
-% 
-% rmsErrNEW1s(3,:) = [123 121 120 119 118 118 118 117 118]/1e4;
-% rmsErrNEW1s(4,:) = [720 696 665 675 665 669 670 666 668]/1e4;
-% rmsErrNEW1s(5,:) = [831 799 788 784 774 775 778 779 786]/1e4;
-% rmsErrNEW1s(6,:) = [1023 1012 990 968 950 942 941 940 944]/1e4;
-% 
-% calcTimeORB =   [2.0 2.2 2.5 2.9 3.4 3.8 5.7 5.7 7.2];
-% calcTimeNEW3s = [1.3 1.4 1.7 2.2 2.7 3.6 5.0 6.8 9.2];
-% calcTimeNEW2s = [1.3 1.4 1.7 2.2 2.7 3.6 4.9 6.6 8.8];
-% calcTimeNEW1s = [1.3 1.4 1.6 2.1 2.6 3.4 4.8 6.2 8.5];
-% 
-% stateLabels = {'x [m]', 'y [m]', 'z [m]', 'x vel [m/s]', 'y vel [m/s]', 'z vel [m/s]'};
-% for st=3:6
-% 	figure(10+st); clf
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [5 5];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 
-% 	plot(numPoints, rmsErrKF(st,:)); hold all
-% 	plot(numPoints, rmsErrORB(st,:), 'Color',[0 0.5 0]); hold all
-% 	plot(numPoints, rmsErrNEW3s(st,:), 'r'); hold all
-% 	if st == 3
-% 		axis([0 numPoints(end) 0.00 0.015]);
-% 	elseif st == 4 || st == 5
-% 		axis([0 numPoints(end) 0.0 0.1]);
-% 	else
-% 		axis([0 numPoints(end) 0.0 0.12]);
-% 	end
-% 	hold off
-% 	xlabel('# feature points');
-% 	ylabel(['rms err ' stateLabels{st}]);
-% 	legend('KF only','ORB Hard C','Soft C','location','best')
-% end
-% 
-% figure(20); clf
-% set(gcf,'Units','Inches');
-% curPos = get(gcf,'Position'); figSize = [5 5];
-% set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% plot(numPoints, calcTimeORB, 'Color', [0 0.5 0]); hold all
-% plot(numPoints, calcTimeNEW3s, 'r'); hold all
-% plot(numPoints, calcTimeNEW2s, 'm'); hold all
-% plot(numPoints, calcTimeNEW1s, 'k'); hold all
-% hold off
-% axis([0 numPoints(end) 0 10]);
-% xlabel('# feature points');
-% ylabel('Calc Time [ms]');
-% legend('ORB Hard C', 'Soft C 3\sigma', 'Soft C 2\sigma', 'Soft C 1\sigma','location','best');
-% 
-% for st=3:6
-% 	figure(30+st); clf
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [5 5];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 
-% 	plot(numPoints, rmsErrNEW3s(st,:), 'r'); hold all
-% 	plot(numPoints, rmsErrNEW2s(st,:), 'm'); hold all
-% 	plot(numPoints, rmsErrNEW1s(st,:), 'k'); hold all
-% 	hold off
-% 	if st == 3
-% 		axis([0 numPoints(end) 0.00 0.015]);
-% 	elseif st == 4 || st == 5
-% 		axis([0 numPoints(end) 0.0 0.1]);
-% 	else
-% 		axis([0 numPoints(end) 0.0 0.12]);
-% 	end
-% 	hold off
-% 	xlabel('# feature points');
-% 	ylabel(['rms err ' stateLabels{st}]);
-% 	legend('Soft C 3\sigma','Soft C 2\sigma', 'Soft C 1\sigma','location','best')
-% end
-
-
-%%
-disp('chad acomplished');
