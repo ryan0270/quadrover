@@ -66,7 +66,8 @@ void Rover::initialize()
 	mVisionProcessor.setThreadPriority(sched,maxPriority-3);
 	mCommManager.setThreadPriority(sched,minPriority);
 	mQuadLogger.setThreadPriority(sched,minPriority);
-	mVideoMaker.setThreadPriority(sched,minPriority);
+//	mVideoMaker.setThreadPriority(sched,minPriority);
+	mVideoMaker.setThreadPriority(sched,maxPriority);
 	this->setThreadPriority(sched,minPriority);
 
 	mCommManager.initialize();
@@ -403,7 +404,10 @@ void Rover::transmitDataUDP()
 	if(mImageMatchData != NULL)
 	{
 		mImageMatchData->lock();
-		pNumFeatures.dataInt32.push_back(mImageMatchData->featurePoints[0].size());
+		if(mImageMatchData->featurePoints.size() > 0)
+			pNumFeatures.dataInt32.push_back(mImageMatchData->featurePoints[0].size());
+		else
+			pNumFeatures.dataInt32.push_back(0);
 		mImageMatchData->unlock();
 	}
 	else
@@ -456,6 +460,8 @@ void Rover::transmitDataUDP()
 
 void Rover::transmitImage()
 {
+mImageIsSending = false;
+return;
 	if(!mCommManager.pcIsConnected())
 	{
 		mImageIsSending = false;
