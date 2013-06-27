@@ -184,7 +184,8 @@ void VisionProcessor::run()
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
-				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t"+points[0].size();
+				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
+				str2 = str2+(points.size() > 0 ? points[0].size() : 0);
 				mMutex_logger.lock();
 				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
@@ -425,6 +426,8 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 
 void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img)
 {
+	if(points.size() == 0)
+		return;
 	cv::Point2f p1, p2;
 	for(int i=0; i<points[0].size(); i++)
 	{

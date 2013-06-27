@@ -54,8 +54,8 @@
          <zVel>0.010000</zVel>
       </DynVar>
       <AttBias>
-         <roll>0.004000</roll>
-         <pitch>0.018000</pitch>
+         <roll>0.000000</roll>
+         <pitch>0.000000</pitch>
          <yaw>0.000000</yaw>
       </AttBias>
       <AttBiasAdaptRate>
@@ -83,7 +83,7 @@
    </Attitude>
 </Observer>
 <Hardware>
-   <MotorForceGain>0.002000</MotorForceGain>
+   <MotorForceGain>0.002350</MotorForceGain>
    <MotorTorqueGain>0.000500</MotorTorqueGain>
    <MotorArmLength>0.200000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
