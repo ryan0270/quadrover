@@ -29,5 +29,5 @@ data.csv
 Leash/runData/*
 
 Rover/video_*/*
-VisionTesting/video_*/*
-
+VisionTesting/video*/*
+VisionTesting/backup*/*
