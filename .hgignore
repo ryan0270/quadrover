@@ -28,7 +28,6 @@ data.csv
 
 Leash/runData/*
 
-Rover/video/*
-
-VisionTesting/video/*
+Rover/video_*/*
+VisionTesting/video_*/*
 

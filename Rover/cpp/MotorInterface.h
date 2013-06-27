@@ -8,6 +8,12 @@
 
 namespace ICSL {
 namespace Quadrotor{
+
+enum{ 
+	MIN_MOTOR_CMD = 0, 
+	MAX_MOTOR_CMD = 1<<11
+};
+
 class MotorInterface : public toadlet::egg::Thread
 {
 	public:

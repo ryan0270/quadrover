@@ -111,7 +111,7 @@ namespace Quadrotor{
 		mMutex_socket.lock(); mMutex_data.lock();
 
 		for(int i=0; i<cmds.size(); i++)
-			mMotorCmds[i] = cmds[i];
+			mMotorCmds[i] = min((uint16)MAX_MOTOR_CMD, max((uint16)MIN_MOTOR_CMD, cmds[i]));
 		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
@@ -133,7 +133,8 @@ namespace Quadrotor{
 		mMutex_socket.lock(); mMutex_data.lock();
 
 		for(int i=0; i<cmds.size(); i++)
-			mMotorCmds[i] = cmds[i];
+			mMotorCmds[i] = min((uint16)MAX_MOTOR_CMD, max((uint16)MIN_MOTOR_CMD, cmds[i]));
+//			mMotorCmds[i] = cmds[i];
 		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16));
 
 		mMutex_data.unlock(); mMutex_socket.unlock();
