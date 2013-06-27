@@ -71,7 +71,7 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 	void onTranslationControllerAccelCmdUpdated(TNT::Array2D<double> const &accelCmd);
 
 	// for Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
+	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
 
 	protected:
 	bool mRunning, mDone;

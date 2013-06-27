@@ -113,6 +113,7 @@ void VisionProcessor::run()
 
 	vector<BlobDetector::Blob> circles;
 	TNT::Array2D<double> attPrev(3,1,0.0), attCur(3,1,0.0);
+	vector<vector<cv::Point2f> > points;
 	while(mRunning)
 	{
 		if(mNewImageReady_featureMatch && mImageDataCur == NULL)
@@ -140,7 +141,8 @@ void VisionProcessor::run()
 			Time procStart;
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
 
-			vector<vector<cv::Point2f> > points = getMatchingPoints(mCurImageGray);
+			points.clear();
+			points = getMatchingPoints(mCurImageGray);
 //			if(points[0].size() > 0)
 //			{
 //				mFeatureMatchBuffer.push_back(points);
@@ -291,11 +293,22 @@ vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &i
 	int result = mFeatureMatcher.Track(img, false);
 	vector<vector<cv::Point2f> > points(2);
 
+	Matcher::p_match match;
+//	for(int i=0; i<mFeatureMatcher.vMatches.size(); i++)
+//	{
+//		match = mFeatureMatcher.vMatches[i];
+//		points[0].push_back(cv::Point2f(match.u1p, match.v1p));
+//		points[1].push_back(cv::Point2f(match.u1c, match.v1c));
+//	}
+	points[0].resize(mFeatureMatcher.vMatches.size());
+	points[1].resize(mFeatureMatcher.vMatches.size());
 	for(int i=0; i<mFeatureMatcher.vMatches.size(); i++)
 	{
-		Matcher::p_match match = mFeatureMatcher.vMatches[i];
-		points[0].push_back(cv::Point2f(match.u1p, match.v1p));
-		points[1].push_back(cv::Point2f(match.u1c, match.v1c));
+		match = mFeatureMatcher.vMatches[i];
+		points[0][i].x = match.u1p;
+		points[0][i].y = match.v1p;
+		points[1][i].x = match.u1c;
+		points[1][i].y = match.v1c;
 	}
 	mMutex_matcher.unlock();
 
@@ -393,7 +406,7 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 		vector<double> dists, distsCorrected;
 		for (size_t pointIdx = 0; pointIdx < b.contour.size(); pointIdx++)
 		{
-			cv::Point2f pt = b.contour[pointIdx];
+			pt = b.contour[pointIdx];
 			dists.push_back(norm(b.location - pt));
 
 			pt = b.contourCorrected[pointIdx];
@@ -412,10 +425,11 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 
 void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img)
 {
+	cv::Point2f p1, p2;
 	for(int i=0; i<points[0].size(); i++)
 	{
-		cv::Point2f p1 = points[0][i];
-		cv::Point2f p2 = points[1][i];
+		p1 = points[0][i];
+		p2 = points[1][i];
  		circle(img,p1,3,cv::Scalar(0,255,0),-1);
  		circle(img,p2,3,cv::Scalar(255,0,0),-1);
  		line(img,p1,p2,cv::Scalar(255,255,255),1);
@@ -471,7 +485,7 @@ void VisionProcessor::setVisionParams(Collection<int> const &p)
 {
 }
 
-void VisionProcessor::onNewSensorUpdate(shared_ptr<Data> const &data)
+void VisionProcessor::onNewSensorUpdate(shared_ptr<IData> const &data)
 {
 	if(data->type == DATA_TYPE_IMAGE)
 	{

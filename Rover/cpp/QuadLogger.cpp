@@ -227,10 +227,11 @@ void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > cons
 				mxmlNewInteger(numPtsNode, (*matchData)[0].size());
 				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
 				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
+				cv::Point2f pt0, pt1;
 				for(int i=0; i<(*matchData)[0].size(); i++)
 				{
-					cv::Point2f pt0 = (*matchData)[0][i];
-					cv::Point2f pt1 = (*matchData)[1][i];
+					pt0 = (*matchData)[0][i];
+					pt1 = (*matchData)[1][i];
 	
 					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
 					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");

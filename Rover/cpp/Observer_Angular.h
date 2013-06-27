@@ -10,7 +10,7 @@ class Observer_AngularListener
 	public:
 	virtual ~Observer_AngularListener(){};
 
-	virtual void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)=0;
+	virtual void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)=0;
 };
 }}
 #define ICSL_OBSERVER_ANGULAR_LISTENER
@@ -47,8 +47,8 @@ class Observer_Angular : public toadlet::egg::Thread,
 		Observer_Angular();
 		virtual ~Observer_Angular();
 
-		void doInnovationUpdate(double dt, shared_ptr<DataVector> const &accelData, shared_ptr<DataVector> const &magData);
-		void doGyroUpdate(double dt, shared_ptr<DataVector> const &gyroData);
+		void doInnovationUpdate(double dt, shared_ptr<DataVector<double> > const &accelData, shared_ptr<DataVector<double> > const &magData);
+		void doGyroUpdate(double dt, shared_ptr<DataVector<double> > const &gyroData);
 
 		/*
 		 * @return current attitude in [roll pitch yaw]^T column vector format
@@ -90,7 +90,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
 		
 		// for SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<Data> const &data);
+		void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	protected:
 		bool mRunning, mDone;
@@ -101,7 +101,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		TNT::Array2D<double> mGyroBias, mInnovation;
 		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
 //		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
-		shared_ptr<DataVector>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
+		shared_ptr<DataVector<double> >  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
 		TNT::Array2D<double> mAccelDirNom, mMagDirNom;
 		Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
 		Collection<double> mExtraDirsWeight;

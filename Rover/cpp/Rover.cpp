@@ -147,13 +147,13 @@ void Rover::shutdown()
 	mMutex_cntl.lock();
 	mAttitudeThrustController.enableMotors(false);
 	mMutex_cntl.unlock();
-//	this->join(); 
-	toadlet::egg::System sys;
-	while(!mRunnerIsDone)
-	{
-		Log::alert("Main waiting");
-		sys.msleep(10);
-	}
+	this->join(); 
+//	toadlet::egg::System sys;
+//	while(!mRunnerIsDone)
+//	{
+//		Log::alert("Main waiting");
+//		sys.msleep(10);
+//	}
 
 	mAttitudeThrustController.shutdown();
 	mTranslationController.shutdown();
@@ -488,7 +488,7 @@ void Rover::transmitImage()
 	mImageIsSending = false;
 }
 
-void Rover::onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)
+void Rover::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
 {
 	mMutex_observer.lock();
 	mCurAtt.inject(attData->data);
@@ -564,16 +564,16 @@ void Rover::onNewCommLogClear()
 	Log::alert(String()+"Log cleared");
 }
 
-void Rover::onNewSensorUpdate(shared_ptr<Data> const &data)
+void Rover::onNewSensorUpdate(shared_ptr<IData> const &data)
 {
 	switch(data->type)
 	{
 		case DATA_TYPE_PRESSURE:
-			mPressure = data->data;
+			mPressure = static_pointer_cast<Data<double> >(data)->data;
 			break;
 		case DATA_TYPE_PHONE_TEMP:
 //			mPhoneTemp = ((DataPhoneTemp*)data)->tmuTemp;
-			mPhoneTemp = static_pointer_cast<DataPhoneTemp>(data)->tmuTemp;
+			mPhoneTemp = static_pointer_cast<DataPhoneTemp<double> >(data)->tmuTemp;
 			break;
 	}
 }
@@ -679,11 +679,11 @@ Array2D<int> Rover::getCpuUsage(int numCpuCores)
 	// Note that since mobile phones tend to turn cores off for power, the number of 
 	// cpu lines found may not actually match the number of cores on the device
 	Array2D<int> data(numCpuCores+1, 7,0.0);
+	String tok, remainder;
+	int index, tokEnd;
 	for(int i=0; i<lines.size(); i++)
 	{
-		String tok;
-		int index;
-		int tokEnd= lines[i].find(' ');
+		tokEnd= lines[i].find(' ');
 		tok = lines[i].substr(0,tokEnd); // tok won't include the space
 		if(tok.length() < 3)
 		{
@@ -694,7 +694,7 @@ Array2D<int> Rover::getCpuUsage(int numCpuCores)
 			index = 0;
 		else
 			index = tok.substr(3,tok.length()-3).toInt32()+1;
-		String remainder = lines[i].substr(tokEnd+1,lines[i].length()-tokEnd);
+		remainder = lines[i].substr(tokEnd+1,lines[i].length()-tokEnd);
 		while(remainder.c_str()[0] == ' ')
 			remainder = remainder.substr(1,remainder.length()-1);
 

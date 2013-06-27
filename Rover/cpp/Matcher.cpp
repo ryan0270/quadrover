@@ -186,12 +186,16 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 	{
 		int left = max(0,(int)(i*sz.width/nGrid+0.5-borderWidth));
 		int width = min(sz.width-left, (int)(sz.width/nGrid+0.5+2*borderWidth));
+		int top, height;
+		cv::Point2f offset;
 		for(int j=0; j<nGrid; j++)
 		{
-			int top = max(0,(int)(j*sz.height/nGrid+0.5-borderWidth));
-			int height = min(sz.height-top, (int)(sz.height/nGrid+0.5+2*borderWidth));
+			top = max(0,(int)(j*sz.height/nGrid+0.5-borderWidth));
+			height = min(sz.height-top, (int)(sz.height/nGrid+0.5+2*borderWidth));
 			cv::Rect mask(left, top, width, height);
-			cv::Point2f offset(left, top);
+//			cv::Point2f offset(left, top);
+			offset.x = left;
+			offset.y = top;
 			//			frames[i*nGrid+j] = frame(mask).clone();
 			frames[i*nGrid+j] = frame(mask);
 			maskOffset[i*nGrid+j] = offset;
@@ -303,16 +307,18 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 			else
 				stop = vKeypointRowLUT[nBottom];
 
-			//! TODO: Can we make this multi-threaded?
+			int dx, dy;
+			int32_t match_radius;
+			float r;
 			for(int j=start; j<stop; j++)
 			{
 				if (vPrevFeatures[j].keypoint.pt.x < nLeft || vPrevFeatures[j].keypoint.pt.x > nRight)
 					continue;
 
-				int dx = currentKpt.pt.x - vPrevFeatures[j].keypoint.pt.x;
-				int dy = currentKpt.pt.y - vPrevFeatures[j].keypoint.pt.y;
+				dx = currentKpt.pt.x - vPrevFeatures[j].keypoint.pt.x;
+				dy = currentKpt.pt.y - vPrevFeatures[j].keypoint.pt.y;
 
-				int32_t match_radius;
+				match_radius;
 
 				if(params.half_resolution)
 					match_radius = params.match_radius/2;
@@ -324,8 +330,6 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 				{
 					continue;
 				}
-
-				float r = 10000.0;
 
 				if (bUseHammingDistance)
 					r = cv::normHamming(vPrevFeatures[j].descriptor.data,vCurrentFeatures[i].descriptor.data,extractor->descriptorSize());
@@ -397,15 +401,16 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 				stop = vKeypointRowLUT[nBottom];
 
 			/// Current;
+			int dx, dy;
+			int32_t match_radius;
+			float r;
 			for(int j=start; j<stop; j++)
 			{
 				if (vCurrentFeatures[j].keypoint.pt.x < nLeft || vCurrentFeatures[j].keypoint.pt.x > nRight)
 					continue;
 
-				int dx = currentKpt.pt.x - vCurrentFeatures[j].keypoint.pt.x;
-				int dy = currentKpt.pt.y - vCurrentFeatures[j].keypoint.pt.y;
-
-				int32_t match_radius;
+				dx = currentKpt.pt.x - vCurrentFeatures[j].keypoint.pt.x;
+				dy = currentKpt.pt.y - vCurrentFeatures[j].keypoint.pt.y;
 
 				if(params.half_resolution)
 					match_radius = params.match_radius/2;
@@ -416,8 +421,6 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 				{
 					continue;
 				}
-
-				float r = 10000.0;
 
 				if (bUseHammingDistance)
 					r = cv::normHamming(vCurrentFeatures[j].descriptor.data,vPrevFeatures[i].descriptor.data,extractor->descriptorSize());
@@ -442,6 +445,7 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 	vMatches.clear();
 	std::set<int> featurePool;
 
+	float factor;
 	for(int i=0; i<vCurrentFeatures.size(); i++)
 	{
 		if ((float) (vCurrentFeatures[i].scoreFirst / vCurrentFeatures[i].scoreSecond) < params.ratio_threshold
@@ -452,8 +456,6 @@ int Matcher::Track(const cv::Mat &inputImg, bool replace)
 				if(vCurrentFeatures[i].scoreFirst > params.minHammingDist)
 					continue;
 			}
-
-			float factor;
 
 			if(params.half_resolution)
 				factor = 2.0;

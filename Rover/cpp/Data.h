@@ -49,15 +49,53 @@ enum DataType
 	DATA_TYPE_ANGULAR_VEL,
 };
 
+template<class T> class Data;
 template<class T> class DataVector; 
-class Data
+class IData
+{
+	public:
+	virtual void lock(){mMutex.lock();}
+	virtual void unlock(){mMutex.unlock();}
+	Time timestamp;
+	DataType type;
+
+	template <class T1, class T2>
+	static T1 interpolate(Time const &t, Data<T1> const &d1, Data<T2> const &d2);
+	template <class T>
+	static T interpolate(Time const &t, std::list<shared_ptr<Data<T> > > const &d);
+	template <class T1, class T2>
+	static TNT::Array2D<T1> interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2);
+	template <class T>
+	static TNT::Array2D<T> interpolate(Time const &t, std::list<shared_ptr<DataVector<T> > > const &d);
+
+	// ideally, the list would be passed in const here but then the returned iterator has to be const and I
+	// couldn't do some things with it (like modify the list based on the returned iterator)
+	template <class T>
+	static typename std::list<std::shared_ptr<Data<T> > >::iterator findIndex(Time const &t, std::list<std::shared_ptr<Data<T> > > &d);
+	template <class T>
+	static typename std::list<std::shared_ptr<Data<T> > >::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<Data<T> > > &d);
+	template <class T>
+	static typename std::list<std::shared_ptr<DataVector<T> > >::iterator findIndex(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
+	template <class T>
+	static typename std::list<std::shared_ptr<DataVector<T> > >::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
+
+	template<class T>
+	static typename std::list<std::shared_ptr<Data<T> > >::iterator truncate(Time const &t, std::list<std::shared_ptr<Data<T> > > &d);
+	template <class T>
+	static void truncate(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
+
+	static bool timeSortPredicate(shared_ptr<IData> const &d1, shared_ptr<IData> const &d2){return d1->timestamp < d2->timestamp;}
+
+	protected:
+	toadlet::egg::Mutex mMutex;
+};
+
+template<class Tclass>
+class Data : public IData
 {
 	public:
 	Data(){type = DATA_TYPE_UNDEFINED;}
-	Data(double d, DataType t){data = d; type = t;}
-
-	virtual void lock(){mMutex.lock();}
-	virtual void unlock(){mMutex.unlock();}
+	Data(Tclass d, DataType t){data = d; type = t;}
 
 	virtual void copyTo(Data &d) {
 		if(&d == this)
@@ -71,39 +109,11 @@ class Data
 		d.unlock();
 		unlock();
 	}
-	double data, dataCalibrated;
-	Time timestamp;
-	DataType type;
-
-	static double interpolate(Time const &t, Data const &d1, Data const &d2);
-	static double interpolate(Time const &t, std::list<shared_ptr<Data> > const &d);
-	template <class T1, class T2>
-	static TNT::Array2D<T1> interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2);
-	template <class T>
-	static TNT::Array2D<T> interpolate(Time const &t, std::list<shared_ptr<DataVector<T> > > const &d);
-//	static TNT::Array2D<float> interpolate(Time const &t, std::list<shared_ptr<DataVector<float> > > const &d);
-
-	// ideally, the list would be passed in const here but then the returned iterator has to be const and I
-	// couldn't do some things with it (like modify the list based on the returned iterator)
-	static std::list<std::shared_ptr<Data> >::iterator findIndex(Time const &t, std::list<std::shared_ptr<Data> > &d);
-	static std::list<std::shared_ptr<Data> >::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<Data> > &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<DataVector<T> > >::iterator findIndex(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<DataVector<T> > >::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
-
-	static std::list<std::shared_ptr<Data> >::iterator truncate(Time const &t, std::list<std::shared_ptr<Data> > &d);
-	template <class T>
-	static void truncate(Time const &t, std::list<std::shared_ptr<DataVector<T> > > &d);
-
-	static bool timeSortPredicate(shared_ptr<Data> const &d1, shared_ptr<Data> const &d2){return d1->timestamp < d2->timestamp;}
-
-	protected:
-	toadlet::egg::Mutex mMutex;
+	Tclass data, dataCalibrated;
 };
 
-template <class T>
-class DataVector : public Data
+template <class Tclass>
+class DataVector : public IData
 {
 	public:
 	DataVector(){type = DATA_TYPE_UNDEFINED;};
@@ -121,10 +131,10 @@ class DataVector : public Data
 		d.unlock();
 		unlock();
 	}
-	TNT::Array2D<T> data, dataCalibrated;
+	TNT::Array2D<Tclass> data, dataCalibrated;
 };
 
-class DataImage : public Data
+class DataImage : public IData
 {
 	public:
 	DataImage() : att(3,1,0.0), angularVel(3,1,0.)  {
@@ -166,7 +176,7 @@ class DataImage : public Data
 	static inline unsigned int &sNextID(){ static unsigned int data = 0; return data;}
 }; 
 
-class DataAnnotatedImage : public Data
+class DataAnnotatedImage : public IData
 {
 	public:
 	DataAnnotatedImage(){ };
@@ -175,22 +185,23 @@ class DataAnnotatedImage : public Data
 	shared_ptr<DataImage> imgDataSource;
 };
 
-class DataPhoneTemp : public Data
+template <class T>
+class DataPhoneTemp : public Data<T>
 {
 	public:
-	DataPhoneTemp(){type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = tmuTemp = -1;}
+	DataPhoneTemp() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = tmuTemp = -1;}
 
-	void copyTo(DataPhoneTemp &d) const {
-		d.timestamp.setTime(timestamp); 
-		d.battTemp = battTemp;
-		d.secTemp = secTemp;
-		d.fgTemp = fgTemp;
-		d.tmuTemp = tmuTemp;
-	}
-	float battTemp, secTemp, fgTemp, tmuTemp;
+//	void copyTo(DataPhoneTemp<T> &d) const {
+//		d.timestamp.setTime(timestamp); 
+//		d.battTemp = battTemp;
+//		d.secTemp = secTemp;
+//		d.fgTemp = fgTemp;
+//		d.tmuTemp = tmuTemp;
+//	}
+	T battTemp, secTemp, fgTemp, tmuTemp;
 };
 
-class ImageMatchData
+class ImageMatchData : public IData
 {
 	public:
 	vector<vector<cv::Point2f> > featurePoints;
@@ -206,7 +217,7 @@ class ImageMatchData
 	toadlet::egg::Mutex mMutex;
 };
 
-class ImageTargetFindData
+class ImageTargetFindData : public IData
 {
 	public:
 	vector<BlobDetector::Blob> circleBlobs;
@@ -222,7 +233,7 @@ class ImageTargetFindData
 //////////////////////////////////////////// Template implementations //////////////////////////////////////
 // the list is assumed to be sorted in increasing time order
 template <class T>
-TNT::Array2D<T> Data::interpolate(Time const &t, list<shared_ptr<DataVector<T> > > const &d)
+TNT::Array2D<T> IData::interpolate(Time const &t, list<shared_ptr<DataVector<T> > > const &d)
 {
 	if(d.size() == 0)
 		return TNT::Array2D<T>();
@@ -262,56 +273,8 @@ TNT::Array2D<T> Data::interpolate(Time const &t, list<shared_ptr<DataVector<T> >
 	return interp;
 }
 
-template <class T>
-typename list<shared_ptr<DataVector<T> > >::iterator Data::findIndex(Time const &t, list<shared_ptr<DataVector<T> > > &d)
-{
-	typename list<shared_ptr<DataVector<T> > >::iterator i = d.begin();
-	while(i != d.end() && (*i)->timestamp < t)
-		i++;
-	return i;
-}
-
-template <class T>
-typename list<shared_ptr<DataVector<T> > >::iterator Data::findIndexReverse(Time const &t, list<shared_ptr<DataVector<T> > > &d)
-{
-	typename list<shared_ptr<DataVector<T> > >::iterator i = d.end();
-	if(d.size() == 0)
-		return i;
-
-	i--;
-	while(i != d.begin() && (*i)->timestamp > t)
-		i--;
-	return i;
-}
-
-template <class T>
-void Data::truncate(Time const &t, list<shared_ptr<DataVector<T> > > &d)
-{
-	if(d.size() == 0)
-	{
-		return;
-	}
-	if(t > d.back()->timestamp)
-	{
-		return;
-	}
-	if(t < d.front()->timestamp)
-	{
-		d.clear();
-		return;
-	}
-
-	typename list<shared_ptr<DataVector<T> > >::iterator iter = d.end();
-	iter--;
-	while(t < (*iter)->timestamp && iter != d.begin())
-	{
-		iter--;
-		d.pop_back();
-	}
-}
-
 template <class T1, class T2>
-TNT::Array2D<T1> Data::interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2)
+TNT::Array2D<T1> IData::interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2)
 {
 	TNT::Array2D<double> interp;
 
@@ -339,6 +302,173 @@ TNT::Array2D<T1> Data::interpolate(Time const &t, DataVector<T1> const &d1, Data
 	}
 
 	return interp;
+}
+
+template <class T1, class T2>
+T1 IData::interpolate(Time const &t, Data<T1> const &d1, Data<T2> const &d2)
+{
+	T1 interp;
+
+	Data<T1> const *d1p;
+	Data<T2> const *d2p;
+	if(d1.timestamp < d2.timestamp)
+	{
+		d1p = &d1;
+		d2p = &d2;
+	}
+	else
+	{
+		d1p = &d2;
+		d2p = &d1;
+	}
+
+	if(t < d1p->timestamp)
+		interp = d1p->data;
+	else if(t > d2p->timestamp)
+		interp = d2p->data;
+	else
+	{
+		T1 a = Time::calcDiffUS(d1p->timestamp,t);
+		T1 b = Time::calcDiffUS(t, d2p->timestamp);
+		interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
+	}
+
+	return interp;
+}
+
+template <class T>
+T IData::interpolate(Time const &t, std::list<shared_ptr<Data<T> > > const &d)
+{
+	if(d.size() == 0)
+		return 0;
+	T interp;
+
+	if(t < d.front()->timestamp)
+		interp = d.front()->data;
+	else if(t > d.back()->timestamp)
+		interp = d.back()->data;
+	else
+	{
+		shared_ptr<Data<T> > d1, d2;
+		typename list<shared_ptr<Data<T> > >::const_iterator iter = d.begin();
+		while(iter != d.end() && (*iter)->timestamp < t)
+		{
+			d1 = *iter;
+			iter++;
+		}
+		if(iter != d.end())
+		{
+			d2 = *iter;
+			T a = Time::calcDiffUS(d1->timestamp,t);
+			T b = Time::calcDiffUS(t, d2->timestamp);
+			interp= b/(a+b)*d1->data+a/(a+b)*d2->data;
+		}
+		else
+			interp = d1->data;
+	}
+
+	return interp;
+}
+
+template <class T>
+typename list<shared_ptr<DataVector<T> > >::iterator IData::findIndex(Time const &t, list<shared_ptr<DataVector<T> > > &d)
+{
+	typename list<shared_ptr<DataVector<T> > >::iterator i = d.begin();
+	while(i != d.end() && (*i)->timestamp < t)
+		i++;
+	return i;
+}
+
+template <class T>
+typename list<shared_ptr<DataVector<T> > >::iterator IData::findIndexReverse(Time const &t, list<shared_ptr<DataVector<T> > > &d)
+{
+	typename list<shared_ptr<DataVector<T> > >::iterator i = d.end();
+	if(d.size() == 0)
+		return i;
+
+	i--;
+	while(i != d.begin() && (*i)->timestamp > t)
+		i--;
+	return i;
+}
+
+template <class T>
+void IData::truncate(Time const &t, list<shared_ptr<DataVector<T> > > &d)
+{
+	if(d.size() == 0)
+	{
+		return;
+	}
+	if(t > d.back()->timestamp)
+	{
+		return;
+	}
+	if(t < d.front()->timestamp)
+	{
+		d.clear();
+		return;
+	}
+
+	typename list<shared_ptr<DataVector<T> > >::iterator iter = d.end();
+	iter--;
+	while(t < (*iter)->timestamp && iter != d.begin())
+	{
+		iter--;
+		d.pop_back();
+	}
+}
+
+// returns first index greater than or equal to t, starting from the front
+template <class T>
+typename list<shared_ptr<Data<T> > >::iterator IData::findIndex(Time const &t, list<shared_ptr<Data<T> > > &d)
+{
+	typename list<shared_ptr<Data<T> > >::iterator i = d.begin();
+	while(i != d.end() && (*i)->timestamp < t)
+		i++;
+	return i;
+}
+
+// returns first index less than or equal to t, starting from the back
+// If t < d.begin(), d.begin() is still returned
+template <class T>
+typename list<shared_ptr<Data<T> > >::iterator IData::findIndexReverse(Time const &t, list<shared_ptr<Data<T> > > &d)
+{
+	typename list<shared_ptr<Data<T> > >::iterator i = d.end();
+	if(d.size() == 0)
+		return i;
+
+	i--;
+	while(i != d.begin() && (*i)->timestamp > t)
+		i--;
+	return i;
+}
+
+template <class T>
+typename list<shared_ptr<Data<T> > >::iterator IData::truncate(Time const &t, list<shared_ptr<Data<T> > > &d)
+{
+	if(d.size() == 0)
+		return d.end();
+	if(t > d.back()->timestamp)
+	{
+		typename list<shared_ptr<Data<T> > >::iterator it = d.end();
+		it--;
+		return it;
+	}
+	if(t < d.front()->timestamp)
+	{
+		d.clear();
+		return d.end();
+	}
+
+	typename list<shared_ptr<Data<T> > >::iterator iter = d.end();
+	iter--;
+	while(t < (*iter)->timestamp && iter != d.begin())
+	{
+		iter--;
+		d.pop_back();
+	}
+
+	return iter;
 }
 
 

@@ -30,8 +30,9 @@ namespace Quadrotor{
 	{
 		Log::alert("------------------------ MotorInterface shutdown started");
 		mRunning = false;
-		while(!mShutdown)
-			System::msleep(10);
+		this->join();
+//		while(!mShutdown)
+//			System::msleep(10);
 
 		Log::alert("------------------------ MotorInterface shutdown done -------------------------");
 	}

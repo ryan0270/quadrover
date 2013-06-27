@@ -68,7 +68,7 @@ set (SRC ${SRC}
 	./cpp/Matcher.cpp
 	./cpp/VideoMaker.cpp
 	./cpp/BlobDetector.cpp
-	./cpp/Data.cpp
+#	./cpp/Data.cpp
 	./cpp/Observer_Angular.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 )

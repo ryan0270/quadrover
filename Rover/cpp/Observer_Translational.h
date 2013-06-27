@@ -57,7 +57,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void addListener(Observer_TranslationalListener *listener){mListeners.push_back(listener);}
 
 	// from Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
+	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
 
 	// from CommManagerListener
 	void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
@@ -77,7 +77,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<Data> const &data);
+	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);
@@ -127,7 +127,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 									   TNT::Array2D<double> &state,
 									   TNT::Array2D<double> &errCov);
 
-	shared_ptr<DataPhoneTemp> mPhoneTempData;
+	shared_ptr<DataPhoneTemp<double> > mPhoneTempData;
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
 
@@ -138,7 +138,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
-	DataVector mOpticFlowVel;
+	DataVector<double>  mOpticFlowVel;
 //	TNT::Array2D<double> mOpticFlowVel;
 //	Time mOpticFlowVelTime;
 
@@ -146,13 +146,13 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	int mThreadPriority, mScheduler;
 
-	vector<list<shared_ptr<Data> > *> mDataBuffers;
-	list<shared_ptr<DataVector> > mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
-	list<shared_ptr<DataVector> > mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer;
-	list<shared_ptr<Data> > mHeightDataBuffer;
-	list<shared_ptr<DataVector> > mMotorCmdsBuffer, mThrustDirBuffer;
-	list<shared_ptr<Data> > mThrustBuffer;
-	list<shared_ptr<Data> > mNewEventsBuffer;
+	vector<list<shared_ptr<Data<double> > > *> mDataBuffers;
+	list<shared_ptr<DataVector<double> > > mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
+	list<shared_ptr<DataVector<double> > > mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer;
+	list<shared_ptr<Data<double> > > mHeightDataBuffer;
+	list<shared_ptr<DataVector<double> > > mMotorCmdsBuffer, mThrustDirBuffer;
+	list<shared_ptr<Data<double> > > mThrustBuffer;
+	list<shared_ptr<IData> > mNewEventsBuffer;
 
 	bool mHaveFirstCameraPos;
 	Time mLastCameraPosTime, mLastViconPosTime;
@@ -162,7 +162,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 
 	TNT::Array2D<double> mViconCameraOffset;
 
-	Time applyData(shared_ptr<Data> const &data);
+	Time applyData(shared_ptr<IData> const &data);
 	void doForceGainAdaptation(TNT::Array2D<double> const &err);
 	void doAttBiasAdaptation(TNT::Array2D<double> const &err);
 };

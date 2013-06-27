@@ -199,18 +199,18 @@ Log::alert("sensor manager - shutdown 5");
 // TODO: Set the event time to match the timestamp in the ASensor struct
 				LogFlags logFlag = LOG_FLAG_OTHER;
 				int logID = -1;
-				shared_ptr<Data> data = NULL;
+				shared_ptr<IData> data = NULL;
 				switch(event.type)
 				{
 					case ASENSOR_TYPE_PRESSURE:
 						{
 							logFlag= LOG_FLAG_PRESSURE;
 							logID = LOG_ID_PRESSURE;
-							data = shared_ptr<Data>(new Data(event.pressure, DATA_TYPE_PRESSURE));
-							data = shared_ptr<Data>(new Data());
+//							data = shared_ptr<Data<double> >(new Data<double>(event.pressure, DATA_TYPE_PRESSURE));
+							data = shared_ptr<IData>(new Data<double>());
 							data->type = DATA_TYPE_PRESSURE;
-							data->data = event.pressure;
-							data->dataCalibrated = event.pressure;
+							static_pointer_cast<Data<double> >(data)->data = event.pressure;
+							static_pointer_cast<Data<double> >(data)->dataCalibrated = event.pressure;
 							mLastPressure = event.pressure;
 						}
 						break;
@@ -226,10 +226,10 @@ Log::alert("sensor manager - shutdown 5");
 							accelCalibrated[0][0] = (event.data[0]-accelOffX)/accelScaleX;
 							accelCalibrated[1][0] = (event.data[1]-accelOffY)/accelScaleY;
 							accelCalibrated[2][0] = (event.data[2]-accelOffZ)/accelScaleZ;
-							data = shared_ptr<Data>(new DataVector());
+							data = shared_ptr<IData>(new DataVector<double>());
 							data->type = DATA_TYPE_ACCEL;
-							static_pointer_cast<DataVector>(data)->data = mLastAccel.copy();
-							static_pointer_cast<DataVector>(data)->dataCalibrated = accelCalibrated.copy();
+							static_pointer_cast<DataVector<double> >(data)->data = mLastAccel.copy();
+							static_pointer_cast<DataVector<double> >(data)->dataCalibrated = accelCalibrated.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -242,11 +242,11 @@ Log::alert("sensor manager - shutdown 5");
 							mLastGyro[0][0] = event.data[0];
 							mLastGyro[1][0] = event.data[1];
 							mLastGyro[2][0] = event.data[2];
-							data = shared_ptr<Data>(new DataVector());
+							data = shared_ptr<IData>(new DataVector<double>());
 							data->type = DATA_TYPE_GYRO;
-							static_pointer_cast<DataVector>(data)->data = mLastGyro.copy();
+							static_pointer_cast<DataVector<double> >(data)->data = mLastGyro.copy();
 // TODO: Apply gyro bias estimate for the calibrated data
-							static_pointer_cast<DataVector>(data)->dataCalibrated = mLastGyro.copy();
+							static_pointer_cast<DataVector<double> >(data)->dataCalibrated = mLastGyro.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -258,10 +258,10 @@ Log::alert("sensor manager - shutdown 5");
 							mLastMag[0][0] = event.data[0];
 							mLastMag[1][0] = event.data[1];
 							mLastMag[2][0] = event.data[2];
-							data = shared_ptr<Data>(new DataVector());
+							data = shared_ptr<IData>(new DataVector<double>());
 							data->type = DATA_TYPE_MAG;
-							static_pointer_cast<DataVector>(data)->data = mLastMag.copy();
-							static_pointer_cast<DataVector>(data)->dataCalibrated = mLastMag.copy();
+							static_pointer_cast<DataVector<double> >(data)->data = mLastMag.copy();
+							static_pointer_cast<DataVector<double> >(data)->dataCalibrated = mLastMag.copy();
 							mMutex_data.unlock();
 						}
 						break;
@@ -395,7 +395,7 @@ Log::alert("sensor manager - shutdown 5");
 			float fgTemp= getFuelgaugeTemp()/10.0;
 			float tmuTemp = getTmuTemp()/10.0;
 
-			shared_ptr<DataPhoneTemp> data = shared_ptr<DataPhoneTemp>(new DataPhoneTemp());
+			shared_ptr<DataPhoneTemp<double> > data = shared_ptr<DataPhoneTemp<double> >(new DataPhoneTemp<double>());
 			data->battTemp = battTemp;
 			data->secTemp = secTemp;
 			data->fgTemp = fgTemp;
@@ -505,7 +505,7 @@ Log::alert("sensor manager - shutdown 5");
 		return temp;
 	}
 
-	void SensorManager::onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)
+	void SensorManager::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
 	{
 		mMutex_attData.lock();
 		mCurAtt.inject(attData->data);
@@ -572,7 +572,7 @@ Log::alert("sensor manager - shutdown 5");
 
 		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)
-			mListeners[i]->onNewSensorUpdate(static_pointer_cast<Data>(data));
+			mListeners[i]->onNewSensorUpdate(static_pointer_cast<IData>(data));
 		mMutex_listeners.unlock();
 
 		if(mQuadLogger != NULL)
