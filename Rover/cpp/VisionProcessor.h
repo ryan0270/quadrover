@@ -81,7 +81,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		void onNewCommLogClear();
 		
 		// SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<Data> const &data);
+		void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	protected:
 		bool mUseIbvs;

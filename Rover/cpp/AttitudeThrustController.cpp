@@ -17,8 +17,8 @@ using namespace TNT;
 		mRunning = false;
 		mDone = true;
 	
-		mDesRotMat.inject(createIdentity(3));
-		mDesRotMat_T.inject(createIdentity(3));
+		mDesRotMat.inject(createIdentity((double)3));
+		mDesRotMat_T.inject(createIdentity((double)3));
 	
 		mDoControl = false;
 		mPcIsConnected = false;
@@ -174,7 +174,7 @@ using namespace TNT;
 		}
 	}
 	
-	void AttitudeThrustController::onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData)
+	void AttitudeThrustController::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
 	{
 		mMutex_data.lock();
 		mCurAtt.inject(attData->data);
@@ -215,8 +215,8 @@ using namespace TNT;
 			Log::alert("AttitudeThrustController -- Acceleration command was too small");
 			mMutex_data.lock();
 			mDesAtt[0][0] = mDesAtt[1][0] = mDesAtt[2][0] = 0;
-			mDesRotMat.inject(createIdentity(3));
-			mDesRotMat_T.inject(createIdentity(3));
+			mDesRotMat.inject(createIdentity((double)3));
+			mDesRotMat_T.inject(createIdentity((double)3));
 			mMutex_data.unlock();
 		}
 	}

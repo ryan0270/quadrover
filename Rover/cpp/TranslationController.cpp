@@ -23,7 +23,7 @@ using namespace TNT;
 		mDone = true;
 		mNewMeasAvailable = false;
 
-		mRotViconToPhone.inject(createIdentity(3));
+		mRotViconToPhone.inject(createIdentity((double)3));
 		mLastControlTime.setTimeMS(0);
 
 		mQuadLogger = NULL;
@@ -43,8 +43,9 @@ using namespace TNT;
 		Log::alert("------------------------- TranslationController shutdown started  --------------------------------------------------");
 		mRunning = false;
 		System sys;
-		while(!mDone)
-			sys.msleep(10);
+		this->join();
+//		while(!mDone)
+//			sys.msleep(10);
 		Log::alert("------------------------- TranslationController shutdown done");
 	}
 

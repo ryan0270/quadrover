@@ -36,7 +36,7 @@ static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 class SensorManagerListener
 {
 	public:
-	virtual void onNewSensorUpdate(shared_ptr<Data> const &data)=0;
+	virtual void onNewSensorUpdate(shared_ptr<IData> const &data)=0;
 };
 
 class SensorManager : public toadlet::egg::Thread, public Observer_AngularListener
@@ -59,7 +59,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	void passNewImage(cv::Mat const *img, int64 const &timestampNS);
 
 	// for Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
+	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
 
 	protected:
 	bool mRunning, mDone;

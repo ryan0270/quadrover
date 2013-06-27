@@ -56,12 +56,13 @@ void CommManager::shutdown()
 {
 	Log::alert("------------------ Comm Manager shutdown started --------------------");
 	mRun = false;
-	toadlet::egg::System sys;
-	while(!mDone) // since join doesn't seem to work correctly in NDK
-	{
-		Log::alert("CommManager Waiting");
-		sys.msleep(10);
-	}
+	this->join();
+//	toadlet::egg::System sys;
+//	while(!mDone) // since join doesn't seem to work correctly in NDK
+//	{
+//		Log::alert("CommManager Waiting");
+//		sys.msleep(10);
+//	}
 
 	if(mSocketTCP != NULL)
 	{

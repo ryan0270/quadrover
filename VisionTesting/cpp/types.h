@@ -4,7 +4,7 @@
 namespace ICSL {
 namespace Rover {
 
-typedef float DTYPE;
+typedef double DTYPE;
 
 } // namespace Rover
 } // namespace ICSL

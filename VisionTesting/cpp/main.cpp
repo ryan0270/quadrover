@@ -551,21 +551,21 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				fs << velLS[i][0] << "\t";
 			fs << endl;
 	
-//			if(imgPrev.data != NULL)
-//			{
-//				cv::Mat imgMatches(img.rows,2*img.cols,img.type());
-////				cv::Mat imgL = imgPrev.clone();
-////				cv::Mat imgR = img.clone();
-////				for(int i=0; i<prevPoints.size(); i++)
-////					cv::circle(imgL, prevPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
-////				for(int j=0; j<curPoints.size(); j++)
-////					cv::circle(imgR, curPoints[j]+center, 4, cv::Scalar(0,0,255), -1);
-////				imgL.copyTo(imgMatches(cv::Rect(0,0,img.cols,img.rows)));
-////				imgR.copyTo(imgMatches(cv::Rect(img.cols,0,img.cols,img.rows)));
-//				drawMatches(imgPrev, prevKp, img, curKp, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-//				imshow("chad",imgMatches);
-//			}
-//			keypress = cv::waitKey() % 256;
+			if(imgPrev.data != NULL)
+			{
+				cv::Mat imgMatches(img.rows,2*img.cols,img.type());
+//				cv::Mat imgL = imgPrev.clone();
+//				cv::Mat imgR = img.clone();
+//				for(int i=0; i<prevPoints.size(); i++)
+//					cv::circle(imgL, prevPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
+//				for(int j=0; j<curPoints.size(); j++)
+//					cv::circle(imgR, curPoints[j]+center, 4, cv::Scalar(0,0,255), -1);
+//				imgL.copyTo(imgMatches(cv::Rect(0,0,img.cols,img.rows)));
+//				imgR.copyTo(imgMatches(cv::Rect(img.cols,0,img.cols,img.rows)));
+				drawMatches(imgPrev, prevKp, img, curKp, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+				imshow("chad",imgMatches);
+			}
+			keypress = cv::waitKey() % 256;
 	
 			imgPrev = img;
   

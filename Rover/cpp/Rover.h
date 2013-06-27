@@ -67,7 +67,7 @@ public:
 	void passNewImage(cv::Mat *img, int64 const &timestampNS){mSensorManager.passNewImage(img, timestampNS);}
 
 	// Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector> attData, shared_ptr<DataVector> angularVelData);
+	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
 
 	// for CommManagerListener
 	void onNewCommTimeSync(int time);
@@ -76,7 +76,7 @@ public:
 	void onNewCommLogClear();
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<Data> const &data);
+	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for VisionProcessorListener
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);
