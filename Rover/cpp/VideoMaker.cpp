@@ -50,10 +50,12 @@ namespace Quadrotor {
 		while(mRunning)
 		{
 			mMutex_imgQueue.lock();
-			if(mImgQueue.size() > 1)
-				Log::alert(String()+"Backlog: "+mImgQueue.size());
 			while(!mImgQueue.empty())
+//			if(!mImgQueue.empty())
 			{
+//				if(mImgQueue.size() > 1)
+//					Log::alert(String()+"Backlog: "+mImgQueue.size());
+
 				shared_ptr<ImageMatchData> data = mImgQueue.front();
 
 				id = data->imgData1->id;
@@ -74,12 +76,19 @@ namespace Quadrotor {
 
 	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const data)
 	{
-		if(mLastImgTime.getElapsedTimeMS() > 10 
-				&& mMotorOn
-				)
+//		if( Time::calcDiffMS(mLastImgTime, data->imgData1->timestamp) > 100
+//				&& mMotorOn
+//				)
+		if(mMotorOn)
 		{
-			mLastImgTime.setTime();
 			mMutex_imgQueue.lock();
+			mLastImgTime.setTime(data->imgData1->timestamp);
+			while(mImgQueue.size() > 100) 
+			{// This is to cap the RAM usage. It WILL delay the calling thread.
+				mMutex_imgQueue.unlock();
+				System::msleep(1);
+				mMutex_imgQueue.lock();
+			}
 			mImgQueue.push(data);
 			mMutex_imgQueue.unlock();
 		}

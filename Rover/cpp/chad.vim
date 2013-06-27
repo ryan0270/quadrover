@@ -50,8 +50,8 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +1 Rover.h
-badd +24 Rover.cpp
+badd +37 Rover.h
+badd +1 Rover.cpp
 badd +96 Observer_Angular.h
 badd +142 Observer_Angular.cpp
 badd +105 Observer_Translational.h
@@ -71,6 +71,8 @@ badd +365 VisionProcessor.cpp
 badd +1 Common.h
 badd +47 QuadLogger.h
 badd +76 QuadLogger.cpp
+badd +1 VideoMaker.h
+badd +1 VideoMaker.cpp
 args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp VisionProcessor.h VisionProcessor.cpp
 edit Rover.cpp
 set splitbelow splitright
@@ -82,8 +84,8 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe 'vert 1resize ' . ((&columns * 95 + 96) / 192)
-exe 'vert 2resize ' . ((&columns * 96 + 96) / 192)
+exe 'vert 1resize ' . ((&columns * 134 + 135) / 271)
+exe 'vert 2resize ' . ((&columns * 136 + 135) / 271)
 argglobal
 edit Rover.cpp
 setlocal keymap=
@@ -189,7 +191,7 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 1 - ((0 * winheight(0) + 24) / 49)
+let s:l = 1 - ((0 * winheight(0) + 34) / 69)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -301,16 +303,16 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 1 - ((0 * winheight(0) + 24) / 49)
+let s:l = 37 - ((34 * winheight(0) + 34) / 69)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-1
-normal! 0
+37
+normal! 018|
 wincmd w
 2wincmd w
-exe 'vert 1resize ' . ((&columns * 95 + 96) / 192)
-exe 'vert 2resize ' . ((&columns * 96 + 96) / 192)
+exe 'vert 1resize ' . ((&columns * 134 + 135) / 271)
+exe 'vert 2resize ' . ((&columns * 136 + 135) / 271)
 tabnext 1
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
