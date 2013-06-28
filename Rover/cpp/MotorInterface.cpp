@@ -14,12 +14,7 @@ namespace Quadrotor{
 
 		mWaitingForConnection = true;
 
-		mScheduler = SCHED_NORMAL;
-		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
-
 		mDoMotorWarmup = true;
-
-		mMutex_socket.unlock();
 	}
 
 	MotorInterface::~MotorInterface()
@@ -45,6 +40,11 @@ namespace Quadrotor{
 		mServerSocket->setBlocking(false);
 
 		mSocket = Socket::ptr(mServerSocket->accept());
+
+		mScheduler = SCHED_NORMAL;
+		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+		mMutex_socket.unlock();
 	}
 
 	void MotorInterface::run()

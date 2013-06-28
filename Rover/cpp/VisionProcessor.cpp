@@ -139,7 +139,9 @@ void VisionProcessor::run()
 			mImageDataCur->unlock();
 
 			Time procStart;
+//Log::alert("cvtColor 2 start");
 			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
+//Log::alert("cvtColor 2 end");
 
 			points.clear();
 			points = getMatchingPoints(mCurImageGray);

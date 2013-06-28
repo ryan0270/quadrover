@@ -74,13 +74,13 @@ void Rover::initialize()
 	mCommManager.addListener(this);
 	mCommManager.start();
 
-	mMutex_cntl.lock();
-	mTranslationController.setRotViconToPhone(mRotViconToPhone);
-	mTranslationController.setStartTime(mStartTime);
-	mTranslationController.setQuadLogger(&mQuadLogger);
-	mTranslationController.initialize();
-	mTranslationController.start();
-	mCommManager.addListener(&mTranslationController);
+//	mMutex_cntl.lock();
+//	mTranslationController.setRotViconToPhone(mRotViconToPhone);
+//	mTranslationController.setStartTime(mStartTime);
+//	mTranslationController.setQuadLogger(&mQuadLogger);
+//	mTranslationController.initialize();
+//	mTranslationController.start();
+//	mCommManager.addListener(&mTranslationController);
 
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
@@ -136,19 +136,26 @@ void Rover::initialize()
 
 	mNumCpuCores = android_getCpuCount();
 
-	this->start();
+//	this->start();
 
 	Log::alert("Initialized");
 }
 
 void Rover::shutdown()
 {
+	Log::alert("Main shutdown started");
+Log::alert("chad 1");
+	mQuadLogger.shutdown();
 	stopLogging();
+Log::alert("chad 2");
 	mRunning = false;
-	mMutex_cntl.lock();
-	mAttitudeThrustController.enableMotors(false);
-	mMutex_cntl.unlock();
-	this->join(); 
+//	mMutex_cntl.lock();
+//	mAttitudeThrustController.enableMotors(false);
+//	mMutex_cntl.unlock();
+Log::alert("chad 3");
+	if(!mRunnerIsDone)
+		this->join(); 
+Log::alert("chad 4");
 //	toadlet::egg::System sys;
 //	while(!mRunnerIsDone)
 //	{
@@ -156,9 +163,11 @@ void Rover::shutdown()
 //		sys.msleep(10);
 //	}
 
+Log::alert("chad 5");
 	mAttitudeThrustController.shutdown();
 	mTranslationController.shutdown();
 
+Log::alert("chad 6");
 	mCommManager.shutdown(); // mCommManager is only ever accessed via the run thread or via functions returning bools so doesn't have a mutex
 
 	mVisionProcessor.shutdown();
@@ -166,10 +175,12 @@ void Rover::shutdown()
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
+Log::alert("chad 7");
 	mImageMatchData = NULL;
 	mSensorManager.shutdown();
 
 
+Log::alert("chad 8");
 	Log::alert(String("----------------- really dead -------------"));
 }
 
@@ -509,7 +520,7 @@ void Rover::startLogging(){
 
 void Rover::stopLogging()
 {
-	mQuadLogger.close();
+	mQuadLogger.shutdown();
 }
 
 void Rover::setLogFilename(String name)
