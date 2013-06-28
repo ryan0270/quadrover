@@ -2,6 +2,9 @@
 #include "TNT/jama_lu.h"
 #include "TNT/jama_qr.h"
 
+//#include <pthread.h>
+#include <thread>
+
 using namespace toadlet::egg;
 using namespace ICSL::Constants;
 
@@ -122,14 +125,6 @@ namespace Quadrotor{
 		mDone = false;
 		mRunning = true;
 
-		class : public Thread{
-					public:
-					void run(){imageMatchData->lock(); parent->calcOpticalFlow(imageMatchData); imageMatchData->unlock();}
-					shared_ptr<ImageMatchData> imageMatchData;
-					Observer_Translational *parent;
-				} flowCalcThread;
-		flowCalcThread.parent = this;
-
 		Time lastUpdateTime;
 		Array2D<double> measTemp(6,1);
 		Array2D<double> r(3,1,0.0);
@@ -236,9 +231,10 @@ namespace Quadrotor{
 					)
 			{
 				// if we're here then the previous thread should already be finished
-				flowCalcThread.imageMatchData = mImageMatchData;
+				shared_ptr<ImageMatchData> imageMatchData = mImageMatchData;
 				mFlowCalcDone = false;
-				flowCalcThread.start();
+				thread th( [imageMatchData,this](){calcOpticalFlow(mImageMatchData);});
+				th.detach();
 				mNewImageResultsReady = false;
 			}
 
@@ -291,8 +287,9 @@ namespace Quadrotor{
 	// See eqn 98 in the Feb 25, 2013 notes
 	void  Observer_Translational::calcOpticalFlow(shared_ptr<ImageMatchData> const matchData)
 	{
-mFlowCalcDone = true;
-return;
+//mFlowCalcDone = true;
+//Log::alert("done");
+//return;
 		if(matchData->featurePoints[0].size() < 5)
 		{
 			String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_OPTIC_FLOW_INSUFFICIENT_POINTS+"\t";

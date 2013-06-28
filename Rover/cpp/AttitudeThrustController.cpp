@@ -55,9 +55,8 @@ using namespace TNT;
 		mMotorInterface->enableMotors(false);
 		mMutex_motorInterface.unlock();
 		mRunning = false;
-		System sys;
 		while(!mDone)
-			sys.msleep(10);
+			System::msleep(10);
 	
 		mMutex_motorInterface.lock();
 		mMotorInterface->shutdown();

@@ -81,8 +81,9 @@ class QuadLogger : public toadlet::egg::Thread
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 //		void start();
 		void run();
-		void close();
-		void clearLog(){close(); start();}
+//		void close();
+		void shutdown();
+		void clearLog(){shutdown(); start();}
 
 		void saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
 							 list<shared_ptr<ImageMatchData> > const &matchDataBuffer);
@@ -109,7 +110,7 @@ class QuadLogger : public toadlet::egg::Thread
 
 		queue<String> mLogQueue;
 
-		bool mRunning;
+		bool mRunning, mDone;
 };
 
 }
