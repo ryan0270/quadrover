@@ -64,6 +64,7 @@ void Rover::initialize()
 	mTranslationController.setThreadPriority(sched,maxPriority-2);
 	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
 	mVisionProcessor.setThreadPriority(sched,maxPriority-3);
+	mVelocityEstimator.setThreadPriority(sched,maxPriority-3);
 	mCommManager.setThreadPriority(sched,minPriority);
 	mQuadLogger.setThreadPriority(sched,minPriority);
 //	mVideoMaker.setThreadPriority(sched,minPriority);
@@ -117,6 +118,15 @@ void Rover::initialize()
 	mVisionProcessor.addListener(&mObsvTranslational);
 	mVisionProcessor.addListener(this);
 
+	mVelocityEstimator.setStartTime(mStartTime);
+	mVelocityEstimator.setQuadLogger(&mQuadLogger);
+	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
+	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
+	mVelocityEstimator.initialize();
+	mVelocityEstimator.start();
+	mVelocityEstimator.addListener(&mObsvTranslational);
+	mVisionProcessor.addListener(&mVelocityEstimator);
+
 	mVideoMaker.initialize();
 	mVideoMaker.start();
 	mCommManager.addListener(&mVideoMaker);
@@ -136,19 +146,27 @@ void Rover::initialize()
 
 	mNumCpuCores = android_getCpuCount();
 
-	this->start();
+//	this->start();
 
 	Log::alert("Initialized");
 }
 
 void Rover::shutdown()
 {
-	stopLogging();
+	Log::alert("Main shutdown started");
+Log::alert("chad 1");
+	mQuadLogger.shutdown();
+//	stopLogging();
+Log::alert("chad 2");
 	mRunning = false;
 	mMutex_cntl.lock();
-	mAttitudeThrustController.enableMotors(false);
+	mMotorInterface.enableMotors(false);
+//	mAttitudeThrustController.enableMotors(false);
 	mMutex_cntl.unlock();
-	this->join(); 
+Log::alert("chad 3");
+	if(!mRunnerIsDone)
+		this->join(); 
+Log::alert("chad 4");
 //	toadlet::egg::System sys;
 //	while(!mRunnerIsDone)
 //	{
@@ -156,20 +174,27 @@ void Rover::shutdown()
 //		sys.msleep(10);
 //	}
 
+Log::alert("chad 5a");
 	mAttitudeThrustController.shutdown();
+Log::alert("chad 5b");
 	mTranslationController.shutdown();
 
+Log::alert("chad 6");
 	mCommManager.shutdown(); // mCommManager is only ever accessed via the run thread or via functions returning bools so doesn't have a mutex
 
 	mVisionProcessor.shutdown();
+	mVelocityEstimator.shutdown();
 	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
+Log::alert("chad 7");
 	mImageMatchData = NULL;
 	mSensorManager.shutdown();
 
+	mMotorInterface.shutdown();
 
+Log::alert("chad 8");
 	Log::alert(String("----------------- really dead -------------"));
 }
 
@@ -284,13 +309,12 @@ void Rover::transmitDataUDP()
 	mMutex_cntl.lock();
 	int arduinoStatus;
 	mMutex_cntl.lock();
-	MotorInterface* motorInterface = mAttitudeThrustController.getMotorInterface();
-	if(motorInterface->isConnected())
+	if(mMotorInterface.isConnected())
 		arduinoStatus = 1;
 	else
 		arduinoStatus = 0;
 
-	pUseMotors.dataBool.push_back(motorInterface->isMotorsEnabled());
+	pUseMotors.dataBool.push_back(mMotorInterface.isMotorsEnabled());
 	pUseMotors.type = COMM_USE_MOTORS;
 
 	Array2D<double> desAtt = mAttitudeThrustController.getDesAttitude();
@@ -509,7 +533,7 @@ void Rover::startLogging(){
 
 void Rover::stopLogging()
 {
-	mQuadLogger.close();
+	mQuadLogger.shutdown();
 }
 
 void Rover::setLogFilename(String name)

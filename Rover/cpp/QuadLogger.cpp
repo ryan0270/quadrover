@@ -28,34 +28,30 @@ QuadLogger::QuadLogger()
 
 	mPaused = false;
 	mRunning = false;;
+	mDone = true;
 }
 
 QuadLogger::~QuadLogger()
 {
-	close();
 }
 
-void QuadLogger::addLine(String const &str, LogFlags type)
+void QuadLogger::shutdown()
 {
-	if(mTypeMask & type)
+	Log::alert("------------------------- QuadLogger shutdown started");
+	mRunning = false;
+Log::alert("bob 1");
+	while(!mDone)
 	{
-		mMutex_logQueue.lock();
-		mLogQueue.push(str);
-		mMutex_logQueue.unlock();
+Log::alert("bob 2");
+		System::msleep(10);
 	}
-
-//	mMutex_file.lock();
-//	if(mTypeMask & type)
-//	{
-//		String str2= str + "\n";
-//		if(mLogStream != NULL)
-//			mLogStream->write((tbyte*)str2.c_str(), str2.length());
-//	}
-//	mMutex_file.unlock();
+Log::alert("bob 3");
+	Log::alert("------------------------- QuadLogger shutdown done");
 }
 
 void QuadLogger::run()
 {
+	mDone = false;
 	mRunning = true;
 	{
 		String s = String() +"Starting logs at " + mDir+"/"+mFilename;
@@ -113,13 +109,34 @@ void QuadLogger::run()
 		mMutex_file.unlock();
 		mLogStream = NULL;
 	}
+
+	mDone = true;
 }
 
-void QuadLogger::close()
+void QuadLogger::addLine(String const &str, LogFlags type)
 {
-	mRunning = false;
-	this->join();
+	if(mTypeMask & type)
+	{
+		mMutex_logQueue.lock();
+		mLogQueue.push(str);
+		mMutex_logQueue.unlock();
+	}
+
+//	mMutex_file.lock();
+//	if(mTypeMask & type)
+//	{
+//		String str2= str + "\n";
+//		if(mLogStream != NULL)
+//			mLogStream->write((tbyte*)str2.c_str(), str2.length());
+//	}
+//	mMutex_file.unlock();
 }
+
+//void QuadLogger::close()
+//{
+//	mRunning = false;
+//	this->join();
+//}
 
 void QuadLogger::saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
 								 list<shared_ptr<ImageMatchData> > const &matchDataBuffer)

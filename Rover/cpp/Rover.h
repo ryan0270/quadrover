@@ -27,6 +27,7 @@
 #include "SensorManager.h"
 #include "VideoMaker.h"
 #include "MotorInterface.h"
+#include "VelocityEstimator.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -107,6 +108,7 @@ protected:
 	QuadLogger mQuadLogger;
 
 	VisionProcessor mVisionProcessor;
+	VelocityEstimator mVelocityEstimator;
 
 	SensorManager mSensorManager;
 

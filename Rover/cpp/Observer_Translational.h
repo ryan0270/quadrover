@@ -18,6 +18,9 @@
 #include "SensorManager.h"
 #include "VisionProcessor.h"
 #include "Data.h"
+#define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
+#include "VelocityEstimator.h"
+#undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 
 namespace ICSL{
 namespace Quadrotor{
@@ -35,7 +38,8 @@ class Observer_Translational : public toadlet::egg::Thread,
 								public CommManagerListener,
 								public AttitudeThrustControllerListener,
 								public SensorManagerListener,
-								public VisionProcessorListener
+								public VisionProcessorListener,
+								public VelocityEstimatorListener
 {
 	public:
 	Observer_Translational();
@@ -55,6 +59,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 	double getBarometerHeight(){mMutex_meas.lock(); double temp = mBarometerHeightState[0][0]+mZeroHeight; mMutex_meas.unlock(); return temp;}
 
 	void addListener(Observer_TranslationalListener *listener){mListeners.push_back(listener);}
+
+	TNT::Array2D<double> estimateStateAtTime(Time const &t);
+	TNT::Array2D<double> estimateErrCovAtTime(Time const &t);
 
 	// from Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
@@ -83,6 +90,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onImageProcessed(shared_ptr<ImageMatchData> const data);
 	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data);
 	void onImageLost(){};
+
+	// for VelocityEstimatorListener
+	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData);
 
 	protected:
 	bool mRunning, mDone;
@@ -131,16 +141,11 @@ class Observer_Translational : public toadlet::egg::Thread,
 	double mZeroHeight;
 	TNT::Array2D<double> mBarometerHeightState;
 
-	bool mNewImageResultsReady, mFlowCalcDone;
+	bool mNewImageResultsReady;
 	toadlet::egg::Mutex mMutex_imageData;
 	shared_ptr<ImageMatchData> mImageMatchData; 
-	void calcOpticalFlow(shared_ptr<ImageMatchData> const img);
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
-
-	DataVector<double>  mOpticFlowVel;
-//	TNT::Array2D<double> mOpticFlowVel;
-//	Time mOpticFlowVelTime;
 
 	bool mMotorOn;
 

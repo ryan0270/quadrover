@@ -532,7 +532,9 @@ Log::alert("sensor manager - shutdown 5");
 //		Log::alert(String()+"dt: "+mImgDT);
 
 		shared_ptr<cv::Mat> imgBGR(new cv::Mat);
+//Log::alert("cvtColor 1 start");
 		cv::cvtColor(*imgYUV, *imgBGR, CV_YUV420sp2BGR);
+//Log::alert("cvtColor 1 end");
 
 		shared_ptr<DataImage> data(new DataImage());
 		data->type = DATA_TYPE_IMAGE;

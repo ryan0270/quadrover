@@ -70,6 +70,7 @@ set (SRC ${SRC}
 	./cpp/BlobDetector.cpp
 #	./cpp/Data.cpp
 	./cpp/Observer_Angular.cpp
+	./cpp/VelocityEstimator.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 )
 
@@ -93,6 +94,7 @@ set (H ${H}
 	./cpp/constants.h
 	./cpp/BlobDetector.h
 	./cpp/Data.h
+	./cpp/VelocityEstimator.h
 	${CPUFEATURES_PATH}/cpu-features.h
 )
 
