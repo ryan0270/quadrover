@@ -126,11 +126,6 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageMatchData> const &mat
 	double f2Inv = 1.0/f2;
 	double cx = matchData->imgData0->img->cols/2;
 	double cy = matchData->imgData0->img->rows/2;
-	Array2D<double> rotPoint(3,1);
-	rotPoint[0][0] = 0;
-	rotPoint[1][0] = 0;
-	rotPoint[2][0] = 0;
-	rotPoint = rotPoint*(f1/0.0037); // assumes f1=f2
 	double x1, y1, x2, y2;
 	for(int i=0; i<matchData->featurePoints[0].size(); i++)
 	{
@@ -139,36 +134,15 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageMatchData> const &mat
 		q2[0][0] = matchData->featurePoints[1][i].x-cx;
 		q2[1][0] = matchData->featurePoints[1][i].y-cy;
 
-//		// Unrotate
-//		q1a[0][0] = q1[0][0];
-//		q1a[1][0] = q1[1][0];
-//		q1a[2][0] = f1;
-//		q2a[0][0] = q2[0][0];
-//		q2a[1][0] = q2[1][0];
-//		q2a[2][0] = f2;
-//
-//		q1a = matmult(R1_T, q1a-rotPoint)+rotPoint;
-//		q2a = matmult(R2_T, q2a-rotPoint)+rotPoint;
-//
-//		// project back on to the focal plane
-//		q1a = f1/q1a[2][0]*q1a;
-//		q2a = f2/q2a[2][0]*q2a;
-//
-//		// back to 2d points
-//		q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
-//		q2[0][0] = q2a[0][0]; q2[1][0] = q2a[1][0];
-
-		x1 = q1[0][0];
-		y1 = q1[1][0];
-		x2 = q2[0][0];
-		y2 = q2[1][0];
+		x1 = q1[0][0]; y1 = q1[1][0];
+		x2 = q2[0][0]; y2 = q2[1][0];
 
 		// Velocity jacobian
-		Lv1[0][0] = -f1; Lv1[0][1] = 0; Lv1[0][2] = x1;
-		Lv1[1][0] = 0; Lv1[1][1] = -f1; Lv1[1][2] = y1;
+		Lv1[0][0] = -f1; 	Lv1[0][1] = 0; 		Lv1[0][2] = x1;
+		Lv1[1][0] = 0; 		Lv1[1][1] = -f1; 	Lv1[1][2] = y1;
 
-		Lv2[0][0] = -f2; Lv2[0][1] = 0; Lv2[0][2] = x2;
-		Lv2[1][0] = 0; Lv2[1][1] = -f2; Lv2[1][2] = y2;
+		Lv2[0][0] = -f2; 	Lv2[0][1] = 0; 		Lv2[0][2] = x2;
+		Lv2[1][0] = 0; 		Lv2[1][1] = -f2; 	Lv2[1][2] = y2;
 
 		Lv.inject(Lv1);
 

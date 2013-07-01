@@ -315,6 +315,38 @@ vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &i
 	}
 	mMutex_matcher.unlock();
 
+	if(points[0].size() < 2)
+		return points;
+	
+int prevPointCount = points[0].size();
+
+	// filter out possible bad matches
+	vector<double> distances(points[0].size());
+	cv::Point2f p1, p2;
+	for(int i=0; i<points[0].size(); i++)
+	{
+		p1 = points[0][i];
+		p2 = points[1][i];
+		distances[i] = sqrt( pow(p1.x-p2.x,2) + pow(p1.y-p2.y,2) );
+	}
+	int medIndex = distances.size()/2;
+	// this finds the median
+	vector<double> distancesCopy(distances);
+	nth_element(distancesCopy.begin(), distancesCopy.begin()+medIndex, distancesCopy.end(),
+						[&](double const &a, double const &b){return a < b;});
+	double medDist = distancesCopy[medIndex];
+	double minDelta = 100;
+	double lowEnd = min(0.5f*medDist,medDist-minDelta);
+	double highEnd = max(1.5f*medDist,medDist+minDelta);
+	vector<vector<cv::Point2f> > tempPoints(2);
+	points.swap(tempPoints);
+	for(int i=0; i<distances.size(); i++)
+		if( lowEnd < distances[i] && distances[i] < highEnd)
+		{
+			points[0].push_back(tempPoints[0][i]);
+			points[1].push_back(tempPoints[0][i]);
+		}
+
 	return points;
 }
 
