@@ -3,7 +3,7 @@
 #include "TNT/jama_qr.h"
 
 //#include <pthread.h>
-#include <thread>
+//#include <thread>
 
 using namespace toadlet::egg;
 using namespace ICSL::Constants;
