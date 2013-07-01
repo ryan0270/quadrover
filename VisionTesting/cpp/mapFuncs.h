@@ -65,7 +65,7 @@ TNT::Array2D<T> logSO3(TNT::Array2D<T> const &R, DTYPE theta)
 		w[2][0] = (R[1][0]-R[0][1])/sTheta2;
 	}
 	else
-		w = Array2D<DTYPE>(3,1,0.0);
+		w = Array2D<T>(3,1,0.0);
 
 	return w;
 }

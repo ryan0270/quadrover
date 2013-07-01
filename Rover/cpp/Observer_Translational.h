@@ -136,6 +136,10 @@ class Observer_Translational : public toadlet::egg::Thread,
 									   TNT::Array2D<double> const &measCov,
 									   TNT::Array2D<double> &state,
 									   TNT::Array2D<double> &errCov);
+	static void doMeasUpdateKF_heightOnly(double const &meas, 
+										  double const &measCov, 
+										  TNT::Array2D<double> &state, 
+										  TNT::Array2D<double> &errCov);
 
 	shared_ptr<DataPhoneTemp<double> > mPhoneTempData;
 	double mZeroHeight;
