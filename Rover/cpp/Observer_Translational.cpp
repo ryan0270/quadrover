@@ -49,8 +49,8 @@ namespace Quadrotor{
 		mMeasCov[5][5] = 0.5*0.5;
 		mPosMeasCov = submat(mMeasCov,0,2,0,2);
 		mVelMeasCov = submat(mMeasCov,3,5,3,5);
-		mDynCov.inject(0.02*0.02*createIdentity((double)6));
-		mDynCov[5][5] *= 10;
+		mDynCov[0][0] = mDynCov[1][1] = mDynCov[2][2] = 0.1*0.1;
+		mDynCov[3][3] = mDynCov[4][4] = mDynCov[5][5] = 0.5*0.5;
 		mErrCovKF.inject(1e-4*createIdentity((double)6));
 
 		mCkf_T.inject(transpose(mCkf));
@@ -286,9 +286,9 @@ namespace Quadrotor{
 			state[i][0] += dt*accel[i-3][0];
 		for(int i=0; i<3; i++)
 		{
-			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dt*dt+dynCov[i][i];
-			errCov[i][i+3] += errCov[i+3][i+3]*dt+dynCov[i][i+3];
-			errCov[i+3][i] += errCov[i+3][i+3]*dt+dynCov[i+3][i];
+			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dt*dt+dt*dynCov[i][i];
+			errCov[i][i+3] += errCov[i+3][i+3]*dt+dt*dynCov[i][i+3];
+			errCov[i+3][i] += errCov[i+3][i+3]*dt+dt*dynCov[i+3][i];
 		}
 		for(int i=3; i<6; i++)
 			errCov[i][i] += dynCov[i][i];
@@ -350,6 +350,24 @@ namespace Quadrotor{
 			errCov[i][i+3] -= gainKF[i][i]*errCov[i][i+3];
 			errCov[i+3][i] = errCov[i][i+3];
 		}
+	}
+
+	void Observer_Translational::doMeasUpdateKF_heightOnly(double const &meas, double const &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	{
+		Array2D<double> gainKF(6,1,0.0);
+		gainKF[2][0] = errCov[2][2]/(errCov[2][2]+measCov);
+		gainKF[5][0] = errCov[2][5]/(errCov[2][2]+measCov);
+
+		// \hat{x} = \hat{x} + K (meas - C \hat{x})
+		double err = meas-state[2][0];
+		state[2][0] += gainKF[2][0]*err;
+		state[5][0] += gainKF[5][0]*err;
+
+		// S = (I-KC) S
+		errCov[2][2] -= gainKF[2][0]*errCov[2][2];
+		errCov[2][5] -= gainKF[2][0]*errCov[2][5];
+		errCov[5][5] -= gainKF[5][0]*errCov[2][5];
+		errCov[5][2] = errCov[2][5];
 	}
 
 	void Observer_Translational::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)

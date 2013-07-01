@@ -114,16 +114,16 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageMatchData> const &mat
 	Array2D<double> B(3,3,0.0);
 	Array2D<double> R1 = createRotMat_ZYX(matchData->imgData0->att[2][0], matchData->imgData0->att[1][0], matchData->imgData0->att[0][0]);
 	Array2D<double> R2 = createRotMat_ZYX(matchData->imgData1->att[2][0], matchData->imgData1->att[1][0], matchData->imgData1->att[0][0]);
-	Array2D<double> R1_T = transpose(R1);
-	Array2D<double> R2_T = transpose(R2);
-	Array2D<double> R = matmult(R1, transpose(R2));
+	Array2D<double> attChange = matmult(transpose(R2), R1);
+	Array2D<double> omega = matmult( mRotPhoneToCam, logSO3(attChange, dt));
 	Array2D<double> q1a(3,1), q2a(3,1);
 	Array2D<double> q1(2,1), q2(2,1);
 	Array2D<double> Lv(2,3), Lv1(2,3), Lv2(2,3);
 	Array2D<double> Lw(2,3), Lw1(2,3), Lw2(2,3);
-	Array2D<double> angularVel(3,1,0.0);
 	double f1= matchData->imgData0->focalLength;
 	double f2 = matchData->imgData1->focalLength;
+	double f1Inv = 1.0/f1;
+	double f2Inv = 1.0/f2;
 	double cx = matchData->imgData0->img->cols/2;
 	double cy = matchData->imgData0->img->rows/2;
 	Array2D<double> rotPoint(3,1);
@@ -131,6 +131,7 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageMatchData> const &mat
 	rotPoint[1][0] = 0;
 	rotPoint[2][0] = 0;
 	rotPoint = rotPoint*(f1/0.0037); // assumes f1=f2
+	double x1, y1, x2, y2;
 	for(int i=0; i<matchData->featurePoints[0].size(); i++)
 	{
 		q1[0][0] = matchData->featurePoints[0][i].x-cx;
@@ -138,49 +139,50 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageMatchData> const &mat
 		q2[0][0] = matchData->featurePoints[1][i].x-cx;
 		q2[1][0] = matchData->featurePoints[1][i].y-cy;
 
-		// Unrotate
-		q1a[0][0] = q1[0][0];
-		q1a[1][0] = q1[1][0];
-		q1a[2][0] = f1;
-		q2a[0][0] = q2[0][0];
-		q2a[1][0] = q2[1][0];
-		q2a[2][0] = f2;
+//		// Unrotate
+//		q1a[0][0] = q1[0][0];
+//		q1a[1][0] = q1[1][0];
+//		q1a[2][0] = f1;
+//		q2a[0][0] = q2[0][0];
+//		q2a[1][0] = q2[1][0];
+//		q2a[2][0] = f2;
+//
+//		q1a = matmult(R1_T, q1a-rotPoint)+rotPoint;
+//		q2a = matmult(R2_T, q2a-rotPoint)+rotPoint;
+//
+//		// project back on to the focal plane
+//		q1a = f1/q1a[2][0]*q1a;
+//		q2a = f2/q2a[2][0]*q2a;
+//
+//		// back to 2d points
+//		q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
+//		q2[0][0] = q2a[0][0]; q2[1][0] = q2a[1][0];
 
-		q1a = matmult(R1_T, q1a-rotPoint)+rotPoint;
-		q2a = matmult(R2_T, q2a-rotPoint)+rotPoint;
-
-		// project back on to the focal plane
-		q1a = f1/q1a[2][0]*q1a;
-		q2a = f2/q2a[2][0]*q2a;
-
-		// back to 2d points
-		q1[0][0] = q1a[0][0]; q1[1][0] = q1a[1][0];
-		q2[0][0] = q2a[0][0]; q2[1][0] = q2a[1][0];
+		x1 = q1[0][0];
+		y1 = q1[1][0];
+		x2 = q2[0][0];
+		y2 = q2[1][0];
 
 		// Velocity jacobian
-		Lv1[0][0] = -f1; Lv1[0][1] = 0; Lv1[0][2] = q1[0][0];
-		Lv1[1][0] = 0; Lv1[1][1] = -f1; Lv1[1][2] = q1[1][0];
+		Lv1[0][0] = -f1; Lv1[0][1] = 0; Lv1[0][2] = x1;
+		Lv1[1][0] = 0; Lv1[1][1] = -f1; Lv1[1][2] = y1;
 
-		Lv2[0][0] = -f2; Lv2[0][1] = 0; Lv2[0][2] = q2[0][0];
-		Lv2[1][0] = 0; Lv2[1][1] = -f2; Lv2[1][2] = q2[1][0];
+		Lv2[0][0] = -f2; Lv2[0][1] = 0; Lv2[0][2] = x2;
+		Lv2[1][0] = 0; Lv2[1][1] = -f2; Lv2[1][2] = y2;
 
-		Lv = Lv1.copy();
+		Lv.inject(Lv1);
 
-		//			Lw1[0][0] = q1[0][0]*q1[1][0]; Lw1[0][1] = -(1+pow(q1[0][0],2)); Lw1[0][2] = q1[1][0];
-		//			Lw1[1][0] = 1+pow(q1[1][0],2); Lw1[1][1] = -Lw1[0][0];			 Lw1[1][2] = -q1[0][0];
-		//			Lw1 = 1.0/matchData->imgData0->focalLength*Lw1;
-		//
-		//			Lw2[0][0] = q2[0][0]*q2[1][0]; Lw2[0][1] = -(1+pow(q2[0][0],2)); Lw2[0][2] = q2[1][0];
-		//			Lw2[1][0] = 1+pow(q2[1][0],2); Lw2[1][1] = -Lw2[0][0];			 Lw2[1][2] = -q2[0][0];
-		//			Lw2 = 1.0/matchData->imgData1->focalLength*Lw2;
-		//
-		//			Lw = Lw1.copy();
+		Lw1[0][0] = f1Inv*x1*y1; 		Lw1[0][1] = -(f1+f1Inv*x1*x1); 	Lw1[0][2] = y1;
+		Lw1[1][0] = f1+f1Inv*y1*y1;		Lw1[1][1] = -f1Inv*x1*y1;		Lw1[1][2] = -x1;
+		
+		Lw2[0][0] = f2Inv*x2*y2; 		Lw1[0][1] = -(f2+f2Inv*x2*x2); 	Lw1[0][2] = y2;
+		Lw2[1][0] = f2+f2Inv*y2*y2;		Lw1[1][1] = -f2Inv*x2*y2;		Lw1[1][2] = -x2;
+		
+		Lw.inject(Lw1);
 
-		//			angularVel.inject(0.5*(matchData->imgData0->startAngularVel+matchData->imgData1->endAngularVel));
-		angularVel.inject(matchData->imgData0->angularVel);
 
-		//			A += matmult(transpose(q2-q1-matmult(Lw,matmult(mRotPhoneToCam,angularVel))),matmult(SnInv, Lv));
-		A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
+		A += matmult(transpose(q2-q1-matmult(Lw,omega)),matmult(SnInv, Lv));
+//		A += matmult(transpose(q2-q1),matmult(SnInv, Lv));
 		B += matmult(transpose(Lv), matmult(SnInv, Lv));
 	}
 	int maxPoints = 50;
@@ -236,6 +238,8 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageMatchData> const &mat
 	for(int i=0; i<velLS.dim1(); i++)
 		str2 = str2+velLS[i][0]+"\t";
 	mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
+
+printArray("vel:\t",vel);
 }
 
 } // namespace Rover

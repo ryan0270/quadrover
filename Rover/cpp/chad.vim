@@ -73,6 +73,8 @@ badd +47 QuadLogger.h
 badd +76 QuadLogger.cpp
 badd +1 VideoMaker.h
 badd +1 VideoMaker.cpp
+badd +2 VelocityEstimator.h
+badd +1 VelocityEstimator.cpp
 args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp VisionProcessor.h VisionProcessor.cpp
 edit Rover.cpp
 set splitbelow splitright
