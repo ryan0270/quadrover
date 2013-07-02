@@ -393,13 +393,13 @@ Log::alert("sensor manager - shutdown 5");
 			float battTemp = getBatteryTemp()/10.0;
 			float secTemp = getSecTemp()/10.0;
 			float fgTemp= getFuelgaugeTemp()/10.0;
-			float tmuTemp = getTmuTemp()/10.0;
+//			float tmuTemp = getTmuTemp()/10.0;
 
 			shared_ptr<DataPhoneTemp<double> > data = shared_ptr<DataPhoneTemp<double> >(new DataPhoneTemp<double>());
 			data->battTemp = battTemp;
 			data->secTemp = secTemp;
 			data->fgTemp = fgTemp;
-			data->tmuTemp = tmuTemp;
+//			data->tmuTemp = tmuTemp;
 			mMutex_listeners.lock();
 			for(int i=0; i<mListeners.size(); i++)
 			{
@@ -413,7 +413,7 @@ Log::alert("sensor manager - shutdown 5");
 				s = s+battTemp+"\t";
 				s = s+secTemp+"\t";
 				s = s+fgTemp+"\t";
-				s = s+tmuTemp+"\t";
+//				s = s+tmuTemp+"\t";
 				mMutex_logger.lock();
 				mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
 				mMutex_logger.unlock();
@@ -484,26 +484,26 @@ Log::alert("sensor manager - shutdown 5");
 		return temp;
 	}
 
-	int SensorManager::getTmuTemp()
-	{
-		int temp = 0;
-		// this path is for the SIII
-		string filename = "/sys/devices/platform/s5p-tmu/curr_temp";
-		ifstream file(filename.c_str());
-		if(file.is_open())
-		{
-			string line;
-			getline(file,line);
-			file.close();
-
-			stringstream ss(line);
-			ss >> temp;
-		}
-		else
-			Log::alert("Failed to open "+String(filename.c_str()));
-
-		return temp;
-	}
+//	int SensorManager::getTmuTemp()
+//	{
+//		int temp = 0;
+//		// this path is for the SIII
+//		string filename = "/sys/devices/platform/s5p-tmu/curr_temp";
+//		ifstream file(filename.c_str());
+//		if(file.is_open())
+//		{
+//			string line;
+//			getline(file,line);
+//			file.close();
+//
+//			stringstream ss(line);
+//			ss >> temp;
+//		}
+//		else
+//			Log::alert("Failed to open "+String(filename.c_str()));
+//
+//		return temp;
+//	}
 
 	void SensorManager::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
 	{

@@ -189,7 +189,7 @@ template <class T>
 class DataPhoneTemp : public Data<T>
 {
 	public:
-	DataPhoneTemp() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = tmuTemp = -1;}
+	DataPhoneTemp() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
 
 //	void copyTo(DataPhoneTemp<T> &d) const {
 //		d.timestamp.setTime(timestamp); 
@@ -198,7 +198,7 @@ class DataPhoneTemp : public Data<T>
 //		d.fgTemp = fgTemp;
 //		d.tmuTemp = tmuTemp;
 //	}
-	T battTemp, secTemp, fgTemp, tmuTemp;
+	T battTemp, secTemp, fgTemp;//, tmuTemp;
 };
 
 class ImageMatchData : public IData

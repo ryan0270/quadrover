@@ -70,7 +70,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	static int getBatteryTemp();
 	static int getSecTemp();
 	static int getFuelgaugeTemp();
-	static int getTmuTemp();
+//	static int getTmuTemp();
 	void runTemperatureMonitor();
 
 	QuadLogger *mQuadLogger;
