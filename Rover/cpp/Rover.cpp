@@ -602,8 +602,7 @@ void Rover::onNewSensorUpdate(shared_ptr<IData> const &data)
 			mPressure = static_pointer_cast<Data<double> >(data)->data;
 			break;
 		case DATA_TYPE_PHONE_TEMP:
-//			mPhoneTemp = ((DataPhoneTemp*)data)->tmuTemp;
-			mPhoneTemp = static_pointer_cast<DataPhoneTemp<double> >(data)->tmuTemp;
+			mPhoneTemp = static_pointer_cast<DataPhoneTemp<double> >(data)->secTemp;
 			break;
 	}
 }

@@ -572,11 +572,11 @@ namespace Quadrotor{
 					return;
 				}
 				mPhoneTempData->lock();
-				float tmuTemp = mPhoneTempData->tmuTemp;
+				float curTemp = mPhoneTempData->secTemp;
 				mPhoneTempData->unlock();
 				mMutex_phoneTempData.unlock();
 				double k = (999.5-1000.0)/(45.0-37.0); // taken from experimental data
-				double pressComp = pressure-k*(tmuTemp-37.0);
+				double pressComp = pressure-k*(curTemp-37.0);
 
 				mMutex_meas.lock();
 				double h = -Rstar*Tb/g0/M*log(pressure/Pb);
