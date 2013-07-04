@@ -61,6 +61,7 @@ set (SRC ${SRC}
 	./cpp/QuadLogger.cpp
 	./cpp/CommManager.cpp
 	./cpp/VisionProcessor.cpp
+	./cpp/FeatureFinder.cpp
 	./cpp/TranslationController.cpp
 	./cpp/AttitudeThrustController.cpp
 	./cpp/MotorInterface.cpp
@@ -84,6 +85,7 @@ set (H ${H}
 	./cpp/Time.h
 	./cpp/CommManager.h
 	./cpp/VisionProcessor.h
+	./cpp/FeatureFinder.h
 	./cpp/TranslationController.h
 	./cpp/AttitudeThrustController.h
 	./cpp/AttitudeThrustControllerListener.h

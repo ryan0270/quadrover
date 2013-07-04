@@ -191,13 +191,6 @@ class DataPhoneTemp : public Data<T>
 	public:
 	DataPhoneTemp() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
 
-//	void copyTo(DataPhoneTemp<T> &d) const {
-//		d.timestamp.setTime(timestamp); 
-//		d.battTemp = battTemp;
-//		d.secTemp = secTemp;
-//		d.fgTemp = fgTemp;
-//		d.tmuTemp = tmuTemp;
-//	}
 	T battTemp, secTemp, fgTemp;//, tmuTemp;
 };
 
@@ -207,11 +200,23 @@ class ImageMatchData : public IData
 	vector<vector<cv::Point2f> > featurePoints;
 	shared_ptr<DataImage> imgData0, imgData1;
 	shared_ptr<DataAnnotatedImage> imgAnnotated;
-//	shared_ptr<cv::Mat> imgAnnotated;
-//	double dt;
 
 	void lock(){mMutex.lock(); if(imgData0 != NULL) imgData0->lock(); if(imgData1 != NULL) imgData1->lock();}
 	void unlock(){mMutex.unlock(); if(imgData0 != NULL) imgData0->unlock(); if(imgData1 != NULL) imgData1->unlock();}
+
+	protected:
+	toadlet::egg::Mutex mMutex;
+};
+
+class ImageFeatureData : public IData
+{
+	public:
+	vector<cv::Point2f> featurePoints;
+	shared_ptr<DataImage> imgData;
+	shared_ptr<DataAnnotatedImage> imgAnnotated;
+
+	void lock(){mMutex.lock(); if(imgData != NULL) imgData->lock(); }
+	void unlock(){mMutex.unlock(); if(imgData != NULL) imgData->unlock(); }
 
 	protected:
 	toadlet::egg::Mutex mMutex;

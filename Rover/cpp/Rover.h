@@ -35,6 +35,7 @@ class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public SensorManagerListener,
 				 public VisionProcessorListener,
+				 public FeatureFinderListener,
 				 public toadlet::egg::Thread
 {
 public:
@@ -80,9 +81,12 @@ public:
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for VisionProcessorListener
-	void onImageProcessed(shared_ptr<ImageMatchData> const data);
+	void onImageProcessed(shared_ptr<ImageMatchData> const &data);
 	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
 	void onImageLost(){};
+
+	// for FeatureFinderListener
+	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
 protected:
 	CommManager mCommManager;

@@ -59,6 +59,8 @@ class VelocityEstimator : public VisionProcessorListener,
 	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
 	void setRotPhoneToCam(TNT::Array2D<double> const &rot){mRotPhoneToCam.inject(rot); mRotCamToPhone.inject(transpose(rot));}
 
+	void doVelocityEstimate(shared_ptr<ImageMatchData> const &matchData);
+
 	void addListener(VelocityEstimatorListener *l){mListeners.push_back(l);}
 
 	// for VisionProcessorListener
@@ -81,9 +83,6 @@ class VelocityEstimator : public VisionProcessorListener,
 	toadlet::egg::Mutex mMutex_imageData;
 
 	Observer_Translational *mObsvTranslational;
-
-	void doVelocityEstimate(shared_ptr<ImageMatchData> const &matchData);
-
 };
 
 } // namespace Rover
