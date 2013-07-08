@@ -39,8 +39,13 @@ void QuadLogger::shutdown()
 {
 	Log::alert("------------------------- QuadLogger shutdown started");
 	mRunning = false;
+Log::alert("bob 1");
 	while(!mDone)
+	{
+Log::alert("bob 2");
 		System::msleep(10);
+	}
+Log::alert("bob 3");
 	Log::alert("------------------------- QuadLogger shutdown done");
 }
 

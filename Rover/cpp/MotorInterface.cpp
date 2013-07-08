@@ -171,12 +171,9 @@ namespace Quadrotor{
 	}
 
 	// TODO: Need to make this function const
-	bool MotorInterface::isConnected()
+	bool MotorInterface::isConnected() const
 	{
-		mMutex_socket.lock(); 
-		bool temp = (mSocket != NULL) && !mWaitingForConnection; 
-		mMutex_socket.unlock(); 
-		return temp;
+		return (mSocket != NULL) && !mWaitingForConnection;
 	}
 } // namespace Quadrotor
 } // namespace ICSL

@@ -46,11 +46,6 @@ class AttitudeThrustController : public toadlet::egg::Thread,
 
 	void calcControl();
 
-	void enableMotors(bool enabled);
-//	bool isMotorInterfaceConnected();
-	// TODO: Need to adjust MotorInterface class so this can be a const pointer
-	MotorInterface* getMotorInterface(){return mMotorInterface;}
-
 	Collection<uint16> getLastMotorCmds(){mMutex_motorInterface.lock(); Collection<uint16> temp(mLastMotorCmds); mMutex_motorInterface.unlock(); return temp;}
 	TNT::Array2D<double> getDesAttitude(){mMutex_data.lock(); TNT::Array2D<double> temp = mDesAtt.copy(); mMutex_data.unlock(); return temp;}
 

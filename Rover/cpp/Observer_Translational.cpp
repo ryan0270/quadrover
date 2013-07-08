@@ -454,7 +454,6 @@ printArray("vel:\n",vel);
 		for(int i=0; i<velLS.dim1(); i++)
 			str2 = str2+velLS[i][0]+"\t";
 		mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
-
 	}
 
 	void Observer_Translational::setMotorCmds(double const cmds[4])

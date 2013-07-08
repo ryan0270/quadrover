@@ -74,13 +74,13 @@ void Rover::initialize()
 	mCommManager.addListener(this);
 	mCommManager.start();
 
-//	mMutex_cntl.lock();
-//	mTranslationController.setRotViconToPhone(mRotViconToPhone);
-//	mTranslationController.setStartTime(mStartTime);
-//	mTranslationController.setQuadLogger(&mQuadLogger);
-//	mTranslationController.initialize();
-//	mTranslationController.start();
-//	mCommManager.addListener(&mTranslationController);
+	mMutex_cntl.lock();
+	mTranslationController.setRotViconToPhone(mRotViconToPhone);
+	mTranslationController.setStartTime(mStartTime);
+	mTranslationController.setQuadLogger(&mQuadLogger);
+	mTranslationController.initialize();
+	mTranslationController.start();
+	mCommManager.addListener(&mTranslationController);
 
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
@@ -146,12 +146,13 @@ void Rover::shutdown()
 	Log::alert("Main shutdown started");
 Log::alert("chad 1");
 	mQuadLogger.shutdown();
-	stopLogging();
+//	stopLogging();
 Log::alert("chad 2");
 	mRunning = false;
-//	mMutex_cntl.lock();
+	mMutex_cntl.lock();
+	mMotorInterface.enableMotors(false);
 //	mAttitudeThrustController.enableMotors(false);
-//	mMutex_cntl.unlock();
+	mMutex_cntl.unlock();
 Log::alert("chad 3");
 	if(!mRunnerIsDone)
 		this->join(); 
@@ -163,8 +164,9 @@ Log::alert("chad 4");
 //		sys.msleep(10);
 //	}
 
-Log::alert("chad 5");
+Log::alert("chad 5a");
 	mAttitudeThrustController.shutdown();
+Log::alert("chad 5b");
 	mTranslationController.shutdown();
 
 Log::alert("chad 6");
@@ -179,6 +181,7 @@ Log::alert("chad 7");
 	mImageMatchData = NULL;
 	mSensorManager.shutdown();
 
+	mMotorInterface.shutdown();
 
 Log::alert("chad 8");
 	Log::alert(String("----------------- really dead -------------"));
@@ -295,13 +298,12 @@ void Rover::transmitDataUDP()
 	mMutex_cntl.lock();
 	int arduinoStatus;
 	mMutex_cntl.lock();
-	MotorInterface* motorInterface = mAttitudeThrustController.getMotorInterface();
-	if(motorInterface->isConnected())
+	if(mMotorInterface.isConnected())
 		arduinoStatus = 1;
 	else
 		arduinoStatus = 0;
 
-	pUseMotors.dataBool.push_back(motorInterface->isMotorsEnabled());
+	pUseMotors.dataBool.push_back(mMotorInterface.isMotorsEnabled());
 	pUseMotors.type = COMM_USE_MOTORS;
 
 	Array2D<double> desAtt = mAttitudeThrustController.getDesAttitude();

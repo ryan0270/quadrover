@@ -51,16 +51,16 @@ using namespace TNT;
 	void AttitudeThrustController::shutdown()
 	{
 		Log::alert("------------------------- AttitudeThrustController shutdown started  --------------------------------------------------");
-		mMutex_motorInterface.lock();
-		mMotorInterface->enableMotors(false);
-		mMutex_motorInterface.unlock();
+//		mMutex_motorInterface.lock();
+//		mMotorInterface->enableMotors(false);
+//		mMutex_motorInterface.unlock();
 		mRunning = false;
 		while(!mDone)
 			System::msleep(10);
 	
-		mMutex_motorInterface.lock();
-		mMotorInterface->shutdown();
-		mMutex_motorInterface.unlock();
+//		mMutex_motorInterface.lock();
+//		mMotorInterface->shutdown();
+//		mMutex_motorInterface.unlock();
 	
 		Log::alert("------------------------- AttitudeThrustController shutdown done");
 	}
@@ -83,11 +83,16 @@ using namespace TNT;
 		while(mRunning)
 		{
 			if(mDoControl)
+			{
+Log::alert("before");
 				calcControl();
+Log::alert("after");
+			}
 	
 			sys.msleep(1);
 		}
 	
+Log::alert("bobbity");
 		mDone = true;
 	}
 	
@@ -312,22 +317,5 @@ using namespace TNT;
 		Log::alert(String()+"Motor arm length updated: "+mMotorArmLength);
 		mMutex_data.unlock();
 	}
-
-	void AttitudeThrustController::enableMotors(bool enabled)
-	{
-		mMutex_motorInterface.lock();
-		mMotorInterface->enableMotors(enabled);
-		mMutex_motorInterface.unlock();
-	}
-
-//	bool AttitudeThrustController::isMotorInterfaceConnected()
-//	{
-//		bool temp;
-//		mMutex_motorInterface.lock();
-//		temp = mMotorInterface->isConnected();
-//		mMutex_motorInterface.unlock();
-//		return temp;
-//	}
-
 } // namespace Quadrotor
 } // namespace ICSL
