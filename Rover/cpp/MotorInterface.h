@@ -25,7 +25,7 @@ class MotorInterface : public toadlet::egg::Thread
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	//TODO: Need to make this function const
-	bool isConnected();
+	bool isConnected() const;
 
 	void sendCommand(toadlet::egg::Collection<uint16> const &cmds);
 
