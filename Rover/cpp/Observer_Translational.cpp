@@ -219,6 +219,7 @@ namespace Quadrotor{
 			mMutex_data.unlock();
 			lastUpdateTime.setTime();
 
+				th.detach();
 			// buffers
 			mMutex_data.lock();
 			shared_ptr<DataVector<double> > stateData = shared_ptr<DataVector<double> >(new DataVector<double>());
@@ -265,6 +266,7 @@ namespace Quadrotor{
 		mDone = true;
 	}
 
+//return;
 	void Observer_Translational::setMotorCmds(double const cmds[4])
 	{
 		shared_ptr<DataVector<double> > data(new DataVector<double>());
