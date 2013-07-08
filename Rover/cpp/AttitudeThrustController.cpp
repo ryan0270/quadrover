@@ -84,12 +84,15 @@ using namespace TNT;
 		{
 			if(mDoControl)
 			{
+Log::alert("before");
 				calcControl();
+Log::alert("after");
 			}
 	
 			sys.msleep(1);
 		}
 	
+Log::alert("bobbity");
 		mDone = true;
 	}
 	
