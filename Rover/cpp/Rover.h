@@ -34,8 +34,6 @@ namespace Quadrotor {
 class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public SensorManagerListener,
-				 public VisionProcessorListener,
-				 public FeatureFinderListener,
 				 public toadlet::egg::Thread
 {
 public:
@@ -85,9 +83,6 @@ public:
 	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
 	void onImageLost(){};
 
-	// for FeatureFinderListener
-	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
-
 protected:
 	CommManager mCommManager;
 	bool mRunning, mRunnerIsDone;
@@ -113,6 +108,8 @@ protected:
 
 	VisionProcessor mVisionProcessor;
 	VelocityEstimator mVelocityEstimator;
+	FeatureFinder mFeatureFinder;
+
 
 	SensorManager mSensorManager;
 

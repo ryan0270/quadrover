@@ -56,7 +56,7 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
 	// used to pass images in from Java
-	void passNewImage(cv::Mat const *img, int64 const &timestampNS);
+	void passNewImage(cv::Mat const *image, int64 const &timestampNS);
 
 	// for Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
@@ -85,9 +85,9 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	Collection<SensorManagerListener *> mListeners;
 
 	shared_ptr<cv::VideoCapture> initCamera();
-//	void runImgAcq(shared_ptr<cv::VideoCapture> cap);
+//	void runImageAcq(shared_ptr<cv::VideoCapture> cap);
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
-	TNT::Array2D<double> mAttAccum, mAngularVelAccum; // accumulators so I can get the average during img acq interval
+	TNT::Array2D<double> mAttAccum, mAngularVelAccum; // accumulators so I can get the average during image acq interval
 	int mAttAccumCnt, mAngularVelAccumCnt;
 	toadlet::egg::Mutex mMutex_accum;
 
@@ -96,9 +96,9 @@ class SensorManager : public toadlet::egg::Thread, public Observer_AngularListen
 	int64_t mTimestampOffsetNS;
 	int mThreadPriority, mScheduler;
 
-	Time mLastImgTime;
-	double mImgDT;
-	int mImgCnt;
+	Time mLastImageTime;
+	double mImageDT;
+	int mImageCnt;
 };
 
 

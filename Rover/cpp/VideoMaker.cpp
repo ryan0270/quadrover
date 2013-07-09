@@ -43,54 +43,54 @@ namespace Quadrotor {
 
 		bool firstImage = true;
 		int id = -1;
-		cv::Mat img;
+		cv::Mat image;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
-			mMutex_imgQueue.lock();
-			while(!mImgQueue.empty())
-//			if(!mImgQueue.empty())
+			mMutex_imageQueue.lock();
+			while(!mImageQueue.empty())
+//			if(!mImageQueue.empty())
 			{
-//				if(mImgQueue.size() > 1)
-//					Log::alert(String()+"Backlog: "+mImgQueue.size());
+//				if(mImageQueue.size() > 1)
+//					Log::alert(String()+"Backlog: "+mImageQueue.size());
 
-				shared_ptr<ImageMatchData> data = mImgQueue.front();
+				shared_ptr<ImageMatchData> data = mImageQueue.front();
 
-				id = data->imgData1->id;
-				String filename = String()+"/sdcard/RoverService/video/img_"+id+".bmp";
-				cv::Mat img = *(data->imgData1->img);
-				mImgQueue.pop();
-  				mMutex_imgQueue.unlock();
-				cv::imwrite(filename.c_str(), img);
-				mMutex_imgQueue.lock();
+				id = data->imageData1->id;
+				String filename = String()+"/sdcard/RoverService/video/image_"+id+".bmp";
+				cv::Mat image = *(data->imageData1->image);
+				mImageQueue.pop();
+  				mMutex_imageQueue.unlock();
+				cv::imwrite(filename.c_str(), image);
+				mMutex_imageQueue.lock();
 				id++;
 			}
-			mMutex_imgQueue.unlock();
+			mMutex_imageQueue.unlock();
 			sys.msleep(1);
 		}
 
 		mDone = true;
 	}
 
-	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const data)
+	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const &data)
 	{
-//		if( Time::calcDiffMS(mLastImgTime, data->imgData1->timestamp) > 100
+//		if( Time::calcDiffMS(mLastImageTime, data->imageData1->timestamp) > 100
 //				&& mMotorOn
 //				)
 		if(mMotorOn)
 		{
-			mMutex_imgQueue.lock();
-			mLastImgTime.setTime(data->imgData1->timestamp);
-			while(mImgQueue.size() > 100) 
+			mMutex_imageQueue.lock();
+			mLastImageTime.setTime(data->imageData1->timestamp);
+			while(mImageQueue.size() > 100) 
 			{// This is to cap the RAM usage. It WILL delay the calling thread.
-				mMutex_imgQueue.unlock();
+				mMutex_imageQueue.unlock();
 				System::msleep(1);
-				mMutex_imgQueue.lock();
+				mMutex_imageQueue.lock();
 			}
-			mImgQueue.push(data);
-			mMutex_imgQueue.unlock();
+			mImageQueue.push(data);
+			mMutex_imageQueue.unlock();
 		}
 	}
 

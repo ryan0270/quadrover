@@ -219,7 +219,6 @@ namespace Quadrotor{
 			mMutex_data.unlock();
 			lastUpdateTime.setTime();
 
-				th.detach();
 			// buffers
 			mMutex_data.lock();
 			shared_ptr<DataVector<double> > stateData = shared_ptr<DataVector<double> >(new DataVector<double>());
@@ -614,94 +613,94 @@ namespace Quadrotor{
 		}
 	}
 
-	void Observer_Translational::onImageProcessed(shared_ptr<ImageMatchData> const data)
-	{
-		mMutex_imageData.lock();
-		mImageMatchData = data;
-		mMutex_imageData.unlock();
-
-		mNewImageResultsReady = true;
-	}
-
-	void Observer_Translational::onImageTargetFound(shared_ptr<ImageTargetFindData> const data)
-	{
-		double nomRadius = 0.097; // m
-		double f = data->imgData->focalLength;
-
-		Array2D<double> att = data->imgData->att.copy();
-		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
-		Array2D<double> R_T = transpose(R);
-
-		float cx = data->imgData->img->cols/2.0;
-		float cy = data->imgData->img->rows/2.0;
-		Array2D<double> point(3,1);
-		point[0][0] = -(data->circleBlobs[0].locationCorrected.x-cx);
-		point[1][0] = -(data->circleBlobs[0].locationCorrected.y-cx);
-		point[2][0] = -f;
-		point = matmult(R_T, matmult(mRotCamToPhone, point));
-
-		double radius = data->circleBlobs[0].radiusCorrected;
-		double z = nomRadius*f/radius;
-		double x = point[0][0]/f*abs(z);
-		double y = point[1][0]/f*abs(z);
-
-		Array2D<double> pos(3,1);
-		pos[0][0] = x; 
-		pos[1][0] = y; 
-		pos[2][0] = z;
-		mMutex_meas.lock();
-///////////////// HACK ////////////////////
-pos[2][0] = mLastViconPos[2][0];
-///////////////// HACK ////////////////////
-		bool doLog = false;
-		mMutex_data.lock();
-		if(!mHaveFirstCameraPos)
-			mViconCameraOffset.inject(mLastViconPos-pos);
-		pos = pos+mViconCameraOffset;
-		if( !mHaveFirstCameraPos ||
-			(mHaveFirstCameraPos && 
-			 norm2(mLastCameraPos-pos) < 0.2) &&
-			 norm2(submat(mStateKF,0,2,0,0)-pos) < 0.5
-			)
-		{
-			mHaveFirstCameraPos = true;
-			double dt = mLastCameraPosTime.getElapsedTimeUS()/1.0e6;
-			if(dt < 0.2)
-				mLastCameraVel.inject( 1.0/dt*(pos-mLastCameraPos));
-			else
-				for(int i=0; i<3; i++)
-					mLastCameraVel[i][0] = 0;
-			mLastCameraPos.inject(pos);
-			mLastCameraPosTime.setTime();
-
-			shared_ptr<DataVector<double> > posData(new DataVector<double>() );
-			posData->type = DATA_TYPE_CAMERA_POS;
-			posData->timestamp.setTime(data->imgData->timestamp);
-			posData->data = mLastCameraPos.copy();
-			mNewEventsBuffer.push_back(posData);
-
-			shared_ptr<DataVector<double> > velData(new DataVector<double>() );
-			velData->type = DATA_TYPE_CAMERA_VEL;
-			velData->timestamp.setTime(data->imgData->timestamp);
-			velData->data = mLastCameraVel.copy();
-			mNewEventsBuffer.push_back(velData);
-
-			doLog = true;
-		}
-		mMutex_data.unlock();
-		
-		mMutex_meas.unlock();
-
-		if(doLog)
-		{
-			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CAMERA_POS+"\t";
-			for(int i=0; i<pos.dim1(); i++)
-				s = s+pos[i][0]+"\t";
-			mQuadLogger->addLine(s, LOG_FLAG_CAM_RESULTS);
-		}
-
-		mNewCameraPosAvailable = true;
-	}
+//	void Observer_Translational::onImageProcessed(shared_ptr<ImageMatchData> const data)
+//	{
+//		mMutex_imageData.lock();
+//		mImageMatchData = data;
+//		mMutex_imageData.unlock();
+//
+//		mNewImageResultsReady = true;
+//	}
+//
+//	void Observer_Translational::onImageTargetFound(shared_ptr<ImageTargetFindData> const data)
+//	{
+//		double nomRadius = 0.097; // m
+//		double f = data->imgData->focalLength;
+//
+//		Array2D<double> att = data->imgData->att.copy();
+//		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
+//		Array2D<double> R_T = transpose(R);
+//
+//		float cx = data->imgData->img->cols/2.0;
+//		float cy = data->imgData->img->rows/2.0;
+//		Array2D<double> point(3,1);
+//		point[0][0] = -(data->circleBlobs[0].locationCorrected.x-cx);
+//		point[1][0] = -(data->circleBlobs[0].locationCorrected.y-cx);
+//		point[2][0] = -f;
+//		point = matmult(R_T, matmult(mRotCamToPhone, point));
+//
+//		double radius = data->circleBlobs[0].radiusCorrected;
+//		double z = nomRadius*f/radius;
+//		double x = point[0][0]/f*abs(z);
+//		double y = point[1][0]/f*abs(z);
+//
+//		Array2D<double> pos(3,1);
+//		pos[0][0] = x; 
+//		pos[1][0] = y; 
+//		pos[2][0] = z;
+//		mMutex_meas.lock();
+/////////////////// HACK ////////////////////
+//pos[2][0] = mLastViconPos[2][0];
+/////////////////// HACK ////////////////////
+//		bool doLog = false;
+//		mMutex_data.lock();
+//		if(!mHaveFirstCameraPos)
+//			mViconCameraOffset.inject(mLastViconPos-pos);
+//		pos = pos+mViconCameraOffset;
+//		if( !mHaveFirstCameraPos ||
+//			(mHaveFirstCameraPos && 
+//			 norm2(mLastCameraPos-pos) < 0.2) &&
+//			 norm2(submat(mStateKF,0,2,0,0)-pos) < 0.5
+//			)
+//		{
+//			mHaveFirstCameraPos = true;
+//			double dt = mLastCameraPosTime.getElapsedTimeUS()/1.0e6;
+//			if(dt < 0.2)
+//				mLastCameraVel.inject( 1.0/dt*(pos-mLastCameraPos));
+//			else
+//				for(int i=0; i<3; i++)
+//					mLastCameraVel[i][0] = 0;
+//			mLastCameraPos.inject(pos);
+//			mLastCameraPosTime.setTime();
+//
+//			shared_ptr<DataVector<double> > posData(new DataVector<double>() );
+//			posData->type = DATA_TYPE_CAMERA_POS;
+//			posData->timestamp.setTime(data->imgData->timestamp);
+//			posData->data = mLastCameraPos.copy();
+//			mNewEventsBuffer.push_back(posData);
+//
+//			shared_ptr<DataVector<double> > velData(new DataVector<double>() );
+//			velData->type = DATA_TYPE_CAMERA_VEL;
+//			velData->timestamp.setTime(data->imgData->timestamp);
+//			velData->data = mLastCameraVel.copy();
+//			mNewEventsBuffer.push_back(velData);
+//
+//			doLog = true;
+//		}
+//		mMutex_data.unlock();
+//		
+//		mMutex_meas.unlock();
+//
+//		if(doLog)
+//		{
+//			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CAMERA_POS+"\t";
+//			for(int i=0; i<pos.dim1(); i++)
+//				s = s+pos[i][0]+"\t";
+//			mQuadLogger->addLine(s, LOG_FLAG_CAM_RESULTS);
+//		}
+//
+//		mNewCameraPosAvailable = true;
+//	}
 
 	void Observer_Translational::onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData)
 	{

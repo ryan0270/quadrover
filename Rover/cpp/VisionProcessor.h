@@ -38,7 +38,7 @@ class VisionProcessorListener
 		virtual ~VisionProcessorListener(){};
 
 		virtual void onImageProcessed(shared_ptr<ImageMatchData> const &data)=0;
-		virtual void onImageTargetFound(shared_ptr<ImageTargetFindData> const data)=0;
+		virtual void onImageTargetFound(shared_ptr<ImageTargetFindData> const &data)=0;
 		virtual void onImageLost()=0;
 };
 
@@ -62,8 +62,8 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		void enableIbvs(bool enable);
 
-		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImgProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
-		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImgProcTimeUS; mMutex_data.unlock(); return temp;}
+		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
+		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
 		void getLastImage(cv::Mat *outImage);
 		void getLastImageAnnotated(cv::Mat *outImage);
 		toadlet::egg::Collection<int> getVisionParams();
@@ -72,7 +72,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		// CommManagerListener functions
 		void onNewCommLogMask(uint32 mask);
-		void onNewCommImgBufferSize(int size);
+		void onNewCommImageBufferSize(int size);
 		void onNewCommVisionRatioThreshold(float h);
 		void onNewCommVisionMatchRadius(float r);
 		void onCommConnectionLost();
@@ -96,9 +96,9 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		shared_ptr<DataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
 
-		Time mStartTime, mLastImgFoundTime, mLastProcessTime;
+		Time mStartTime, mLastImageFoundTime, mLastProcessTime;
 
-		toadlet::uint32 mImgProcTimeUS;
+		toadlet::uint32 mImageProcTimeUS;
 
 		QuadLogger *mQuadLogger;
 
@@ -109,9 +109,9 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		void run();
 
-		int mImgBufferMaxSize;
-		list<shared_ptr<DataImage> > mImgDataBuffer;
-		list<shared_ptr<ImageMatchData> > mImgMatchDataBuffer;
+		int mImageBufferMaxSize;
+		list<shared_ptr<DataImage> > mImageDataBuffer;
+		list<shared_ptr<ImageMatchData> > mImageMatchDataBuffer;
 		list<vector<vector<cv::Point2f> > > mFeatureMatchBuffer;
 		list<Time> mFeatureMatchTimeBuffer;
 		list<double> mFeatureMatchDTBuffer;
@@ -119,10 +119,10 @@ class VisionProcessor : public toadlet::egg::Thread,
 
 		Matcher mFeatureMatcher;
 
-		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &img);
-		vector<BlobDetector::Blob> findCircles(cv::Mat const &img);
-		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img);
-		static void drawTarget(vector<BlobDetector::Blob> const &circles, cv::Mat &img);
+		vector<vector<cv::Point2f> > getMatchingPoints(cv::Mat const &image);
+		vector<BlobDetector::Blob> findCircles(cv::Mat const &image);
+		static void drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &image);
+		static void drawTarget(vector<BlobDetector::Blob> const &circles, cv::Mat &image);
 
 		void runTargetFinder();
 

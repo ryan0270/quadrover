@@ -13,6 +13,7 @@ VelocityEstimator::VelocityEstimator() :
 	mRunning = false;
 
 	mNewImageDataAvailable = false;
+	mLastImageFeatureData = NULL;
 }
 
 VelocityEstimator::~VelocityEstimator()
@@ -42,17 +43,13 @@ void VelocityEstimator::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
-	shared_ptr<ImageMatchData> imgMatchData;
+	shared_ptr<ImageFeatureData> imgFeatureData;
 	while(mRunning)
 	{
 		if(mNewImageDataAvailable)
 		{
-			mMutex_imageData.lock();
-			imgMatchData = mImageMatchData;
-			mMutex_imageData.unlock();
-
-			doVelocityEstimate(imgMatchData);
-
+			imgFeatureData = mLastImageFeatureData;
+			doVelocityEstimate(imgFeatureData);
 			mNewImageDataAvailable = false;
 		}
 
@@ -62,19 +59,16 @@ void VelocityEstimator::run()
 	mDone = true;
 }
 
-void VelocityEstimator::onImageProcessed(shared_ptr<ImageMatchData> const data)
-{
-	mMutex_imageData.lock();
-	mImageMatchData = data;	
-	mMutex_imageData.unlock();
-
-	mNewImageDataAvailable = true;
-}
-
 // See eqn 98 in the Feb 25, 2013 notes
-void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageMatchData> const &matchData)
+void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &featureData) const
 {
 //	Log::alert("skipping velocity estimate");
+}
+
+void VelocityEstimator::onFeaturesFound(shared_ptr<ImageFeatureData> const &data)
+{
+	mLastImageFeatureData = data;
+	mNewImageDataAvailable = true;
 }
 
 } // namespace Rover

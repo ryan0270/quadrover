@@ -33,7 +33,7 @@ class FeatureFinderListener
 	public:
 		virtual ~FeatureFinderListener(){};
 
-		virtual void onFeaturesFound(shared_ptr<ImageFeatureData> const data)=0;
+		virtual void onFeaturesFound(shared_ptr<ImageFeatureData> const &data)=0;
 };
 
 class FeatureFinder : public toadlet::egg::Thread, 
@@ -56,8 +56,8 @@ class FeatureFinder : public toadlet::egg::Thread,
 
 		void enableIbvs(bool enable);
 
-		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImgProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
-		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImgProcTimeUS; mMutex_data.unlock(); return temp;}
+		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
+		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
 		void getLastImage(cv::Mat *outImage);
 		void getLastImageAnnotated(cv::Mat *outImage);
 		toadlet::egg::Collection<int> getVisionParams();
@@ -66,10 +66,8 @@ class FeatureFinder : public toadlet::egg::Thread,
 
 		// CommManagerListener functions
 		void onNewCommLogMask(uint32 mask);
-		void onNewCommImgBufferSize(int size);
+		void onNewCommImageBufferSize(int size);
 		void onCommConnectionLost();
-		void onNewCommMotorOn(){mMotorOn = true;}
-		void onNewCommMotorOff(){mMotorOn = false;}
 		void onNewCommLogClear();
 		
 		// SensorManagerListener
@@ -81,15 +79,16 @@ class FeatureFinder : public toadlet::egg::Thread,
 		bool mRunning, mFinished;
 		bool mNewImageReady, mNewImageReady_targetFind;
 		bool mLogImages;
-		cv::Mat	mCurImage, mCurImageGray;
+//		cv::Mat	mCurImage, mCurImageGray;
 		shared_ptr<cv::Mat> mCurImageAnnotated;
-		vector<vector<double> > mMSERHuMoments;
 
-		shared_ptr<DataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
+//		shared_ptr<DataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
+		shared_ptr<DataImage> mImageDataNext;
+		shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
 
 		Time mStartTime, mLastProcessTime;
 
-		toadlet::uint32 mImgProcTimeUS;
+		toadlet::uint32 mImageProcTimeUS;
 
 		QuadLogger *mQuadLogger;
 
@@ -100,12 +99,9 @@ class FeatureFinder : public toadlet::egg::Thread,
 
 		void run();
 
-		int mImgBufferMaxSize;
-
 		vector<cv::Point2f> findFeaturePoints(cv::Mat const &img);
 		static void drawPoints(vector<cv::Point2f> const &points, cv::Mat &img);
 
-		bool mMotorOn;
 		int mThreadPriority, mScheduler;
 };
 

@@ -139,16 +139,16 @@ class DataImage : public IData
 	public:
 	DataImage() : att(3,1,0.0), angularVel(3,1,0.)  {
 		type = DATA_TYPE_IMAGE; 
-		imgFormat = IMG_FORMAT_BGR; 
-		img = shared_ptr<cv::Mat>(new cv::Mat());
+		imageFormat = IMG_FORMAT_BGR; 
+		image = shared_ptr<cv::Mat>(new cv::Mat());
 		cap = NULL;
 		id = sNextID()++;
 	}
-//	DataImage(cv::Mat img1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
-//		img1.copyTo(*img);
+//	DataImage(cv::Mat image1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
+//		image1.copyTo(*image);
 //		att = att1.copy();
 //		angularVel = angularVel.copy();
-//		imgFormat = fmt;
+//		imageFormat = fmt;
 //	}
 
 	void copyTo(DataImage &d) {
@@ -157,7 +157,7 @@ class DataImage : public IData
 		lock();
 		d.lock();
 		d.timestamp.setTime(timestamp); 
-		img->copyTo(*(d.img)); 
+		image->copyTo(*(d.image)); 
 		d.att.inject(att);
 		d.angularVel.inject(angularVel);
 		d.focalLength = focalLength;
@@ -165,10 +165,10 @@ class DataImage : public IData
 		unlock();
 	}
 	unsigned int id;
-	shared_ptr<cv::Mat> img;
+	shared_ptr<cv::Mat> image;
 	TNT::Array2D<double> att;
 	TNT::Array2D<double> angularVel;
-	ImageFormat imgFormat;
+	ImageFormat imageFormat;
 	double focalLength;
 	shared_ptr<cv::VideoCapture> cap;
 
@@ -181,8 +181,8 @@ class DataAnnotatedImage : public IData
 	public:
 	DataAnnotatedImage(){ };
 
-	shared_ptr<cv::Mat> imgAnnotated;
-	shared_ptr<DataImage> imgDataSource;
+	shared_ptr<cv::Mat> imageAnnotated;
+	shared_ptr<DataImage> imageDataSource;
 };
 
 template <class T>
@@ -198,11 +198,11 @@ class ImageMatchData : public IData
 {
 	public:
 	vector<vector<cv::Point2f> > featurePoints;
-	shared_ptr<DataImage> imgData0, imgData1;
-	shared_ptr<DataAnnotatedImage> imgAnnotated;
+	shared_ptr<DataImage> imageData0, imageData1;
+	shared_ptr<DataAnnotatedImage> imageAnnotated;
 
-	void lock(){mMutex.lock(); if(imgData0 != NULL) imgData0->lock(); if(imgData1 != NULL) imgData1->lock();}
-	void unlock(){mMutex.unlock(); if(imgData0 != NULL) imgData0->unlock(); if(imgData1 != NULL) imgData1->unlock();}
+	void lock(){mMutex.lock(); if(imageData0 != NULL) imageData0->lock(); if(imageData1 != NULL) imageData1->lock();}
+	void unlock(){mMutex.unlock(); if(imageData0 != NULL) imageData0->unlock(); if(imageData1 != NULL) imageData1->unlock();}
 
 	protected:
 	toadlet::egg::Mutex mMutex;
@@ -212,11 +212,11 @@ class ImageFeatureData : public IData
 {
 	public:
 	vector<cv::Point2f> featurePoints;
-	shared_ptr<DataImage> imgData;
-	shared_ptr<DataAnnotatedImage> imgAnnotated;
+	shared_ptr<DataImage> imageData;
+	shared_ptr<DataAnnotatedImage> imageAnnotated;
 
-	void lock(){mMutex.lock(); if(imgData != NULL) imgData->lock(); }
-	void unlock(){mMutex.unlock(); if(imgData != NULL) imgData->unlock(); }
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); }
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); }
 
 	protected:
 	toadlet::egg::Mutex mMutex;
@@ -226,10 +226,10 @@ class ImageTargetFindData : public IData
 {
 	public:
 	vector<BlobDetector::Blob> circleBlobs;
-	shared_ptr<DataImage> imgData;
+	shared_ptr<DataImage> imageData;
 
-	void lock(){mMutex.lock(); if(imgData != NULL) imgData->lock();}
-	void unlock(){mMutex.unlock(); if(imgData != NULL) imgData->unlock();}
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock();}
 
 	protected:
 	toadlet::egg::Mutex mMutex;

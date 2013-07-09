@@ -38,7 +38,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 								public CommManagerListener,
 								public AttitudeThrustControllerListener,
 								public SensorManagerListener,
-								public VisionProcessorListener,
+//								public VisionProcessorListener,
 								public VelocityEstimatorListener
 {
 	public:
@@ -87,9 +87,9 @@ class Observer_Translational : public toadlet::egg::Thread,
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for VisionProcessorListener
-	void onImageProcessed(shared_ptr<ImageMatchData> const data);
-	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data);
-	void onImageLost(){};
+//	void onImageProcessed(shared_ptr<ImageMatchData> const data);
+//	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data);
+//	void onImageLost(){};
 
 	// for VelocityEstimatorListener
 	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData);

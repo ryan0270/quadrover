@@ -4,8 +4,8 @@ using namespace std;
 using namespace TNT;
 using namespace toadlet;
 using namespace ICSL::Constants;
-using toadlet::uint64;
-using toadlet::egg::String;
+//using toadlet::uint64;
+//using toadlet::egg::String;
 
 namespace ICSL {
 namespace Quadrotor {
@@ -22,12 +22,6 @@ Rover::Rover() :
 	mDataIsSending = false;
 	mImageIsSending = false;
 
-//	mRotViconToQuad = createRotMat(0, (double)toadlet::egg::math::Math::PI);
-//	mRotQuadToPhone = matmult(createRotMat(2,-0.25*toadlet::egg::math::Math::PI),
-//				  			  createRotMat(0,(double)toadlet::egg::math::Math::PI));
-//	mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)toadlet::egg::math::Math::PI),
-//							 createRotMat(0,(double)toadlet::egg::math::Math::PI));
-//	mRotPhoneToCam = transpose(mRotCamToPhone);
 	mRotViconToQuad = createRotMat(0, (double)PI);
 	mRotQuadToPhone = matmult(createRotMat(2,-0.25*PI),
 				  			  createRotMat(0,(double)PI));
@@ -61,14 +55,15 @@ void Rover::initialize()
 	mSensorManager.setThreadPriority(sched,maxPriority);
 	mObsvAngular.setThreadPriority(sched,maxPriority);
 	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
+	mVelocityEstimator.setThreadPriority(sched,maxPriority-1);
+	mFeatureFinder.setThreadPriority(sched,maxPriority-2);
 	mTranslationController.setThreadPriority(sched,maxPriority-2);
 	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
 	mVisionProcessor.setThreadPriority(sched,maxPriority-3);
-	mVelocityEstimator.setThreadPriority(sched,maxPriority-3);
 	mCommManager.setThreadPriority(sched,minPriority);
 	mQuadLogger.setThreadPriority(sched,minPriority);
-//	mVideoMaker.setThreadPriority(sched,minPriority);
-	mVideoMaker.setThreadPriority(sched,maxPriority);
+	mVideoMaker.setThreadPriority(sched,minPriority);
+//	mVideoMaker.setThreadPriority(sched,maxPriority);
 	this->setThreadPriority(sched,minPriority);
 
 	mCommManager.initialize();
@@ -115,8 +110,8 @@ void Rover::initialize()
 	mVisionProcessor.initialize();
 	mVisionProcessor.start();
 	mCommManager.addListener(&mVisionProcessor);
-	mVisionProcessor.addListener(&mObsvTranslational);
-	mVisionProcessor.addListener(this);
+//	mVisionProcessor.addListener(&mObsvTranslational);
+//	mVisionProcessor.addListener(this);
 
 	mVelocityEstimator.setStartTime(mStartTime);
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
@@ -125,7 +120,7 @@ void Rover::initialize()
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.start();
 	mVelocityEstimator.addListener(&mObsvTranslational);
-	mVisionProcessor.addListener(&mVelocityEstimator);
+//	mVisionProcessor.addListener(&mVelocityEstimator);
 
 	mVideoMaker.initialize();
 	mVideoMaker.start();
@@ -141,6 +136,10 @@ void Rover::initialize()
 	mSensorManager.addListener(&mObsvTranslational);
 	mSensorManager.addListener(&mVisionProcessor);
 	mSensorManager.addListener(this);
+
+	mFeatureFinder.initialize();
+	mFeatureFinder.start();
+	mFeatureFinder.addListener(&mVelocityEstimator);
 
 	mQuadLogger.setStartTime(mStartTime);
 
@@ -607,7 +606,7 @@ void Rover::onNewSensorUpdate(shared_ptr<IData> const &data)
 	}
 }
 
-void Rover::onImageProcessed(shared_ptr<ImageMatchData> const data)
+void Rover::onImageProcessed(shared_ptr<ImageMatchData> const &data)
 {
 	mMutex_vision.lock();
 	mImageMatchData = data;
