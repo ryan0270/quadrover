@@ -7,18 +7,14 @@ imap <silent> <Plug>IMAP_JumpForward =IMAP_Jumpfunc('', 0)
 vmap <NL> <Plug>IMAP_JumpForward
 nmap <NL> <Plug>IMAP_JumpForward
 nmap gx <Plug>NetrwBrowseX
-nnoremap <silent> <Plug>NetrwBrowseX :call netrw#NetrwBrowseX(expand("<cWORD>"),0)
 vmap <silent> <Plug>IMAP_JumpBack `<i=IMAP_Jumpfunc('b', 0)
 vmap <silent> <Plug>IMAP_JumpForward i=IMAP_Jumpfunc('', 0)
 vmap <silent> <Plug>IMAP_DeleteAndJumpBack "_<Del>i=IMAP_Jumpfunc('b', 0)
 vmap <silent> <Plug>IMAP_DeleteAndJumpForward "_<Del>i=IMAP_Jumpfunc('', 0)
 nmap <silent> <Plug>IMAP_JumpBack i=IMAP_Jumpfunc('b', 0)
 nmap <silent> <Plug>IMAP_JumpForward i=IMAP_Jumpfunc('', 0)
+nnoremap <silent> <Plug>NetrwBrowseX :call netrw#NetrwBrowseX(expand("<cWORD>"),0)
 imap <NL> <Plug>IMAP_JumpForward
-inoremap <expr>  omni#cpp#maycomplete#Complete()
-inoremap <expr> . omni#cpp#maycomplete#Dot()
-inoremap <expr> : omni#cpp#maycomplete#Scope()
-inoremap <expr> > omni#cpp#maycomplete#Arrow()
 let &cpo=s:cpo_save
 unlet s:cpo_save
 set autoindent
@@ -50,12 +46,12 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +37 Rover.h
+badd +110 Rover.h
 badd +1 Rover.cpp
 badd +96 Observer_Angular.h
-badd +142 Observer_Angular.cpp
+badd +222 Observer_Angular.cpp
 badd +105 Observer_Translational.h
-badd +628 Observer_Translational.cpp
+badd +231 Observer_Translational.cpp
 badd +1 AttitudeThrustController.h
 badd +1 AttitudeThrustController.cpp
 badd +1 TranslationController.h
@@ -66,15 +62,17 @@ badd +1 CommManager.h
 badd +1 CommManager.cpp
 badd +166 SensorManager.h
 badd +308 SensorManager.cpp
-badd +113 VisionProcessor.h
+badd +107 VisionProcessor.h
 badd +365 VisionProcessor.cpp
 badd +1 Common.h
 badd +47 QuadLogger.h
 badd +76 QuadLogger.cpp
-badd +1 VideoMaker.h
-badd +1 VideoMaker.cpp
-badd +2 VelocityEstimator.h
-badd +1 VelocityEstimator.cpp
+badd +45 VideoMaker.h
+badd +58 VideoMaker.cpp
+badd +78 VelocityEstimator.h
+badd +71 VelocityEstimator.cpp
+badd +62 FeatureFinder.h
+badd +70 FeatureFinder.cpp
 args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp VisionProcessor.h VisionProcessor.cpp
 edit Rover.cpp
 set splitbelow splitright
@@ -157,7 +155,7 @@ setlocal nrformats=octal,hex
 set number
 setlocal number
 setlocal numberwidth=4
-setlocal omnifunc=omni#cpp#complete#Main
+setlocal omnifunc=ccomplete#Complete
 setlocal path=
 setlocal nopreserveindent
 setlocal nopreviewwindow
@@ -193,7 +191,7 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 1 - ((0 * winheight(0) + 34) / 69)
+let s:l = 1 - ((0 * winheight(0) + 35) / 71)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -269,7 +267,7 @@ setlocal nrformats=octal,hex
 set number
 setlocal number
 setlocal numberwidth=4
-setlocal omnifunc=omni#cpp#complete#Main
+setlocal omnifunc=ccomplete#Complete
 setlocal path=
 setlocal nopreserveindent
 setlocal nopreviewwindow
@@ -305,7 +303,7 @@ set nowrap
 setlocal nowrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 37 - ((34 * winheight(0) + 34) / 69)
+let s:l = 37 - ((35 * winheight(0) + 35) / 71)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt

@@ -4,7 +4,7 @@
 
 using namespace toadlet;
 //using namespace cv;
-using toadlet::egg::String;
+//using toadlet::egg::String;
 using namespace TNT;
 using namespace ICSL::Constants;
 
@@ -24,13 +24,13 @@ VisionProcessor::VisionProcessor() :
 	mCurImageGray.create(height, width, CV_8UC1); mCurImageGray = cv::Scalar(0);
 	mCurImageAnnotated = NULL;
 
-	mImgProcTimeUS = 0;
+	mImageProcTimeUS = 0;
 
 	mLastProcessTime.setTimeMS(0);
 
 	mNewImageReady_featureMatch = mNewImageReady_targetFind = false;
 
-	mImgBufferMaxSize = 10;
+	mImageBufferMaxSize = 10;
 	
 	mLogImages = false;
 
@@ -134,8 +134,8 @@ void VisionProcessor::run()
 			mImageDataPrev->unlock(); 
 			mMutex_imageData.unlock();
 
-			mCurImage = *(mImageDataCur->img);
-			mCurImageGray.create(mImageDataCur->img->rows, mImageDataCur->img->cols, mImageDataCur->img->type());
+			mCurImage = *(mImageDataCur->image);
+			mCurImageGray.create(mImageDataCur->image->rows, mImageDataCur->image->cols, mImageDataCur->image->type());
 			mImageDataCur->unlock();
 
 			Time procStart;
@@ -154,34 +154,34 @@ void VisionProcessor::run()
 //				mFeatureMatchAttCurBuffer.push_back(attCur.copy());
 //			}
 
-			shared_ptr<cv::Mat> imgAnnotated(new cv::Mat());
-			mCurImage.copyTo(*imgAnnotated);
-			drawMatches(points, *imgAnnotated);
+			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
+			mCurImage.copyTo(*imageAnnotated);
+			drawMatches(points, *imageAnnotated);
 
 			mMutex_data.lock();
 			circles = mLastCircles;
 			mMutex_data.unlock();
-			drawTarget(circles, *imgAnnotated);
+			drawTarget(circles, *imageAnnotated);
 
-			mCurImageAnnotated = imgAnnotated;
+			mCurImageAnnotated = imageAnnotated;
 			
-			shared_ptr<DataAnnotatedImage> imgAnnotatedData(new DataAnnotatedImage());
-			imgAnnotatedData->imgAnnotated = imgAnnotated;
-			imgAnnotatedData->imgDataSource = mImageDataCur;
+			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
+			imageAnnotatedData->imageAnnotated = imageAnnotated;
+			imageAnnotatedData->imageDataSource = mImageDataCur;
 
 			shared_ptr<ImageMatchData> data(new ImageMatchData());
 //			data->dt = dt;
 			data->featurePoints = points;
-			data->imgData0 = mImageDataPrev;
-			data->imgData1 = mImageDataCur;
-			data->imgAnnotated = imgAnnotatedData;
+			data->imageData0 = mImageDataPrev;
+			data->imageData1 = mImageDataCur;
+			data->imageAnnotated = imageAnnotatedData;
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onImageProcessed(data);
 
-			mImgProcTimeUS = procStart.getElapsedTimeUS();
+			mImageProcTimeUS = procStart.getElapsedTimeUS();
 			if(mQuadLogger != NULL)
 			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImgProcTimeUS;
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
 				mMutex_logger.lock();
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
@@ -196,13 +196,13 @@ void VisionProcessor::run()
 			if(mLogImages && mMotorOn)
 			{
 //				mMutex_buffers.lock();
-//				mImgDataBuffer.push_back(shared_ptr<DataImage>(mImageDataCur));
-//				while(mImgDataBuffer.size() > mImgBufferMaxSize)
-//					mImgDataBuffer.pop_front();
+//				mImageDataBuffer.push_back(shared_ptr<DataImage>(mImageDataCur));
+//				while(mImageDataBuffer.size() > mImageBufferMaxSize)
+//					mImageDataBuffer.pop_front();
 //
-//				mImgMatchDataBuffer.push_back(shared_ptr<ImageMatchData>(data));
-//				while(mImgMatchDataBuffer.size() > mImgBufferMaxSize)
-//					mImgMatchDataBuffer.pop_front();
+//				mImageMatchDataBuffer.push_back(shared_ptr<ImageMatchData>(data));
+//				while(mImageMatchDataBuffer.size() > mImageBufferMaxSize)
+//					mImageMatchDataBuffer.pop_front();
 //				mMutex_buffers.unlock();
 			}
 
@@ -213,15 +213,15 @@ void VisionProcessor::run()
 
 	targetFinderThread.join();
 
-//	mQuadLogger->saveImageBuffer(mImgDataBuffer, mImgMatchDataBuffer);
+//	mQuadLogger->saveImageBuffer(mImageDataBuffer, mImageMatchDataBuffer);
 //	mQuadLogger->saveFeatureMatchBuffer(mFeatureMatchBuffer, 
 //										mFeatureMatchTimeBuffer, 
 //										mFeatureMatchDTBuffer, 
 //										mFeatureMatchAttPrevBuffer, 
 //										mFeatureMatchAttCurBuffer);
 
-	mImgDataBuffer.clear();
-	mImgMatchDataBuffer.clear();
+	mImageDataBuffer.clear();
+	mImageMatchDataBuffer.clear();
 
 	mFinished = true;
 }
@@ -235,7 +235,7 @@ void VisionProcessor::runTargetFinder()
 	cv::Mat curImage, curImageGray;
 	shared_ptr<DataImage> curImageData;
 	vector<BlobDetector::Blob> circles;
-	uint32 imgProcTimeUS;
+	uint32 imageProcTimeUS;
 	while(mRunning)
 	{
 		if(mNewImageReady_targetFind)
@@ -244,7 +244,7 @@ void VisionProcessor::runTargetFinder()
 			curImageData = mImageDataNext;
 
 			curImageData->lock();
-			curImage = *(curImageData->img);
+			curImage = *(curImageData->image);
 			curImageData->unlock();
 			curImageGray.create(curImage.rows, curImage.cols, curImage.type());
 
@@ -261,14 +261,14 @@ void VisionProcessor::runTargetFinder()
 			{
 				shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
 				data->circleBlobs = circles;
-				data->imgData = curImageData;
+				data->imageData = curImageData;
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onImageTargetFound(data);
 			}
 
-			imgProcTimeUS = procStart.getElapsedTimeUS();
+			imageProcTimeUS = procStart.getElapsedTimeUS();
 			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_TARGET_FIND + "\t" + imgProcTimeUS;
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_TARGET_FIND + "\t" + imageProcTimeUS;
 				mMutex_logger.lock();
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
@@ -290,10 +290,10 @@ void VisionProcessor::runTargetFinder()
 	}
 }
 
-vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &img)
+vector<vector<cv::Point2f> > VisionProcessor::getMatchingPoints(cv::Mat const &image)
 {
 	mMutex_matcher.lock();
-	int result = mFeatureMatcher.Track(img, false);
+	int result = mFeatureMatcher.Track(image, false);
 	vector<vector<cv::Point2f> > points(2);
 
 	Matcher::p_match match;
@@ -350,13 +350,13 @@ int prevPointCount = points[0].size();
 	return points;
 }
 
-vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
+vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &image)
 {
-	cv::Mat pyrImg;
-	cv::equalizeHist(img, pyrImg);
-	cv::pyrDown(pyrImg, pyrImg);
-	cv::pyrDown(pyrImg, pyrImg);
- 	double scale = (double)pyrImg.rows/img.rows;
+	cv::Mat pyrImage;
+	cv::equalizeHist(image, pyrImage);
+	cv::pyrDown(pyrImage, pyrImage);
+	cv::pyrDown(pyrImage, pyrImage);
+ 	double scale = (double)pyrImage.rows/image.rows;
 
 	BlobDetector blobby;
 //	blobby.minThreshold = 50;
@@ -370,7 +370,7 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 	blobby.filterByArea = true;
 	blobby.minArea = 125;
 //	blobby.minArea = 500;
-	blobby.maxArea = pyrImg.rows*pyrImg.cols;
+	blobby.maxArea = pyrImage.rows*pyrImage.cols;
 	blobby.filterByCircularity = true;
 	blobby.minCircularity = 0.85;
 //	blobby.maxCircularity = 1.1;
@@ -380,7 +380,7 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 //	blobby.maxConvexity = 1.1;
 
 	vector<BlobDetector::Blob> blobs;
-	blobby.detectImpl(pyrImg, blobs);
+	blobby.detectImpl(pyrImage, blobs);
 
 	// just grab the biggest one
 //	sort(keypoints.begin(), keypoints.end(), [&](cv::KeyPoint kp1, cv::KeyPoint kp2){return kp1.size > kp2.size;});
@@ -458,7 +458,7 @@ vector<BlobDetector::Blob> VisionProcessor::findCircles(cv::Mat const &img)
 	return circs;
 }
 
-void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &img)
+void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv::Mat &image)
 {
 	if(points.size() == 0)
 		return;
@@ -467,13 +467,13 @@ void VisionProcessor::drawMatches(vector<vector<cv::Point2f> > const &points, cv
 	{
 		p1 = points[0][i];
 		p2 = points[1][i];
- 		circle(img,p1,3,cv::Scalar(0,255,0),-1);
- 		circle(img,p2,3,cv::Scalar(255,0,0),-1);
- 		line(img,p1,p2,cv::Scalar(255,255,255),1);
+ 		circle(image,p1,3,cv::Scalar(0,255,0),-1);
+ 		circle(image,p2,3,cv::Scalar(255,0,0),-1);
+ 		line(image,p1,p2,cv::Scalar(255,255,255),1);
 	}
 }
 
-void VisionProcessor::drawTarget(vector<BlobDetector::Blob> const &circles, cv::Mat &img)
+void VisionProcessor::drawTarget(vector<BlobDetector::Blob> const &circles, cv::Mat &image)
 {
 	vector<vector<cv::Point> > contours;
 	for(int i=0; i<circles.size(); i++)
@@ -482,9 +482,9 @@ void VisionProcessor::drawTarget(vector<BlobDetector::Blob> const &circles, cv::
 		for(int j=0; j<circles[i].contour.size(); j++)
 			contours[i].push_back(circles[i].contour[j]);
 	}
-	cv::drawContours(img, contours, -1, cv::Scalar(0,0,255), 3);
+	cv::drawContours(image, contours, -1, cv::Scalar(0,0,255), 3);
 //	for(int i=0; i<circles.size(); i++)
-//		circle(img, circles[i].pt, circles[i].size, cv::Scalar(0,0,255), 3);
+//		circle(image, circles[i].pt, circles[i].size, cv::Scalar(0,0,255), 3);
 }
 
 void VisionProcessor::enableIbvs(bool enable)
@@ -497,7 +497,7 @@ void VisionProcessor::enableIbvs(bool enable)
 		mMutex_logger.lock();
 		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
 		mMutex_logger.unlock();
-		mLastImgFoundTime.setTime();
+		mLastImageFoundTime.setTime();
 		mFirstImageProcessed = false;
 	}
 	else
@@ -540,14 +540,14 @@ void VisionProcessor::onNewCommLogMask(uint32 mask)
 	else
 	{
 		mLogImages = false; 
-		mImgDataBuffer.clear();
+		mImageDataBuffer.clear();
 	}
 }
 
-void VisionProcessor::onNewCommImgBufferSize(int size)
+void VisionProcessor::onNewCommImageBufferSize(int size)
 {
 	mMutex_buffers.lock();
-	mImgBufferMaxSize = size;
+	mImageBufferMaxSize = size;
 	mMutex_buffers.unlock();
 }
 
@@ -575,8 +575,8 @@ void VisionProcessor::onNewCommLogClear()
 	mFeatureMatchDTBuffer.clear();
 	mFeatureMatchAttPrevBuffer.clear();
 	mFeatureMatchAttCurBuffer.clear();
-	mImgDataBuffer.clear();
-	mImgMatchDataBuffer.clear();
+	mImageDataBuffer.clear();
+	mImageMatchDataBuffer.clear();
 	mMutex_buffers.unlock();
 }
 

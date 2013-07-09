@@ -35,13 +35,15 @@ class VelocityEstimatorListener
 #include "Observer_Angular.h"
 #include "Observer_Translational.h"
 #include "VisionProcessor.h"
+#include "FeatureFinder.h"
 
 namespace ICSL {
 namespace Quadrotor {
 
 using namespace std;
 
-class VelocityEstimator : public VisionProcessorListener,
+class VelocityEstimator : //public VisionProcessorListener,
+						  public FeatureFinderListener,
 						  public toadlet::egg::Thread
 {
 	public:
@@ -62,9 +64,12 @@ class VelocityEstimator : public VisionProcessorListener,
 	void addListener(VelocityEstimatorListener *l){mListeners.push_back(l);}
 
 	// for VisionProcessorListener
-	void onImageProcessed(shared_ptr<ImageMatchData> const data);
-	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
-	void onImageLost(){};
+//	void onImageProcessed(shared_ptr<ImageMatchData> const data);
+//	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
+//	void onImageLost(){};
+
+	// for FeatureFinderListener
+	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
 	protected:
 	bool mRunning, mDone;
@@ -76,13 +81,13 @@ class VelocityEstimator : public VisionProcessorListener,
 	Collection<VelocityEstimatorListener*> mListeners;
 
 	bool mNewImageDataAvailable;
-	shared_ptr<ImageMatchData> mImageMatchData;
+	shared_ptr<ImageFeatureData> mLastImageFeatureData;
 
 	toadlet::egg::Mutex mMutex_imageData;
 
 	Observer_Translational *mObsvTranslational;
 
-	void doVelocityEstimate(shared_ptr<ImageMatchData> const &matchData);
+	void doVelocityEstimate(shared_ptr<ImageFeatureData> const &featureData) const;
 
 };
 

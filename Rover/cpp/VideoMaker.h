@@ -27,8 +27,8 @@ class VideoMaker : 	public VisionProcessorListener,
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 		// for VisionProcessorListener
-		void onImageProcessed(shared_ptr<ImageMatchData> const data);
-		void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
+		void onImageProcessed(shared_ptr<ImageMatchData> const &data);
+		void onImageTargetFound(shared_ptr<ImageTargetFindData> const &data){};
 		void onImageLost(){};
 
 		// from CommManagerListener
@@ -38,11 +38,11 @@ class VideoMaker : 	public VisionProcessorListener,
 	protected:
 		bool mRunning, mDone;
 		bool mMotorOn;
-//		std::queue<shared_ptr<cv::Mat> > mImgQueue;
-		std::queue<shared_ptr<ImageMatchData> > mImgQueue;
+//		std::queue<shared_ptr<cv::Mat> > mImageQueue;
+		std::queue<shared_ptr<ImageMatchData> > mImageQueue;
 
-		Time mLastImgTime;
-		toadlet::egg::Mutex mMutex_imgQueue;
+		Time mLastImageTime;
+		toadlet::egg::Mutex mMutex_imageQueue;
 		int mThreadPriority, mScheduler;
 };
 } // namespace Quadrotor

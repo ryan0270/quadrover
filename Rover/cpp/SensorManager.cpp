@@ -29,9 +29,9 @@ namespace Quadrotor{
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 
-		mImgDT = 0;
-		mImgCnt = 0;
-		mLastImgTime.setTimeMS(0);
+		mImageDT = 0;
+		mImageCnt = 0;
+		mLastImageTime.setTimeMS(0);
 
 		mAttAccumCnt = 0;
 		mAngularVelAccum = 0;
@@ -150,13 +150,13 @@ Log::alert("sensor manager - shutdown 5");
 
 //		class : public Thread{
 //			public:
-//			void run(){parent->runImgAcq(cap);}
+//			void run(){parent->runImageAcq(cap);}
 //			shared_ptr<cv::VideoCapture> cap;
 //			SensorManager *parent;
-//		} imgAcqThread;
-//		imgAcqThread.parent = this;
-//		imgAcqThread.cap = cap;
-//		imgAcqThread.start();
+//		} imageAcqThread;
+//		imageAcqThread.parent = this;
+//		imageAcqThread.cap = cap;
+//		imageAcqThread.start();
 
 		class : public Thread{
 			public:
@@ -293,7 +293,7 @@ Log::alert("sensor manager - shutdown 5");
 			sys.usleep(100);
 		}
 
-//		imgAcqThread.join();
+//		imageAcqThread.join();
 		tempMonitorThread.join();
 
 		mDone = true;
@@ -331,12 +331,12 @@ Log::alert("sensor manager - shutdown 5");
 		return cap;
 	}
 
-//	void SensorManager::runImgAcq(shared_ptr<cv::VideoCapture> cap)
+//	void SensorManager::runImageAcq(shared_ptr<cv::VideoCapture> cap)
 //	{
 //		if(cap == NULL)
 //			return;
 //
-//		cv::Mat img;
+//		cv::Mat image;
 //		sched_param sp;
 //		sp.sched_priority = mThreadPriority-1;
 //		sched_setscheduler(0, mScheduler, &sp);
@@ -355,14 +355,14 @@ Log::alert("sensor manager - shutdown 5");
 //			static_pointer_cast<DataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
 //			mMutex_attData.unlock();
 //
-//			shared_ptr<cv::Mat> img(new cv::Mat);
-//			cap->retrieve(*img);
-//			static_pointer_cast<DataImage>(data)->img = img;
-////			img->copyTo(*static_pointer_cast<DataImage>(data)->img); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
+//			shared_ptr<cv::Mat> image(new cv::Mat);
+//			cap->retrieve(*image);
+//			static_pointer_cast<DataImage>(data)->image = image;
+////			image->copyTo(*static_pointer_cast<DataImage>(data)->image); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
 //			static_pointer_cast<DataImage>(data)->cap = cap;
-//			static_pointer_cast<DataImage>(data)->focalLength = 3.7*img->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+//			static_pointer_cast<DataImage>(data)->focalLength = 3.7*image->cols/5.76; // (focal length mm)*(image width px)/(ccd width mm)
 //
-//			static_pointer_cast<DataImage>(data)->imgFormat = IMG_FORMAT_BGR;
+//			static_pointer_cast<DataImage>(data)->imageFormat = IMG_FORMAT_BGR;
 //
 //			mMutex_listeners.lock();
 //			for(int i=0; i<mListeners.size(); i++)
@@ -520,20 +520,20 @@ Log::alert("sensor manager - shutdown 5");
 		mMutex_accum.unlock();
 	}
 
-	void SensorManager::passNewImage(cv::Mat const *imgYUV, int64 const &timestampNS)
+	void SensorManager::passNewImage(cv::Mat const *imageYUV, int64 const &timestampNS)
 	{
-//		if(mLastImgTime.getMS() != 0)
+//		if(mLastImageTime.getMS() != 0)
 //		{
-//			double dt = mLastImgTime.getElapsedTimeNS()/1.0e9;
-//			mImgDT = (mImgDT*mImgCnt + dt)/(mImgCnt+1);
-//			mImgCnt++;
+//			double dt = mLastImageTime.getElapsedTimeNS()/1.0e9;
+//			mImageDT = (mImageDT*mImageCnt + dt)/(mImageCnt+1);
+//			mImageCnt++;
 //		}
-//		mLastImgTime.setTime();
-//		Log::alert(String()+"dt: "+mImgDT);
+//		mLastImageTime.setTime();
+//		Log::alert(String()+"dt: "+mImageDT);
 
-		shared_ptr<cv::Mat> imgBGR(new cv::Mat);
+		shared_ptr<cv::Mat> imageBGR(new cv::Mat);
 //Log::alert("cvtColor 1 start");
-		cv::cvtColor(*imgYUV, *imgBGR, CV_YUV420sp2BGR);
+		cv::cvtColor(*imageYUV, *imageBGR, CV_YUV420sp2BGR);
 //Log::alert("cvtColor 1 end");
 
 		shared_ptr<DataImage> data(new DataImage());
@@ -567,10 +567,10 @@ Log::alert("sensor manager - shutdown 5");
 		data->att.inject(attCam);
 		data->angularVel.inject(matmult(mRotPhoneToCam, angVel));
 
-		data->img = imgBGR;
-		data->imgFormat = IMG_FORMAT_BGR;
+		data->image = imageBGR;
+		data->imageFormat = IMG_FORMAT_BGR;
 		data->cap = NULL;
-//		data->focalLength = 3.7*imgBGR->cols/5.76; // (focal length mm)*(img width px)/(ccd width mm)
+//		data->focalLength = 3.7*imageBGR->cols/5.76; // (focal length mm)*(image width px)/(ccd width mm)
 		data->focalLength = 524; // from calibration for a 640x480 image
 
 		mMutex_listeners.lock();
