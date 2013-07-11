@@ -137,8 +137,10 @@ void Rover::initialize()
 	mSensorManager.addListener(this);
 
 	mFeatureFinder.initialize();
+	mFeatureFinder.setQuadLogger(&mQuadLogger);
 	mFeatureFinder.start();
 	mFeatureFinder.addListener(&mVelocityEstimator);
+	mSensorManager.addListener(&mFeatureFinder);
 
 	mQuadLogger.setStartTime(mStartTime);
 
@@ -594,7 +596,8 @@ void Rover::copyImageData(cv::Mat *m)
 		return;
 
 	mMutex_vision.lock();
-	mVisionProcessor.getLastImageAnnotated(m);
+//	mVisionProcessor.getLastImageAnnotated(m);
+	mFeatureFinder.getLastImageAnnotated(m);
 	mMutex_vision.unlock();
 }
 
