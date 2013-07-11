@@ -113,29 +113,18 @@ namespace Quadrotor{
 	{
 		Log::alert("////////////////////// SensorManager shutdown started //////////////////");
 		mRunning = false;
-Log::alert("sensor manager - shutdown -1");
-		this->join();
-Log::alert("sensor manager - shutdown 0");
-//		while(!mDone) 
-//		{
-//			Log::alert("SensorManager waiting");
-//			System::msleep(10);
-//		}
+		while(!mDone) 
+			System::msleep(10);
 
-Log::alert("sensor manager - shutdown 1");
-		if(mMagSensor != NULL)
+		if(mSensorEventQueue != NULL && mMagSensor != NULL)
 			ASensorEventQueue_disableSensor(mSensorEventQueue, mMagSensor);
-Log::alert("sensor manager - shutdown 2");
-		if(mAccelSensor != NULL)
+		if(mSensorEventQueue != NULL && mAccelSensor != NULL)
 			ASensorEventQueue_disableSensor(mSensorEventQueue, mAccelSensor);
-Log::alert("sensor manager - shutdown 3");
-		if(mGyroSensor != NULL)
+		if(mSensorEventQueue != NULL && mGyroSensor != NULL)
 			ASensorEventQueue_disableSensor(mSensorEventQueue, mGyroSensor);
-Log::alert("sensor manager - shutdown 4");
-		if(mPressureSensor != NULL)
+		if(mSensorEventQueue != NULL && mPressureSensor != NULL)
 			ASensorEventQueue_disableSensor(mSensorEventQueue, mPressureSensor);
 
-Log::alert("sensor manager - shutdown 5");
 		if(mSensorManager != NULL && mSensorEventQueue != NULL)
 			ASensorManager_destroyEventQueue(mSensorManager, mSensorEventQueue);
 		Log::alert("////////////////////// SensorManager shutdown done //////////////////");
@@ -144,27 +133,7 @@ Log::alert("sensor manager - shutdown 5");
 	void SensorManager::run()
 	{
 		mRunning = true;
-//		shared_ptr<cv::VideoCapture> cap = initCamera();
-//		if(cap == NULL)
-//			mRunning = false;
-
-//		class : public Thread{
-//			public:
-//			void run(){parent->runImageAcq(cap);}
-//			shared_ptr<cv::VideoCapture> cap;
-//			SensorManager *parent;
-//		} imageAcqThread;
-//		imageAcqThread.parent = this;
-//		imageAcqThread.cap = cap;
-//		imageAcqThread.start();
-
-		class : public Thread{
-			public:
-			void run(){parent->runTemperatureMonitor();}
-			SensorManager *parent;
-		} tempMonitorThread;
-		tempMonitorThread.parent = this;
-		tempMonitorThread.start();
+		thread tempMonitorTh(&SensorManager::runTemperatureMonitor, this);
 
 		double accelCal1X = -0.0002;
 		double accelCal1Y = 0.1116;
@@ -184,7 +153,6 @@ Log::alert("sensor manager - shutdown 5");
 
 		Array2D<double> accelCalibrated(3,1), gyroCalibrated(3,1), magCalibrated(3,1);
 
-		System sys;
 		mDone = false;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
@@ -290,11 +258,10 @@ Log::alert("sensor manager - shutdown 5");
 			}
 
 
-			sys.usleep(100);
+			System::usleep(100);
 		}
 
-//		imageAcqThread.join();
-		tempMonitorThread.join();
+		tempMonitorTh.join();
 
 		mDone = true;
 	}
@@ -384,7 +351,6 @@ Log::alert("sensor manager - shutdown 5");
 
 	void SensorManager::runTemperatureMonitor()
 	{
-		System sys;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority-1;
 		sched_setscheduler(0, mScheduler, &sp);
@@ -419,7 +385,7 @@ Log::alert("sensor manager - shutdown 5");
 				mMutex_logger.unlock();
 			}
 
-			sys.msleep(500);
+			System::msleep(500);
 		}
 	}
 

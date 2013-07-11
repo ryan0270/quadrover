@@ -46,7 +46,7 @@ public class RoverService extends Service {
 
 	public Notification.Builder mNotificationBuilder;
 
-	private PowerManager.WakeLock mWakeLock;
+	private PowerManager.WakeLock mWakeLock = null;
 
 	private final IBinder mBinder = new RoverBinder();
 
@@ -140,7 +140,8 @@ public class RoverService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId)
 	{
-		mWakeLock.acquire();
+		if(mWakeLock != null)
+			mWakeLock.acquire();
 
 		// If we get killed, after returning from here, play dead
 		return START_NOT_STICKY;
@@ -149,6 +150,7 @@ public class RoverService extends Service {
     @Override
 	public void onDestroy()
 	{
+		super.onDestroy();
 		Log.i(ME,"Rover service stop started");
 		if(mCamera != null)
 		{
@@ -164,12 +166,11 @@ public class RoverService extends Service {
 		}
 
 		onJNIStop();
-		mWakeLock.release();
+		if(mWakeLock != null)
+			mWakeLock.release();
 		Toast.makeText(this, "Rover sleeping", Toast.LENGTH_SHORT).show();
 		stopForeground(true);
 		Log.i(ME,"Rover service stopped");
-		
-		super.onDestroy();
 	}
 
 	@Override

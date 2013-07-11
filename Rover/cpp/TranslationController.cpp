@@ -42,10 +42,8 @@ using namespace TNT;
 	{
 		Log::alert("------------------------- TranslationController shutdown started  --------------------------------------------------");
 		mRunning = false;
-		System sys;
-		this->join();
-//		while(!mDone)
-//			sys.msleep(10);
+		while(!mDone)
+			System::msleep(10);
 		Log::alert("------------------------- TranslationController shutdown done");
 	}
 
@@ -57,17 +55,15 @@ using namespace TNT;
 	{
 		mDone = false;
 		mRunning = true;
-		System sys;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			if(mNewMeasAvailable)
-			{
 				calcControl();
-			}
-			sys.msleep(1);
+
+			System::msleep(1);
 		}
 
 		mDone = true;

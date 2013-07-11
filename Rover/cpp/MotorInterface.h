@@ -1,6 +1,7 @@
 #ifndef MOTORINTERFACE
 #define MOTORINTERFACE
 #include <sched.h>
+#include <thread>
 
 #include "toadlet/egg.h"
 
@@ -14,7 +15,7 @@ enum{
 	MAX_MOTOR_CMD = 1<<11
 };
 
-class MotorInterface : public toadlet::egg::Thread
+class MotorInterface
 {
 	public:
 	MotorInterface();
@@ -32,7 +33,7 @@ class MotorInterface : public toadlet::egg::Thread
 	void enableMotors(bool on);
 	bool isMotorsEnabled() const {return mMotorsEnabled;}
 
-	// from toadlet::egg::Thread
+	void start(){ thread th(&MotorInterface::run, this); th.detach(); }
 	void run();
 
 	protected:

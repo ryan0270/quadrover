@@ -2,6 +2,7 @@
 #define ICSL_VISIONFINDER_H
 #include <memory>
 #include <sched.h>
+#include <thread>
 #include <cmath>
 #include <list>
 
@@ -36,8 +37,7 @@ class FeatureFinderListener
 		virtual void onFeaturesFound(shared_ptr<ImageFeatureData> const &data)=0;
 };
 
-class FeatureFinder : public toadlet::egg::Thread, 
-						public CommManagerListener,
+class FeatureFinder : public CommManagerListener,
 						public SensorManagerListener
 {
 	public:
@@ -45,6 +45,7 @@ class FeatureFinder : public toadlet::egg::Thread,
 		virtual ~FeatureFinder(){};
 
 		void shutdown();
+		void start(){ thread th(&FeatureFinder::run, this); th.detach(); }
 		void initialize();
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 

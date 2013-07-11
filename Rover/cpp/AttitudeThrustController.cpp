@@ -76,20 +76,15 @@ using namespace TNT;
 	{
 		mDone = false;
 		mRunning = true;
-		System sys;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
 		while(mRunning)
 		{
 			if(mDoControl)
-			{
-Log::alert("before");
 				calcControl();
-Log::alert("after");
-			}
 	
-			sys.msleep(1);
+			System::msleep(1);
 		}
 	
 Log::alert("bobbity");

@@ -24,7 +24,8 @@ void VelocityEstimator::shutdown()
 {
 	Log::alert("------------------------- VelocityEstimator shutdown started");
 	mRunning = false;
-	this->join();
+	while(mDone != true)
+		System::msleep(10);
 	Log::alert("------------------------- VelocityEstimator shutdown done");
 }
 

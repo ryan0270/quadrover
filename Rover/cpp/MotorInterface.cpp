@@ -25,9 +25,9 @@ namespace Quadrotor{
 	{
 		Log::alert("------------------------ MotorInterface shutdown started");
 		mRunning = false;
-		this->join();
-//		while(!mShutdown)
-//			System::msleep(10);
+//		this->join();
+		while(!mShutdown)
+			System::msleep(10);
 
 		Log::alert("------------------------ MotorInterface shutdown done -------------------------");
 	}
@@ -53,7 +53,6 @@ namespace Quadrotor{
 		mRunning = true;
 
 		// this just monitors the connection
-		System sys;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
@@ -85,7 +84,7 @@ namespace Quadrotor{
 				}
 			}
 
-			sys.msleep(20);
+			System::msleep(20);
 		}
 
 		Collection<uint16> cmds(4,0);

@@ -23,6 +23,7 @@ class VelocityEstimatorListener
 #define ICSL_VELOCITY_ESTIMATOR_H
 #include <memory>
 #include <sched.h>
+#include <thread>
 
 #include "toadlet/egg.h"
 
@@ -42,14 +43,13 @@ namespace Quadrotor {
 
 using namespace std;
 
-class VelocityEstimator : //public VisionProcessorListener,
-						  public FeatureFinderListener,
-						  public toadlet::egg::Thread
+class VelocityEstimator : public FeatureFinderListener
 {
 	public:
 	VelocityEstimator();
 	virtual ~VelocityEstimator();
 
+	void start(){ thread th(&VelocityEstimator::run, this); th.detach(); }
 	void run();
 	void shutdown();
 	void initialize();

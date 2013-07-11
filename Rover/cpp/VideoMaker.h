@@ -2,6 +2,7 @@
 #define ICSL_VIDEOMAKER_H
 #include <sched.h>
 #include <queue>
+#include <thread>
 
 #include "opencv2/highgui/highgui.hpp"
 
@@ -14,14 +15,14 @@ namespace ICSL{
 namespace Quadrotor{
 
 class VideoMaker : 	public VisionProcessorListener,
-					public CommManagerListener,
-				   	public toadlet::egg::Thread
+					public CommManagerListener
 {
 	public:
 		VideoMaker();
 		virtual ~VideoMaker();
 
 		void initialize();
+		void start(){ thread th(&VideoMaker::run, this); th.detach(); }
 		void run();
 		void shutdown();
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};

@@ -26,11 +26,10 @@ namespace Quadrotor {
 	{
 		Log::alert("-------------------------- Video maker shutdown started ----------------------");
 		mRunning = false;
-		System sys;
 		while(!mDone)
 		{
 			Log::alert("VideoMaker waiting");
-			sys.msleep(100); // this can take a while if we are saving a lot of images
+			System::msleep(100); // this can take a while if we are saving a lot of images
 		}
 
 		Log::alert("-------------------------- Video maker shutdown done ----------------------");
@@ -39,7 +38,6 @@ namespace Quadrotor {
 	void VideoMaker::run()
 	{
 		mRunning = true;
-		System sys;
 
 		bool firstImage = true;
 		int id = -1;
@@ -51,7 +49,6 @@ namespace Quadrotor {
 		{
 			mMutex_imageQueue.lock();
 			while(!mImageQueue.empty())
-//			if(!mImageQueue.empty())
 			{
 //				if(mImageQueue.size() > 1)
 //					Log::alert(String()+"Backlog: "+mImageQueue.size());
@@ -68,7 +65,7 @@ namespace Quadrotor {
 				id++;
 			}
 			mMutex_imageQueue.unlock();
-			sys.msleep(1);
+			System::msleep(1);
 		}
 
 		mDone = true;

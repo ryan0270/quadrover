@@ -63,7 +63,6 @@ void Rover::initialize()
 	mCommManager.setThreadPriority(sched,minPriority);
 	mQuadLogger.setThreadPriority(sched,minPriority);
 	mVideoMaker.setThreadPriority(sched,minPriority);
-//	mVideoMaker.setThreadPriority(sched,maxPriority);
 	this->setThreadPriority(sched,minPriority);
 
 	mCommManager.initialize();
@@ -145,7 +144,7 @@ void Rover::initialize()
 
 	mNumCpuCores = android_getCpuCount();
 
-//	this->start();
+	this->start();
 
 	Log::alert("Initialized");
 }
@@ -153,69 +152,40 @@ void Rover::initialize()
 void Rover::shutdown()
 {
 	Log::alert("Main shutdown started");
-Log::alert("chad 1");
 	mQuadLogger.shutdown();
-//	stopLogging();
-Log::alert("chad 2");
 	mRunning = false;
 	mMutex_cntl.lock();
 	mMotorInterface.enableMotors(false);
-//	mAttitudeThrustController.enableMotors(false);
 	mMutex_cntl.unlock();
-Log::alert("chad 3");
-	if(!mRunnerIsDone)
-		this->join(); 
-Log::alert("chad 4");
-//	toadlet::egg::System sys;
-//	while(!mRunnerIsDone)
-//	{
-//		Log::alert("Main waiting");
-//		sys.msleep(10);
-//	}
+	while(!mRunnerIsDone)
+		System::msleep(10);
 
-Log::alert("chad 5a");
-	mAttitudeThrustController.shutdown();
-Log::alert("chad 5b");
+	mMutex_cntl.lock();
 	mTranslationController.shutdown();
+	mAttitudeThrustController.shutdown();
+	mMutex_cntl.unlock();
 
-Log::alert("chad 6");
-	mCommManager.shutdown(); // mCommManager is only ever accessed via the run thread or via functions returning bools so doesn't have a mutex
+	mCommManager.shutdown();
 
 	mVisionProcessor.shutdown();
 	mVelocityEstimator.shutdown();
+	mFeatureFinder.shutdown();
 	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
-Log::alert("chad 7");
 	mImageMatchData = NULL;
 	mSensorManager.shutdown();
 
 	mMotorInterface.shutdown();
 
-Log::alert("chad 8");
 	Log::alert(String("----------------- really dead -------------"));
 }
 
 void Rover::run()
 {
 	mRunning = true;
-	System sys;
 	mRunnerIsDone = false;
-	class : public Thread{
-			public: 
-			void run(){ 
-				parent->transmitDataUDP(); 
-			}
-			Rover *parent;
-		} dataSendThread;
-	class : public Thread{
-			public:
-			void run(){ parent->transmitImage();}
-			Rover *parent;
-			} imgSendThread;
-	dataSendThread.parent = this;
-	imgSendThread.parent = this;
 
 	Array2D<int> cpuUsagePrev(1,7,0.0), cpuUsageCur(1,7,0.0);
 	Time mLastCpuUsageTime;
@@ -224,25 +194,25 @@ void Rover::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
+	thread dataSendTh, imageSendTh;
 	while(mRunning) 
 	{
 		if(!mDataIsSending && mLastDataSendTime.getElapsedTimeMS() > 100)
 		{
 			mDataIsSending = true;
-			dataSendThread.join();
-			dataSendThread.start();
+			dataSendTh = thread(&Rover::transmitDataUDP, this);
+			dataSendTh.detach();
 			mLastDataSendTime.setTime();
 		}
 		if(!mImageIsSending && mLastImageSendTime.getElapsedTimeMS() > 200)
 		{
 			mImageIsSending = true;
-			imgSendThread.join(); 
-			imgSendThread.start();
+			imageSendTh = thread(&Rover::transmitImage, this);
+			imageSendTh.detach();
 			mLastImageSendTime.setTime();
 		}
 
-
-		if(mLastCpuUsageTime.getElapsedTimeMS() > 500)
+		if(mLastCpuUsageTime.getElapsedTimeMS() > 1000)
 		{
 			cpuUsageCur = getCpuUsage(mNumCpuCores);
 			mLastCpuUsageTime.setTime();
@@ -285,8 +255,13 @@ void Rover::run()
 			cpuUsagePrev.inject(cpuUsageCur);
 		}
 
-		sys.msleep(10);
+		System::msleep(10);
 	}
+
+	if(dataSendTh.joinable())
+		dataSendTh.join();
+	if(imageSendTh.joinable())
+		imageSendTh.join();
 
 	Log::alert(String("----------------- Rover runner dead -------------"));
 	mRunnerIsDone = true;
