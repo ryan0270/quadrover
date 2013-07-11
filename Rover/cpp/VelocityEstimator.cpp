@@ -50,6 +50,7 @@ void VelocityEstimator::run()
 		if(mNewImageDataAvailable)
 		{
 			imgFeatureData = mLastImageFeatureData;
+Log::alert(String()+"Processing "+imgFeatureData->featurePoints.size()+" feature points");
 			doVelocityEstimate(imgFeatureData);
 			mNewImageDataAvailable = false;
 		}

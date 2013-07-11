@@ -185,7 +185,8 @@ public class RoverService extends Service {
 			mCamera = Camera.open();
 			Camera.Parameters camParams = mCamera.getParameters();
 			List<Size> previewSizes = camParams.getSupportedPreviewSizes();
-			camParams.setPreviewSize(640,480);
+//			camParams.setPreviewSize(640,480);
+			camParams.setPreviewSize(320,240);
 
 			//	List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
 			//	int[] fps = fpsList.get(fpsList.size()-1);
@@ -304,15 +305,11 @@ public class RoverService extends Service {
 
 		try{
 			if(mImage == null)
-				mImage = new Mat();
+				mImage = new Mat(480,640,CvType.CV_8UC3);
 			if( getImage(mImage.getNativeObjAddr()) )
-			{
 				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
-			}
 			else
-			{
 				return null;
-			}
 			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
 				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
 			Utils.matToBitmap(mImage, mBmp);

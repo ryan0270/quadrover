@@ -498,9 +498,7 @@ namespace Quadrotor{
 //		Log::alert(String()+"dt: "+mImageDT);
 
 		shared_ptr<cv::Mat> imageBGR(new cv::Mat);
-//Log::alert("cvtColor 1 start");
 		cv::cvtColor(*imageYUV, *imageBGR, CV_YUV420sp2BGR);
-//Log::alert("cvtColor 1 end");
 
 		shared_ptr<DataImage> data(new DataImage());
 		data->type = DATA_TYPE_IMAGE;

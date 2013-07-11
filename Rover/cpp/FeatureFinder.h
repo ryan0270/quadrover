@@ -100,10 +100,16 @@ class FeatureFinder : public CommManagerListener,
 
 		void run();
 
-		vector<cv::Point2f> findFeaturePoints(cv::Mat const &img);
-		static void drawPoints(vector<cv::Point2f> const &points, cv::Mat &img);
 
 		int mThreadPriority, mScheduler;
+
+		vector<cv::Point2f> findFeaturePoints(cv::Mat const &image, 
+															 double const &qualityLevel,
+															 double const &minDistance,
+															 int const &fastThreshold);
+		static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
+		static void drawPoints(vector<cv::Point2f> const &points, cv::Mat &img);
+
 };
 
 } // namespace Quadrotor

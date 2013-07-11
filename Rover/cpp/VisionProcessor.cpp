@@ -123,72 +123,70 @@ void VisionProcessor::run()
 			mImageDataCur->unlock();
 
 			Time procStart;
-//Log::alert("cvtColor 2 start");
-//			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
-//Log::alert("cvtColor 2 end");
-//
-//			points.clear();
-//			points = getMatchingPoints(mCurImageGray);
-////			if(points[0].size() > 0)
-////			{
-////				mFeatureMatchBuffer.push_back(points);
-////				mFeatureMatchTimeBuffer.push_back(mImageDataCur->timestamp);
-////				mFeatureMatchDTBuffer.push_back(dt);
-////				mFeatureMatchAttPrevBuffer.push_back(attPrev.copy());
-////				mFeatureMatchAttCurBuffer.push_back(attCur.copy());
-////			}
-//
-//			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-//			mCurImage.copyTo(*imageAnnotated);
-//			drawMatches(points, *imageAnnotated);
-//
-//			mMutex_data.lock();
-//			circles = mLastCircles;
-//			mMutex_data.unlock();
-//			drawTarget(circles, *imageAnnotated);
-//
-//			mCurImageAnnotated = imageAnnotated;
-//			
-//			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
-//			imageAnnotatedData->imageAnnotated = imageAnnotated;
-//			imageAnnotatedData->imageDataSource = mImageDataCur;
-//
-//			shared_ptr<ImageMatchData> data(new ImageMatchData());
-////			data->dt = dt;
-//			data->featurePoints = points;
-//			data->imageData0 = mImageDataPrev;
-//			data->imageData1 = mImageDataCur;
-//			data->imageAnnotated = imageAnnotatedData;
-//			for(int i=0; i<mListeners.size(); i++)
-//				mListeners[i]->onImageProcessed(data);
-//
-//			mImageProcTimeUS = procStart.getElapsedTimeUS();
-//			if(mQuadLogger != NULL)
+			cvtColor(mCurImage, mCurImageGray, CV_BGR2GRAY);
+
+			points.clear();
+			points = getMatchingPoints(mCurImageGray);
+//			if(points[0].size() > 0)
 //			{
-//				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
-//				mMutex_logger.lock();
-//				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
-//				mMutex_logger.unlock();
-//
-//				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
-//				str2 = str2+(points.size() > 0 ? points[0].size() : 0);
-//				mMutex_logger.lock();
-//				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
-//				mMutex_logger.unlock();
+//				mFeatureMatchBuffer.push_back(points);
+//				mFeatureMatchTimeBuffer.push_back(mImageDataCur->timestamp);
+//				mFeatureMatchDTBuffer.push_back(dt);
+//				mFeatureMatchAttPrevBuffer.push_back(attPrev.copy());
+//				mFeatureMatchAttCurBuffer.push_back(attCur.copy());
 //			}
+
+			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
+			mCurImage.copyTo(*imageAnnotated);
+			drawMatches(points, *imageAnnotated);
+
+			mMutex_data.lock();
+			circles = mLastCircles;
+			mMutex_data.unlock();
+			drawTarget(circles, *imageAnnotated);
+
+			mCurImageAnnotated = imageAnnotated;
+			
+			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
+			imageAnnotatedData->imageAnnotated = imageAnnotated;
+			imageAnnotatedData->imageDataSource = mImageDataCur;
+
+			shared_ptr<ImageMatchData> data(new ImageMatchData());
+//			data->dt = dt;
+			data->featurePoints = points;
+			data->imageData0 = mImageDataPrev;
+			data->imageData1 = mImageDataCur;
+			data->imageAnnotated = imageAnnotatedData;
+			for(int i=0; i<mListeners.size(); i++)
+				mListeners[i]->onImageProcessed(data);
+
+			mImageProcTimeUS = procStart.getElapsedTimeUS();
+			if(mQuadLogger != NULL)
+			{
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
+				mMutex_logger.lock();
+				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+				mMutex_logger.unlock();
+
+				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
+				str2 = str2+(points.size() > 0 ? points[0].size() : 0);
+				mMutex_logger.lock();
+				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
+				mMutex_logger.unlock();
+			}
+
+			if(mLogImages && mMotorOn)
+			{
+//				mMutex_buffers.lock();
+//				mImageDataBuffer.push_back(shared_ptr<DataImage>(mImageDataCur));
+//				while(mImageDataBuffer.size() > mImageBufferMaxSize)
+//					mImageDataBuffer.pop_front();
 //
-//			if(mLogImages && mMotorOn)
-//			{
-////				mMutex_buffers.lock();
-////				mImageDataBuffer.push_back(shared_ptr<DataImage>(mImageDataCur));
-////				while(mImageDataBuffer.size() > mImageBufferMaxSize)
-////					mImageDataBuffer.pop_front();
-////
-////				mImageMatchDataBuffer.push_back(shared_ptr<ImageMatchData>(data));
-////				while(mImageMatchDataBuffer.size() > mImageBufferMaxSize)
-////					mImageMatchDataBuffer.pop_front();
-////				mMutex_buffers.unlock();
-//			}
+//				mImageMatchDataBuffer.push_back(shared_ptr<ImageMatchData>(data));
+//				while(mImageMatchDataBuffer.size() > mImageBufferMaxSize)
+//					mImageMatchDataBuffer.pop_front();
+//				mMutex_buffers.unlock();
+			}
 
 		}
 
