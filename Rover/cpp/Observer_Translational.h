@@ -3,6 +3,7 @@
 #include <memory>
 #include <fstream>
 #include <sched.h>
+#include <thread>
 
 #include "toadlet/egg.h"
 
@@ -33,8 +34,7 @@ class Observer_TranslationalListener
 	virtual void onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel)=0;
 };
 
-class Observer_Translational : public toadlet::egg::Thread,
-								public Observer_AngularListener,
+class Observer_Translational : public Observer_AngularListener,
 								public CommManagerListener,
 								public AttitudeThrustControllerListener,
 								public SensorManagerListener,
@@ -46,6 +46,7 @@ class Observer_Translational : public toadlet::egg::Thread,
 	virtual ~Observer_Translational();
 
 	void initialize();
+	void start(){ thread th(&Observer_Translational ::run, this); th.detach(); }
 	void run();
 	void shutdown();
 

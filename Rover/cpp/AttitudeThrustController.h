@@ -1,6 +1,7 @@
 #ifndef ICSL_ATITTUDETHRUSTCONTROLLER
 #define ICSL_ATITTUDETHRUSTCONTROLLER
 #include <sched.h>
+#include <thread>
 
 #include "toadlet/egg.h"
 
@@ -26,16 +27,16 @@ class AttitudeThrustControllerListener;
 //	virtual void onAttitudeThrustControllerCmdsSent(double const cmds[4])=0;
 //};
 
-class AttitudeThrustController : public toadlet::egg::Thread,
-									public CommManagerListener,
-									public TranslationControllerListener,
-									public Observer_AngularListener
+class AttitudeThrustController : public CommManagerListener,
+								public TranslationControllerListener,
+								public Observer_AngularListener
 {
 	public:
 	AttitudeThrustController();
 	virtual ~AttitudeThrustController();
 
 	void initialize();
+	void start(){ thread th(&AttitudeThrustController::run, this); th.detach(); }
 	void run();
 	void shutdown();
 

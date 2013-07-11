@@ -170,13 +170,32 @@ public class Rover extends Activity implements Runnable
 				float att[] = mService.getRoverAttitude();
 				int imgProcTimeMS = mService.getRoverImageProcTimeMS();
 
-				final String strGyro = String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]);
-				final String strAccel = String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]);
-				final String strMag = String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]);
-				final String strImgProcTime = "Proc Time: "+String.valueOf(imgProcTimeMS)+"ms";
-				final String strRoll = String.format("Roll:\t%1.3f",att[0]);
-				final String strPitch = String.format("Pitch:\t%1.3f",att[1]);
-				final String strYaw = String.format("Yaw:\t%1.3f",att[2]);
+				final String strGyro, strAccel, strMag, strImgProcTime, strRoll, strPitch, strYaw;
+				if(gyro.length > 2)
+					strGyro = String.format("Gyro:\t\t%1.2f\t\t%1.2f\t\t%1.2f",gyro[0],gyro[1],gyro[2]);
+				else
+					strGyro = "Gyro: n/a";
+				if(accel.length > 2)
+					strAccel = String.format("Accel:\t\t%1.2f\t\t%1.2f\t\t%1.2f",accel[0],accel[1],accel[2]);
+				else
+					strAccel = "Accel: n/a";
+				if(mag.length > 2)
+					strMag = String.format("Mag:\t\t%1.2f\t\t%1.2f\t\t%1.2f",mag[0],mag[1],mag[2]);
+				else
+					strMag = "Mag: n/a";
+				strImgProcTime = "Proc Time: "+String.valueOf(imgProcTimeMS)+"ms";
+				if(att.length > 2)
+					strRoll = String.format("Roll:\t%1.3f",att[0]);
+				else
+					strRoll = "Roll: n/a";
+				if(att.length > 2)
+					strPitch = String.format("Pitch:\t%1.3f",att[1]);
+				else
+					strPitch = "Pitch: n/a";
+				if(att.length > 2)
+					strYaw = String.format("Yaw:\t%1.3f",att[2]);
+				else
+					strYaw = "Yaw: n/a";
 				runOnUiThread(new Runnable(){
 					public void run(){ 
 //						mTvGyro.setText(strGyro);

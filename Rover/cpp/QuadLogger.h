@@ -4,7 +4,7 @@
 #include <queue>
 #include <sstream>
 #include <memory>
-
+#include <thread>
 
 #include "mxml.h"
 
@@ -59,7 +59,7 @@ enum LogIDs
 	LOG_ID_OBSV_TRANS_PROC_TIME = 10000,
 };
 
-class QuadLogger : public toadlet::egg::Thread
+class QuadLogger
 {
 	public:
 		explicit QuadLogger();
@@ -79,9 +79,8 @@ class QuadLogger : public toadlet::egg::Thread
 		void resume(){mPaused = false;}
 
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
-//		void start();
+		void start(){ thread th(&QuadLogger::run, this); th.detach(); }
 		void run();
-//		void close();
 		void shutdown();
 		void clearLog(){shutdown(); start();}
 
@@ -99,7 +98,7 @@ class QuadLogger : public toadlet::egg::Thread
 		String mDir, mFilename;
 		uint32 mTypeMask;
 		FileStream::ptr mLogStream;
-		Mutex mMutex_file, mMutex_logQueue;
+		Mutex mMutex_file, mMutex_logQueue, mMutex_addLine;
 		Time mStartTime;
 
 		bool mPaused;

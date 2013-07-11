@@ -21,6 +21,7 @@ class Observer_AngularListener
 #define ICSL_OBSERVER_ANGULAR 
 #include <memory>
 #include <sched.h>
+#include <thread>
 
 #include <toadlet/egg.h>
 
@@ -39,9 +40,8 @@ namespace ICSL{
 namespace Quadrotor{
 
 //class Observer_Angular : public InputDeviceListener
-class Observer_Angular : public toadlet::egg::Thread, 
-							public CommManagerListener,
-							public SensorManagerListener
+class Observer_Angular : public CommManagerListener,
+						 public SensorManagerListener
 {
 	public:
 		Observer_Angular();
@@ -78,6 +78,7 @@ class Observer_Angular : public toadlet::egg::Thread,
 		void addDirectionMeasurement(TNT::Array2D<double> const &dirMeas, TNT::Array2D<double> const &dirInertial, double weight);
 
 		void initialize();
+		void start(){ thread th(&Observer_Angular::run, this); th.detach(); }
 		void run();
 		void shutdown();
 

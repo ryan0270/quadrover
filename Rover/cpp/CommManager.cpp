@@ -56,13 +56,8 @@ void CommManager::shutdown()
 {
 	Log::alert("------------------ Comm Manager shutdown started --------------------");
 	mRun = false;
-	this->join();
-//	toadlet::egg::System sys;
-//	while(!mDone) // since join doesn't seem to work correctly in NDK
-//	{
-//		Log::alert("CommManager Waiting");
-//		sys.msleep(10);
-//	}
+	while(!mDone)
+		System::msleep(10);
 
 	if(mSocketTCP != NULL)
 	{
@@ -85,7 +80,6 @@ void CommManager::run()
 {
 	mDone = false;
 	mRun = true;
-	System sys;
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
@@ -144,7 +138,7 @@ mPortPC = 13120;
 			mLastCmdRcvTime.setTime();
 		}
 
-		sys.msleep(1);
+		System::msleep(1);
 	}
 
 	mDone = true;

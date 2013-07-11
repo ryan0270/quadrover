@@ -71,9 +71,8 @@ void Observer_Angular::shutdown()
 {
 	Log::alert("------------------------- Observer_Angular shutdown started  --------------------------------------------------");
 	mRunning = false;
-	toadlet::egg::System sys;
 	while(!mDone) // since join doesn't seem to work correctly in NDK
-		sys.msleep(10);
+		System::msleep(10);
 
 
 	mAccelData = NULL;
@@ -103,7 +102,6 @@ void Observer_Angular::run()
 {
 	mRunning = true;
 	mDone = false;
-	System sys;
 	Time lastInnovationUpdateTime;
 	Time lastGyroUpdateTime;
 	Array2D<double> gyroSum(3,1,0.0);
@@ -206,7 +204,7 @@ void Observer_Angular::run()
 			gyroProcessed = true;
 		}
 
-		sys.usleep(500);
+		System::usleep(500);
 	}
 
 	mDone = true;

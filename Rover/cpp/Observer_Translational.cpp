@@ -102,9 +102,8 @@ namespace Quadrotor{
 	{
 		Log::alert("------------------------- Observer_Translational shutdown started  --------------------------------------------------");
 		mRunning = false;
-		this->join();
-//		while(!mDone)
-//			System::msleep(10);
+		while(!mDone)
+			System::msleep(10);
 
 		mPhoneTempData = NULL;
 		mImageMatchData = NULL;
@@ -265,7 +264,6 @@ namespace Quadrotor{
 		mDone = true;
 	}
 
-//return;
 	void Observer_Translational::setMotorCmds(double const cmds[4])
 	{
 		shared_ptr<DataVector<double> > data(new DataVector<double>());

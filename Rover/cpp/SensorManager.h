@@ -1,6 +1,7 @@
 #ifndef ICSL_SENSOR_MANAGER
 #define ICSL_SENSOR_MANAGER
 #include <sched.h>
+#include <thread>
 
 #include <memory>
 #include <string>
@@ -39,12 +40,13 @@ class SensorManagerListener
 	virtual void onNewSensorUpdate(shared_ptr<IData> const &data)=0;
 };
 
-class SensorManager : public toadlet::egg::Thread, public Observer_AngularListener
+class SensorManager : public Observer_AngularListener
 {
 	public:
 	SensorManager();
 	virtual ~SensorManager();
 
+	void start(){ thread th(&SensorManager::run, this); th.detach(); }
 	void run();
 	void initialize();
 	void shutdown();

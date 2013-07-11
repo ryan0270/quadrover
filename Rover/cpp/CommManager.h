@@ -1,6 +1,7 @@
 #ifndef ICSL_COMM_MANAGER
 #define ICSL_COMM_MANAGER
 #include <sched.h>
+#include <thread>
 
 #include <vector>
 #include <toadlet/egg.h>
@@ -52,7 +53,7 @@ class CommManagerListener
 	virtual void onNewCommSetDesiredPos(){};
 }; // class CommManagerListener
 
-class CommManager : public toadlet::egg::Thread
+class CommManager 
 {
 	public:
 	explicit CommManager();
@@ -60,6 +61,7 @@ class CommManager : public toadlet::egg::Thread
 
 	void initialize();
 	void shutdown();
+	void start(){ thread th(&CommManager::run, this); th.detach(); }
 	void run();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 

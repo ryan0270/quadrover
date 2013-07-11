@@ -1,5 +1,7 @@
 #include "QuadLogger.h"
 
+#include <unistd.h>
+
 namespace ICSL{
 namespace Quadrotor{
 using namespace std;
@@ -39,13 +41,8 @@ void QuadLogger::shutdown()
 {
 	Log::alert("------------------------- QuadLogger shutdown started");
 	mRunning = false;
-Log::alert("bob 1");
 	while(!mDone)
-	{
-Log::alert("bob 2");
 		System::msleep(10);
-	}
-Log::alert("bob 3");
 	Log::alert("------------------------- QuadLogger shutdown done");
 }
 
@@ -60,7 +57,6 @@ void QuadLogger::run()
 
 	generateMatlabHeader();
 
-	mMutex_file.lock();
 	mLogStream = FileStream::ptr(new FileStream(mDir+"/"+mFilename, FileStream::Open_BIT_WRITE));
 
 //	String str = "1\t2\t3\t4\t5\t6\t7\t8\t9\t10\n";
@@ -73,13 +69,11 @@ void QuadLogger::run()
 	// for easy indexing while post processing
 	str = String() + "0\t-500\n";
 	mLogStream->write((tbyte*)str.c_str(),str.length());
-	mMutex_file.unlock();
 
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
-	System sys;
 	String line;
 	while(mRunning)
 	{
@@ -92,21 +86,17 @@ void QuadLogger::run()
 			size = mLogQueue.size();
 			mMutex_logQueue.unlock();
 
-			mMutex_file.lock();
 			line = line+"\n";
 			if(mLogStream != NULL)
 				mLogStream->write((tbyte*)line.c_str(), line.length());
-			mMutex_file.unlock();
 		}
 
-		sys.msleep(1);
+		System::msleep(1);
 	}
 
 	if(mLogStream != NULL)
 	{
-		mMutex_file.lock();
 		mLogStream->close();
-		mMutex_file.unlock();
 		mLogStream = NULL;
 	}
 
@@ -115,6 +105,7 @@ void QuadLogger::run()
 
 void QuadLogger::addLine(String const &str, LogFlags type)
 {
+	mMutex_addLine.lock();
 	if(mTypeMask & type)
 	{
 		mMutex_logQueue.lock();
@@ -122,14 +113,7 @@ void QuadLogger::addLine(String const &str, LogFlags type)
 		mMutex_logQueue.unlock();
 	}
 
-//	mMutex_file.lock();
-//	if(mTypeMask & type)
-//	{
-//		String str2= str + "\n";
-//		if(mLogStream != NULL)
-//			mLogStream->write((tbyte*)str2.c_str(), str2.length());
-//	}
-//	mMutex_file.unlock();
+	mMutex_addLine.unlock();
 }
 
 //void QuadLogger::close()

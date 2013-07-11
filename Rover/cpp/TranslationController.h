@@ -1,6 +1,7 @@
 #ifndef ICSL_TRANSLATIONALCONTROLLER
 #define ICSL_TRANSLATIONALCONTROLLER
 #include <sched.h>
+#include <thread>
 
 #include "toadlet/egg.h"
 
@@ -25,8 +26,7 @@ class TranslationControllerListener
 	virtual void onTranslationControllerAccelCmdUpdated(TNT::Array2D<double> const &accelCmd)=0;
 };
 
-class TranslationController : 	public toadlet::egg::Thread,
-								public Observer_TranslationalListener,
+class TranslationController : 	public Observer_TranslationalListener,
 								public CommManagerListener
 {
 	public:
@@ -34,6 +34,7 @@ class TranslationController : 	public toadlet::egg::Thread,
 	virtual ~TranslationController();
 
 	void initialize();
+	void start(){ thread th(&TranslationController::run, this); th.detach(); }
 	void run();
 	void shutdown();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};

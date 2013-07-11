@@ -3,6 +3,7 @@
 #include <memory>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 #include <cpu-features.h>
 
@@ -33,8 +34,7 @@ namespace ICSL {
 namespace Quadrotor {
 class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
-				 public SensorManagerListener,
-				 public toadlet::egg::Thread
+				 public SensorManagerListener
 {
 public:
 	Rover();
@@ -48,6 +48,7 @@ public:
 	void startLogging();
 	void stopLogging();
 
+	void start(){ thread th(&Rover::run, this); th.detach(); }
 	void run();
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};

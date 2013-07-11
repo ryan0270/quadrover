@@ -2,6 +2,7 @@
 #define ICSL_VISIONPROCESSOR_H
 #include <memory>
 #include <sched.h>
+#include <thread>
 #include <cmath>
 #include <list>
 
@@ -42,8 +43,7 @@ class VisionProcessorListener
 		virtual void onImageLost()=0;
 };
 
-class VisionProcessor : public toadlet::egg::Thread, 
-						public CommManagerListener,
+class VisionProcessor : public CommManagerListener,
 						public SensorManagerListener
 {
 	public:
@@ -51,6 +51,7 @@ class VisionProcessor : public toadlet::egg::Thread,
 		virtual ~VisionProcessor(){};
 
 		void shutdown();
+		void start(){ thread th(&VisionProcessor ::run, this); th.detach(); }
 		void initialize();
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 

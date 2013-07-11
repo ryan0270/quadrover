@@ -37,12 +37,8 @@ void FeatureFinder::shutdown()
 {
 	Log::alert("-------------------------- Feature finder shutdown started ----------------------");
 	mRunning = false;
-	this->join();
-//	while(!mFinished)
-//	{
-//		Log::alert("FeatureFinder waiting");
-//		System::msleep(100); // this can take a while if we are saving a lot of images
-//	}
+	while(!mFinished)
+		System::msleep(10);
 
 	mImageDataNext = NULL;
 
@@ -90,41 +86,41 @@ void FeatureFinder::run()
 			curImage = *(imageData->image);
 			curImageGray.create(imageData->image->rows, imageData->image->cols, imageData->image->type());
 
-			cvtColor(curImage, curImageGray, CV_BGR2GRAY);
-
-			points.clear();
-			points = findFeaturePoints(curImageGray);
-
-			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-			curImage.copyTo(*imageAnnotated);
-			drawPoints(points, *imageAnnotated);
-			
-			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
-			imageAnnotatedData->imageAnnotated = imageAnnotated;
-			imageAnnotatedData->imageDataSource = imageData;
-			mImageAnnotatedLast = imageAnnotatedData;
-
-			shared_ptr<ImageFeatureData> data(new ImageFeatureData());
-			data->featurePoints = points;
-			data->imageData = imageData;
-			data->imageAnnotated = imageAnnotatedData;
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onFeaturesFound(data);
-
-			mImageProcTimeUS = procStart.getElapsedTimeUS();
-			if(mQuadLogger != NULL)
-			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
-				mMutex_logger.lock();
-				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
-				mMutex_logger.unlock();
-
-				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
-				str2 = str2+points.size();
-				mMutex_logger.lock();
-				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
-				mMutex_logger.unlock();
-			}
+//			cvtColor(curImage, curImageGray, CV_BGR2GRAY);
+//
+//			points.clear();
+//			points = findFeaturePoints(curImageGray);
+//
+//			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
+//			curImage.copyTo(*imageAnnotated);
+//			drawPoints(points, *imageAnnotated);
+//			
+//			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
+//			imageAnnotatedData->imageAnnotated = imageAnnotated;
+//			imageAnnotatedData->imageDataSource = imageData;
+//			mImageAnnotatedLast = imageAnnotatedData;
+//
+//			shared_ptr<ImageFeatureData> data(new ImageFeatureData());
+//			data->featurePoints = points;
+//			data->imageData = imageData;
+//			data->imageAnnotated = imageAnnotatedData;
+//			for(int i=0; i<mListeners.size(); i++)
+//				mListeners[i]->onFeaturesFound(data);
+//
+//			mImageProcTimeUS = procStart.getElapsedTimeUS();
+//			if(mQuadLogger != NULL)
+//			{
+//				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
+//				mMutex_logger.lock();
+//				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+//				mMutex_logger.unlock();
+//
+//				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
+//				str2 = str2+points.size();
+//				mMutex_logger.lock();
+//				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
+//				mMutex_logger.unlock();
+//			}
 		}
 
 		System::msleep(1);
