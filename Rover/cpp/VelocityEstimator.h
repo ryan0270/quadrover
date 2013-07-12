@@ -87,7 +87,9 @@ class VelocityEstimator : public FeatureFinderListener
 
 	Observer_Translational *mObsvTranslational;
 
-	void doVelocityEstimate(shared_ptr<ImageFeatureData> const &featureData) const;
+	void doVelocityEstimate(shared_ptr<ImageFeatureData> const &featureData,
+							TNT::Array2D<double> &velEstOUT,
+							double &heightEstOUT) const;
 
 };
 

@@ -103,7 +103,7 @@ class FeatureFinder : public CommManagerListener,
 
 		int mThreadPriority, mScheduler;
 
-		vector<cv::Point2f> findFeaturePoints(cv::Mat const &image, 
+		static vector<cv::Point2f> findFeaturePoints(cv::Mat const &image, 
 															 double const &qualityLevel,
 															 double const &minDistance,
 															 int const &fastThreshold);

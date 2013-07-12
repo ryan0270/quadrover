@@ -161,19 +161,19 @@ void VisionProcessor::run()
 				mListeners[i]->onImageProcessed(data);
 
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
-			if(mQuadLogger != NULL)
-			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
-				mMutex_logger.lock();
-				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
-				mMutex_logger.unlock();
-
-				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
-				str2 = str2+(points.size() > 0 ? points[0].size() : 0);
-				mMutex_logger.lock();
-				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
-				mMutex_logger.unlock();
-			}
+//			if(mQuadLogger != NULL)
+//			{
+//				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
+//				mMutex_logger.lock();
+//				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+//				mMutex_logger.unlock();
+//
+//				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
+//				str2 = str2+(points.size() > 0 ? points[0].size() : 0);
+//				mMutex_logger.lock();
+//				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
+//				mMutex_logger.unlock();
+//			}
 
 			if(mLogImages && mMotorOn)
 			{

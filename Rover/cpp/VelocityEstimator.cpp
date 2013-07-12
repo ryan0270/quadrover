@@ -45,14 +45,26 @@ void VelocityEstimator::run()
 	sched_setscheduler(0, mScheduler, &sp);
 
 	shared_ptr<ImageFeatureData> imgFeatureData;
+	Time procTimer;
+	double procTime;
+	Array2D<double> velEst(3,1);
+	double heightEst;
 	while(mRunning)
 	{
 		if(mNewImageDataAvailable)
 		{
+			procTimer.setTime();
 			imgFeatureData = mLastImageFeatureData;
-Log::alert(String()+"Processing "+imgFeatureData->featurePoints.size()+" feature points");
-			doVelocityEstimate(imgFeatureData);
+			doVelocityEstimate(imgFeatureData, velEst, heightEst);
 			mNewImageDataAvailable = false;
+
+			procTime = procTimer.getElapsedTimeNS()/1.0e9;
+
+			if(mQuadLogger != NULL)
+			{
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_VEL_CALC_TIME + "\t"+procTime;
+				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+			}
 		}
 
 		System::msleep(1);
@@ -62,7 +74,9 @@ Log::alert(String()+"Processing "+imgFeatureData->featurePoints.size()+" feature
 }
 
 // See eqn 98 in the Feb 25, 2013 notes
-void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &featureData) const
+void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &featureData,
+										   Array2D<double> &velEst, 
+										   double &heightEst) const
 {
 //	Log::alert("skipping velocity estimate");
 }

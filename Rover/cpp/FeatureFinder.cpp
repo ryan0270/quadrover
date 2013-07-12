@@ -111,10 +111,9 @@ void FeatureFinder::run()
 				mListeners[i]->onFeaturesFound(data);
 
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
-Log::alert(String()+"feature find time: " + mImageProcTimeUS/1.0e3 + "ms");
 			if(mQuadLogger != NULL)
 			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMG_PROC_TIME_FEATURE_MATCH + "\t" + mImageProcTimeUS;
+				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_FEATURE_FIND_TIME + "\t" + mImageProcTimeUS;
 				mMutex_logger.lock();
 				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();

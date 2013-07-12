@@ -126,9 +126,9 @@ void Rover::initialize()
 	mCommManager.addListener(&mVideoMaker);
 	mVisionProcessor.addListener(&mVideoMaker);
 
-	mSensorManager.initialize();
 	mSensorManager.setStartTime(mStartTime);
 	mSensorManager.setQuadLogger(&mQuadLogger);
+	mSensorManager.initialize();
 	mSensorManager.start();
 	mObsvAngular.addListener(&mSensorManager);
 	mSensorManager.addListener(&mObsvAngular);
@@ -136,8 +136,9 @@ void Rover::initialize()
 	mSensorManager.addListener(&mVisionProcessor);
 	mSensorManager.addListener(this);
 
-	mFeatureFinder.initialize();
+	mFeatureFinder.setStartTime(mStartTime);
 	mFeatureFinder.setQuadLogger(&mQuadLogger);
+	mFeatureFinder.initialize();
 	mFeatureFinder.start();
 	mFeatureFinder.addListener(&mVelocityEstimator);
 	mSensorManager.addListener(&mFeatureFinder);
