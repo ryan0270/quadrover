@@ -53,22 +53,22 @@ void computeMAPEstimate(Array2D<DTYPE> &velMAP /*out*/, Array2D<DTYPE> &covVel /
 						DTYPE const &focalLength, DTYPE const &dt, Array2D<DTYPE> const &omega,
 						int maxPointCnt);
 
-template<typename T>
-TNT::Array2D<T> logSO3(TNT::Array2D<T> const &R, DTYPE theta)
-{
-	Array2D<T> w(3,1);
-	if(abs(theta) > 0)
-	{
-		DTYPE sTheta2 = 2.0*sin(theta);
-		w[0][0] = (R[2][1]-R[1][2])/sTheta2;
-		w[1][0] = (R[0][2]-R[2][0])/sTheta2;
-		w[2][0] = (R[1][0]-R[0][1])/sTheta2;
-	}
-	else
-		w = Array2D<DTYPE>(3,1,0.0);
-
-	return w;
-}
+//template<typename T>
+//TNT::Array2D<T> logSO3(TNT::Array2D<T> const &R, DTYPE theta)
+//{
+//	Array2D<T> w(3,1);
+//	if(abs(theta) > 0)
+//	{
+//		DTYPE sTheta2 = 2.0*sin(theta);
+//		w[0][0] = (R[2][1]-R[1][2])/sTheta2;
+//		w[1][0] = (R[0][2]-R[2][0])/sTheta2;
+//		w[2][0] = (R[1][0]-R[0][1])/sTheta2;
+//	}
+//	else
+//		w = Array2D<DTYPE>(3,1,0.0);
+//
+//	return w;
+//}
 
 extern DTYPE rs0, rs1, rs2, rs3, rs4, rs5;
 
