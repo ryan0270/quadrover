@@ -96,7 +96,7 @@ void doTimeUpdateKF(Array2D<DTYPE> const &accel, DTYPE const &dt, Array2D<DTYPE>
 void doMeasUpdateKF_posOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
 void doMeasUpdateKF_heightOnly(DTYPE const &meas, DTYPE const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
 void doMeasUpdateKF_velOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &measCov, Array2D<DTYPE> &state, Array2D<DTYPE> &errCov);
-Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
+Time applyData(Time const &curTime, shared_ptr<IData> const &data, 
 				Array2D<DTYPE> &kfState, Array2D<DTYPE> &kfErrCov, 
 				Array2D<DTYPE> const &kfPosMeasCov, Array2D<DTYPE> const &kfVelMeasCov, Array2D<DTYPE> const &kfDynCov,
 				DTYPE &thrust, Array2D<DTYPE> &thrustDir,
@@ -339,7 +339,7 @@ void android_main(struct android_app* state) {
 	Log::alert("start chadding");
 
 	rs0 = rs1 = rs2 = rs3 = rs4 = rs5 = 0;
-	int testType = 1;
+	int testType = 0;
 	string imgDir;
 	if(testType == 0)
 		imgDir = "/sdcard/VisionTestApp/video_Jun5_3";
@@ -509,7 +509,7 @@ void android_main(struct android_app* state) {
 			imgIdx++;
 		imgIdx--;
 		Time curTime = imgIdList[imgIdx].second;
-		viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
+		viconTransState.inject(IData::interpolate(curTime, viconTransDataList));
 		kfState.inject(viconTransState);
 		Time lastMeasTime(curTime);
 
@@ -567,10 +567,10 @@ void android_main(struct android_app* state) {
 			else
 				dt = 0;
 	
-			attState.inject(Data::interpolate(curTime, attDataList));
+			attState.inject(IData::interpolate(curTime, attDataList));
 
 			// process events up to now
-			list<shared_ptr<Data> > events;
+			list<shared_ptr<IData> > events;
 			while(attDataList.size() > 0 && attDataList.front()->timestamp < curTime)
 			{ events.push_back(attDataList.front()); attDataList.pop_front(); }
 			while(transDataList.size() > 0 && transDataList.front()->timestamp < curTime)
@@ -581,7 +581,7 @@ void android_main(struct android_app* state) {
 			{ events.push_back(motorCmdsDataList.front()); motorCmdsDataList.pop_front(); }
 			while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
 			{ events.push_back(thrustDirDataList.front()); thrustDirDataList.pop_front(); }
-			events.sort( Data::timeSortPredicate );
+			events.sort( IData::timeSortPredicate );
 			Time updateTime = prevTime;
 			while(events.size() > 0)
 			{
@@ -614,14 +614,14 @@ void android_main(struct android_app* state) {
 			}
 
 			// remaining time update
-//			thrustDir.inject( Data::interpolate(curTime, thrustDirDataList) );
+//			thrustDir.inject( IData::interpolate(curTime, thrustDirDataList) );
 			accel.inject(thrust/mass*thrustDir);
 			accel[2][0] -= GRAVITY;
 			DTYPE dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
 			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
 
 			// KF measurement update
-			viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
+			viconTransState.inject(IData::interpolate(curTime, viconTransDataList));
 			if( Time::calcDiffMS(lastMeasTime, curTime) > viconUpdateDT)
 			{
 				// add noise
@@ -709,18 +709,44 @@ ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 					cv::Point2f p2 = curKp[tempMatches[i].trainIdx].pt;
 					distances[i] = sqrt( pow(p1.x-p2.x,2) + pow(p1.y-p2.y,2));
 				}
+
+				// first filter on distance
 				int medIndex = distances.size()/2;
 				vector<DTYPE> distancesCopy(distances);
 				// this finds the median
 				nth_element(distancesCopy.begin(), distancesCopy.begin()+medIndex, distancesCopy.end(),
 						[&](DTYPE const &a, DTYPE const &b){return a < b;});
 				DTYPE medDist = distancesCopy[medIndex];
-				DTYPE maxDelta = 40;
-				DTYPE lowEnd = min(0.5f*medDist,medDist-maxDelta);
-				DTYPE highEnd = max(1.5f*medDist,medDist+maxDelta);
+				DTYPE minDelta = 40;
+				DTYPE lowEnd = min(0.5f*medDist,medDist-minDelta);
+				DTYPE highEnd = max(1.5f*medDist,medDist+minDelta);
 				for(int i=0; i<tempMatches.size(); i++)
 					if( lowEnd < distances[i] && distances[i] < highEnd)
 						goodMatches.push_back(tempMatches[i]);
+
+				// now filter on angles
+				tempMatches.clear();
+				goodMatches.swap(tempMatches);
+				vector<DTYPE> angles(tempMatches.size());
+				for(int i=0; i<tempMatches.size(); i++)
+				{
+					cv::Point2f p1 = prevKp[tempMatches[i].queryIdx].pt;
+					cv::Point2f p2 = curKp[tempMatches[i].trainIdx].pt;
+					angles[i] = atan2(p2.y-p1.y, p2.x-p1.x);
+				}
+				medIndex = angles.size()/2;
+				vector<DTYPE> anglesCopy(angles);
+				// this finds the median
+				nth_element(anglesCopy.begin(), anglesCopy.begin()+medIndex, anglesCopy.end(),
+						[&](DTYPE const &a, DTYPE const &b){return a < b;});
+				DTYPE medAngle = anglesCopy[medIndex];
+				minDelta = 20*DEG2RAD;
+				lowEnd = medAngle-minDelta;
+				highEnd = medAngle+minDelta;
+				for(int i=0; i<tempMatches.size(); i++)
+					if( lowEnd < angles[i] && angles[i] < highEnd)
+						goodMatches.push_back(tempMatches[i]);
+
 				numMatchesAccum += goodMatches.size();
 			}
 	
@@ -807,8 +833,8 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				// Apply measurement to the state estimate
 				vel = matmult(rotCamToPhone, vel);
 //				covVel = matmult(rotCamToPhone, matmult(covVel, rotPhoneToCam));
-//				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
-//				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
+				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
+				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
 			}
 
 			// save data
@@ -860,272 +886,272 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 	//////////////////////////////////////////////////////////////////
 	// Once for new algo
 	//////////////////////////////////////////////////////////////////
-	{
-		curTime.setTimeMS(0);
-		attPrev = createIdentity((DTYPE)3.0);
-		attCur = createIdentity((DTYPE)3.0);
-		attChange = createIdentity((DTYPE)3.0);
-		int imgIdx = 0;
-		list<pair<int, cv::Mat> >::iterator iter_imgList;
-		iter_imgList = imgList.begin();
-		long long numFeaturesAccum = 0;
-		DTYPE numMatchesAccum = 0;
-
-		Array2D<DTYPE> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
-		Array2D<DTYPE> errCov1(9,1), errCov(6,6,0.0);
-
-		kfErrCov.inject(kfErrCovStart);
-
-		Array2D<DTYPE> mv(3,1), omega(3,1), vel;
-		DTYPE mz, dt, z;
-
-		imgId = iter_imgList->first;
-		while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
-			imgIdx++;
-		imgIdx--;
-		Time curTime = imgIdList[imgIdx].second;
-		viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
-		kfState.inject(viconTransState);
-		Time lastMeasTime(curTime);
-
-		// Make local copy of data
-		list<shared_ptr<DataVector<DTYPE> > > attDataList(attDataListOrig);
-		list<shared_ptr<DataVector<DTYPE> > > transDataList(transDataListOrig);
-		list<shared_ptr<DataVector<DTYPE> > > errCovDataList(errCovDataListOrig);
-		list<shared_ptr<DataVector<DTYPE> > > motorCmdsDataList(motorCmdsDataListOrig);
-		list<shared_ptr<DataVector<DTYPE> > > thrustDirDataList;(thrustDirDataListOrig);
-
-		// truncate the lists to the current start time
-		shared_ptr<DataVector<DTYPE> > attData, transData, errCovData, motorCmdsData, thrustDirData;
-		while(attDataList.size() > 0 && attDataList.front()->timestamp < curTime)
-		{ attData= attDataList.front(); attDataList.pop_front(); }
-		while(transDataList.size() > 0 && transDataList.front()->timestamp < curTime)
-		{ transData= transDataList.front(); transDataList.pop_front(); }
-		while(errCovDataList.size() > 0 && errCovDataList.front()->timestamp < curTime)
-		{ errCovData= errCovDataList.front(); errCovDataList.pop_front(); }
-		while(motorCmdsDataList.size() > 0 && motorCmdsDataList.front()->timestamp < curTime)
-		{ motorCmdsData= motorCmdsDataList.front(); motorCmdsDataList.pop_front(); }
-		while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
-		{ thrustDirData= thrustDirDataList.front(); thrustDirDataList.pop_front(); }
-
-		vector<pair<Array2D<DTYPE>, Array2D<DTYPE> > > priorDistList;
-
-		Array2D<DTYPE> C;
-
-		DTYPE ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
-		ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = ts7 = 0;
-		Time t0;
-
-		Array2D<DTYPE> lastViconPos;
-//		fstream fs("/sdcard/VisionTestApp/mapResults.txt", fstream::out);
-		FileStream::ptr fs = FileStream::ptr(new FileStream(String("/sdcard/VisionTestApp/mapResults.txt"), FileStream::Open_BIT_WRITE));
-		for(int i=0; i<10; i++)
-			writeLine(fs,String()+i+"\t");
-		writeLine(fs,"\n");
+//	{
+//		curTime.setTimeMS(0);
+//		attPrev = createIdentity((DTYPE)3.0);
+//		attCur = createIdentity((DTYPE)3.0);
+//		attChange = createIdentity((DTYPE)3.0);
+//		int imgIdx = 0;
+//		list<pair<int, cv::Mat> >::iterator iter_imgList;
+//		iter_imgList = imgList.begin();
+//		long long numFeaturesAccum = 0;
+//		DTYPE numMatchesAccum = 0;
+//
+//		Array2D<DTYPE> attState(6,1), transState(6,1), viconAttState(6,1), viconTransState(6,1);
+//		Array2D<DTYPE> errCov1(9,1), errCov(6,6,0.0);
+//
+//		kfErrCov.inject(kfErrCovStart);
+//
+//		Array2D<DTYPE> mv(3,1), omega(3,1), vel;
+//		DTYPE mz, dt, z;
+//
+//		imgId = iter_imgList->first;
+//		while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
+//			imgIdx++;
+//		imgIdx--;
+//		Time curTime = imgIdList[imgIdx].second;
+//		viconTransState.inject(IData::interpolate(curTime, viconTransDataList));
+//		kfState.inject(viconTransState);
+//		Time lastMeasTime(curTime);
+//
+//		// Make local copy of data
+//		list<shared_ptr<DataVector<DTYPE> > > attDataList(attDataListOrig);
+//		list<shared_ptr<DataVector<DTYPE> > > transDataList(transDataListOrig);
+//		list<shared_ptr<DataVector<DTYPE> > > errCovDataList(errCovDataListOrig);
+//		list<shared_ptr<DataVector<DTYPE> > > motorCmdsDataList(motorCmdsDataListOrig);
+//		list<shared_ptr<DataVector<DTYPE> > > thrustDirDataList;(thrustDirDataListOrig);
+//
+//		// truncate the lists to the current start time
+//		shared_ptr<DataVector<DTYPE> > attData, transData, errCovData, motorCmdsData, thrustDirData;
+//		while(attDataList.size() > 0 && attDataList.front()->timestamp < curTime)
+//		{ attData= attDataList.front(); attDataList.pop_front(); }
+//		while(transDataList.size() > 0 && transDataList.front()->timestamp < curTime)
+//		{ transData= transDataList.front(); transDataList.pop_front(); }
+//		while(errCovDataList.size() > 0 && errCovDataList.front()->timestamp < curTime)
+//		{ errCovData= errCovDataList.front(); errCovDataList.pop_front(); }
+//		while(motorCmdsDataList.size() > 0 && motorCmdsDataList.front()->timestamp < curTime)
+//		{ motorCmdsData= motorCmdsDataList.front(); motorCmdsDataList.pop_front(); }
+//		while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
+//		{ thrustDirData= thrustDirDataList.front(); thrustDirDataList.pop_front(); }
+//
+//		vector<pair<Array2D<DTYPE>, Array2D<DTYPE> > > priorDistList;
+//
+//		Array2D<DTYPE> C;
+//
+//		DTYPE ts0, ts1, ts2, ts3, ts4, ts5, ts6, ts7;
+//		ts0 = ts1 = ts2 = ts3 = ts4 = ts5 = ts6 = ts7 = 0;
+//		Time t0;
+//
+//		Array2D<DTYPE> lastViconPos;
+////		fstream fs("/sdcard/VisionTestApp/mapResults.txt", fstream::out);
+//		FileStream::ptr fs = FileStream::ptr(new FileStream(String("/sdcard/VisionTestApp/mapResults.txt"), FileStream::Open_BIT_WRITE));
+//		for(int i=0; i<10; i++)
+//			writeLine(fs,String()+i+"\t");
+//		writeLine(fs,"\n");
+////		fs->close();
+//		Time mapStartTime;
+//		while(iter_imgList != imgList.end())
+//		{
+//			t0.setTime();
+//			imgId = iter_imgList->first;
+//			img = iter_imgList->second;
+//			iter_imgList++;
+//			while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
+//				imgIdx++;
+//			if(imgIdx == imgIdList.size() )
+//			{
+//				cout << "imgIdx exceeded vector" << endl;
+//				return;
+//			}
+//			prevTime.setTime(curTime);
+//			curTime = imgIdList[imgIdx].second;
+//			if(prevTime.getMS() > 0)
+//				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
+//			else
+//				dt = 0;
+//
+//			attState.inject(IData::interpolate(curTime, attDataList));
+//
+//			// process events up to now
+//			list<shared_ptr<IData> > events;
+//			while(attDataList.size() > 0 && attDataList.front()->timestamp < curTime)
+//			{ events.push_back(attDataList.front()); attDataList.pop_front(); }
+//			while(transDataList.size() > 0 && transDataList.front()->timestamp < curTime)
+//			{ /*events.push_back(transDataList.front());*/ transDataList.pop_front(); }
+//			while(errCovDataList.size() > 0 && errCovDataList.front()->timestamp < curTime)
+//			{ /*events.push_back(errCovDataList.front());*/ errCovDataList.pop_front(); }
+//			while(motorCmdsDataList.size() > 0 && motorCmdsDataList.front()->timestamp < curTime)
+//			{ events.push_back(motorCmdsDataList.front()); motorCmdsDataList.pop_front(); }
+//			while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
+//			{ events.push_back(thrustDirDataList.front()); thrustDirDataList.pop_front(); }
+//			events.sort( IData::timeSortPredicate );
+//			Time updateTime = prevTime;
+//			while(events.size() > 0)
+//			{
+//				updateTime = applyData(updateTime, events.front(), 
+//						kfState, kfErrCov, 
+//						kfViconPosMeasCov, kfViconVelMeasCov, kfDynCov, 
+//						thrust, thrustDir,
+//						mass);
+//				events.pop_front();
+//			}
+//
+//			// Checking to make sure we haven't broken the error covariance
+//			JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
+//			Array2D<DTYPE> eigs;
+//			eig_kfErrCov.getD(eigs);
+//			DTYPE minEig = eigs[0][0];
+//			for(int i=1; i<eigs.dim1(); i++)
+//				minEig = min(minEig, (DTYPE)eigs[i][i]);
+//			while(minEig <= 0)
+//			{
+//				cout << "crap! kfErrCov is not definite" << endl;
+//				printArray("kfErrCov:\n",kfErrCov);
+//
+//				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity((DTYPE)6.0);
+//
+//				JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
+//				eig_kfErrCov.getD(eigs);
+//				minEig = eigs[0][0];
+//				for(int i=1; i<eigs.dim1(); i++)
+//					minEig = min(minEig, (DTYPE)eigs[i][i]);
+//			}
+//
+//			// remaining time update
+////			thrustDir.inject( IData::interpolate(curTime, thrustDirDataList) );
+//			accel.inject(thrust/mass*thrustDir);
+//			accel[2][0] -= GRAVITY;
+//			DTYPE dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
+//			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
+//
+//			// KF measurement update
+//			if( Time::calcDiffMS(lastMeasTime, curTime) > viconUpdateDT)
+//			{
+//				viconTransState.inject(IData::interpolate(curTime, viconTransDataList));
+//				// add noise
+//				Array2D<DTYPE> meas = submat(viconTransState,0,2,0,0);
+//				meas += measNoise[imgId];
+//
+//				DTYPE dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
+//				lastMeasTime.setTime(curTime);
+//				doMeasUpdateKF_posOnly( meas, kfViconPosMeasCov, kfState, kfErrCov);
+//			}
+//
+//			attPrev.inject(attCur);
+//			if(useViconState)
+//				attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
+//			else
+//				attCur.inject( createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]) );
+////			attChange.inject( matmult(attCur, transpose(attPrev)) );
+//			attChange.inject( matmult(transpose(attCur), attPrev) );
+//			omega.inject(logSO3(attChange, dt));
+//
+//			// Rotate to camera coords
+//			attState.inject(matmult(rotPhoneToCam2, attState));
+//			transState.inject(matmult(rotPhoneToCam2, kfState));
+//			errCov.inject(matmult(rotPhoneToCam2, matmult(kfErrCov, rotCamToPhone2)));
+////			viconAttState = matmult(rotPhoneToCam2, viconAttState);
+//			omega.inject(matmult(rotPhoneToCam, omega));
+//
+//ts0 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+//			/////////////////////////////////////////////////////
+//			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
+//			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
+////			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
+//
+//ts1 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+//			curPoints.swap(prevPoints);
+//			findPoints(imgGray, curPoints, minDistance, qualityLevel);
+//			numFeaturesAccum += curPoints.size();
+//
+//ts2 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+//			/////////////////////////////////////////////////////
+//			//  Prior distributions
+//			for(int i=0; i<curPoints.size(); i++)
+//				curPoints[i] -= center;
+//
+//			mv[0][0] = transState[3][0];
+//			mv[1][0] = transState[4][0];
+//			mv[2][0] = transState[5][0];
+//
+//			mz = -transState[2][0]; // in camera coords, z is flipped
+//			mz -= camOffset; // camera to vicon markers offset
+//
+//			sz = sqrt( errCov[2][2]);
+//			Sv[0][0] = errCov[3][3];
+//			Sv[1][1] = errCov[4][4];
+//			Sv[2][2] = errCov[5][5];
+//
+//			priorDistList.clear();
+//			priorDistList = calcPriorDistributions(prevPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
+//
+//ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+//			// Correspondence
+//			C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
+//
+//ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+//			for(int i=0; i<C.dim1()-1; i++)
+//				for(int j=0; j<C.dim2()-1; j++)
+//					numMatchesAccum += C[i][j];
+//			
+//			// MAP velocity and height
+//			if(prevPoints.size() > 0)
+//			{
+//				Array2D<DTYPE> covVel;
+//				computeMAPEstimate(vel, covVel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
+//ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+//				z += camOffset;
+//
+//				// Apply measurement to the state estimate
+//				vel = matmult(rotCamToPhone, vel);
+//				covVel = matmult(rotCamToPhone, matmult(covVel, rotPhoneToCam));
+//				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
+//				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
+//			}
+//
+//			// save data
+//			stringstream ss;
+//			ss << curTime.getMS() << "\t" << 98 << "\t";
+//			for(int i=0; i<vel.dim1(); i++)
+//				ss << vel[i][0] << "\t";
+//			ss << endl;
+//
+//			ss << curTime.getMS() << "\t" << 99 << "\t" << z << endl;
+//
+//			ss << curTime.getMS() << "\t" << 100 << "\t";
+//			for(int i=0; i<kfState.dim1(); i++)
+//				ss << kfState[i][0] << "\t";
+//			ss << endl;
+//			writeLine(fs, ss.str().c_str());
+//
+//ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
+//		}
 //		fs->close();
-		Time mapStartTime;
-		while(iter_imgList != imgList.end())
-		{
-			t0.setTime();
-			imgId = iter_imgList->first;
-			img = iter_imgList->second;
-			iter_imgList++;
-			while(imgIdList[imgIdx].first < imgId && imgIdx < imgIdList.size()) 
-				imgIdx++;
-			if(imgIdx == imgIdList.size() )
-			{
-				cout << "imgIdx exceeded vector" << endl;
-				return;
-			}
-			prevTime.setTime(curTime);
-			curTime = imgIdList[imgIdx].second;
-			if(prevTime.getMS() > 0)
-				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
-			else
-				dt = 0;
-
-			attState.inject(Data::interpolate(curTime, attDataList));
-
-			// process events up to now
-			list<shared_ptr<Data> > events;
-			while(attDataList.size() > 0 && attDataList.front()->timestamp < curTime)
-			{ events.push_back(attDataList.front()); attDataList.pop_front(); }
-			while(transDataList.size() > 0 && transDataList.front()->timestamp < curTime)
-			{ /*events.push_back(transDataList.front());*/ transDataList.pop_front(); }
-			while(errCovDataList.size() > 0 && errCovDataList.front()->timestamp < curTime)
-			{ /*events.push_back(errCovDataList.front());*/ errCovDataList.pop_front(); }
-			while(motorCmdsDataList.size() > 0 && motorCmdsDataList.front()->timestamp < curTime)
-			{ events.push_back(motorCmdsDataList.front()); motorCmdsDataList.pop_front(); }
-			while(thrustDirDataList.size() > 0 && thrustDirDataList.front()->timestamp < curTime)
-			{ events.push_back(thrustDirDataList.front()); thrustDirDataList.pop_front(); }
-			events.sort( Data::timeSortPredicate );
-			Time updateTime = prevTime;
-			while(events.size() > 0)
-			{
-				updateTime = applyData(updateTime, events.front(), 
-						kfState, kfErrCov, 
-						kfViconPosMeasCov, kfViconVelMeasCov, kfDynCov, 
-						thrust, thrustDir,
-						mass);
-				events.pop_front();
-			}
-
-			// Checking to make sure we haven't broken the error covariance
-			JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
-			Array2D<DTYPE> eigs;
-			eig_kfErrCov.getD(eigs);
-			DTYPE minEig = eigs[0][0];
-			for(int i=1; i<eigs.dim1(); i++)
-				minEig = min(minEig, (DTYPE)eigs[i][i]);
-			while(minEig <= 0)
-			{
-				cout << "crap! kfErrCov is not definite" << endl;
-				printArray("kfErrCov:\n",kfErrCov);
-
-				kfErrCov = kfErrCov-(1.1*minEig-1e-6)*createIdentity((DTYPE)6.0);
-
-				JAMA::Eigenvalue<DTYPE> eig_kfErrCov(kfErrCov);
-				eig_kfErrCov.getD(eigs);
-				minEig = eigs[0][0];
-				for(int i=1; i<eigs.dim1(); i++)
-					minEig = min(minEig, (DTYPE)eigs[i][i]);
-			}
-
-			// remaining time update
-//			thrustDir.inject( Data::interpolate(curTime, thrustDirDataList) );
-			accel.inject(thrust/mass*thrustDir);
-			accel[2][0] -= GRAVITY;
-			DTYPE dtRem = Time::calcDiffNS(updateTime, curTime)/1.0e9;
-			doTimeUpdateKF(accel, dtRem, kfState, kfErrCov, kfDynCov);
-
-			// KF measurement update
-			if( Time::calcDiffMS(lastMeasTime, curTime) > viconUpdateDT)
-			{
-				viconTransState.inject(Data::interpolate(curTime, viconTransDataList));
-				// add noise
-				Array2D<DTYPE> meas = submat(viconTransState,0,2,0,0);
-				meas += measNoise[imgId];
-
-				DTYPE dt = Time::calcDiffNS(lastMeasTime, curTime)/1.0e9;
-				lastMeasTime.setTime(curTime);
-				doMeasUpdateKF_posOnly( meas, kfViconPosMeasCov, kfState, kfErrCov);
-			}
-
-			attPrev.inject(attCur);
-			if(useViconState)
-				attCur.inject( createRotMat_ZYX( viconAttState[2][0], viconAttState[1][0], viconAttState[0][0]) );
-			else
-				attCur.inject( createRotMat_ZYX( attState[2][0], attState[1][0], attState[0][0]) );
-//			attChange.inject( matmult(attCur, transpose(attPrev)) );
-			attChange.inject( matmult(transpose(attCur), attPrev) );
-			omega.inject(logSO3(attChange, dt));
-
-			// Rotate to camera coords
-			attState.inject(matmult(rotPhoneToCam2, attState));
-			transState.inject(matmult(rotPhoneToCam2, kfState));
-			errCov.inject(matmult(rotPhoneToCam2, matmult(kfErrCov, rotCamToPhone2)));
-//			viconAttState = matmult(rotPhoneToCam2, viconAttState);
-			omega.inject(matmult(rotPhoneToCam, omega));
-
-ts0 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-			/////////////////////////////////////////////////////
-			cv::cvtColor(img, imgGrayRaw, CV_BGR2GRAY);
-			cv::GaussianBlur(imgGrayRaw, imgGray, cv::Size(5,5), 2, 2);
-//			cv::cvtColor(img, imgGray, CV_BGR2GRAY);
-
-ts1 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-			curPoints.swap(prevPoints);
-			findPoints(imgGray, curPoints, minDistance, qualityLevel);
-			numFeaturesAccum += curPoints.size();
-
-ts2 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-			/////////////////////////////////////////////////////
-			//  Prior distributions
-			for(int i=0; i<curPoints.size(); i++)
-				curPoints[i] -= center;
-
-			mv[0][0] = transState[3][0];
-			mv[1][0] = transState[4][0];
-			mv[2][0] = transState[5][0];
-
-			mz = -transState[2][0]; // in camera coords, z is flipped
-			mz -= camOffset; // camera to vicon markers offset
-
-			sz = sqrt( errCov[2][2]);
-			Sv[0][0] = errCov[3][3];
-			Sv[1][1] = errCov[4][4];
-			Sv[2][2] = errCov[5][5];
-
-			priorDistList.clear();
-			priorDistList = calcPriorDistributions(prevPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
-
-ts3 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-			// Correspondence
-			C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
-
-ts4 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-			for(int i=0; i<C.dim1()-1; i++)
-				for(int j=0; j<C.dim2()-1; j++)
-					numMatchesAccum += C[i][j];
-			
-			// MAP velocity and height
-			if(prevPoints.size() > 0)
-			{
-				Array2D<DTYPE> covVel;
-				computeMAPEstimate(vel, covVel, z, prevPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
-ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-				z += camOffset;
-
-				// Apply measurement to the state estimate
-				vel = matmult(rotCamToPhone, vel);
-				covVel = matmult(rotCamToPhone, matmult(covVel, rotPhoneToCam));
-				doMeasUpdateKF_velOnly(vel, kfImageVelMeasCov, kfState, kfErrCov);
-				doMeasUpdateKF_heightOnly(z, kfImageHeightMeasCov, kfState, kfErrCov);
-			}
-
-			// save data
-			stringstream ss;
-			ss << curTime.getMS() << "\t" << 98 << "\t";
-			for(int i=0; i<vel.dim1(); i++)
-				ss << vel[i][0] << "\t";
-			ss << endl;
-
-			ss << curTime.getMS() << "\t" << 99 << "\t" << z << endl;
-
-			ss << curTime.getMS() << "\t" << 100 << "\t";
-			for(int i=0; i<kfState.dim1(); i++)
-				ss << kfState[i][0] << "\t";
-			ss << endl;
-			writeLine(fs, ss.str().c_str());
-
-ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
-		}
-		fs->close();
-//		fs.close();
-
-		Log::alert(String()+"Avg num features: " + ((DTYPE)numFeaturesAccum)/imgList.size() );
-		Log::alert(String()+"Avg num matches: " + ((DTYPE)numMatchesAccum)/(imgList.size()-1) );
-		Log::alert(String()+"New total time: " + mapStartTime.getElapsedTimeMS()/1.0e3 );
-		Log::alert(String()+"\tts0: " + ts0 );
-		Log::alert(String()+"\tts1: " + ts1 );
-		Log::alert(String()+"\tts2: " + ts2 );
-		Log::alert(String()+"\tts3: " + ts3 );
-		Log::alert(String()+"\tts4: " + ts4 );
-		Log::alert(String()+"\tts5: " + ts5 );
-		Log::alert(String()+"\tts6: " + ts6 );
-		Log::alert(String()+"\tts7: " + ts7 );
-		Log::alert(String()+ts0+" & "+ts1+" & "+ts2+" & "+ts3+" & "+ts4+" & "+ts5+" & "+ts6+" & "+ts7);
-//		Log::alert(String()+"--------------------");
-//		Log::alert(String()+"\trs0: " + rs0 );
-//		Log::alert(String()+"\trs1: " + rs1 );
-//		Log::alert(String()+"\trs2: " + rs2 );
-//		Log::alert(String()+"\trs3: " + rs3 );
-//		Log::alert(String()+"\trs4: " + rs4 );
-
-		DTYPE avgCalcTime = mapStartTime.getElapsedTimeNS()/1.0e9 - ts0;
-		avgCalcTime /= imgList.size()-1;
-		Log::alert(String()+"NEW avg calc time: " + avgCalcTime );
-	}
+////		fs.close();
+//
+//		Log::alert(String()+"Avg num features: " + ((DTYPE)numFeaturesAccum)/imgList.size() );
+//		Log::alert(String()+"Avg num matches: " + ((DTYPE)numMatchesAccum)/(imgList.size()-1) );
+//		Log::alert(String()+"New total time: " + mapStartTime.getElapsedTimeMS()/1.0e3 );
+//		Log::alert(String()+"\tts0: " + ts0 );
+//		Log::alert(String()+"\tts1: " + ts1 );
+//		Log::alert(String()+"\tts2: " + ts2 );
+//		Log::alert(String()+"\tts3: " + ts3 );
+//		Log::alert(String()+"\tts4: " + ts4 );
+//		Log::alert(String()+"\tts5: " + ts5 );
+//		Log::alert(String()+"\tts6: " + ts6 );
+//		Log::alert(String()+"\tts7: " + ts7 );
+//		Log::alert(String()+ts0+" & "+ts1+" & "+ts2+" & "+ts3+" & "+ts4+" & "+ts5+" & "+ts6+" & "+ts7);
+////		Log::alert(String()+"--------------------");
+////		Log::alert(String()+"\trs0: " + rs0 );
+////		Log::alert(String()+"\trs1: " + rs1 );
+////		Log::alert(String()+"\trs2: " + rs2 );
+////		Log::alert(String()+"\trs3: " + rs3 );
+////		Log::alert(String()+"\trs4: " + rs4 );
+//
+//		DTYPE avgCalcTime = mapStartTime.getElapsedTimeNS()/1.0e9 - ts0;
+//		avgCalcTime /= imgList.size()-1;
+//		Log::alert(String()+"NEW avg calc time: " + avgCalcTime );
+//	}
 
     // loop waiting for stuff to do.
     while (1) 
@@ -1376,7 +1402,7 @@ void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDi
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel)
 {
 	vector<cv::KeyPoint> tempKp1;
-	int fastFeatureThreshold = 60;
+	int fastFeatureThreshold = 5;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastFeatureThreshold));
 	int maxKp = 1000;
 	int gridRows = 3;
@@ -1736,7 +1762,7 @@ void doMeasUpdateKF_velOnly(Array2D<DTYPE> const &meas, Array2D<DTYPE> const &me
 		errCov[i][i] -= gainKF[i][i-3]*errCov[i][i];
 }
 
-Time applyData(Time const &curTime, shared_ptr<Data> const &data, 
+Time applyData(Time const &curTime, shared_ptr<IData> const &data, 
 				Array2D<DTYPE> &kfState, Array2D<DTYPE> &kfErrCov, 
 				Array2D<DTYPE> const &kfPosMeasCov, Array2D<DTYPE> const &kfVelMeasCov, Array2D<DTYPE> const &kfDynCov,
 				DTYPE &thrust, Array2D<DTYPE> &thrustDir,

@@ -51,7 +51,7 @@ set (LIBS  ${LIBS}
 set (SRC ${SRC}
 	./cpp/main.cpp
 	./cpp/mapFuncs.cpp
-	../../Rover/cpp/Data.cpp
+#	../../Rover/cpp/Data.cpp
 	${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c
 )
 
