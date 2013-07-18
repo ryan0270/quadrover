@@ -142,34 +142,18 @@ class DataImage : public IData
 		imageFormat = IMG_FORMAT_BGR; 
 		image = shared_ptr<cv::Mat>(new cv::Mat());
 		cap = NULL;
+		centerX_640x480 = centerY_640x480 = 0;
+		focalLength_640x480 = 0;
 		id = sNextID()++;
 	}
-//	DataImage(cv::Mat image1, TNT::Array2D<double> att1, TNT::Array2D<double> angularVel1, ImageFormat fmt){
-//		image1.copyTo(*image);
-//		att = att1.copy();
-//		angularVel = angularVel.copy();
-//		imageFormat = fmt;
-//	}
-
-	void copyTo(DataImage &d) {
-		if(&d == this)
-			return;
-		lock();
-		d.lock();
-		d.timestamp.setTime(timestamp); 
-		image->copyTo(*(d.image)); 
-		d.att.inject(att);
-		d.angularVel.inject(angularVel);
-		d.focalLength = focalLength;
-		d.unlock();
-		unlock();
-	}
+	
 	unsigned int id;
 	shared_ptr<cv::Mat> image;
 	TNT::Array2D<double> att;
 	TNT::Array2D<double> angularVel;
 	ImageFormat imageFormat;
-	double focalLength;
+	float focalLength_640x480;
+	float centerX_640x480, centerY_640x480;
 	shared_ptr<cv::VideoCapture> cap;
 
 	private:

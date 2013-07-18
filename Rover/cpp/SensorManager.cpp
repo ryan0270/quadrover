@@ -107,6 +107,25 @@ namespace Quadrotor{
 //			str = str+"\tresolution: "+res;
 //			Log::alert(str);
 //		}
+
+		// Now try load camera calibration params
+		cv::FileStorage fs;
+		String filename = "sdcard/RoverService/s4Calib_640x480.yml";
+		fs.open(filename.c_str(), cv::FileStorage::READ);
+		if( fs.isOpened() )
+		{
+			String str = "Camera calib loaded from " + filename;
+			fs["camera_matrix"] >> mCameraMatrix_640x480;
+			str = str+"\n\t"+"Focal length: " + mCameraMatrix_640x480.at<double>(0,0);
+			str = str+"\n\t"+"centerX: " + mCameraMatrix_640x480.at<double>(0,2);
+			str = str+"\n\t"+"centerY: " + mCameraMatrix_640x480.at<double>(1,2);
+			Log::alert(str);
+		}
+		else
+		{
+			Log::alert("Failed to open " + filename);
+		}
+		fs.release();
 	}
 
 	void SensorManager::shutdown()
@@ -534,8 +553,18 @@ namespace Quadrotor{
 		data->image = imageBGR;
 		data->imageFormat = IMG_FORMAT_BGR;
 		data->cap = NULL;
-//		data->focalLength = 3.7*imageBGR->cols/5.76; // (focal length mm)*(image width px)/(ccd width mm)
-		data->focalLength = 524; // from calibration for a 640x480 image
+		if(mCameraMatrix_640x480.rows > 0)
+		{
+			data->focalLength_640x480 = mCameraMatrix_640x480.at<double>(0,0);
+			data->centerX_640x480 = mCameraMatrix_640x480.at<double>(0,2);
+			data->centerY_640x480 = mCameraMatrix_640x480.at<double>(1,2);
+		}
+		else
+		{
+			data->focalLength_640x480 = 580;
+			data->centerX_640x480 = 320;
+			data->centerY_640x480 = 240;
+		}
 
 		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)

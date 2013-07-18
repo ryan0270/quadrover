@@ -101,6 +101,8 @@ class SensorManager : public Observer_AngularListener
 	Time mLastImageTime;
 	double mImageDT;
 	int mImageCnt;
+
+	cv::Mat mCameraMatrix_640x480, mCameraMatrix_320x240;
 };
 
 

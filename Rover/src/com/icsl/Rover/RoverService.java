@@ -266,6 +266,8 @@ public class RoverService extends Service {
 //					mAvgDT = (mAvgDT*mImgProcCnt+dt)/(mImgProcCnt+1);
 //					mLastPreviewTimeNS = System.nanoTime();
 //
+//					Log.i(ME, "--------------------------------------------------");
+//					Log.i(ME, "dt: " + String.valueOf(dt));
 //					Log.i(ME, "mAvgDT: "+String.valueOf(mAvgDT));
 //				}
   	

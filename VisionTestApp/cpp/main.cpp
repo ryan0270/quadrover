@@ -1402,7 +1402,7 @@ void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDi
 void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel)
 {
 	vector<cv::KeyPoint> tempKp1;
-	int fastFeatureThreshold = 5;
+	int fastFeatureThreshold = 60;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastFeatureThreshold));
 	int maxKp = 1000;
 	int gridRows = 3;
