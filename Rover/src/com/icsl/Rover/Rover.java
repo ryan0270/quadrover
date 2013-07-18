@@ -196,6 +196,11 @@ public class Rover extends Activity implements Runnable
 					strYaw = String.format("Yaw:\t%1.3f",att[2]);
 				else
 					strYaw = "Yaw: n/a";
+
+				// Running stuff on the UI thread seems to interfere
+				// with the camera acquistion rate
+				// For now this is ok since it only happens when I'm not connected to the PC
+				// and, hence, don't care about flight performacne
 				runOnUiThread(new Runnable(){
 					public void run(){ 
 //						mTvGyro.setText(strGyro);

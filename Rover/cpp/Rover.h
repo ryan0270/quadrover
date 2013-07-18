@@ -111,7 +111,6 @@ protected:
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
 
-
 	SensorManager mSensorManager;
 
 	bool mUseIbvs;

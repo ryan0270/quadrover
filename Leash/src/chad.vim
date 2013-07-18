@@ -15,10 +15,6 @@ vmap <silent> <Plug>IMAP_DeleteAndJumpForward "_<Del>i=IMAP_Jumpfunc('', 0)
 nmap <silent> <Plug>IMAP_JumpBack i=IMAP_Jumpfunc('b', 0)
 nmap <silent> <Plug>IMAP_JumpForward i=IMAP_Jumpfunc('', 0)
 imap <NL> <Plug>IMAP_JumpForward
-inoremap <expr>  omni#cpp#maycomplete#Complete()
-inoremap <expr> . omni#cpp#maycomplete#Dot()
-inoremap <expr> : omni#cpp#maycomplete#Scope()
-inoremap <expr> > omni#cpp#maycomplete#Arrow()
 let &cpo=s:cpo_save
 unlet s:cpo_save
 set autoindent

@@ -29,6 +29,7 @@ class VelocityEstimatorListener
 
 #include "TNT/tnt.h"
 #include "TNT/jama_lu.h"
+#include "TNT/jama_cholesky.h"
 
 #include "Time.h"
 #include "QuadLogger.h"
@@ -87,10 +88,45 @@ class VelocityEstimator : public FeatureFinderListener
 
 	Observer_Translational *mObsvTranslational;
 
-	void doVelocityEstimate(shared_ptr<ImageFeatureData> const &featureData,
+	void doVelocityEstimate(shared_ptr<ImageFeatureData> const &oldFeatureData,
+							shared_ptr<ImageFeatureData> const &curFeatureData,
 							TNT::Array2D<double> &velEstOUT,
 							double &heightEstOUT) const;
 
+	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
+	vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
+														Array2D<double> const &mv, Array2D<double> const &Sv, 
+														double const &mz, double const &varz, 
+														double const &focalLength, double const &dt,
+														Array2D<double> const &omega) const;
+	Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, 
+										vector<cv::Point2f> const &curPointList, 
+										Array2D<double> const &Sn, 
+										Array2D<double> const &SnInv) const;
+	
+	void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+							vector<cv::Point2f> const &prevPoints,
+							vector<cv::Point2f> const &curPoints, 
+							Array2D<double> const &C, // correspondence matrix
+							Array2D<double> const &mv, // velocity mean
+							Array2D<double> const &Sv, // velocity covariance
+							double const &mz, // height mean
+							double const &vz, // height variance
+							Array2D<double> const &Sn, // feature measurement covariance
+							double const &focalLength, double const &dt, Array2D<double> const &omega) const;
+	
+	void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+							vector<cv::Point2f> const &prevPoints,
+							vector<cv::Point2f> const &curPoints, 
+							Array2D<double> const &C, // correspondence matrix
+							Array2D<double> const &mv, // velocity mean
+							Array2D<double> const &Sv, // velocity covariance
+							double const &mz, // height mean
+							double const &vz, // height variance
+							Array2D<double> const &Sn, // feature measurement covariance
+							double const &focalLength, double const &dt, Array2D<double> const &omega,
+							int maxPointCnt) const;
+	
 };
 
 } // namespace Rover

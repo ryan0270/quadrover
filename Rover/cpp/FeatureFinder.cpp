@@ -74,25 +74,31 @@ void FeatureFinder::run()
 
 	vector<cv::Point2f> points;
 	shared_ptr<DataImage> imageData;
-	cv::Mat curImage, curImageGray, imageAnnotated;
+	cv::Mat curImage, pyr1Image, pyr1ImageGray, imageAnnotated;
+	String logString;
+	Time procStart;
+	double qualityLevel = 0.05;
+	double minDistance = 10;
+	int fastThreshold = 30;
 	while(mRunning)
 	{
 		if(mNewImageReady)
 		{
-			Time procStart;
+			procStart.setTime();
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
 			curImage = *(imageData->image);
-			curImageGray.create(imageData->image->rows, imageData->image->cols, imageData->image->type());
+			if(curImage.cols == 640)
+				cv::pyrDown(curImage, pyr1Image);
+			else
+				pyr1Image = curImage;
+			cvtColor(pyr1Image, pyr1ImageGray, CV_BGR2GRAY);
 
-			cvtColor(curImage, curImageGray, CV_BGR2GRAY);
-
-			points.clear();
-			double qualityLevel = 0.05;
-			double minDistance = 10;
-			int fastThreshold = 20;
-			points = findFeaturePoints(curImageGray, qualityLevel, minDistance, fastThreshold);
+			points = findFeaturePoints(pyr1ImageGray, qualityLevel, minDistance, fastThreshold);
+			if(curImage.cols == 640)
+				for(int i=0; i<points.size(); i++)
+					points[i] *= 2;
 
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 			curImage.copyTo(*imageAnnotated);
@@ -113,15 +119,15 @@ void FeatureFinder::run()
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
 			if(mQuadLogger != NULL)
 			{
-				String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_FEATURE_FIND_TIME + "\t" + mImageProcTimeUS;
+				logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_FEATURE_FIND_TIME + "\t" + (mImageProcTimeUS/1.0e6);
 				mMutex_logger.lock();
-				mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
-				String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
-				str2 = str2+points.size();
+				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
+				logString = logString+points.size();
 				mMutex_logger.lock();
-				mQuadLogger->addLine(str2,LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
 			}

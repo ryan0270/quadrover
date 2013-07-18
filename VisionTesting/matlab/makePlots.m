@@ -9,17 +9,17 @@ rmsErrKF(4,:) = 843/10000*ones(size(numPoints));
 rmsErrKF(5,:) = 927/10000*ones(size(numPoints));
 rmsErrKF(6,:) = 1107/10000*ones(size(numPoints));
 
-rmsErrORB(3,:) = [127 126 120 154 121 121 121 121 121]/1e4;
-rmsErrORB(4,:) = [841 846 834 771 736 724 719 713 710]/1e4;
-rmsErrORB(5,:) = [923 910 866 1205 1072 883 842 832 824]/1e4;
-rmsErrORB(6,:) = [1081 1060 980 2066 1075 1064 1011 1020 1015]/1e4;
+rmsErrORB(3,:) = [128 126 121 120 121 121 121 121 121]/1e4;
+rmsErrORB(4,:) = [860 892 1058 897 818 719 718 722 714]/1e4;
+rmsErrORB(5,:) = [914 921 1004 1006 923 835 839 841 840]/1e4;
+rmsErrORB(6,:) = [1092 1066 983 996 1005 1015 1015 1012 1013]/1e4;
 
 rmsErrNEW3s(3,:) = [123 121 119 116 115 114 114 114 115]/1e4;
 rmsErrNEW3s(4,:) = [700 670 658 676 678 673 660 650 645]/1e4;
 rmsErrNEW3s(5,:) = [800 753 749 742 739 733 726 735 731]/1e4;
 rmsErrNEW3s(6,:) = [1019 999 966 924 909 884 886 891 901]/1e4;
 
-calcTimeORB =   [20 21 22 25 28 30 38 42 46];
+calcTimeORB =   [21 22 23 28 31 32 37 40 47];
 calcTimeNEW3s = [11 11 12 15 15 18 25 33 39];
 
 submaskORB = [2 3 4 7];
@@ -43,6 +43,7 @@ subtimesNEW3s{3} = [2.768490 7.799527 1.089369 0.449310 0.351953 0.645463 0.0837
 subtimesNEW3s{2} = [2.773169 7.771474 1.033151 0.196942 0.200338 0.626315 0.087097]/900*1000;
 subtimesNEW3s{1} = [2.824145 7.790476 0.952583 0.125353 0.131078 0.568960 0.090726]/900*1000;
 
+%%
 stateLabels = {'x [m]', 'y [m]', 'z [m]', 'x vel [m/s]', 'y vel [m/s]', 'z vel [m/s]'};
 for st=3:6
 	figure(10+st); clf
@@ -50,9 +51,9 @@ for st=3:6
 	curPos = get(gcf,'Position'); figSize = [5 5];
 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 
-	plot(numPoints, rmsErrKF(st,:),'b--'); hold all
-	plot(numPoints, rmsErrORB(st,:), '.-','Color',[0 0.5 0]); hold all
-	plot(numPoints, rmsErrNEW3s(st,:), 'rx-'); hold all
+	plot(numPoints, rmsErrKF(st,:),'b--','LineWidth',2); hold all
+	plot(numPoints, rmsErrORB(st,:), '.-','Color',[0 0.5 0],'LineWidth',2,'MarkerSize',20); hold all
+	plot(numPoints, rmsErrNEW3s(st,:), 'rx-','LineWidth',2,'MarkerSize',10); hold all
 	if st == 3
 		axis([0 numPoints(end) 0.00 0.015]);
 	elseif st == 4 || st == 5
@@ -70,8 +71,8 @@ figure(20); clf
 set(gcf,'Units','Inches');
 curPos = get(gcf,'Position'); figSize = [5 5];
 set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-plot(numPoints, calcTimeORB, '.-','Color', [0 0.5 0]); hold all
-plot(numPoints, calcTimeNEW3s, 'rx-'); hold all
+plot(numPoints, calcTimeORB, '.-','Color', [0 0.5 0],'LineWidth',2,'MarkerSize',20); hold all
+plot(numPoints, calcTimeNEW3s, 'rx-','LineWidth',2,'MarkerSize',10); hold all
 hold off
 axis([0 numPoints(end) 0 50]);
 xlabel('# feature points');

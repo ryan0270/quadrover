@@ -2,14 +2,10 @@
 #include "TNT/jama_lu.h"
 #include "TNT/jama_qr.h"
 
-//#include <pthread.h>
-//#include <thread>
-
-using namespace toadlet::egg;
-using namespace ICSL::Constants;
-
 namespace ICSL{
 namespace Quadrotor{
+using namespace toadlet::egg;
+using namespace ICSL::Constants;
 	Observer_Translational::Observer_Translational() :
 		mRotViconToPhone(3,3,0.0),
 		mCkf(6,6,0.0),

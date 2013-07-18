@@ -4,8 +4,6 @@ using namespace std;
 using namespace TNT;
 using namespace toadlet;
 using namespace ICSL::Constants;
-//using toadlet::uint64;
-//using toadlet::egg::String;
 
 namespace ICSL {
 namespace Quadrotor {
@@ -104,11 +102,11 @@ void Rover::initialize()
 	mCommManager.addListener(&mObsvTranslational);
 	mAttitudeThrustController.addListener(&mObsvTranslational);
 
-	mVisionProcessor.setStartTime(mStartTime);
-	mVisionProcessor.setQuadLogger(&mQuadLogger);
-	mVisionProcessor.initialize();
-	mVisionProcessor.start();
-	mCommManager.addListener(&mVisionProcessor);
+//	mVisionProcessor.setStartTime(mStartTime);
+//	mVisionProcessor.setQuadLogger(&mQuadLogger);
+//	mVisionProcessor.initialize();
+//	mVisionProcessor.start();
+//	mCommManager.addListener(&mVisionProcessor);
 //	mVisionProcessor.addListener(&mObsvTranslational);
 //	mVisionProcessor.addListener(this);
 
@@ -124,7 +122,7 @@ void Rover::initialize()
 	mVideoMaker.initialize();
 	mVideoMaker.start();
 	mCommManager.addListener(&mVideoMaker);
-	mVisionProcessor.addListener(&mVideoMaker);
+//	mVisionProcessor.addListener(&mVideoMaker);
 
 	mSensorManager.setStartTime(mStartTime);
 	mSensorManager.setQuadLogger(&mQuadLogger);
@@ -133,7 +131,7 @@ void Rover::initialize()
 	mObsvAngular.addListener(&mSensorManager);
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
-	mSensorManager.addListener(&mVisionProcessor);
+//	mSensorManager.addListener(&mVisionProcessor);
 	mSensorManager.addListener(this);
 
 	mFeatureFinder.setStartTime(mStartTime);

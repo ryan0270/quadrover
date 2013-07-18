@@ -51,8 +51,8 @@ void loadPcLog(String filename,
 		);
 vector<string> tokenize(string str);
 
-void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel);
-void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel);
+void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel, int const &fastThreshold);
+void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel, int const &fastThreshold);
 
 //static void HarrisResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize, DTYPE harris_k);
 static void EigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
@@ -190,6 +190,7 @@ cout << "final image: " << imgId << endl;
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	int fastThreshold = 40;
 	DTYPE qualityLevel = 0.01;
 	DTYPE minDistance = 10;
 
@@ -395,7 +396,7 @@ ts0 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 	
 ts1 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			curKp.swap(prevKp);
-			findPoints(imgGray, curKp, minDistance, qualityLevel);
+			findPoints(imgGray, curKp, minDistance, qualityLevel, fastThreshold);
 			numFeaturesAccum += curKp.size();
 	
 ts2 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
@@ -582,13 +583,16 @@ ts6 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			if(imgPrev.data != NULL)
 			{
 				cv::Mat drawImg = img.clone();
-				for(int i=0; i<curPoints.size(); i++)
+				if(N1 > 5)
 				{
-					line(drawImg, prevPoints[i]+center, curPoints[i]+center, cv::Scalar(0,0,255), 2);
-					circle(drawImg, curPoints[i]+center, 5, cv::Scalar(255,0,0),-1);
+					for(int i=0; i<curPoints.size(); i++)
+					{
+						line(drawImg, prevPoints[i]+center, curPoints[i]+center, cv::Scalar(255,0,0), 2);
+						circle(drawImg, curPoints[i]+center, 5, cv::Scalar(0,0,255),-1);
+					}
 				}
 				stringstream ss;
-				ss << imgDir << "/annotated_ORB/img_" << imgCnt++ << ".bmp";
+				ss << imgDir << "/annotated_ORB_FAST_" << fastThreshold << "/img_" << imgCnt++ << ".bmp";
 				imwrite(ss.str(), drawImg);
 //				imshow("chad",drawImg);
 //				drawMatches(imgPrev, prevKp, img, curKp, goodMatches, imgMatches, cv::Scalar::all(-1), cv::Scalar::all(-1), vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
@@ -801,7 +805,7 @@ ts0 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 
 ts1 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 			curPoints.swap(prevPoints);
-			findPoints(imgGray, curPoints, minDistance, qualityLevel);
+			findPoints(imgGray, curPoints, minDistance, qualityLevel, fastThreshold);
 			numFeaturesAccum += curPoints.size();
 
 ts2 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
@@ -881,16 +885,16 @@ ts7 += t0.getElapsedTimeNS()/1.0e9; t0.setTime();
 				double height = 2*3*sqrt(D[1][1]);
 				double theta = atan2(V[1][0], V[0][0]);
 				cv::RotatedRect rect(pt+center, cv::Size(width, height), theta);
-				cv::ellipse(overlay, rect, cv::Scalar(255,0,0), -1);
+				cv::ellipse(overlay, rect, cv::Scalar(0,125,0), -1);
 			}
-			double opacity = 0.6;
+			double opacity = 0.4;
 			cv::addWeighted(overlay, opacity, img, 1-opacity, 0, img);
 
 			// current points
 			for(int i=0; i<curPoints.size(); i++)
 				cv::circle(img, curPoints[i]+center, 4, cv::Scalar(0,0,255), -1);
 			stringstream ss;
-			ss << imgDir << "/annotated_soft/img_" << imgCnt++<< ".bmp";
+			ss << imgDir << "/annotated_soft_FAST_" << fastThreshold << "/img_" << imgCnt++<< ".bmp";
 			imwrite(ss.str(), img);
 //			imshow("chad",img);
 //			cv::Mat dblImg(img.rows, 2*img.cols, img.type());
@@ -1119,24 +1123,23 @@ time -= 0;
 		cout << "Couldn't find " << filename.c_str() << endl;
 }
 
-void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel)
+void findPoints(cv::Mat const &img, vector<cv::Point2f> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel, int const &fastThreshold)
 {
 	vector<cv::KeyPoint> kp;
-	findPoints(img, kp, minDistance, qualityLevel);
+	findPoints(img, kp, minDistance, qualityLevel, fastThreshold);
 	cv::KeyPoint::convert(kp, pts);
 }
 
-void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel)
+void findPoints(cv::Mat const &img, vector<cv::KeyPoint> &pts, DTYPE const &minDistance, DTYPE const &qualityLevel, int const &fastThreshold)
 {
 	vector<cv::KeyPoint> tempKp1;
-	int fastFeatureThreshold = 20;
-	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastFeatureThreshold));
+	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
 	int maxKp = 1000;
 	int gridRows = 3;
 	int gridCols = 3;
 	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
 	detector.detect(img, tempKp1);
-//	FAST(img, tempKp1, fastFeatureThreshold, true);
+//	FAST(img, tempKp1, fastThreshold, true);
 	EigenValResponses(img, tempKp1, 5);
 
 	DTYPE maxScore = -0xFFFFFFF;
