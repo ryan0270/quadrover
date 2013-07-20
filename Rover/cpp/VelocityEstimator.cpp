@@ -89,7 +89,7 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &o
 										   Array2D<double> &velEst, 
 										   double &heightEst) const
 {
-Log::alert("--------------------------------------------------");
+Time start;
 	Time oldTime = oldFeatureData->imageData->timestamp;
 	Time curTime = curFeatureData->imageData->timestamp;
 	double dt = Time::calcDiffNS(oldTime, curTime)/1.0e9;
@@ -174,7 +174,7 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 							Array2D<double> const &mv, Array2D<double> const &Sv, 
 							double const &mz, double const &varz, 
 							double const &focalLength, double const &dt, 
-							Array2D<double> const &omega) const
+							Array2D<double> const &omega)
 {
 	double mvx = mv[0][0];
 	double mvy = mv[1][0];
@@ -279,7 +279,7 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 	return priorDistList;
 }
 
-Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<double> const &Sn, Array2D<double> const &SnInv) const
+Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<double> const &Sn, Array2D<double> const &SnInv)
 {
 	int N1 = priorDistList.size();
 	int N2 = curPointList.size();
@@ -457,7 +457,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 						double const &mz, // height mean
 						double const &vz, // height variance
 						Array2D<double> const &Sn, // feature measurement covariance
-						double const &focalLength, double const &dt, Array2D<double> const &omega) const
+						double const &focalLength, double const &dt, Array2D<double> const &omega)
 {
 	computeMAPEstimate(velMAP, covVel, heightMAP, prevPoints, curPoints, C, mv, Sv, mz, vz, Sn, focalLength, dt, omega, -1);
 }
@@ -472,8 +472,9 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 						double const &vz, // height variance
 						Array2D<double> const &Sn, // feature measurement covariance
 						double const &focalLength, double const &dt, Array2D<double> const &omega,
-						int maxPointCnt) const
+						int maxPointCnt)
 {
+Time start;
 	int N1 = prevPoints.size();
 	int N2 = curPoints.size();
 	double f = focalLength;
@@ -485,6 +486,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 
 	double sz = sqrt(vz);
 
+Log::alert(String()+"chad 1:\t"+start.getElapsedTimeMS()); start.setTime();
 	///////////////////////////////////////////////////////////////
 	// Build up constant matrices
 	///////////////////////////////////////////////////////////////
@@ -508,6 +510,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 		q1HatList[i] = q1+dt*matmult(Lw, omega);
 	}
 
+Log::alert(String()+"chad 2:\t"+start.getElapsedTimeMS()); start.setTime();
 	vector<Array2D<double> > AjList(N2);
 	Array2D<double> Aj(2,3);
 	for(int j=0; j<N2; j++)
@@ -531,11 +534,13 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 		AjList[j] = Aj.copy();
 	}
 
+Log::alert(String()+"chad 3:\t"+start.getElapsedTimeMS()); start.setTime();
 	double s0 = 0;
 	Array2D<double> s1_T(1,3,0.0), S2(3,3,0.0);
 	Array2D<double> q2(2,1), ds1_T(1,3), dS2(3,3);
 	Array2D<double> temp1(2,1), temp2(2,3);
 	double ds0;
+Log::alert(String()+"N1:\t"+N1+"\tN2:\t"+N2);
 	for(int j=0; j<N2; j++)
 	{
 		if( (1-C[N1][j]) > 1e-2)
@@ -578,6 +583,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 		}
 	}
 
+Log::alert(String()+"chad 4:\t"+start.getElapsedTimeMS()); start.setTime();
 	Array2D<double> s1 = transpose(s1_T);
 
 	// For easy evaluation of the objective function
@@ -602,6 +608,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 		return chol_temp2.solve(temp1);
 	};
 
+Log::alert(String()+"chad 5:\t"+start.getElapsedTimeMS()); start.setTime();
 	///////////////////////////////////////////////////////////////
 	// Find a good starting point
 	///////////////////////////////////////////////////////////////
@@ -658,6 +665,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
+Log::alert(String()+"chad 6:\t"+start.getElapsedTimeMS()); start.setTime();
 }
 
 } // namespace Rover

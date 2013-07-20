@@ -94,17 +94,17 @@ class VelocityEstimator : public FeatureFinderListener
 							double &heightEstOUT) const;
 
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
-	vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
+	static vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
 														Array2D<double> const &mv, Array2D<double> const &Sv, 
 														double const &mz, double const &varz, 
 														double const &focalLength, double const &dt,
-														Array2D<double> const &omega) const;
-	Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, 
+														Array2D<double> const &omega);
+	static Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, 
 										vector<cv::Point2f> const &curPointList, 
 										Array2D<double> const &Sn, 
-										Array2D<double> const &SnInv) const;
+										Array2D<double> const &SnInv);
 	
-	void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+	static void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 							vector<cv::Point2f> const &prevPoints,
 							vector<cv::Point2f> const &curPoints, 
 							Array2D<double> const &C, // correspondence matrix
@@ -113,9 +113,9 @@ class VelocityEstimator : public FeatureFinderListener
 							double const &mz, // height mean
 							double const &vz, // height variance
 							Array2D<double> const &Sn, // feature measurement covariance
-							double const &focalLength, double const &dt, Array2D<double> const &omega) const;
+							double const &focalLength, double const &dt, Array2D<double> const &omega);
 	
-	void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+	static void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 							vector<cv::Point2f> const &prevPoints,
 							vector<cv::Point2f> const &curPoints, 
 							Array2D<double> const &C, // correspondence matrix
@@ -125,7 +125,7 @@ class VelocityEstimator : public FeatureFinderListener
 							double const &vz, // height variance
 							Array2D<double> const &Sn, // feature measurement covariance
 							double const &focalLength, double const &dt, Array2D<double> const &omega,
-							int maxPointCnt) const;
+							int maxPointCnt);
 	
 };
 
