@@ -66,9 +66,11 @@ class FeatureFinder : public CommManagerListener,
 		void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
 
 		// CommManagerListener functions
-		void onNewCommVisionFeatureFindQualityLevel(float qLevel);
-		void onNewCommVisionFeatureFindSeparationDistance(int sepDist);
-		void onNewCommVisionFeatureFindFASTThreshold(int thresh);
+		void onNewCommVisionFeatureFindQualityLevel(float const &qLevel);
+		void onNewCommVisionFeatureFindSeparationDistance(int const &sepDist);
+		void onNewCommVisionFeatureFindFASTThreshold(int const &thresh);
+		void onNewCommVisionFeatureFindPointCntTarget(int const &target);
+		void onNewCommVisionFeatureFindFASTAdaptRate(float const &r);
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<IData> const &data);
@@ -79,6 +81,7 @@ class FeatureFinder : public CommManagerListener,
 		bool mRunning, mFinished;
 		bool mNewImageReady, mNewImageReady_targetFind;
 		bool mLogImages;
+		bool mHaveUpdatedSettings;
 //		cv::Mat	mCurImage, mCurImageGray;
 		shared_ptr<cv::Mat> mCurImageAnnotated;
 
@@ -98,8 +101,8 @@ class FeatureFinder : public CommManagerListener,
 
 		Collection<FeatureFinderListener*> mListeners;
 
-		float mQualityLevel;
-		int mSepDist, mFASTThreshold;
+		float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
+		int mSepDist, mPointCntTarget;
 
 		void run();
 

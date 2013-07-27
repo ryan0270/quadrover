@@ -69,9 +69,17 @@ targetFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IM
 targetFindTimeTime = phoneData(targetFindTimeIndices,1)'/1000;
 targetFindTime = phoneData(targetFindTimeIndices,3)';
 
-featureMatchTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_FEATURE_MATCH);
-featureMatchTimeTime = phoneData(featureMatchTimeIndices,1)'/1000;
-featureMatchTime = phoneData(featureMatchTimeIndices,3)';
+mapVelCalcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL_CALC_TIME);
+mapVelCalcTimeTime = phoneData(mapVelCalcTimeIndices,1)'/1000;
+mapVelCalcTime = phoneData(mapVelCalcTimeIndices,3)';
+
+velCalcDelayTotalTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW_VELOCITY_DELAY);
+velCalcDelayTotalTimeTime = phoneData(velCalcDelayTotalTimeIndices,1)'/1000;
+velCalcDelayTotalTime = phoneData(velCalcDelayTotalTimeIndices,3)';
+
+featureFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FEATURE_FIND_TIME);
+featureFindTimeTime = phoneData(featureFindTimeIndices,1)'/1000;
+featureFindTime = phoneData(featureFindTimeIndices,3)';
 
 gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO_BIAS);
 gyroBiasTime = phoneData(gyroBiasIndices,1)'/1000;
@@ -85,21 +93,25 @@ forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV
 forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
 forceScaling = phoneData(forceScalingIndices,3)';
 
-% cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
-% cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
-% cpuUsage = phoneData(cpuUsageIndices,3:end)';
+cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
+cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
+cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
-phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
-phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
-phoneTemp = phoneData(phoneTempIndices,3:6)';
+% phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
+% phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
+% phoneTemp = phoneData(phoneTempIndices,3:6)';
 
-% velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
-% velEstTime = phoneData(velEstIndices,1)'/1000;
-% velEst = phoneData(velEstIndices,3:5)';
+velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
+velEstTime = phoneData(velEstIndices,1)'/1000;
+velEst = phoneData(velEstIndices,3:5)';
 
 viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
 viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
 viconReceive = phoneData(viconReceiveIndices,3:14)';
+
+fastThreshIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FAST_THRESHOLD);
+fastThreshTime = phoneData(fastThreshIndices,1)'/1000;
+fastThresh = phoneData(fastThreshIndices,3)';
 
 numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
 numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
@@ -268,7 +280,7 @@ if exist('pressure','var') && ~isempty(pressure)
 	xlabel('Time [s]');
 	ylabel('Pressure [mBar]');
 	
-	Rstar = 8.31432; % N·m /(mol·K)
+	Rstar = 8.31432; % N??m /(mol??K)
 	Tb = 288.15; % K
 	g0 = 9.80665; % m/s^2
 	M = 0.0289644; % kg/mol
@@ -306,11 +318,27 @@ if isfinite(motor_dt)
 end
 
 %%
-if exist('featureMatchTime','var') && ~isempty(featureMatchTime)
+if exist('featureFindTime','var') && ~isempty(featureFindTime)
 	figure(601);
-	plot(featureMatchTimeTime, featureMatchTime/1000);
+	plot(featureFindTimeTime, featureFindTime*1000);
 	xlabel('Time [s]');
-	ylabel('Feature match time [ms]');
+	ylabel('Feature find time [ms]');
+end
+
+%%
+if exist('mapVelCalcTime','var') && ~isempty(mapVelCalcTime)
+	figure(602);
+	plot(mapVelCalcTimeTime, mapVelCalcTime*1000);
+	xlabel('Time [s]');
+	ylabel('MAP vel calc time [ms]');
+end
+
+%%
+if exist('velCalcDelayTotalTime','var') && ~isempty(velCalcDelayTotalTime)
+	figure(603);
+	plot(velCalcDelayTotalTimeTime, velCalcDelayTotalTime*1000);
+	xlabel('Time [s]');
+	ylabel('Vel Total Delay Time [ms]');
 end
 
 %%
@@ -344,6 +372,14 @@ if exist('numFeatures','var') && ~isempty(numFeatures)
 	plot(numFeaturesTime, numFeatures,'x');
 	xlabel('Time [s]');
 	ylabel('Num Features Matched [cnt]');
+end
+
+%%
+if exist('fastThresh','var') && ~isempty(fastThresh)
+	figure(1302); clf;
+	plot(fastThreshTime, fastThresh);
+	xlabel('Time [s]');
+	ylabel('FAST threshold');
 end
 
 %%

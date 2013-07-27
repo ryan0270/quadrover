@@ -34,7 +34,8 @@ namespace ICSL {
 namespace Quadrotor {
 class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
-				 public SensorManagerListener
+				 public SensorManagerListener,
+				 public FeatureFinderListener
 {
 public:
 	Rover();
@@ -80,9 +81,12 @@ public:
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for VisionProcessorListener
-	void onImageProcessed(shared_ptr<ImageMatchData> const &data);
-	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
-	void onImageLost(){};
+//	void onImageProcessed(shared_ptr<ImageMatchData> const &data);
+//	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
+//	void onImageLost(){};
+
+	// for FeatureFinderListener
+	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
 protected:
 	CommManager mCommManager;
@@ -121,7 +125,8 @@ protected:
 
 	double mPressure, mPhoneTemp;
 
-	shared_ptr<ImageMatchData> mImageMatchData;
+//	shared_ptr<ImageMatchData> mImageMatchData;
+	shared_ptr<ImageFeatureData> mFeatureData;
 
 	VideoMaker mVideoMaker;
 	
