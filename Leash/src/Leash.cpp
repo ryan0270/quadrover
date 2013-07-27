@@ -68,6 +68,8 @@ Leash::Leash(QWidget *parent) :
 	mFeatureFindQualityLevel = 0.01;
 	mFeatureFindSeparationDistance = 10;
 	mFeatureFindFASTThreshold = 20;
+	mFeatureFindPointCountTarget = 30;
+	mFeatureFindFASTAdaptRate = 0.05;
 
 	mVelEstVisionMeasCov = 2*pow(5,2);
 	mVelEstProbNoCorr = 0.1; // actually a ratio compared to the peak value
@@ -587,6 +589,7 @@ void Leash::pollTCP()
 							ui->lblImageDisplay->setPixmap(QPixmap::fromImage(cvMat2QImage(img)));
 							ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
 							ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
+cout << "There should be an image here" << endl;
 						}
 						break;
 					case COMM_HOST_EXIT:
@@ -899,6 +902,16 @@ bool Leash::sendParams()
 	code = COMM_FEATURE_FIND_FAST_THRESHOLD;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&fastThresh,sizeof(fastThresh));
+
+	int pntCntTarget = mFeatureFindPointCountTarget;
+	code = COMM_FEATURE_FIND_POINT_COUNT_TARGET;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&pntCntTarget,sizeof(pntCntTarget));
+
+	float fastAdaptRate = mFeatureFindFASTAdaptRate;
+	code = COMM_FEATURE_FIND_FAST_ADAPT_RATE;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&fastAdaptRate,sizeof(fastAdaptRate));
 
 	float measCov = mVelEstVisionMeasCov;
 	code = COMM_VELOCITY_ESTIMATION_VISION_MEASUREMENT_COV;
@@ -1230,6 +1243,12 @@ void Leash::loadVisionConfig(mxml_node_t *visionRoot)
 	mxml_node_t *fastThresNode = mxmlFindElement(visionRoot, visionRoot, "FASTThreshold", NULL, NULL, MXML_DESCEND);
 	if(fastThresNode != NULL) stringstream(fastThresNode->child->value.text.string) >> mFeatureFindFASTThreshold;
 
+	mxml_node_t *pointCntTgtNode = mxmlFindElement(visionRoot, visionRoot, "PointCntTarget", NULL, NULL, MXML_DESCEND);
+	if(pointCntTgtNode != NULL) stringstream(pointCntTgtNode->child->value.text.string) >> mFeatureFindPointCountTarget;
+
+	mxml_node_t *fastAdaptRateNode = mxmlFindElement(visionRoot, visionRoot, "FASTAdaptRate", NULL, NULL, MXML_DESCEND);
+	if(fastAdaptRateNode != NULL) stringstream(fastAdaptRateNode->child->value.text.string) >> mFeatureFindFASTAdaptRate;
+
 	mxml_node_t *measCovNode = mxmlFindElement(visionRoot, visionRoot, "MeasurementCov", NULL, NULL, MXML_DESCEND);
 	if(measCovNode != NULL) stringstream(measCovNode->child->value.text.string) >> mVelEstVisionMeasCov;
 
@@ -1364,6 +1383,8 @@ void Leash::saveVisionConfig(mxml_node_t *visionRoot)
 	mxmlNewReal(mxmlNewElement(visionRoot, "QualityLevel"), mFeatureFindQualityLevel);
 	mxmlNewReal(mxmlNewElement(visionRoot, "SeparationDistance"), mFeatureFindSeparationDistance);
 	mxmlNewReal(mxmlNewElement(visionRoot, "FASTThreshold"), mFeatureFindFASTThreshold);
+	mxmlNewReal(mxmlNewElement(visionRoot, "PointCntTarget"), mFeatureFindPointCountTarget);
+	mxmlNewReal(mxmlNewElement(visionRoot, "FASTAdaptRate"), mFeatureFindFASTAdaptRate);
 	mxmlNewReal(mxmlNewElement(visionRoot, "MeasurementCov"), mVelEstVisionMeasCov);
 	mxmlNewReal(mxmlNewElement(visionRoot, "ProbNoCorr"), mVelEstProbNoCorr);
 	mMutex_data.unlock();
@@ -1441,6 +1462,8 @@ void Leash::applyVisionConfig()
 	mFeatureFindQualityLevel = ui->txtFeatureFindQualityLevel->text().toDouble();
 	mFeatureFindSeparationDistance = ui->txtFeatureFindSeparationDistance->text().toInt();
 	mFeatureFindFASTThreshold= ui->txtFeatureFindFASTThreshold->text().toInt();
+	mFeatureFindPointCountTarget = ui->txtFeatureFindPointCountTarget->text().toInt();
+	mFeatureFindFASTAdaptRate = ui->txtFeatureFindFASTAdaptRate->text().toDouble();
 
 	mVelEstVisionMeasCov = ui->txtVelEstMeasCov->text().toDouble();
 	mVelEstProbNoCorr = ui->txtVelEstProbNoCorr->text().toDouble();
@@ -1844,6 +1867,8 @@ void Leash::populateVisionUI()
 	ui->txtFeatureFindQualityLevel->setText(QString::number(mFeatureFindQualityLevel));
 	ui->txtFeatureFindSeparationDistance->setText(QString::number(mFeatureFindSeparationDistance));
 	ui->txtFeatureFindFASTThreshold->setText(QString::number(mFeatureFindFASTThreshold));
+	ui->txtFeatureFindPointCountTarget->setText(QString::number(mFeatureFindPointCountTarget));
+	ui->txtFeatureFindFASTAdaptRate->setText(QString::number(mFeatureFindFASTAdaptRate));
 
 	ui->txtVelEstMeasCov->setText(QString::number(mVelEstVisionMeasCov));
 	ui->txtVelEstProbNoCorr->setText(QString::number(mVelEstProbNoCorr));

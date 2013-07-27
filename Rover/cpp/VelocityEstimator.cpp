@@ -77,7 +77,7 @@ void VelocityEstimator::run()
 			procTime = procTimer.getElapsedTimeNS()/1.0e9;
 			delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
 			mMutex_data.lock();
-			mLastDelayTimeUS = delayTime;
+			mLastDelayTimeUS = delayTime*1.0e6;
 			mMutex_data.unlock();
 
 			if(mQuadLogger != NULL)
@@ -86,8 +86,8 @@ void VelocityEstimator::run()
 				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
 				
 				logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OPTIC_FLOW_VELOCITY_DELAY + "\t"+ delayTime;
+				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
 			}
-//Log::alert(String()+"delay: " + delayTime);
 		}
 
 		System::msleep(1);
@@ -493,11 +493,17 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 						double const &focalLength, double const &dt, Array2D<double> const &omega,
 						int maxPointCnt)
 {
-Time start;
 	int N1 = prevPoints.size();
 	int N2 = curPoints.size();
 	double f = focalLength;
 	double fInv = 1.0/focalLength;
+
+	if(N1 == 0 || N2 == 0)
+	{
+		velMAP = Array2D<double>(3,1,0.0);
+		heightMAP = 0;
+		return;
+	}
 
 	JAMA::Cholesky<double> chol_Sv(Sv), chol_Sn(Sn);
 	Array2D<double> SvInv = chol_Sv.solve(createIdentity((double)3.0));
@@ -681,7 +687,7 @@ Time start;
 	heightMAP = 0.5*(zL+zR);
 }
 
-void VelocityEstimator::onNewCommVelEstMeasCov(float measCov)
+void VelocityEstimator::onNewCommVelEstMeasCov(float const &measCov)
 {
 	mMutex_params.lock();
 	mMeasCov = measCov;
@@ -690,7 +696,7 @@ void VelocityEstimator::onNewCommVelEstMeasCov(float measCov)
 	Log::alert(String()+"Vision Meas Cov set to " + measCov);
 }
 
-void VelocityEstimator::onNewCommVelEstProbNoCorr(float probNoCorr)
+void VelocityEstimator::onNewCommVelEstProbNoCorr(float const &probNoCorr)
 {
 	mMutex_params.lock();
 	mProbNoCorr = probNoCorr;

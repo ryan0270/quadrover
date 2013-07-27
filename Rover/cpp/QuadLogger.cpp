@@ -309,6 +309,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_OBSV_TRANS_PROC_TIME="+LOG_ID_OBSV_TRANS_PROC_TIME+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_FEATURE_FIND_TIME="+LOG_ID_FEATURE_FIND_TIME+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_NUM_FEATURE_POINTS="+LOG_ID_NUM_FEATURE_POINTS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_FAST_THRESHOLD="+LOG_ID_FAST_THRESHOLD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_MAP_VEL_CALC_TIME="+LOG_ID_MAP_VEL_CALC_TIME+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_OPTIC_FLOW_VELOCITY_DELAY="+LOG_ID_OPTIC_FLOW_VELOCITY_DELAY+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 

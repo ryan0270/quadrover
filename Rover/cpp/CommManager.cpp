@@ -596,6 +596,32 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
+				case COMM_FEATURE_FIND_POINT_COUNT_TARGET:
+					{
+						int target;
+						bool received = receiveTCP((tbyte*)&target, sizeof(target));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommVisionFeatureFindPointCntTarget(target);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
+				case COMM_FEATURE_FIND_FAST_ADAPT_RATE:
+					{
+						float r;
+						bool received = receiveTCP((tbyte*)&r, sizeof(r));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommVisionFeatureFindFASTAdaptRate(r);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
 				case COMM_VELOCITY_ESTIMATION_VISION_MEASUREMENT_COV:
 					{
 						float measCov;

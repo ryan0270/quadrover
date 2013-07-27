@@ -48,11 +48,13 @@ class CommManagerListener
 	virtual void onNewCommMotorArmLength(float l){};
 	virtual void onNewCommImgBufferSize(int size){};
 	virtual void onNewCommBarometerZeroHeight(float h){};
-	virtual void onNewCommVisionFeatureFindQualityLevel(float qLevel){};
-	virtual void onNewCommVisionFeatureFindSeparationDistance(int sepDist){};
-	virtual void onNewCommVisionFeatureFindFASTThreshold(int thresh){};
-	virtual void onNewCommVelEstMeasCov(float measCov){};
-	virtual void onNewCommVelEstProbNoCorr(float probNoCorr){};
+	virtual void onNewCommVisionFeatureFindQualityLevel(float const &qLevel){};
+	virtual void onNewCommVisionFeatureFindSeparationDistance(int const &sepDist){};
+	virtual void onNewCommVisionFeatureFindFASTThreshold(int const &thresh){};
+	virtual void onNewCommVisionFeatureFindPointCntTarget(int const &target){};
+	virtual void onNewCommVisionFeatureFindFASTAdaptRate(float const &r){};
+	virtual void onNewCommVelEstMeasCov(float const &measCov){};
+	virtual void onNewCommVelEstProbNoCorr(float const &probNoCorr){};
 	virtual void onNewCommSetDesiredPos(){};
 }; // class CommManagerListener
 

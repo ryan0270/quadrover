@@ -213,8 +213,8 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		QShortcut *mScToggleIbvs;
 
 		// Vision params
-		float mFeatureFindQualityLevel, mVelEstVisionMeasCov, mVelEstProbNoCorr;
-		int mFeatureFindSeparationDistance, mFeatureFindFASTThreshold;
+		float mFeatureFindQualityLevel, mVelEstVisionMeasCov, mVelEstProbNoCorr, mFeatureFindFASTAdaptRate;
+		int mFeatureFindSeparationDistance, mFeatureFindFASTThreshold, mFeatureFindPointCountTarget;
 
 		list<float> mImgProcTimeBuffer;
 

@@ -209,9 +209,12 @@ using namespace ICSL::Constants;
 			mMutex_data.unlock();
 
 			dt = lastUpdateTime.getElapsedTimeUS()/1.0e6;
-			mMutex_data.lock();
-			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
-			mMutex_data.unlock();
+			if(mMotorOn)
+			{
+				mMutex_data.lock();
+				doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+				mMutex_data.unlock();
+			}
 			lastUpdateTime.setTime();
 
 			// buffers

@@ -68,8 +68,8 @@ class VelocityEstimator : public FeatureFinderListener,
 	uint32 getLastVisionDelayTimeUS(){mMutex_data.lock(); uint32 temp=mLastDelayTimeUS; mMutex_data.unlock(); return temp;};
 
 	// for VisionProcessorListener
-	void onNewCommVelEstMeasCov(float measCov);
-	void onNewCommVelEstProbNoCorr(float probNoCorr);
+	void onNewCommVelEstMeasCov(float const &measCov);
+	void onNewCommVelEstProbNoCorr(float const &probNoCorr);
 
 	// for FeatureFinderListener
 	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);

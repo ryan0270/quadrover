@@ -1,15 +1,10 @@
 #include "FeatureFinder.h"
 
-//#include "tbb/parallel_for.h"
-
-using namespace toadlet;
-//using namespace cv;
-using toadlet::egg::String;
-using namespace TNT;
-using namespace ICSL::Constants;
-
 namespace ICSL {
 namespace Quadrotor{
+using namespace toadlet;
+using namespace TNT;
+using namespace ICSL::Constants;
 
 FeatureFinder::FeatureFinder()
 {
@@ -17,6 +12,7 @@ FeatureFinder::FeatureFinder()
 	mFinished = true;
 	mUseIbvs = false;
 	mFirstImageProcessed = false;
+	mHaveUpdatedSettings = true;
 	mCurImageAnnotated = NULL;
 
 	mImageProcTimeUS = 0;
@@ -33,6 +29,8 @@ FeatureFinder::FeatureFinder()
 	mQualityLevel = 0.05;
 	mSepDist = 10;
 	mFASTThreshold = 30;
+	mPointCntTarget = 30;
+	mFASTAdaptRate = 0.01;
 }
 
 void FeatureFinder::shutdown()
@@ -79,8 +77,10 @@ void FeatureFinder::run()
 	cv::Mat curImage, pyr1Image, pyr1ImageGray, imageAnnotated;
 	String logString;
 	Time procStart;
-	float qualityLevel;
-	int sepDist, fastThresh;
+	float qualityLevel, fastThresh;
+	int sepDist;
+	float pointCntTarget = mPointCntTarget;
+	float fastAdaptRate = mFASTAdaptRate;
 	while(mRunning)
 	{
 		if(mNewImageReady)
@@ -96,16 +96,33 @@ void FeatureFinder::run()
 				pyr1Image = curImage;
 			cvtColor(pyr1Image, pyr1ImageGray, CV_BGR2GRAY);
 
-			mMutex_params.lock();
-			qualityLevel = mQualityLevel;
-			sepDist = mSepDist;
-			fastThresh = mFASTThreshold;
-			mMutex_params.unlock();
+			if(mHaveUpdatedSettings)
+			{
+				mMutex_params.lock();
+				qualityLevel = mQualityLevel;
+				sepDist = mSepDist;
+				fastThresh = mFASTThreshold;
+				pointCntTarget = mPointCntTarget;
+				fastAdaptRate = mFASTAdaptRate;
+				mMutex_params.unlock();
+
+				mHaveUpdatedSettings = false;
+			}
 
 			points = findFeaturePoints(pyr1ImageGray, qualityLevel, sepDist, fastThresh);
 			if(curImage.cols == 640)
 				for(int i=0; i<points.size(); i++)
 					points[i] *= 2;
+
+			// A little adaptation to achieve the target number of points
+			if(points.size() == 0)
+			{
+				mMutex_params.lock();
+				fastThresh = mFASTThreshold;
+				mMutex_params.unlock();
+			}
+			else
+				fastThresh += min(1.0f, max(-1.0f, fastAdaptRate*((float)points.size()-pointCntTarget)));
 
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 			curImage.copyTo(*imageAnnotated);
@@ -137,6 +154,11 @@ void FeatureFinder::run()
 				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
+				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_FAST_THRESHOLD+"\t";
+				logString = logString+fastThresh;
+				mMutex_logger.lock();
+				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+				mMutex_logger.unlock();
 			}
 		}
 
@@ -384,31 +406,54 @@ void FeatureFinder::onNewSensorUpdate(shared_ptr<IData> const &data)
 	}
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindQualityLevel(float qLevel)
+void FeatureFinder::onNewCommVisionFeatureFindQualityLevel(float const &qLevel)
 {
 	mMutex_params.lock();
 	mQualityLevel = qLevel;
 	mMutex_params.unlock();
 
+	mHaveUpdatedSettings = true;
 	Log::alert(String()+"Feature finder quality level set to " + qLevel);
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindSeparationDistance(int sepDist)
+void FeatureFinder::onNewCommVisionFeatureFindSeparationDistance(int const &sepDist)
 {
 	mMutex_params.lock();
 	mSepDist = sepDist;
 	mMutex_params.unlock();
 
+	mHaveUpdatedSettings = true;
 	Log::alert(String()+"Feature finder separation distance set to " + sepDist);
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindFASTThreshold(int thresh)
+void FeatureFinder::onNewCommVisionFeatureFindFASTThreshold(int const &thresh)
 {
 	mMutex_params.lock();
 	mFASTThreshold = thresh;
 	mMutex_params.unlock();
 
+	mHaveUpdatedSettings = true;
 	Log::alert(String()+"Feature finder FAST threshold set to " + thresh);
+}
+
+void FeatureFinder::onNewCommVisionFeatureFindPointCntTarget(int const &target)
+{
+	mMutex_params.lock();
+	mPointCntTarget = target;
+	mMutex_params.unlock();
+
+	mHaveUpdatedSettings = true;
+	Log::alert(String()+"Feature finder point count target set to " + target);
+}
+
+void FeatureFinder::onNewCommVisionFeatureFindFASTAdaptRate(float const &r)
+{
+	mMutex_params.lock();
+	mFASTAdaptRate = r;
+	mMutex_params.unlock();
+
+	mHaveUpdatedSettings = true;
+	Log::alert(String()+"Feature finder FAST adapt rate set to " + r);
 }
 
 } // namespace Quadrotor

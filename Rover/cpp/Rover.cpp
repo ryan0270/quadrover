@@ -33,7 +33,8 @@ Rover::Rover() :
 	mPressure = 0;
 	mPhoneTemp = 0;
 
-	mImageMatchData = NULL;
+//	mImageMatchData = NULL;
+	mFeatureData = NULL;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -116,6 +117,7 @@ void Rover::initialize()
 	mFeatureFinder.start();
 	mSensorManager.addListener(&mFeatureFinder);
 	mCommManager.addListener(&mFeatureFinder);
+	mFeatureFinder.addListener(this);
 
 	mVelocityEstimator.setStartTime(mStartTime);
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
@@ -177,7 +179,8 @@ void Rover::shutdown()
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
-	mImageMatchData = NULL;
+//	mImageMatchData = NULL;
+	mFeatureData = NULL;
 	mSensorManager.shutdown();
 
 	mMotorInterface.shutdown();
@@ -340,7 +343,7 @@ void Rover::transmitDataUDP()
 
 	pImgProcTime.type = COMM_IMGPROC_TIME_US;
 	mMutex_vision.lock();
-	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
+//	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
 	pImgProcTime.dataInt32.push_back(mVelocityEstimator.getLastVisionDelayTimeUS());
 	mMutex_vision.unlock();
 
@@ -403,14 +406,23 @@ void Rover::transmitDataUDP()
 	Packet pNumFeatures;
 	pNumFeatures.type = COMM_VISION_NUM_FEATURES;
 	mMutex_vision.lock();
-	if(mImageMatchData != NULL)
+//	if(mImageMatchData != NULL)
+//	{
+//		mImageMatchData->lock();
+//		if(mImageMatchData->featurePoints.size() > 0)
+//			pNumFeatures.dataInt32.push_back(mImageMatchData->featurePoints[0].size());
+//		else
+//			pNumFeatures.dataInt32.push_back(0);
+//		mImageMatchData->unlock();
+//	}
+	if(mFeatureData != NULL)
 	{
-		mImageMatchData->lock();
-		if(mImageMatchData->featurePoints.size() > 0)
-			pNumFeatures.dataInt32.push_back(mImageMatchData->featurePoints[0].size());
+		mFeatureData->lock();
+		if(mFeatureData->featurePoints.size() > 0)
+			pNumFeatures.dataInt32.push_back(mFeatureData->featurePoints.size());
 		else
 			pNumFeatures.dataInt32.push_back(0);
-		mImageMatchData->unlock();
+		mFeatureData->unlock();
 	}
 	else
 		pNumFeatures.dataInt32.push_back(0);
@@ -462,8 +474,8 @@ void Rover::transmitDataUDP()
 
 void Rover::transmitImage()
 {
-mImageIsSending = false;
-return;
+//mImageIsSending = false;
+//return;
 	if(!mCommManager.pcIsConnected())
 	{
 		mImageIsSending = false;
@@ -472,7 +484,8 @@ return;
 
 	cv::Mat img;
 	mMutex_vision.lock();
-	mVisionProcessor.getLastImageAnnotated(&img);
+//	mVisionProcessor.getLastImageAnnotated(&img);
+	mFeatureFinder.getLastImageAnnotated(&img);
 	mMutex_vision.unlock();
 
 	// save on transmitted data
@@ -585,11 +598,16 @@ void Rover::onNewSensorUpdate(shared_ptr<IData> const &data)
 	}
 }
 
-void Rover::onImageProcessed(shared_ptr<ImageMatchData> const &data)
+//void Rover::onImageProcessed(shared_ptr<ImageMatchData> const &data)
+//{
+//	mMutex_vision.lock();
+//	mImageMatchData = data;
+//	mMutex_vision.unlock();
+//}
+
+void Rover::onFeaturesFound(shared_ptr<ImageFeatureData> const &data)
 {
-	mMutex_vision.lock();
-	mImageMatchData = data;
-	mMutex_vision.unlock();
+	mFeatureData = data;
 }
 
 void Rover::copyImageData(cv::Mat *m)
