@@ -533,21 +533,23 @@ void VisionProcessor::onNewCommImageBufferSize(int size)
 	mMutex_buffers.unlock();
 }
 
-void VisionProcessor::onNewCommVisionRatioThreshold(float h)
-{
-	mMutex_matcher.lock();
-	mFeatureMatcher.params.ratio_threshold = h;
-	mMutex_matcher.unlock();
-	Log::alert(String()+"Matcher ratio threshold set to "+h);
-}
+//void VisionProcessor::onNewCommVisionRatioThreshold(float h)
+//{
+//	Log::alert("onNewCommVisionRatioThreshold not implemented");
+//	mMutex_matcher.lock();
+//	mFeatureMatcher.params.ratio_threshold = h;
+//	mMutex_matcher.unlock();
+//	Log::alert(String()+"Matcher ratio threshold set to "+h);
+//}
 
-void VisionProcessor::onNewCommVisionMatchRadius(float r)
-{
-	mMutex_matcher.lock();
-	mFeatureMatcher.params.match_radius = r;
-	mMutex_matcher.unlock();
-	Log::alert(String()+"Matcher match radius set to "+r);
-}
+//void VisionProcessor::onNewCommVisionMatchRadius(float r)
+//{
+//	Log::alert("onNewCommVisionMatchRadius not implemented");
+//	mMutex_matcher.lock();
+//	mFeatureMatcher.params.match_radius = r;
+//	mMutex_matcher.unlock();
+//	Log::alert(String()+"Matcher match radius set to "+r);
+//}
 
 void VisionProcessor::onNewCommLogClear()
 {

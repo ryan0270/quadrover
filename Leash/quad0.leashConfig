@@ -95,8 +95,11 @@
    </MotorTrim>
 </Hardware>
 <Vision>
-   <RatioThreshold>0.200000</RatioThreshold>
-   <MatchRadius>30.000000</MatchRadius>
+   <QualityLevel>0.010000</QualityLevel>
+   <SeparationDistance>10.000000</SeparationDistance>
+   <FASTThreshold>20.000000</FASTThreshold>
+   <MeasurementCov>50.000000</MeasurementCov>
+   <ProbNoCorr>0.100000</ProbNoCorr>
 </Vision>
 <LogMask>1021</LogMask>
 <ImgBufferSize>100</ImgBufferSize>

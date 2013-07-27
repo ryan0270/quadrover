@@ -15,6 +15,9 @@ VelocityEstimator::VelocityEstimator() :
 
 	mNewImageDataAvailable = false;
 	mLastImageFeatureData = NULL;
+
+	mMeasCov = 2*5*5;
+	mProbNoCorr = 0.1;
 }
 
 VelocityEstimator::~VelocityEstimator()
@@ -52,6 +55,7 @@ void VelocityEstimator::run()
 	Array2D<double> velEst(3,1);
 	double heightEst;
 	String logString;
+	float measCov, probNoCorr;
 	while(mRunning)
 	{
 		if(mNewImageDataAvailable)
@@ -61,11 +65,20 @@ void VelocityEstimator::run()
 			curImageFeatureData = mLastImageFeatureData;
 			
 			if(oldImageFeatureData != NULL)
-				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst);
+			{
+				mMutex_params.lock();
+				measCov = mMeasCov;
+				probNoCorr = mProbNoCorr;
+				mMutex_params.unlock();
+				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, mMeasCov, probNoCorr);
+			}
 			mNewImageDataAvailable = false;
 
 			procTime = procTimer.getElapsedTimeNS()/1.0e9;
 			delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
+			mMutex_data.lock();
+			mLastDelayTimeUS = delayTime;
+			mMutex_data.unlock();
 
 			if(mQuadLogger != NULL)
 			{
@@ -74,7 +87,7 @@ void VelocityEstimator::run()
 				
 				logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OPTIC_FLOW_VELOCITY_DELAY + "\t"+ delayTime;
 			}
-Log::alert(String()+"delay: " + delayTime);
+//Log::alert(String()+"delay: " + delayTime);
 		}
 
 		System::msleep(1);
@@ -87,7 +100,9 @@ Log::alert(String()+"delay: " + delayTime);
 void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &oldFeatureData,
 										   shared_ptr<ImageFeatureData> const &curFeatureData,
 										   Array2D<double> &velEst, 
-										   double &heightEst) const
+										   double &heightEst,
+										   double visionMeasCov,
+										   double probNoCorr) const
 {
 Time start;
 	Time oldTime = oldFeatureData->imageData->timestamp;
@@ -143,12 +158,12 @@ Time start;
 	mz = min(mz, 0.150);
 
 	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
-	Sn[0][0] = Sn[1][1] = 2*pow(5,2);
+	Sn[0][0] = Sn[1][1] = visionMeasCov;
 	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
 
 	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(oldPoints.size());
 	priorDistList = calcPriorDistributions(oldPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
-	Array2D<double> C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv);
+	Array2D<double> C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv, probNoCorr);
 
 //	float numMatches = 0;
 //	for(int i=0; i<C.dim1()-1; i++)
@@ -279,7 +294,11 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 	return priorDistList;
 }
 
-Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, vector<cv::Point2f> const &curPointList, Array2D<double> const &Sn, Array2D<double> const &SnInv)
+Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList,
+													  vector<cv::Point2f> const &curPointList,
+													  Array2D<double> const &Sn,
+													  Array2D<double> const &SnInv,
+													  float const &probNoCorr)
 {
 	int N1 = priorDistList.size();
 	int N2 = curPointList.size();
@@ -399,7 +418,7 @@ Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double
 		peakCoeff = max(peakCoeff,coeffList[i]);
 	}
 
-	double probNoCorr = 0.1*peakCoeff;
+	double thresh = probNoCorr*peakCoeff;
 	for(int j=0; j<N2; j++)
 		C[N1][j] = probNoCorr;
 
@@ -486,7 +505,6 @@ Time start;
 
 	double sz = sqrt(vz);
 
-Log::alert(String()+"chad 1:\t"+start.getElapsedTimeMS()); start.setTime();
 	///////////////////////////////////////////////////////////////
 	// Build up constant matrices
 	///////////////////////////////////////////////////////////////
@@ -510,7 +528,6 @@ Log::alert(String()+"chad 1:\t"+start.getElapsedTimeMS()); start.setTime();
 		q1HatList[i] = q1+dt*matmult(Lw, omega);
 	}
 
-Log::alert(String()+"chad 2:\t"+start.getElapsedTimeMS()); start.setTime();
 	vector<Array2D<double> > AjList(N2);
 	Array2D<double> Aj(2,3);
 	for(int j=0; j<N2; j++)
@@ -534,16 +551,14 @@ Log::alert(String()+"chad 2:\t"+start.getElapsedTimeMS()); start.setTime();
 		AjList[j] = Aj.copy();
 	}
 
-Log::alert(String()+"chad 3:\t"+start.getElapsedTimeMS()); start.setTime();
 	double s0 = 0;
 	Array2D<double> s1_T(1,3,0.0), S2(3,3,0.0);
 	Array2D<double> q2(2,1), ds1_T(1,3), dS2(3,3);
 	Array2D<double> temp1(2,1), temp2(2,3);
 	double ds0;
-Log::alert(String()+"N1:\t"+N1+"\tN2:\t"+N2);
 	for(int j=0; j<N2; j++)
 	{
-		if( (1-C[N1][j]) > 1e-2)
+		if( (1-C[N1][j]) > 0.01)
 		{
 			q2[0][0] = curPoints[j].x;
 			q2[1][0] = curPoints[j].y;
@@ -583,7 +598,6 @@ Log::alert(String()+"N1:\t"+N1+"\tN2:\t"+N2);
 		}
 	}
 
-Log::alert(String()+"chad 4:\t"+start.getElapsedTimeMS()); start.setTime();
 	Array2D<double> s1 = transpose(s1_T);
 
 	// For easy evaluation of the objective function
@@ -608,7 +622,6 @@ Log::alert(String()+"chad 4:\t"+start.getElapsedTimeMS()); start.setTime();
 		return chol_temp2.solve(temp1);
 	};
 
-Log::alert(String()+"chad 5:\t"+start.getElapsedTimeMS()); start.setTime();
 	///////////////////////////////////////////////////////////////
 	// Find a good starting point
 	///////////////////////////////////////////////////////////////
@@ -630,6 +643,7 @@ Log::alert(String()+"chad 5:\t"+start.getElapsedTimeMS()); start.setTime();
 
 	///////////////////////////////////////////////////////////////
 	// Line search to find the optimum
+	// Golden ratio algorithm (from Luenberger book)
 	///////////////////////////////////////////////////////////////
 	double zL= zBest-interval;
 	double zR= zBest+interval;
@@ -665,7 +679,24 @@ Log::alert(String()+"chad 5:\t"+start.getElapsedTimeMS()); start.setTime();
 
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
-Log::alert(String()+"chad 6:\t"+start.getElapsedTimeMS()); start.setTime();
+}
+
+void VelocityEstimator::onNewCommVelEstMeasCov(float measCov)
+{
+	mMutex_params.lock();
+	mMeasCov = measCov;
+	mMutex_params.unlock();
+
+	Log::alert(String()+"Vision Meas Cov set to " + measCov);
+}
+
+void VelocityEstimator::onNewCommVelEstProbNoCorr(float probNoCorr)
+{
+	mMutex_params.lock();
+	mProbNoCorr = probNoCorr;
+	mMutex_params.unlock();
+
+	Log::alert(String()+"Probability of no correspondence set to "+probNoCorr);
 }
 
 } // namespace Rover

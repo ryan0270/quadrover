@@ -25,12 +25,14 @@ FeatureFinder::FeatureFinder()
 
 	mNewImageReady = mNewImageReady_targetFind = false;
 
-	mLogImages = false;
-
 	mImageDataNext = NULL;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+	mQualityLevel = 0.05;
+	mSepDist = 10;
+	mFASTThreshold = 30;
 }
 
 void FeatureFinder::shutdown()
@@ -77,9 +79,8 @@ void FeatureFinder::run()
 	cv::Mat curImage, pyr1Image, pyr1ImageGray, imageAnnotated;
 	String logString;
 	Time procStart;
-	double qualityLevel = 0.05;
-	double minDistance = 10;
-	int fastThreshold = 30;
+	float qualityLevel;
+	int sepDist, fastThresh;
 	while(mRunning)
 	{
 		if(mNewImageReady)
@@ -95,7 +96,13 @@ void FeatureFinder::run()
 				pyr1Image = curImage;
 			cvtColor(pyr1Image, pyr1ImageGray, CV_BGR2GRAY);
 
-			points = findFeaturePoints(pyr1ImageGray, qualityLevel, minDistance, fastThreshold);
+			mMutex_params.lock();
+			qualityLevel = mQualityLevel;
+			sepDist = mSepDist;
+			fastThresh = mFASTThreshold;
+			mMutex_params.unlock();
+
+			points = findFeaturePoints(pyr1ImageGray, qualityLevel, sepDist, fastThresh);
 			if(curImage.cols == 640)
 				for(int i=0; i<points.size(); i++)
 					points[i] *= 2;
@@ -152,7 +159,8 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(cv::Mat const &image,
 	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
 	detector.detect(image, tempKp1);
 //	FAST(image, tempKp1, fastFeatureThreshold, true);
-	eigenValResponses(image, tempKp1, 5);
+	int blockSize = 5;
+	eigenValResponses(image, tempKp1, blockSize);
 
 	double maxScore = -0xFFFFFFF;
 	for(int i=0; i<tempKp1.size(); i++)
@@ -279,6 +287,7 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(cv::Mat const &image,
 	return points;
 }
 
+// Adapted from OpenCV 2.4.5
 void FeatureFinder::eigenValResponses(const cv::Mat& image, vector<cv::KeyPoint>& points, int blockSize)
 {
     CV_Assert( image.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
@@ -375,28 +384,32 @@ void FeatureFinder::onNewSensorUpdate(shared_ptr<IData> const &data)
 	}
 }
 
-void FeatureFinder::onNewCommLogMask(uint32 mask)
+void FeatureFinder::onNewCommVisionFeatureFindQualityLevel(float qLevel)
 {
-	if((mask & LOG_FLAG_CAM_IMAGES) > 0)
-		mLogImages = true;
-	else
-		mLogImages = false; 
+	mMutex_params.lock();
+	mQualityLevel = qLevel;
+	mMutex_params.unlock();
+
+	Log::alert(String()+"Feature finder quality level set to " + qLevel);
 }
 
-void FeatureFinder::onNewCommImageBufferSize(int size)
+void FeatureFinder::onNewCommVisionFeatureFindSeparationDistance(int sepDist)
 {
+	mMutex_params.lock();
+	mSepDist = sepDist;
+	mMutex_params.unlock();
+
+	Log::alert(String()+"Feature finder separation distance set to " + sepDist);
 }
 
-void FeatureFinder::onNewCommLogClear()
+void FeatureFinder::onNewCommVisionFeatureFindFASTThreshold(int thresh)
 {
-}
+	mMutex_params.lock();
+	mFASTThreshold = thresh;
+	mMutex_params.unlock();
 
-void FeatureFinder::onCommConnectionLost()
-{
-	// stop logging images so I don't loose the ones from the flight
-	mLogImages = false;
+	Log::alert(String()+"Feature finder FAST threshold set to " + thresh);
 }
-
 
 } // namespace Quadrotor
 } // namespace ICSL
