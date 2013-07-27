@@ -110,6 +110,13 @@ void Rover::initialize()
 //	mVisionProcessor.addListener(&mObsvTranslational);
 //	mVisionProcessor.addListener(this);
 
+	mFeatureFinder.setStartTime(mStartTime);
+	mFeatureFinder.setQuadLogger(&mQuadLogger);
+	mFeatureFinder.initialize();
+	mFeatureFinder.start();
+	mSensorManager.addListener(&mFeatureFinder);
+	mCommManager.addListener(&mFeatureFinder);
+
 	mVelocityEstimator.setStartTime(mStartTime);
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
 	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
@@ -117,6 +124,8 @@ void Rover::initialize()
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.start();
 	mVelocityEstimator.addListener(&mObsvTranslational);
+	mFeatureFinder.addListener(&mVelocityEstimator);
+	mCommManager.addListener(&mVelocityEstimator);
 //	mVisionProcessor.addListener(&mVelocityEstimator);
 
 	mVideoMaker.initialize();
@@ -133,13 +142,6 @@ void Rover::initialize()
 	mSensorManager.addListener(&mObsvTranslational);
 //	mSensorManager.addListener(&mVisionProcessor);
 	mSensorManager.addListener(this);
-
-	mFeatureFinder.setStartTime(mStartTime);
-	mFeatureFinder.setQuadLogger(&mQuadLogger);
-	mFeatureFinder.initialize();
-	mFeatureFinder.start();
-	mFeatureFinder.addListener(&mVelocityEstimator);
-	mSensorManager.addListener(&mFeatureFinder);
 
 	mQuadLogger.setStartTime(mStartTime);
 
@@ -339,6 +341,7 @@ void Rover::transmitDataUDP()
 	pImgProcTime.type = COMM_IMGPROC_TIME_US;
 	mMutex_vision.lock();
 	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
+	pImgProcTime.dataInt32.push_back(mVelocityEstimator.getLastVisionDelayTimeUS());
 	mMutex_vision.unlock();
 
 	pUseIbvs.type = COMM_USE_IBVS;

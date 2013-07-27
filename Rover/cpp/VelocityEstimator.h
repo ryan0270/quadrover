@@ -44,7 +44,8 @@ namespace Quadrotor {
 
 using namespace std;
 
-class VelocityEstimator : public FeatureFinderListener
+class VelocityEstimator : public FeatureFinderListener,
+						  public CommManagerListener
 {
 	public:
 	VelocityEstimator();
@@ -64,10 +65,11 @@ class VelocityEstimator : public FeatureFinderListener
 
 	void addListener(VelocityEstimatorListener *l){mListeners.push_back(l);}
 
+	uint32 getLastVisionDelayTimeUS(){mMutex_data.lock(); uint32 temp=mLastDelayTimeUS; mMutex_data.unlock(); return temp;};
+
 	// for VisionProcessorListener
-//	void onImageProcessed(shared_ptr<ImageMatchData> const data);
-//	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
-//	void onImageLost(){};
+	void onNewCommVelEstMeasCov(float measCov);
+	void onNewCommVelEstProbNoCorr(float probNoCorr);
 
 	// for FeatureFinderListener
 	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
@@ -84,14 +86,20 @@ class VelocityEstimator : public FeatureFinderListener
 	bool mNewImageDataAvailable;
 	shared_ptr<ImageFeatureData> mLastImageFeatureData;
 
-	toadlet::egg::Mutex mMutex_imageData;
+	toadlet::egg::Mutex mMutex_imageData, mMutex_data, mMutex_params;
 
 	Observer_Translational *mObsvTranslational;
+
+	uint32 mLastDelayTimeUS;
+
+	float mMeasCov, mProbNoCorr;
 
 	void doVelocityEstimate(shared_ptr<ImageFeatureData> const &oldFeatureData,
 							shared_ptr<ImageFeatureData> const &curFeatureData,
 							TNT::Array2D<double> &velEstOUT,
-							double &heightEstOUT) const;
+							double &heightEstOUT,
+							double visionMeasCov,
+							double probNoCorr) const;
 
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
 	static vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(vector<cv::Point2f> const &points, 
@@ -102,7 +110,8 @@ class VelocityEstimator : public FeatureFinderListener
 	static Array2D<double> calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList, 
 										vector<cv::Point2f> const &curPointList, 
 										Array2D<double> const &Sn, 
-										Array2D<double> const &SnInv);
+										Array2D<double> const &SnInv,
+										float const &probNoCorr);
 	
 	static void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 							vector<cv::Point2f> const &prevPoints,

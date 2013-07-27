@@ -64,15 +64,16 @@ badd +166 SensorManager.h
 badd +308 SensorManager.cpp
 badd +107 VisionProcessor.h
 badd +365 VisionProcessor.cpp
+badd +62 FeatureFinder.h
+badd +70 FeatureFinder.cpp
+badd +78 VelocityEstimator.h
+badd +71 VelocityEstimator.cpp
 badd +1 Common.h
+badd +1 Data.h
 badd +47 QuadLogger.h
 badd +76 QuadLogger.cpp
 badd +45 VideoMaker.h
 badd +58 VideoMaker.cpp
-badd +78 VelocityEstimator.h
-badd +71 VelocityEstimator.cpp
-badd +62 FeatureFinder.h
-badd +70 FeatureFinder.cpp
 args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp VisionProcessor.h VisionProcessor.cpp
 edit Rover.cpp
 set splitbelow splitright

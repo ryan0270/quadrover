@@ -557,27 +557,66 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
-				case COMM_VISION_RATIO_THRESHOLD:
+				case COMM_FEATURE_FIND_QUALITY_THRESHOLD:
 					{
-						float h;
-						bool received = receiveTCP((tbyte*)&h, sizeof(h));
+						float qLevel;
+						bool received = receiveTCP((tbyte*)&qLevel, sizeof(qLevel));
 						if(received)
 						{
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommVisionRatioThreshold(h);
+								mListeners[i]->onNewCommVisionFeatureFindQualityLevel(qLevel);
 						}
 						else
 							resetSocket = true;
 					}
 					break;
-				case COMM_VISION_MATCH_RADIUS:
+				case COMM_FEATURE_FIND_SEPARATION_DISTANCE:
 					{
-						float r;
-						bool received = receiveTCP((tbyte*)&r, sizeof(r));
+						int sepDist;
+						bool received = receiveTCP((tbyte*)&sepDist, sizeof(sepDist));
 						if(received)
 						{
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommVisionMatchRadius(r);
+								mListeners[i]->onNewCommVisionFeatureFindSeparationDistance(sepDist);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
+				case COMM_FEATURE_FIND_FAST_THRESHOLD:
+					{
+						int thresh;
+						bool received = receiveTCP((tbyte*)&thresh, sizeof(thresh));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommVisionFeatureFindFASTThreshold(thresh);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
+				case COMM_VELOCITY_ESTIMATION_VISION_MEASUREMENT_COV:
+					{
+						float measCov;
+						bool received = receiveTCP((tbyte*)&measCov, sizeof(measCov));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommVelEstMeasCov(measCov);
+						}
+						else
+							resetSocket = true;
+					}
+					break;
+				case COMM_VELOCITY_ESTIMATION_PROB_NO_CORR:
+					{
+						float probNoCorr;
+						bool received = receiveTCP((tbyte*)&probNoCorr, sizeof(probNoCorr));
+						if(received)
+						{
+							for(int i=0; i<mListeners.size(); i++)
+								mListeners[i]->onNewCommVelEstProbNoCorr(probNoCorr);
 						}
 						else
 							resetSocket = true;

@@ -66,10 +66,9 @@ class FeatureFinder : public CommManagerListener,
 		void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
 
 		// CommManagerListener functions
-		void onNewCommLogMask(uint32 mask);
-		void onNewCommImageBufferSize(int size);
-		void onCommConnectionLost();
-		void onNewCommLogClear();
+		void onNewCommVisionFeatureFindQualityLevel(float qLevel);
+		void onNewCommVisionFeatureFindSeparationDistance(int sepDist);
+		void onNewCommVisionFeatureFindFASTThreshold(int thresh);
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<IData> const &data);
@@ -95,8 +94,12 @@ class FeatureFinder : public CommManagerListener,
 
 		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
 		toadlet::egg::Mutex mMutex_logger;
+		toadlet::egg::Mutex mMutex_params;
 
 		Collection<FeatureFinderListener*> mListeners;
+
+		float mQualityLevel;
+		int mSepDist, mFASTThreshold;
 
 		void run();
 

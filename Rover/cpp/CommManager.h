@@ -48,8 +48,11 @@ class CommManagerListener
 	virtual void onNewCommMotorArmLength(float l){};
 	virtual void onNewCommImgBufferSize(int size){};
 	virtual void onNewCommBarometerZeroHeight(float h){};
-	virtual void onNewCommVisionRatioThreshold(float h){};
-	virtual void onNewCommVisionMatchRadius(float r){};
+	virtual void onNewCommVisionFeatureFindQualityLevel(float qLevel){};
+	virtual void onNewCommVisionFeatureFindSeparationDistance(int sepDist){};
+	virtual void onNewCommVisionFeatureFindFASTThreshold(int thresh){};
+	virtual void onNewCommVelEstMeasCov(float measCov){};
+	virtual void onNewCommVelEstProbNoCorr(float probNoCorr){};
 	virtual void onNewCommSetDesiredPos(){};
 }; // class CommManagerListener
 

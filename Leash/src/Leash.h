@@ -212,8 +212,9 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		QShortcut *mScIncreaseHeight, *mScDecreaseHeight, *mScMoveLeft, *mScMoveRight, *mScMoveForward, *mScMoveBackward;
 		QShortcut *mScToggleIbvs;
 
-		// For Hyon's featrure tracker
-		float mRatioThreshold, mMatchRadius;
+		// Vision params
+		float mFeatureFindQualityLevel, mVelEstVisionMeasCov, mVelEstProbNoCorr;
+		int mFeatureFindSeparationDistance, mFeatureFindFASTThreshold;
 
 		list<float> mImgProcTimeBuffer;
 

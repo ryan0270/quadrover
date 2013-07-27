@@ -74,8 +74,8 @@ class VisionProcessor : public CommManagerListener,
 		// CommManagerListener functions
 		void onNewCommLogMask(uint32 mask);
 		void onNewCommImageBufferSize(int size);
-		void onNewCommVisionRatioThreshold(float h);
-		void onNewCommVisionMatchRadius(float r);
+//		void onNewCommVisionRatioThreshold(float h);
+//		void onNewCommVisionMatchRadius(float r);
 		void onCommConnectionLost();
 		void onNewCommMotorOn(){mMotorOn = true;}
 		void onNewCommMotorOff(){mMotorOn = false;}

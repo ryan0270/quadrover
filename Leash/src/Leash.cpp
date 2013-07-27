@@ -65,8 +65,12 @@ Leash::Leash(QWidget *parent) :
 
 	mFirstDraw = true;
 
-	mRatioThreshold = 0.65;
-	mMatchRadius = 60;
+	mFeatureFindQualityLevel = 0.01;
+	mFeatureFindSeparationDistance = 10;
+	mFeatureFindFASTThreshold = 20;
+
+	mVelEstVisionMeasCov = 2*pow(5,2);
+	mVelEstProbNoCorr = 0.1; // actually a ratio compared to the peak value
 
 	mRotViconToQuad = createRotMat(0, (float)PI);
 	mRotQuadToPhone = matmult(createRotMat(2,(float)(-0.25*PI)),
@@ -881,15 +885,30 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&armLength,sizeof(armLength));
 
-	float ratio = mRatioThreshold;
-	code = COMM_VISION_RATIO_THRESHOLD;
+	float qLevel= mFeatureFindQualityLevel;
+	code = COMM_FEATURE_FIND_QUALITY_THRESHOLD;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&ratio,sizeof(ratio));
+	if(result) result = result && sendTCP((tbyte*)&qLevel,sizeof(qLevel));
 
-	float radius = mMatchRadius;
-	code = COMM_VISION_MATCH_RADIUS;
+	int sepDist = mFeatureFindSeparationDistance;
+	code = COMM_FEATURE_FIND_SEPARATION_DISTANCE;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&radius,sizeof(radius));
+	if(result) result = result && sendTCP((tbyte*)&sepDist,sizeof(sepDist));
+
+	int fastThresh= mFeatureFindFASTThreshold;
+	code = COMM_FEATURE_FIND_FAST_THRESHOLD;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&fastThresh,sizeof(fastThresh));
+
+	float measCov = mVelEstVisionMeasCov;
+	code = COMM_VELOCITY_ESTIMATION_VISION_MEASUREMENT_COV;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&measCov,sizeof(measCov));
+	
+	float probNoCorr = mVelEstProbNoCorr;
+	code = COMM_VELOCITY_ESTIMATION_PROB_NO_CORR;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&probNoCorr,sizeof(probNoCorr));
 
 	if(result)
 		cout << "Phone params sent." << endl;
@@ -1202,11 +1221,20 @@ void Leash::loadHardwareConfig(mxml_node_t *hdwRoot)
 void Leash::loadVisionConfig(mxml_node_t *visionRoot)
 {
 	mMutex_data.lock();
-	mxml_node_t *ratioNode = mxmlFindElement(visionRoot, visionRoot, "RatioThreshold", NULL, NULL, MXML_DESCEND);
-	if(ratioNode != NULL) stringstream(ratioNode->child->value.text.string) >> mRatioThreshold;
+	mxml_node_t *qualityNode = mxmlFindElement(visionRoot, visionRoot, "QualityLevel", NULL, NULL, MXML_DESCEND);
+	if(qualityNode != NULL) stringstream(qualityNode->child->value.text.string) >> mFeatureFindQualityLevel;
 
-	mxml_node_t *radiusNode = mxmlFindElement(visionRoot, visionRoot, "MatchRadius", NULL, NULL, MXML_DESCEND);
-	if(radiusNode != NULL) stringstream(radiusNode->child->value.text.string) >> mMatchRadius;
+	mxml_node_t *sepDistNode = mxmlFindElement(visionRoot, visionRoot, "SeparationDistance", NULL, NULL, MXML_DESCEND);
+	if(sepDistNode != NULL) stringstream(sepDistNode->child->value.text.string) >> mFeatureFindSeparationDistance;
+	
+	mxml_node_t *fastThresNode = mxmlFindElement(visionRoot, visionRoot, "FASTThreshold", NULL, NULL, MXML_DESCEND);
+	if(fastThresNode != NULL) stringstream(fastThresNode->child->value.text.string) >> mFeatureFindFASTThreshold;
+
+	mxml_node_t *measCovNode = mxmlFindElement(visionRoot, visionRoot, "MeasurementCov", NULL, NULL, MXML_DESCEND);
+	if(measCovNode != NULL) stringstream(measCovNode->child->value.text.string) >> mVelEstVisionMeasCov;
+
+	mxml_node_t *probNoCorrNode = mxmlFindElement(visionRoot, visionRoot, "ProbNoCorr", NULL, NULL, MXML_DESCEND);
+	if(probNoCorrNode != NULL) stringstream(probNoCorrNode->child->value.text.string) >> mVelEstProbNoCorr;
 	mMutex_data.unlock();
 }
 
@@ -1333,8 +1361,11 @@ void Leash::saveHardwareConfig(mxml_node_t *hdwRoot)
 void Leash::saveVisionConfig(mxml_node_t *visionRoot)
 {
 	mMutex_data.lock();
-	mxmlNewReal(mxmlNewElement(visionRoot, "RatioThreshold"), mRatioThreshold);
-	mxmlNewReal(mxmlNewElement(visionRoot, "MatchRadius"), mMatchRadius);
+	mxmlNewReal(mxmlNewElement(visionRoot, "QualityLevel"), mFeatureFindQualityLevel);
+	mxmlNewReal(mxmlNewElement(visionRoot, "SeparationDistance"), mFeatureFindSeparationDistance);
+	mxmlNewReal(mxmlNewElement(visionRoot, "FASTThreshold"), mFeatureFindFASTThreshold);
+	mxmlNewReal(mxmlNewElement(visionRoot, "MeasurementCov"), mVelEstVisionMeasCov);
+	mxmlNewReal(mxmlNewElement(visionRoot, "ProbNoCorr"), mVelEstProbNoCorr);
 	mMutex_data.unlock();
 }
 
@@ -1407,8 +1438,12 @@ void Leash::applyHardwareConfig()
 void Leash::applyVisionConfig()
 {
 	mMutex_data.lock();
-	mRatioThreshold = ui->txtRatioThreshold->text().toDouble();
-	mMatchRadius = ui->txtMatchRadius->text().toDouble();
+	mFeatureFindQualityLevel = ui->txtFeatureFindQualityLevel->text().toDouble();
+	mFeatureFindSeparationDistance = ui->txtFeatureFindSeparationDistance->text().toInt();
+	mFeatureFindFASTThreshold= ui->txtFeatureFindFASTThreshold->text().toInt();
+
+	mVelEstVisionMeasCov = ui->txtVelEstMeasCov->text().toDouble();
+	mVelEstProbNoCorr = ui->txtVelEstProbNoCorr->text().toDouble();
 	mMutex_data.unlock();
 }
 
@@ -1806,8 +1841,12 @@ void Leash::populateDataLoggingUI()
 void Leash::populateVisionUI()
 {
 	mMutex_data.lock();
-	ui->txtRatioThreshold->setText(QString::number(mRatioThreshold));
-	ui->txtMatchRadius->setText(QString::number(mMatchRadius));
+	ui->txtFeatureFindQualityLevel->setText(QString::number(mFeatureFindQualityLevel));
+	ui->txtFeatureFindSeparationDistance->setText(QString::number(mFeatureFindSeparationDistance));
+	ui->txtFeatureFindFASTThreshold->setText(QString::number(mFeatureFindFASTThreshold));
+
+	ui->txtVelEstMeasCov->setText(QString::number(mVelEstVisionMeasCov));
+	ui->txtVelEstProbNoCorr->setText(QString::number(mVelEstProbNoCorr));
 	mMutex_data.unlock();
 }
 
