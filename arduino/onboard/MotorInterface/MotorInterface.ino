@@ -2,7 +2,7 @@
 #include <Adb.h>
 #include <Wire.h>
 
-int verbosity=0;
+int verbosity=1;
 
 short motorCommands[4];
 
