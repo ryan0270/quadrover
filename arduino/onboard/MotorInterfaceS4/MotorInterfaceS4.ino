@@ -17,12 +17,12 @@ void setup()
     Serial.read();
 }
 
-//float val = -1.325;
-int val = 0;
+float val = -1.325;
+//int val = 0;
 int timeoutMS = 500;
 void loop()
 {
-  Serial.println(val);
+  Serial.println(val,4);
   
   while(Serial.available() == 0)
     delay(10);
@@ -42,8 +42,8 @@ void loop()
       for(int i=0; i<4; i++)
         serialFloat.byteVal[i] = Serial.read();
       
-//      val = serialFloat.floatVal+0.25;
-      val = serialFloat.intVal+1;
+      val = serialFloat.floatVal+0.25;
+//      val = serialFloat.intVal+1;
 //      val = Serial.parseInt()+1;
 //      val = Serial.read()+1;
     }

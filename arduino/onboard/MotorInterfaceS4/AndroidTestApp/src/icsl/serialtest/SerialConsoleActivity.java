@@ -87,14 +87,15 @@ public class SerialConsoleActivity extends Activity {
 					if(data[data.length-1] == 0x0A)
 					{
 //						mDumpTextView.append(new String(msgBuffer.array()));
-						float val1 = Float.parseFloat(new String(msgBuffer.array()));
-						int val = (int)val1;
+						float val = Float.parseFloat(new String(msgBuffer.array()));
+						val += 0.50;
+//						int val = (int)val1;
 //						int val = Integer.parseInt(new String(msgBuffer.array()));
 						mDumpTextView.append( String.valueOf(val) + "\n");
 						msgBuffer = ByteBuffer.allocate(128);
 
-//						int valBytes = Float.floatToIntBits(val);
-						int valBytes = val;
+						int valBytes = Float.floatToIntBits(val);
+//						int valBytes = val;
 						byte[] chad = new byte[4];
 						chad[3] = (byte)(valBytes >> 3*8);
 						chad[2] = (byte)(valBytes >> 2*8);
