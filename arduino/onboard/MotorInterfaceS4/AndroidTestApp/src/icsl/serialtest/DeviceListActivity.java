@@ -215,7 +215,8 @@ public class DeviceListActivity extends Activity {
     }
 
     private void showConsoleActivity(UsbSerialDriver driver) {
-        SerialConsoleActivity.show(this, driver);
+//        SerialConsoleActivity.show(this, driver);
+		TestActivity.show(this, driver);
     }
 
 }
