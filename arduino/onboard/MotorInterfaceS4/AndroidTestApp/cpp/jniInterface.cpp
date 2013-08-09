@@ -69,8 +69,11 @@ void run()
     {
 		if(haveNewData)
 		{
-			float val = newFloat+0.5;
+			float val = newFloat;
 			haveNewData = false;
+
+			if(val > 0.9)
+				val = 0;
 			env->CallBooleanMethod(obj, mid_sendFloat, val, timeoutMS);
 		}
 
