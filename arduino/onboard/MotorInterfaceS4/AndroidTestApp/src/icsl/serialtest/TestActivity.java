@@ -75,9 +75,16 @@ public class TestActivity extends Activity implements Runnable {
         @Override
         public void onNewData(final byte[] data) {
 			msgBuffer.put(data);
+TestActivity.this.runOnUiThread(new Runnable() {
+	@Override
+	public void run() {
+mDumpTextView.append("chad\n");
+	}
+});
 			if(data[data.length-1] == 0x0A)
 			{
-				mNewFloat = Float.parseFloat(new String(msgBuffer.array()));
+//				mNewFloat = Float.parseFloat(new String(msgBuffer.array()));
+				mNewFloat = Integer.parseInt(new String(msgBuffer.array()));
 				msgBuffer = ByteBuffer.allocate(128);
 				mIsNewDataReady = true;
 
@@ -85,11 +92,8 @@ public class TestActivity extends Activity implements Runnable {
 				TestActivity.this.runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
-						if(data[data.length-1] == 0x0A)
-						{
-							mDumpTextView.append( String.valueOf(val) + "\n");
-							mScrollView.smoothScrollTo(0, mDumpTextView.getBottom());
-						}
+						mDumpTextView.append( String.valueOf(val) + "\n");
+						mScrollView.smoothScrollTo(0, mDumpTextView.getBottom());
 					}
 				});
 			}
@@ -189,6 +193,18 @@ public class TestActivity extends Activity implements Runnable {
 		chad[2] = (byte)(valBytes >> 2*8);
 		chad[1] = (byte)(valBytes >> 1*8);
 		chad[0] = (byte)(valBytes >> 0*8);
+
+		int numBytesSent = 0;
+		try
+		{ numBytesSent = mDriver.write(chad, timeoutMS); }
+		catch(Exception ex){ numBytesSent = -1;};
+
+		return numBytesSent;
+	}
+
+	public int sendInt(int val, int timeoutMS)
+	{
+		byte[] chad = ByteBuffer.allocate(4).putInt(val).array();
 
 		int numBytesSent = 0;
 		try
