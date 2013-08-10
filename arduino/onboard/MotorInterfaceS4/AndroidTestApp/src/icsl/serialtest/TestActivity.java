@@ -75,16 +75,9 @@ public class TestActivity extends Activity implements Runnable {
         @Override
         public void onNewData(final byte[] data) {
 			msgBuffer.put(data);
-TestActivity.this.runOnUiThread(new Runnable() {
-	@Override
-	public void run() {
-mDumpTextView.append("chad\n");
-	}
-});
 			if(data[data.length-1] == 0x0A)
 			{
-//				mNewFloat = Float.parseFloat(new String(msgBuffer.array()));
-				mNewFloat = Integer.parseInt(new String(msgBuffer.array()));
+				mNewFloat = Float.parseFloat(new String(msgBuffer.array()));
 				msgBuffer = ByteBuffer.allocate(128);
 				mIsNewDataReady = true;
 
