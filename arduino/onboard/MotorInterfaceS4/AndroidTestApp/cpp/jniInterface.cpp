@@ -18,8 +18,8 @@ jmethodID mid_sendInt = 0;
 
 enum
 {
-	COMM_ADK_PREFIX = 0xFFFF,
-	COMM_ADK_SUFFIX = 0xFFFF-1,
+	COMM_ADK_PREFIX = 0x0000FF00,
+	COMM_ADK_SUFFIX = 0x0000FF00-1,
 	COMM_ADK_MOTOR_N = 0xFF-2,
 	COMM_ADK_MOTOR_E = 0xFF-3,
 	COMM_ADK_MOTOR_S = 0xFF-4,
@@ -92,11 +92,11 @@ void run()
 
 			if(val > 0.9)
 				val = 0;
-			float chad = COMM_ADK_PREFIX;
+			int chad = COMM_ADK_PREFIX;
 			float bob = COMM_ADK_SUFFIX;
 			env->CallBooleanMethod(obj, mid_sendInt, chad, timeoutMS);
-//			usleep(1e6);
-//			env->CallBooleanMethod(obj, mid_sendFloat, val, timeoutMS);
+			usleep(1e6);
+			env->CallBooleanMethod(obj, mid_sendFloat, val, timeoutMS);
 //			env->CallBooleanMethod(obj, mid_sendFloat, bob, timeoutMS);
 		}
 
