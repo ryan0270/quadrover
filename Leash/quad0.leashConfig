@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Controller>
+   <Translation>
+      <P>
+         <x>3.000000</x>
+         <y>3.000000</y>
+         <z>3.000000</z>
+      </P>
+      <D>
+         <x>4.000000</x>
+         <y>4.000000</y>
+         <z>4.000000</z>
+      </D>
+      <I>
+         <x>0.000000</x>
+         <y>0.000000</y>
+         <z>2.000000</z>
+      </I>
+      <ILimit>
+         <x>2.000000</x>
+         <y>2.000000</y>
+         <z>5.000000</z>
+      </ILimit>
+   </Translation>
+   <Attitude>
+      <P>
+         <x>0.250000</x>
+         <y>0.250000</y>
+         <z>1.000000</z>
+      </P>
+      <D>
+         <x>0.200000</x>
+         <y>0.200000</y>
+         <z>1.000000</z>
+      </D>
+   </Attitude>
+</Controller>
+<Observer>
+   <Translation>
+      <MeasVar>
+         <x>0.001000</x>
+         <y>0.001000</y>
+         <z>0.001000</z>
+         <xVel>0.020000</xVel>
+         <yVel>0.020000</yVel>
+         <zVel>0.020000</zVel>
+      </MeasVar>
+      <DynVar>
+         <x>0.000100</x>
+         <y>0.000100</y>
+         <z>0.000100</z>
+         <xVel>0.005000</xVel>
+         <yVel>0.005000</yVel>
+         <zVel>0.010000</zVel>
+      </DynVar>
+      <AttBias>
+         <roll>0.000000</roll>
+         <pitch>0.000000</pitch>
+         <yaw>0.000000</yaw>
+      </AttBias>
+      <AttBiasAdaptRate>
+         <roll>0.005000</roll>
+         <pitch>0.005000</pitch>
+         <yaw>0.000000</yaw>
+      </AttBiasAdaptRate>
+      <ForceGainAdaptRate>0.003000</ForceGainAdaptRate>
+      <BarometerZeroHeight>76.000000</BarometerZeroHeight>
+   </Translation>
+   <Attitude>
+      <Gain>
+         <P>4.000000</P>
+         <I>0.004000</I>
+      </Gain>
+      <DirWeight>
+         <Accel>1.000000</Accel>
+         <Mag>0.000000</Mag>
+      </DirWeight>
+      <NomMag>
+         <x>-16.200001</x>
+         <y>3.700000</y>
+         <z>15.900000</z>
+      </NomMag>
+   </Attitude>
+</Observer>
+<Hardware>
+   <MotorForceGain>0.002350</MotorForceGain>
+   <MotorTorqueGain>0.000500</MotorTorqueGain>
+   <MotorArmLength>0.200000</MotorArmLength>
+   <TotalMass>1.100000</TotalMass>
+   <MotorTrim>
+      <North>0.000000</North>
+      <East>0.000000</East>
+      <South>0.000000</South>
+      <West>0.000000</West>
+   </MotorTrim>
+</Hardware>
+<Vision>
+   <QualityLevel>0.010000</QualityLevel>
+   <SeparationDistance>10.000000</SeparationDistance>
+   <FASTThreshold>20.000000</FASTThreshold>
+   <PointCntTarget>30.000000</PointCntTarget>
+   <FASTAdaptRate>0.050000</FASTAdaptRate>
+   <MeasurementCov>50.000000</MeasurementCov>
+   <ProbNoCorr>0.100000</ProbNoCorr>
+</Vision>
+<LogMask>1021</LogMask>
+<ImgBufferSize>100</ImgBufferSize>
+<IP>192.168.100.107</IP>
+<Port>13120</Port>
