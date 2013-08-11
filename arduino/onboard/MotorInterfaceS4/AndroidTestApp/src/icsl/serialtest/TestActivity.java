@@ -181,7 +181,6 @@ public class TestActivity extends Activity implements Runnable {
 	{
 		int valBytes = Float.floatToIntBits(val);
 		byte[] chad = new byte[4];
-//		chad[4] = (byte)0xFF; // terminate character
 		chad[3] = (byte)(valBytes >> 3*8);
 		chad[2] = (byte)(valBytes >> 2*8);
 		chad[1] = (byte)(valBytes >> 1*8);
@@ -195,9 +194,33 @@ public class TestActivity extends Activity implements Runnable {
 		return numBytesSent;
 	}
 
+	public int sendCommControlMessage(int val, int timeoutMS)
+	{
+//		byte[] chad = ByteBuffer.allocate(4).putInt(val).array();
+		byte[] chad = new byte[4];
+		chad[3] = (byte)(val >>> 3*8);
+		chad[2] = (byte)(val >>> 2*8);
+		chad[1] = (byte)(val >>> 1*8);
+		chad[0] = (byte)(val >>> 0*8);
+
+		int numBytesSent = 0;
+		try
+		{ numBytesSent = mDriver.write(chad, timeoutMS); }
+		catch(Exception ex){ numBytesSent = -1;};
+
+		return numBytesSent;
+	}
+
+	// Be careful!
+	// The arduino boards don't all use 4-byte int's
 	public int sendInt(int val, int timeoutMS)
 	{
-		byte[] chad = ByteBuffer.allocate(4).putInt(val).array();
+//		byte[] chad = ByteBuffer.allocate(4).putInt(val).array();
+		byte[] chad = new byte[4];
+		chad[3] = (byte)(val >> 3*8);
+		chad[2] = (byte)(val >> 2*8);
+		chad[1] = (byte)(val >> 1*8);
+		chad[0] = (byte)(val >> 0*8);
 
 		int numBytesSent = 0;
 		try

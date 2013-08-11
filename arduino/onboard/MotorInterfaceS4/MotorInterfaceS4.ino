@@ -5,15 +5,18 @@
 
 union
 {
-  char byteVal[4];
+  byte byteVal[4];
   float floatVal;
   int intVal;
   unsigned int uintVal;
+  short shortVal;
+  uint32_t uint32Val;
 } 
 commMsg;
 
 enum
 {
+  COMM_STATE_UNKNOWN=-1,
   COMM_STATE_RECEIVED_START_MESSAGE,
   COMM_STATE_RECEIVED_MOTOR_ID,
   COMM_STATE_NONE,
@@ -22,8 +25,8 @@ int currentCommState;
 
 enum
 {
-  COMM_FLAG_MESSAGE_PREFIX = 0x0000FF00,
-  COMM_FLAG_MESSAGE_SUFFIX = 0x0000FF00-1,
+  COMM_FLAG_MESSAGE_PREFIX = 0xDDCCBBAA,
+  COMM_FLAG_MESSAGE_SUFFIX = 0xDDCCBBAA-2,
 };
 
 unsigned long lastCommTime;
@@ -78,7 +81,7 @@ void loop()
   if(millis()-lastCommTime > 5000)
     isConnected = false;
 
-  if(Serial.available() > 0 )
+  while(Serial.available() > 0 )
   {
     int start = millis();
     while(Serial.available() < 4 && millis()-start < timeoutMS)
@@ -88,39 +91,40 @@ void loop()
     {
       lastCommTime = millis();
       isConnected = true;
-      for(int i=0; i<4; i++)
-        commMsg.byteVal[i] = Serial.read();
-
-//      if(commMsg.intVal == COMM_FLAG_MESSAGE_SUFFIX)
-//      {
-//        currentCommState = COMM_STATE_NONE;
-//        digitalWrite(COMM_STATE_START_PIN,LOW);
-//        digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
-//        digitalWrite(COMM_STATE_NONE_PIN,HIGH);
-//      }
-//      else
+      for(int bn=0; bn<4; bn++)
+        commMsg.byteVal[bn] = Serial.read();
+        
+      if(commMsg.uint32Val == COMM_FLAG_MESSAGE_SUFFIX)
+      {
+        digitalWrite(4,LOW);
+        currentCommState = COMM_STATE_NONE;
+        digitalWrite(COMM_STATE_START_PIN,LOW);
+        digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
+        digitalWrite(COMM_STATE_NONE_PIN,HIGH);
+      }
+      else
       {  
         switch(currentCommState)
         {
           case COMM_STATE_NONE:
-//            val = (int)(commMsg.intVal & 0);
-            if( (commMsg.intVal & 0) == 0 )
+            if( commMsg.uint32Val == COMM_FLAG_MESSAGE_PREFIX)
             {
               currentCommState = COMM_STATE_RECEIVED_START_MESSAGE;
-              digitalWrite(COMM_STATE_NONE_PIN,LOW);
-              digitalWrite(COMM_STATE_START_PIN,HIGH);
-//              PORTB &= ~_BV(PB0); // Pin 8 low
-//              PORTD |= _BV(PD6); // Pin 6 high
+//              digitalWrite(COMM_STATE_NONE_PIN,LOW);
+//              digitalWrite(COMM_STATE_START_PIN,HIGH);
+////              PORTB &= ~_BV(PB0); // Pin 8 low
+////              PORTD |= _BV(PD6); // Pin 6 high
             }
             break;
           case COMM_STATE_RECEIVED_START_MESSAGE:
             val = commMsg.floatVal;
-            currentCommState = COMM_STATE_NONE;
-            digitalWrite(COMM_STATE_START_PIN,LOW);
-            digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
-            digitalWrite(COMM_STATE_NONE_PIN,HIGH);
-//            PORTB |= _BV(PB0); // Pin 8 high
-//            PORTD &= ~_BV(PD6); // Pin 6 low
+            currentCommState = COMM_STATE_UNKNOWN;
+            digitalWrite(4,HIGH);
+//            digitalWrite(COMM_STATE_START_PIN,LOW);
+//            digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
+//            digitalWrite(COMM_STATE_NONE_PIN,HIGH);
+////            PORTB |= _BV(PB0); // Pin 8 high
+////            PORTD &= ~_BV(PD6); // Pin 6 low
             break;
           case COMM_STATE_RECEIVED_MOTOR_ID:
             break;

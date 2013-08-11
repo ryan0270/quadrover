@@ -14,16 +14,12 @@ JavaVM *myJVM = NULL;
 jobject obj = 0;
 jclass cls = 0;
 jmethodID mid_sendFloat = 0;
-jmethodID mid_sendInt = 0;
+jmethodID mid_sendCommControlMessage = 0;
 
 enum
 {
-	COMM_ADK_PREFIX = 0x0000FF00,
-	COMM_ADK_SUFFIX = 0x0000FF00-1,
-	COMM_ADK_MOTOR_N = 0xFF-2,
-	COMM_ADK_MOTOR_E = 0xFF-3,
-	COMM_ADK_MOTOR_S = 0xFF-4,
-	COMM_ADK_MOTOR_W = 0xFF-5,
+	COMM_ADK_PREFIX = 0xDDCCBBAA,
+	COMM_ADK_SUFFIX = 0xDDCCBBAA-2,
 };
 
 extern "C" {
@@ -46,8 +42,8 @@ jint JNI_OnLoad(JavaVM *jvm, void *reserved)
 		return -1;
 	}
 
-	mid_sendInt= env->GetMethodID(cls, "sendInt","(II)I");
-	if(mid_sendInt== 0)
+	mid_sendCommControlMessage= env->GetMethodID(cls, "sendCommControlMessage","(II)I");
+	if(mid_sendCommControlMessage== 0)
 	{
 		LOGI("Couldn't find java method sendInt");
 		return -1;
@@ -93,11 +89,11 @@ void run()
 			if(val > 0.9)
 				val = 0;
 			int chad = COMM_ADK_PREFIX;
-			float bob = COMM_ADK_SUFFIX;
-			env->CallBooleanMethod(obj, mid_sendInt, chad, timeoutMS);
-			usleep(1e6);
+			int bob = COMM_ADK_SUFFIX;
+			env->CallBooleanMethod(obj, mid_sendCommControlMessage, chad, timeoutMS);
+//			usleep(1e6);
 			env->CallBooleanMethod(obj, mid_sendFloat, val, timeoutMS);
-//			env->CallBooleanMethod(obj, mid_sendFloat, bob, timeoutMS);
+			env->CallBooleanMethod(obj, mid_sendCommControlMessage, bob, timeoutMS);
 		}
 
 		usleep(10e3);
