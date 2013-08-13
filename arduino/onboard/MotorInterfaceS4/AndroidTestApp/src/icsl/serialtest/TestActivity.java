@@ -28,6 +28,13 @@ import android.util.Log;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.hoho.android.usbserial.driver.UsbSerialProber;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
+import android.os.SystemClock;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.util.HexDump;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
@@ -127,6 +134,19 @@ public class TestActivity extends Activity implements Runnable {
     @Override
     protected void onResume() {
         super.onResume();
+
+		SystemClock.sleep(1000);
+        UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
+		for (final UsbDevice device : manager.getDeviceList().values())
+		{
+			final List<UsbSerialDriver> drivers = UsbSerialProber.probeSingleDevice(manager, device);
+			Log.d(TAG, "Found usb device: " + device);
+			if (drivers.isEmpty())
+				Log.d(TAG, "  - No UsbSerialDriver available.");
+			else
+				mDriver = drivers.get(0);
+		}
+
         Log.d(TAG, "Resumed, mDriver=" + mDriver);
         if (mDriver == null) {
             mTitleTextView.setText("No serial device.");
@@ -148,6 +168,7 @@ public class TestActivity extends Activity implements Runnable {
             mTitleTextView.setText("Serial device: " + mDriver.getClass().getSimpleName());
 			(new Thread(this)).start();
         }
+
         onDeviceStateChange();
 		jniInit();
     }

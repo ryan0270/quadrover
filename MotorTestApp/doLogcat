@@ -2,5 +2,5 @@
 
 adb logcat -c
 # adb logcat | grep -e toadlet -e OpenCV -e E/ -e Rover -e GC_CONCURRENT
-adb logcat | grep -e MotorTestApp
+adb logcat | grep -e MotorTestApp -e DeviceListActivity -e UsbSerialDriver -e UsbSerialProber
 # adb logcat | grep -e toadlet -e OpenCV -e Rover 

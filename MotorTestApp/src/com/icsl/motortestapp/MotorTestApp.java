@@ -7,8 +7,11 @@ import android.os.Bundle;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.util.Log;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialProber;
 import com.hoho.android.usbserial.util.HexDump;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
@@ -16,10 +19,13 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MotorTestApp extends Activity
 {
 	private final static String ME="MotorTestApp";
+	private TextView mTxtCommStatus;
 	private TextView mTxtMotorVal1, mTxtMotorVal2, mTxtMotorVal3, mTxtMotorVal4;
 	private SeekBar mSldMotorVal1, mSldMotorVal2, mSldMotorVal3, mSldMotorVal4;
 
@@ -36,6 +42,8 @@ public class MotorTestApp extends Activity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+
+		mTxtCommStatus = (TextView)findViewById(R.id.txtCommStatus);
 
 		mTxtMotorVal1 = (TextView)findViewById(R.id.txtMotorVal1);
 		mTxtMotorVal2 = (TextView)findViewById(R.id.txtMotorVal2);
@@ -127,6 +135,17 @@ public class MotorTestApp extends Activity
 			@Override
 			public void onStopTrackingTouch(SeekBar seekbar){};
 		});
+
+		Intent startIntent = getIntent();
+
+        UsbManager manager = (UsbManager)startIntent.getParcelableExtra("manager");
+		UsbDevice device = (UsbDevice)startIntent.getParcelableExtra("device");
+		final List<UsbSerialDriver> drivers = UsbSerialProber.probeSingleDevice(manager, device);
+		if (drivers.isEmpty())
+			Log.d(ME, "  - No UsbSerialDriver available.");
+		else
+			mDriver = drivers.get(0);
+
     }
 
 	@Override
@@ -156,7 +175,7 @@ public class MotorTestApp extends Activity
         super.onResume();
         Log.d(ME, "Resumed, mDriver=" + mDriver);
         if (mDriver == null) {
-			mTxtCommStatus = "No device";
+			mTxtCommStatus.setText("No device");
         } else {
             try {
                 mDriver.open();
@@ -201,14 +220,37 @@ public class MotorTestApp extends Activity
 		}
     };
 
-	public int sendFloat(float val, int timeoutMS)
+    private void stopIoManager()
 	{
-		int valBytes = Float.floatToIntBits(val);
+        if (mSerialIoManager != null) {
+            Log.i(ME, "Stopping io manager ..");
+            mSerialIoManager.stop();
+            mSerialIoManager = null;
+        }
+    }
+
+    private void startIoManager()
+	{
+        if (mDriver != null) {
+            Log.i(ME, "Starting io manager ..");
+            mSerialIoManager = new SerialInputOutputManager(mDriver, mListener);
+            mExecutor.submit(mSerialIoManager);
+        }
+    }
+
+    private void onDeviceStateChange()
+	{
+        stopIoManager();
+        startIoManager();
+    }
+
+	public int sendCommControlMessage(int val, int timeoutMS)
+	{
 		byte[] chad = new byte[4];
-		chad[3] = (byte)(valBytes >> 3*8);
-		chad[2] = (byte)(valBytes >> 2*8);
-		chad[1] = (byte)(valBytes >> 1*8);
-		chad[0] = (byte)(valBytes >> 0*8);
+		chad[3] = (byte)(val >>> 3*8);
+		chad[2] = (byte)(val >>> 2*8);
+		chad[1] = (byte)(val >>> 1*8);
+		chad[0] = (byte)(val >>> 0*8);
 
 		int numBytesSent = 0;
 		try
@@ -218,10 +260,15 @@ public class MotorTestApp extends Activity
 		return numBytesSent;
 	}
 
-	// BEWARE: on some arduino's int is a 16-bit type
+	// BEWARE
+	// The arduino boards don't all use 4-byte int's
 	public int sendInt(int val, int timeoutMS)
 	{
-		byte[] chad = ByteBuffer.allocate(4).putInt(val).array();
+		byte[] chad = new byte[4];
+		chad[3] = (byte)(val >> 3*8);
+		chad[2] = (byte)(val >> 2*8);
+		chad[1] = (byte)(val >> 1*8);
+		chad[0] = (byte)(val >> 0*8);
 
 		int numBytesSent = 0;
 		try
@@ -230,4 +277,17 @@ public class MotorTestApp extends Activity
 
 		return numBytesSent;
 	}
+
+    /**
+     * Starts the activity, using the supplied driver instance.
+     *
+     * @param context
+     * @param driver
+     */
+    static void show(Context context, UsbSerialDriver driver) {
+        mDriver = driver;
+        final Intent intent = new Intent(context, MotorTestApp.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY);
+        context.startActivity(intent);
+    }
 }
