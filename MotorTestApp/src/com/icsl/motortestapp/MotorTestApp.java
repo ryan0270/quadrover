@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.util.Log;
@@ -22,12 +23,17 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MotorTestApp extends Activity
+public class MotorTestApp extends Activity implements Runnable
 {
 	private final static String ME="MotorTestApp";
 	private TextView mTxtCommStatus;
 	private TextView mTxtMotorVal1, mTxtMotorVal2, mTxtMotorVal3, mTxtMotorVal4;
 	private SeekBar mSldMotorVal1, mSldMotorVal2, mSldMotorVal3, mSldMotorVal4;
+
+	boolean mIsThreadDone = true;
+	boolean mDoThreadRun = false;
+
+	int mMotorVals[] = new int[4];
 
 	// for usb comm with arduino
     private static UsbSerialDriver mDriver = null;
@@ -60,10 +66,14 @@ public class MotorTestApp extends Activity
 		mSldMotorVal3.setMax( 1<<11 );
 		mSldMotorVal4.setMax( 1<<11 );
 
+		for(int i=0; i<4; i++)
+			mMotorVals[i] = 0;
+
 		mSldMotorVal1.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
 			{
+				mMotorVals[0] = progress;
 				final int val = progress;
 				runOnUiThread(new Runnable(){
 					public void run(){
@@ -83,6 +93,7 @@ public class MotorTestApp extends Activity
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
 			{
+				mMotorVals[1] = progress;
 				final int val = progress;
 				runOnUiThread(new Runnable(){
 					public void run(){
@@ -102,6 +113,7 @@ public class MotorTestApp extends Activity
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
 			{
+				mMotorVals[2] = progress;
 				final int val = progress;
 				runOnUiThread(new Runnable(){
 					public void run(){
@@ -121,6 +133,7 @@ public class MotorTestApp extends Activity
 			@Override
 			public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
 			{
+				mMotorVals[3] = progress;
 				final int val = progress;
 				runOnUiThread(new Runnable(){
 					public void run(){
@@ -135,28 +148,17 @@ public class MotorTestApp extends Activity
 			@Override
 			public void onStopTrackingTouch(SeekBar seekbar){};
 		});
-
-		Intent startIntent = getIntent();
-
-        UsbManager manager = (UsbManager)startIntent.getParcelableExtra("manager");
-		UsbDevice device = (UsbDevice)startIntent.getParcelableExtra("device");
-		final List<UsbSerialDriver> drivers = UsbSerialProber.probeSingleDevice(manager, device);
-		if (drivers.isEmpty())
-			Log.d(ME, "  - No UsbSerialDriver available.");
-		else
-			mDriver = drivers.get(0);
-
     }
 
 	@Override
     protected void onPause() {
         super.onPause();
-//		mDoThreadRun = false;
-//		while(!mIsThreadDone)
-//		{
-//			try{ Thread.sleep(10); }
-//			catch(Exception e){};
-//		}
+		mDoThreadRun = false;
+		while(!mIsThreadDone)
+		{
+			Log.i(ME,"Waiting");
+			SystemClock.sleep(10);
+		}
         stopIoManager();
         if (mDriver != null) {
             try {
@@ -173,30 +175,87 @@ public class MotorTestApp extends Activity
     @Override
     protected void onResume() {
         super.onResume();
+
+//		SystemClock.sleep(1000);
+
+        UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
+		// a bit hackish
+		// For now I'm assuming just one device attached
+		for (final UsbDevice device : manager.getDeviceList().values())
+		{
+			final List<UsbSerialDriver> drivers = UsbSerialProber.probeSingleDevice(manager, device);
+			Log.d(ME, "Found usb device: " + device);
+			if (drivers.isEmpty())
+				Log.d(ME, "  - No UsbSerialDriver available.");
+			else
+				mDriver = drivers.get(0);
+		}
+
         Log.d(ME, "Resumed, mDriver=" + mDriver);
-        if (mDriver == null) {
+        if (mDriver == null)
+		{
 			mTxtCommStatus.setText("No device");
-        } else {
-            try {
+        }
+		else
+		{
+            try
+			{
                 mDriver.open();
                 mDriver.setParameters(115200, 8, UsbSerialDriver.STOPBITS_1, UsbSerialDriver.PARITY_NONE);
-            } catch (IOException e) {
+            } 
+			catch (IOException e) 
+			{
                 Log.e(ME, "Error setting up device: " + e.getMessage(), e);
 				mTxtCommStatus.setText("Error opening device: " + e.getMessage());
-                try {
-                    mDriver.close();
-                } catch (IOException e2) {
-                    // Ignore.
-                }
+                try 
+				{ mDriver.close(); } 
+				catch (IOException e2) { }
                 mDriver = null;
                 return;
             }
-			mTxtCommStatus.setText("Connected");
-//			(new Thread(this)).start();
+			(new Thread(this)).start();
         }
         onDeviceStateChange();
 //		jniInit();
     }
+
+	public void run()
+	{
+		Log.i(ME,"Starting runner");
+		mIsThreadDone = false;
+		mDoThreadRun = true;
+		int timeoutMS = 100;
+		
+		int commPrefix = 0x00CCBBAA;
+//		int commPrefix = 0xFFFFFFFF;
+//		commPrefix = commPrefix & 0x000000AA;
+//		commPrefix = 170;
+		while(mDoThreadRun)
+		{
+//			runOnUiThread(new Runnable(){
+//				public void run(){
+//					mTxtMotorVal1.setText(String.valueOf(mMotorVals[0]));
+//					mTxtMotorVal2.setText(String.valueOf(mMotorVals[1]));
+//					mTxtMotorVal3.setText(String.valueOf(mMotorVals[2]));
+//					mTxtMotorVal4.setText(String.valueOf(mMotorVals[3]));
+//				}
+//			});
+			if(mDriver != null)
+			{
+				sendInt(commPrefix, timeoutMS);
+				for(int motorID=0; motorID<4; motorID++)
+					sendInt(mMotorVals[motorID], timeoutMS);
+//				Log.i(ME,"----------------------------------------");
+//				for(int motorID=0; motorID<4; motorID++)
+//					Log.i(ME,"Chadding "+String.valueOf(mMotorVals[motorID]));
+			}
+
+			SystemClock.sleep(10);
+		}
+		
+		Log.i(ME,"Runner done");
+		mIsThreadDone = true;
+	}
 
 	// This is what receives the actual events from the arduino
     private final SerialInputOutputManager.Listener mListener =
@@ -204,7 +263,8 @@ public class MotorTestApp extends Activity
 
         @Override
         public void onRunError(Exception e) {
-            Log.d(ME, "Runner stopped.");
+            Log.d(ME, "USB comm error: "+ e.toString());
+			stopIoManager();
         }
 
 		private ByteBuffer msgBuffer = ByteBuffer.allocate(128);
@@ -226,6 +286,7 @@ public class MotorTestApp extends Activity
             Log.i(ME, "Stopping io manager ..");
             mSerialIoManager.stop();
             mSerialIoManager = null;
+			mTxtCommStatus.setText("Disconnected");
         }
     }
 
@@ -235,6 +296,7 @@ public class MotorTestApp extends Activity
             Log.i(ME, "Starting io manager ..");
             mSerialIoManager = new SerialInputOutputManager(mDriver, mListener);
             mExecutor.submit(mSerialIoManager);
+			mTxtCommStatus.setText("Connected");
         }
     }
 
@@ -277,17 +339,4 @@ public class MotorTestApp extends Activity
 
 		return numBytesSent;
 	}
-
-    /**
-     * Starts the activity, using the supplied driver instance.
-     *
-     * @param context
-     * @param driver
-     */
-    static void show(Context context, UsbSerialDriver driver) {
-        mDriver = driver;
-        final Intent intent = new Intent(context, MotorTestApp.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY);
-        context.startActivity(intent);
-    }
 }
