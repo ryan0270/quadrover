@@ -1,9 +1,19 @@
+#include <SPI.h>
+#include <Wire.h>
+
 #define PIN_LED 12
 #define PIN_MOTOR_0 8
 #define PIN_MOTOR_1 6
 #define PIN_MOTOR_2 4
 #define PIN_MOTOR_3 2
 #define NUM_MOTORS 4
+
+byte MOTOR_ADDR_E = (0x53 + (0 << 1)) >> 1;
+byte MOTOR_ADDR_W = (0x53 + (1 << 1)) >> 1;
+byte MOTOR_ADDR_S = (0x53 + (2 << 1)) >> 1;
+byte MOTOR_ADDR_N = (0x53 + (3 << 1)) >> 1;
+byte motorAddr[4];
+
 union
 {
   byte byteVal[4];
@@ -69,12 +79,26 @@ void setup()
 
   lastCommTime = 0;
 
-  motorVals[0] = motorVals[1] = motorVals[2] = motorVals[3] = 0;
-
   motorPins[0] = PIN_MOTOR_0;
   motorPins[1] = PIN_MOTOR_1;
   motorPins[2] = PIN_MOTOR_2;
   motorPins[3] = PIN_MOTOR_3;
+  
+  Wire.begin();
+  motorAddr[0] = MOTOR_ADDR_N;
+  motorAddr[1] = MOTOR_ADDR_E;
+  motorAddr[2] = MOTOR_ADDR_S;
+  motorAddr[3] = MOTOR_ADDR_W;
+  
+  for(int i=0; i<4; i++)
+  {
+    motorVals[i] = 0;
+    sendCommand(motorAddr[i], 0);
+  }
+
+  doRegularMotorStart();
+
+
 }
 
 byte nextMotorID = 0;
@@ -93,6 +117,12 @@ void loop()
     }
     isConnected = false;
   }
+  
+  // for safety to to maintain the comm link with
+  // ESCs, this will happen every loop
+  if(!isConnected)
+    for(int motorID=0; motorID<NUM_MOTORS; motorID++)
+      sendCommand(motorAddr[motorID], 0);
 
   while(Serial.available() > 0 )
   {
@@ -117,6 +147,7 @@ void loop()
       else if(currentCommState == COMM_STATE_RECEIVED_START_MESSAGE)
       {
         motorVals[nextMotorID] = (commMsg.uint32Val & 0x0000FFFF); // ints on the mega ADK are 16-bit
+        sendCommand(motorAddr[nextMotorID], motorVals[nextMotorID]);
         analogWrite(motorPins[nextMotorID], (int)( (float)motorVals[nextMotorID]/MAXCMD*255));
         nextMotorID = (nextMotorID+1) % 4;
       }
@@ -137,7 +168,27 @@ void loop()
   delay(1);
 }
 
+void doRegularMotorStart()
+{
+  for(int i=0; i<500; i++)
+  {
+    // need to keep the comm alive
+    for(int mdl=0; mdl<4; mdl++)
+      sendCommand(motorAddr[mdl], 0);
+    delay(10);
+  }
+}
 
+boolean sendCommand(byte addr, short cmd)
+{
+  Wire.beginTransmission(addr);
+  byte upper = floor(cmd/8.0);
+  byte lower = cmd % 8;
+  Wire.write(upper);
+  Wire.write( lower & 0x07 );
+  byte result = Wire.endTransmission(true);
+  return result == 0;  
+}
 
 
 
