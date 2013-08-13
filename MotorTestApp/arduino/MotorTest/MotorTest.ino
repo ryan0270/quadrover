@@ -138,6 +138,7 @@ void loop()
         
       if( commMsg.uint32Val == COMM_FLAG_MESSAGE_PREFIX )
       {
+        nextMotorID = 0;
         lastCommTime = millis();
         if(!isConnected)
           digitalWrite(PIN_LED, HIGH);
