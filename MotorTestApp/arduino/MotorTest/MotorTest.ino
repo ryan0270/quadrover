@@ -1,38 +1,45 @@
-#define LED_PIN 12
-#define COMM_STATE_NONE_PIN 8
-#define COMM_STATE_START_PIN 6
-#define COMM_STATE_MOTOR_PIN 4
-
+#define PIN_LED 12
+#define PIN_MOTOR_0 8
+#define PIN_MOTOR_1 6
+#define PIN_MOTOR_2 4
+#define PIN_MOTOR_3 2
+#define NUM_MOTORS 4
 union
 {
-  char byteVal[4];
+  byte byteVal[4];
   float floatVal;
   int intVal;
   unsigned int uintVal;
+  short shortVal;
+  uint32_t uint32Val;
 } 
 commMsg;
 
 enum
 {
-  COMM_STATE_RECEIVED_START_MESSAGE,
-  COMM_STATE_RECEIVED_MOTOR_ID,
   COMM_STATE_NONE,
+  COMM_STATE_RECEIVED_START_MESSAGE,  
 };
 int currentCommState;
 
+int MAXCMD = 1<<11;
+
 enum
 {
-  COMM_FLAG_MESSAGE_PREFIX = 0x0000FF00,
-  COMM_FLAG_MESSAGE_SUFFIX = 0x0000FF00-1,
+  COMM_FLAG_MESSAGE_PREFIX = 0x00CCBBAA,
 };
 
 unsigned long lastCommTime;
+boolean isConnected = false;
+int timeoutMS = 500;
+int motorVals[NUM_MOTORS];
+int motorPins[4];
 void setup()
 {
   delay(500);
   Serial.begin(115200);
-  pinMode(LED_PIN,OUTPUT);
-  digitalWrite(LED_PIN,LOW);
+  pinMode(PIN_LED,OUTPUT);
+  digitalWrite(PIN_LED,LOW);
 
   // Ground pins
   pinMode(9,OUTPUT); 
@@ -45,11 +52,15 @@ void setup()
   digitalWrite(3,LOW);
 
   // active pins
-  pinMode(COMM_STATE_NONE_PIN,OUTPUT); digitalWrite(COMM_STATE_NONE_PIN,HIGH);
-  pinMode(COMM_STATE_START_PIN,OUTPUT); digitalWrite(COMM_STATE_START_PIN,LOW);
-  pinMode(COMM_STATE_MOTOR_PIN,OUTPUT); digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
-  pinMode(2,OUTPUT); digitalWrite(2,LOW);
-  
+  pinMode(PIN_MOTOR_0,OUTPUT); 
+  digitalWrite(PIN_MOTOR_0,LOW);
+  pinMode(PIN_MOTOR_1,OUTPUT); 
+  digitalWrite(PIN_MOTOR_1,LOW);
+  pinMode(PIN_MOTOR_2,OUTPUT); 
+  digitalWrite(PIN_MOTOR_2,LOW);
+  pinMode(PIN_MOTOR_3,OUTPUT); 
+  digitalWrite(PIN_MOTOR_3,LOW);
+
   currentCommState = COMM_STATE_NONE;
 
   commMsg.intVal = 0;
@@ -57,91 +68,77 @@ void setup()
     Serial.read();
 
   lastCommTime = 0;
+
+  motorVals[0] = motorVals[1] = motorVals[2] = motorVals[3] = 0;
+
+  motorPins[0] = PIN_MOTOR_0;
+  motorPins[1] = PIN_MOTOR_1;
+  motorPins[2] = PIN_MOTOR_2;
+  motorPins[3] = PIN_MOTOR_3;
 }
 
-boolean isConnected = false;
-
-//float val = 127/255;
-float val = 10;
-int timeoutMS = 500;
+byte nextMotorID = 0;
 void loop()
 {
-  val += 0.01;
-  
-  if(isConnected)
-    analogWrite(LED_PIN, (int)(val*255));
-  else
-    digitalWrite(LED_PIN, LOW);
-
-  Serial.println(val,4);
-
-  if(millis()-lastCommTime > 5000)
+  if(millis()-lastCommTime > 1000)
+  {
+    if(isConnected)
+    {
+      digitalWrite(PIN_LED, LOW);
+      for(int motorID=0; motorID<NUM_MOTORS; motorID++)
+      {
+        motorVals[motorID] = 0;
+        digitalWrite(motorPins[motorID], LOW);
+      }
+    }
     isConnected = false;
+  }
 
-  if(Serial.available() > 0 )
+  while(Serial.available() > 0 )
   {
     int start = millis();
+    
     while(Serial.available() < 4 && millis()-start < timeoutMS)
-      delay(5);
-
+      delay(1);
+      
     if(Serial.available() >= 4)
     {
-      lastCommTime = millis();
-      isConnected = true;
-      for(int i=0; i<4; i++)
-        commMsg.byteVal[i] = Serial.read();
-
-//      if(commMsg.intVal == COMM_FLAG_MESSAGE_SUFFIX)
-//      {
-//        currentCommState = COMM_STATE_NONE;
-//        digitalWrite(COMM_STATE_START_PIN,LOW);
-//        digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
-//        digitalWrite(COMM_STATE_NONE_PIN,HIGH);
-//      }
-//      else
-      {  
-        switch(currentCommState)
-        {
-          case COMM_STATE_NONE:
-//            val = (int)(commMsg.intVal & 0);
-            if( (commMsg.intVal & 0) == 0 )
-            {
-              currentCommState = COMM_STATE_RECEIVED_START_MESSAGE;
-              digitalWrite(COMM_STATE_NONE_PIN,LOW);
-              digitalWrite(COMM_STATE_START_PIN,HIGH);
-//              PORTB &= ~_BV(PB0); // Pin 8 low
-//              PORTD |= _BV(PD6); // Pin 6 high
-            }
-            break;
-          case COMM_STATE_RECEIVED_START_MESSAGE:
-            val = commMsg.floatVal;
-            currentCommState = COMM_STATE_NONE;
-            digitalWrite(COMM_STATE_START_PIN,LOW);
-            digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
-            digitalWrite(COMM_STATE_NONE_PIN,HIGH);
-//            PORTB |= _BV(PB0); // Pin 8 high
-//            PORTD &= ~_BV(PD6); // Pin 6 low
-            break;
-          case COMM_STATE_RECEIVED_MOTOR_ID:
-            break;
-        }
+      for(int b=0; b<4; b++)
+        commMsg.byteVal[b] = Serial.read();
+        
+      if( commMsg.uint32Val == COMM_FLAG_MESSAGE_PREFIX )
+      {
+        lastCommTime = millis();
+        if(!isConnected)
+          digitalWrite(PIN_LED, HIGH);
+        isConnected = true;
+        currentCommState = COMM_STATE_RECEIVED_START_MESSAGE;
+      }
+      else if(currentCommState == COMM_STATE_RECEIVED_START_MESSAGE)
+      {
+        motorVals[nextMotorID] = (commMsg.uint32Val & 0x0000FFFF); // ints on the mega ADK are 16-bit
+        analogWrite(motorPins[nextMotorID], (int)( (float)motorVals[nextMotorID]/MAXCMD*255));
+        nextMotorID = (nextMotorID+1) % 4;
       }
     }
     else
     {
       while(Serial.available() > 0)
         Serial.read();
-      digitalWrite(2,HIGH);
-      delay(100);
-      digitalWrite(2,LOW);
+      for(int motorID=0; motorID<NUM_MOTORS; motorID++)
+      {
+        motorVals[motorID] = 0;
+        analogWrite(motorPins[motorID], 0);
+      }
       currentCommState = COMM_STATE_NONE;
-      digitalWrite(COMM_STATE_START_PIN,LOW);
-      digitalWrite(COMM_STATE_MOTOR_PIN,LOW);
-      digitalWrite(COMM_STATE_NONE_PIN,HIGH);
     }
   }
 
-  delay(100);
+  delay(1);
 }
+
+
+
+
 
 

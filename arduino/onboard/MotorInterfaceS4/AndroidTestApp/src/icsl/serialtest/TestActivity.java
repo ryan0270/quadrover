@@ -48,17 +48,7 @@ public class TestActivity extends Activity implements Runnable {
 
     private final String TAG = TestActivity.class.getSimpleName();
 
-    /**
-     * Driver instance, passed in statically via
-     * {@link #show(Context, UsbSerialDriver)}.
-     *
-     * <p/>
-     * This is a devious hack; it'd be cleaner to re-create the driver using
-     * arguments passed in with the {@link #startActivity(Intent)} intent. We
-     * can get away with it because both activities will run in the same
-     * process, and this is a simple demo.
-     */
-    private static UsbSerialDriver mDriver = null;
+    private static UsbSerialDriver mDriver;
 
     private TextView mTitleTextView;
     private TextView mDumpTextView;
@@ -135,8 +125,10 @@ public class TestActivity extends Activity implements Runnable {
     protected void onResume() {
         super.onResume();
 
-		SystemClock.sleep(1000);
+//		SystemClock.sleep(100);
         UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
+		// a bit hackish
+		// For now I'm assuming just one device attached
 		for (final UsbDevice device : manager.getDeviceList().values())
 		{
 			final List<UsbSerialDriver> drivers = UsbSerialProber.probeSingleDevice(manager, device);
@@ -150,18 +142,23 @@ public class TestActivity extends Activity implements Runnable {
         Log.d(TAG, "Resumed, mDriver=" + mDriver);
         if (mDriver == null) {
             mTitleTextView.setText("No serial device.");
-        } else {
-            try {
+        }
+		else
+		{
+            try
+			{
                 mDriver.open();
                 mDriver.setParameters(115200, 8, UsbSerialDriver.STOPBITS_1, UsbSerialDriver.PARITY_NONE);
-            } catch (IOException e) {
+            }
+			catch (IOException e)
+			{
                 Log.e(TAG, "Error setting up device: " + e.getMessage(), e);
                 mTitleTextView.setText("Error opening device: " + e.getMessage());
-                try {
+                try
+				{
                     mDriver.close();
-                } catch (IOException e2) {
-                    // Ignore.
                 }
+				catch (IOException e2) { }
                 mDriver = null;
                 return;
             }
@@ -180,7 +177,6 @@ public class TestActivity extends Activity implements Runnable {
 		Log.i(TAG,"Starting runner");
 		mIsThreadDone = false;
 		mDoThreadRun = true;
-		ByteBuffer msgBuffer = ByteBuffer.allocate(128);
 		int timeoutMS = 500;
 		while(mDoThreadRun)
 		{
@@ -217,7 +213,6 @@ public class TestActivity extends Activity implements Runnable {
 
 	public int sendCommControlMessage(int val, int timeoutMS)
 	{
-//		byte[] chad = ByteBuffer.allocate(4).putInt(val).array();
 		byte[] chad = new byte[4];
 		chad[3] = (byte)(val >>> 3*8);
 		chad[2] = (byte)(val >>> 2*8);
@@ -236,7 +231,6 @@ public class TestActivity extends Activity implements Runnable {
 	// The arduino boards don't all use 4-byte int's
 	public int sendInt(int val, int timeoutMS)
 	{
-//		byte[] chad = ByteBuffer.allocate(4).putInt(val).array();
 		byte[] chad = new byte[4];
 		chad[3] = (byte)(val >> 3*8);
 		chad[2] = (byte)(val >> 2*8);
