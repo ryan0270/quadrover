@@ -14,6 +14,7 @@ Connection * connection;
 // Event handler for the shell connection. 
 void adbEventHandler(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
 {
+  Serial.println("here");
   if(event == ADB_CONNECT && verbosity > 0)
   {
     Serial.println("ADB_CONNECT");
@@ -87,6 +88,8 @@ void setup()
   
   delay(500);
   
+<<<<<<< local
+=======
   // Initialise the ADB subsystem.  
   ADB::init();
   // Open an ADB stream to the phone's shell. Auto-reconnect
@@ -94,6 +97,7 @@ void setup()
   
   delay(1000);
 
+>>>>>>> other
   Wire.begin();
   motorAddr[0] = MOTOR_ADDR_N;
   motorAddr[1] = MOTOR_ADDR_E;
@@ -108,6 +112,13 @@ void setup()
     
 
   doRegularMotorStart();
+  
+    // Initialise the ADB subsystem.  
+  ADB::init();
+  // Open an ADB stream to the phone's shell. Auto-reconnect
+  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
+  
+  delay(1000);
 
   phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();

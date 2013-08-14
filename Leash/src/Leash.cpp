@@ -118,7 +118,6 @@ Leash::~Leash()
 
 void Leash::initialize()
 {
-Log::alert("chad 1");
 	connect(mTmrGui, SIGNAL(timeout()), this, SLOT(updateDisplay()));
 	connect(ui->btnStartMotors, SIGNAL(clicked()), this, SLOT(onBtnStartMotors_clicked()));
 	connect(ui->btnStopMotors,  SIGNAL(clicked()), this, SLOT(onBtnStopMotors_clicked()));
@@ -135,7 +134,6 @@ Log::alert("chad 1");
 	connect(ui->btnSyncTime,SIGNAL(clicked()),this,SLOT(onBtnSyncTime_clicked()));
 	connect(ui->btnSetDesiredPos,SIGNAL(clicked()),this,SLOT(onBtnSetDesiredPos_clicked()));
 
-Log::alert("chad 2");
 	mScStartMotors = new QShortcut(Qt::Key_W, this);
 	mScStopMotors = new QShortcut(Qt::Key_Space, this);
 	mScQuit = new QShortcut(Qt::Key_Q, this);
@@ -143,7 +141,6 @@ Log::alert("chad 2");
 	connect(mScStopMotors,SIGNAL(activated()), this, SLOT(onBtnStopMotors_clicked()));
 	connect(mScQuit,SIGNAL(activated()), this, SLOT(onBtnQuit_clicked()));
 
-Log::alert("chad 3");
 //	mScIncreaseHeight = new QShortcut(Qt::Key_9, this);
 //	mScDecreaseHeight = new QShortcut(Qt::Key_7, this);
 //	mScMoveLeft = new QShortcut(Qt::Key_4, this);
@@ -166,24 +163,21 @@ Log::alert("chad 3");
 	mScToggleIbvs = new QShortcut(Qt::Key_V, this);
 	connect(mScToggleIbvs,SIGNAL(activated()), this, SLOT(onToggleIbvs()));
 
-Log::alert("chad 4");
 	loadConfigFromFile("../quad0.leashConfig");
 
-Log::alert("chad 5");
 	cout << "Connecting to Vicon ... ";
 	try
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
 	mTelemVicon.addTrackedQuadrotor("quadMikroPhone");
 	mTelemVicon.addListener(this);
 
-Log::alert("chad 6");
 	mSocketTCP = NULL;
 	mSocketUDP = NULL;
 
@@ -227,7 +221,6 @@ Log::alert("chad 6");
 		resizeTable(*views[mdl]);
 	}
 
-Log::alert("chad 7");
 	data.clear();
 	data.push_back(&mStateData);
 	data.push_back(&mDesStateData);
@@ -267,7 +260,6 @@ Log::alert("chad 7");
 		resizeTable(*views[mdl]);
 	}
 
-Log::alert("chad 8");
 	for(int i=0; i<4; i++)
 	{
 		mMotorData.push_back(new QStandardItem(QString("000000")));
@@ -300,7 +292,6 @@ Log::alert("chad 8");
 	}
 	tables.push_back(ui->tblKalmanAttBias);
 
-Log::alert("chad 9");
 	for(int i=0; i<2; i++)
 		ui->tblAttObsvGains->item(0,i)->setText("-00.0000");
 	tables.push_back(ui->tblAttObsvGains);
@@ -324,7 +315,6 @@ Log::alert("chad 9");
 		setVerticalTabOrder(tables[tbl]);
 	}
 
-Log::alert("chad 10");
 	cv::Mat img(240,320,CV_8UC3,cv::Scalar(0));
 	ui->lblImageDisplay->setPixmap(QPixmap::fromImage(cvMat2QImage(img)));
 	ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
@@ -338,7 +328,6 @@ Log::alert("chad 10");
 	}
 	ui->tabWidget->setCurrentIndex(0);
 
-Log::alert("chad 11");
 	resizeTable(ui->vwGyro);
 	resizeTable(ui->vwGyroBias);
 	resizeTable(ui->vwAccel);
@@ -353,7 +342,6 @@ Log::alert("chad 11");
 	setVerticalTabOrder(ui->tblTransCntl);
 
 	populateUI();
-Log::alert("chad 12");
 }
 
 void Leash::shutdown()
@@ -589,7 +577,6 @@ void Leash::pollTCP()
 							ui->lblImageDisplay->setPixmap(QPixmap::fromImage(cvMat2QImage(img)));
 							ui->lblImageDisplay->setMaximumSize(img.size().width, img.size().height);
 							ui->lblImageDisplay->setMinimumSize(img.size().width, img.size().height);
-cout << "There should be an image here" << endl;
 						}
 						break;
 					case COMM_HOST_EXIT:

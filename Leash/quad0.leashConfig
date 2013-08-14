@@ -98,12 +98,12 @@
    <QualityLevel>0.010000</QualityLevel>
    <SeparationDistance>10.000000</SeparationDistance>
    <FASTThreshold>20.000000</FASTThreshold>
-   <PointCntTarget>30.000000</PointCntTarget>
+   <PointCntTarget>50.000000</PointCntTarget>
    <FASTAdaptRate>0.050000</FASTAdaptRate>
    <MeasurementCov>50.000000</MeasurementCov>
    <ProbNoCorr>0.100000</ProbNoCorr>
 </Vision>
 <LogMask>1021</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
-<IP>192.168.100.107</IP>
+<IP>192.168.100.127</IP>
 <Port>13120</Port>
