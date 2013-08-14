@@ -84,10 +84,12 @@ using namespace ICSL::Constants;
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mCameraPosBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mCameraVelBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mOpticFlowVelBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mHeightDataBuffer));
+//		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mHeightBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mMapHeightBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mMotorCmdsBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mThrustDirBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mThrustBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mMapVelBuffer));
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -289,7 +291,7 @@ using namespace ICSL::Constants;
 			errCov[i+3][i] += errCov[i+3][i+3]*dt+dt*dynCov[i+3][i];
 		}
 		for(int i=3; i<6; i++)
-			errCov[i][i] += dynCov[i][i];
+			errCov[i][i] += dt*dynCov[i][i];
 	}
 
 	void Observer_Translational::doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
@@ -424,10 +426,10 @@ using namespace ICSL::Constants;
 		velData->timestamp.setTime(now);
 		velData->data = vel.copy();
 
-		shared_ptr<Data<double> > heightData = shared_ptr<Data<double> >(new Data<double>());
-		heightData->type = DATA_TYPE_VICON_HEIGHT;
-		heightData->timestamp.setTime(now);
-		heightData->data = pos[2][0];
+//		shared_ptr<Data<double> > heightData = shared_ptr<Data<double> >(new Data<double>());
+//		heightData->type = DATA_TYPE_VICON_HEIGHT;
+//		heightData->timestamp.setTime(now);
+//		heightData->data = pos[2][0];
 
 		mMutex_data.lock();
 		mLastViconPos.inject(pos);
@@ -435,7 +437,7 @@ using namespace ICSL::Constants;
 
 		mNewEventsBuffer.push_back(posData);
 		mNewEventsBuffer.push_back(velData);
-		mHeightDataBuffer.push_back(heightData);
+//		mHeightBuffer.push_back(heightData);
 
 		mLastPosReceiveTime.setTime(now);
 		mMutex_data.unlock();
@@ -699,10 +701,11 @@ using namespace ICSL::Constants;
 //		mNewCameraPosAvailable = true;
 //	}
 
-	void Observer_Translational::onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData)
+	void Observer_Translational::onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData)
 	{
 		mMutex_meas.lock();
 		mNewEventsBuffer.push_back(velData);
+		mNewEventsBuffer.push_back(heightData);
 		mMutex_meas.unlock();
 	}
 
@@ -747,13 +750,13 @@ using namespace ICSL::Constants;
 				break;
 			case DATA_TYPE_CAMERA_POS:
 				mCameraPosBuffer.push_back(static_pointer_cast<DataVector<double> >(data));
-				if(mUseCameraPos)
-				{
-					Array2D<double> err = submat(mStateKF,0,2,0,0) - static_pointer_cast<DataVector<double> >(data)->data;
-					doForceGainAdaptation(err);
-					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double> >(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
-				}
-				else
+//				if(mUseCameraPos)
+//				{
+//					Array2D<double> err = submat(mStateKF,0,2,0,0) - static_pointer_cast<DataVector<double> >(data)->data;
+//					doForceGainAdaptation(err);
+//					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double> >(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
+//				}
+//				else
 				{
 					mMutex_data.unlock();
 					return dataTime;
@@ -761,9 +764,9 @@ using namespace ICSL::Constants;
 				break;
 			case DATA_TYPE_VICON_VEL:
 				mViconVelBuffer.push_back(static_pointer_cast<DataVector<double> >(data));
-				if(mUseViconPos)
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
-				else
+//				if(mUseViconPos)
+//					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
+//				else
 				{
 					mMutex_data.unlock();
 					return dataTime;
@@ -771,9 +774,9 @@ using namespace ICSL::Constants;
 				break;
 			case DATA_TYPE_CAMERA_VEL:
 				mCameraVelBuffer.push_back(static_pointer_cast<DataVector<double> >(data));
-				if(mUseCameraPos)
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
-				else
+//				if(mUseCameraPos)
+//					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
+//				else
 				{
 					mMutex_data.unlock();
 					return dataTime;
@@ -786,8 +789,21 @@ using namespace ICSL::Constants;
 			case DATA_TYPE_THRUST_DIR:
 				mThrustDirBuffer.push_back(static_pointer_cast<DataVector<double> >(data));
 				break;
+			case DATA_TYPE_MAP_VEL:
+				mMapVelBuffer.push_back(static_pointer_cast<DataVector<double> >(data));
+				doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(data)->data, mVelMeasCov, mStateKF, mErrCovKF);
+				break;
+			case DATA_TYPE_MAP_HEIGHT:
+				{
+				mMapHeightBuffer.push_back(static_pointer_cast<Data<double> >(data));
+double mHeightMeasCov = 0.1*0.1;
+				doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double> >(data)->data, mHeightMeasCov, mStateKF, mErrCovKF);
+				}
+				break;
 			default:
 				Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
+				mMutex_data.unlock();
+				return dataTime;
 		}
 
 		if(mThrustBuffer.size() == 0)
@@ -809,8 +825,9 @@ using namespace ICSL::Constants;
 		else
 		{
 			posBuffer = &mCameraPosBuffer;
-			velBuffer = &mCameraVelBuffer;
+//			velBuffer = &mCameraVelBuffer;
 		}
+//		velBuffer = &mMapVelBuffer;
 
 		// These iters point to the last data point with iter->timestamp < dataTime 
 		posIter = IData::findIndexReverse(dataTime, *posBuffer);
@@ -896,7 +913,12 @@ using namespace ICSL::Constants;
 					break;
 				case DATA_TYPE_VICON_VEL:
 				case DATA_TYPE_CAMERA_VEL:
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(*eventIter)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
+//					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(*eventIter)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
+					break;
+				case DATA_TYPE_MAP_VEL:
+					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
+					break;
+				case DATA_TYPE_MAP_HEIGHT:
 					break;
 				case DATA_TYPE_OPTIC_FLOW_VEL:
 					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double> >(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
@@ -935,9 +957,8 @@ using namespace ICSL::Constants;
 			mMutex_adaptation.unlock();
 			return;
 		}
-		double dt = mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6;
-		if(dt < 0.1) // doing this too low runs into problems with ground effect
-			mForceGain += mForceGainAdaptRate*dt*err[2][0];
+		double dt = min((double)1.0, mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6);
+		mForceGain -= mForceGainAdaptRate*dt*err[2][0];
 		mLastForceGainUpdateTime.setTime();
 
 		{

@@ -47,6 +47,8 @@ enum DataType
 	DATA_TYPE_THRUST_DIR,
 	DATA_TYPE_ATTITUDE,
 	DATA_TYPE_ANGULAR_VEL,
+	DATA_TYPE_MAP_VEL,
+	DATA_TYPE_MAP_HEIGHT,
 };
 
 template<class T> class Data;

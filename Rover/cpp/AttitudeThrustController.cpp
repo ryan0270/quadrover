@@ -74,6 +74,7 @@ using namespace TNT;
 	
 	void AttitudeThrustController::run()
 	{
+		Log::alert(String()+"Bob's start time is: " + mStartTime.getMS());
 		mDone = false;
 		mRunning = true;
 		sched_param sp;
@@ -87,7 +88,6 @@ using namespace TNT;
 			System::msleep(1);
 		}
 	
-Log::alert("bobbity");
 		mDone = true;
 	}
 	

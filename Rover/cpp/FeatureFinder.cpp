@@ -14,6 +14,7 @@ FeatureFinder::FeatureFinder()
 	mFirstImageProcessed = false;
 	mHaveUpdatedSettings = true;
 	mCurImageAnnotated = NULL;
+	mIsMotorOn = false;
 
 	mImageProcTimeUS = 0;
 
@@ -83,7 +84,9 @@ void FeatureFinder::run()
 	float fastAdaptRate = mFASTAdaptRate;
 	while(mRunning)
 	{
-		if(mNewImageReady)
+		if(mNewImageReady
+			&& mIsMotorOn
+			)
 		{
 			procStart.setTime();
 			mNewImageReady = false;
@@ -122,7 +125,10 @@ void FeatureFinder::run()
 				mMutex_params.unlock();
 			}
 			else
+			{
 				fastThresh += min(1.0f, max(-1.0f, fastAdaptRate*((float)points.size()-pointCntTarget)));
+				fastThresh = max(5.0f, fastThresh);
+			}
 
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 			curImage.copyTo(*imageAnnotated);

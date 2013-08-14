@@ -48,12 +48,14 @@ void VelocityEstimator::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
+	Log::alert(String()+"Chad's start time is: " + mStartTime.getMS());
+
 	shared_ptr<ImageFeatureData> oldImageFeatureData, curImageFeatureData;
 	oldImageFeatureData = curImageFeatureData = NULL;
 	Time procTimer;
 	double procTime, delayTime;
-	Array2D<double> velEst(3,1);
-	double heightEst;
+	Array2D<double> velEst(3,1,0.0);
+	double heightEst = 0.05;;
 	String logString;
 	float measCov, probNoCorr;
 	while(mRunning)
@@ -63,30 +65,51 @@ void VelocityEstimator::run()
 			procTimer.setTime();
 			oldImageFeatureData = curImageFeatureData;
 			curImageFeatureData = mLastImageFeatureData;
+			mNewImageDataAvailable = false;
 			
-			if(oldImageFeatureData != NULL)
+			if(oldImageFeatureData != NULL && oldImageFeatureData->featurePoints.size() > 5 && curImageFeatureData->featurePoints.size() > 5)
 			{
 				mMutex_params.lock();
 				measCov = mMeasCov;
 				probNoCorr = mProbNoCorr;
 				mMutex_params.unlock();
 				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, mMeasCov, probNoCorr);
-			}
-			mNewImageDataAvailable = false;
 
-			procTime = procTimer.getElapsedTimeNS()/1.0e9;
-			delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
-			mMutex_data.lock();
-			mLastDelayTimeUS = delayTime*1.0e6;
-			mMutex_data.unlock();
+				shared_ptr<DataVector<double> > velData(new DataVector<double>());
+				velData->data = velEst.copy();
+				velData->type = DATA_TYPE_MAP_VEL;
+				velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
 
-			if(mQuadLogger != NULL)
-			{
-				logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_VEL_CALC_TIME + "\t"+procTime;
-				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
-				
-				logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OPTIC_FLOW_VELOCITY_DELAY + "\t"+ delayTime;
-				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+				shared_ptr<Data<double> > heightData(new Data<double>());
+				heightData->data = heightEst;
+				heightData->type = DATA_TYPE_MAP_HEIGHT;
+				heightData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
+
+				for(int i=0; i<mListeners.size(); i++)
+					mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
+
+				procTime = procTimer.getElapsedTimeNS()/1.0e9;
+				delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
+				mMutex_data.lock();
+				mLastDelayTimeUS = delayTime*1.0e6;
+				mMutex_data.unlock();
+
+				if(mQuadLogger != NULL)
+				{
+					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_VEL+ "\t";
+					for(int i=0; i<velEst.dim1(); i++)
+						logString = logString + velEst[i][0] + "\t";
+					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+
+					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_HEIGHT + "\t" + heightEst;
+					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+
+					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_VEL_CALC_TIME + "\t"+procTime;
+					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+
+					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OPTIC_FLOW_VELOCITY_DELAY + "\t"+ delayTime;
+					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+				}
 			}
 		}
 
@@ -149,13 +172,12 @@ Time start;
 
 	Array2D<double> mv = submat(curState,3,5,0,0);
 	Array2D<double> Sv = submat(curErrCov,3,5,3,5);
-	double mz = curState[2][0];
+	double mz = -curState[2][0];
 	double sz = sqrt(curErrCov[2][2]);
 
 	double camOffset = 0.05;
 	mz -= camOffset;
-
-	mz = min(mz, 0.150);
+	mz = max(mz, 0.130);
 
 	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
 	Sn[0][0] = Sn[1][1] = visionMeasCov;
@@ -177,6 +199,9 @@ Time start;
 
 	vel = matmult(mRotCamToPhone, vel);
 	covVel = matmult(mRotCamToPhone, matmult(covVel, mRotPhoneToCam));
+
+	velEst.inject(vel);
+	heightEst = z;
 }
 
 void VelocityEstimator::onFeaturesFound(shared_ptr<ImageFeatureData> const &data)

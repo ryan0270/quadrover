@@ -93,7 +93,7 @@ class Observer_Translational : public Observer_AngularListener,
 //	void onImageLost(){};
 
 	// for VelocityEstimatorListener
-	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData);
+	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData);
 
 	protected:
 	bool mRunning, mDone;
@@ -158,8 +158,8 @@ class Observer_Translational : public Observer_AngularListener,
 
 	vector<list<shared_ptr<Data<double> > > *> mDataBuffers;
 	list<shared_ptr<DataVector<double> > > mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
-	list<shared_ptr<DataVector<double> > > mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer;
-	list<shared_ptr<Data<double> > > mHeightDataBuffer;
+	list<shared_ptr<DataVector<double> > > mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer, mMapVelBuffer;
+	list<shared_ptr<Data<double> > > /*mHeightDataBuffer,*/ mMapHeightBuffer;
 	list<shared_ptr<DataVector<double> > > mMotorCmdsBuffer, mThrustDirBuffer;
 	list<shared_ptr<Data<double> > > mThrustBuffer;
 	list<shared_ptr<IData> > mNewEventsBuffer;

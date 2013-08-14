@@ -13,7 +13,7 @@ class VelocityEstimatorListener
 	VelocityEstimatorListener(){};
 	virtual ~VelocityEstimatorListener(){};
 
-	virtual void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData)=0;
+	virtual void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData)=0;
 };
 }}
 #endif

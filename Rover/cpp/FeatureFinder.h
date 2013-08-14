@@ -71,6 +71,8 @@ class FeatureFinder : public CommManagerListener,
 		void onNewCommVisionFeatureFindFASTThreshold(int const &thresh);
 		void onNewCommVisionFeatureFindPointCntTarget(int const &target);
 		void onNewCommVisionFeatureFindFASTAdaptRate(float const &r);
+		void onNewCommMotorOn(){mIsMotorOn = true;};
+		void onNewCommMotorOff(){mIsMotorOn = false;};
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<IData> const &data);
@@ -82,6 +84,7 @@ class FeatureFinder : public CommManagerListener,
 		bool mNewImageReady, mNewImageReady_targetFind;
 		bool mLogImages;
 		bool mHaveUpdatedSettings;
+		bool mIsMotorOn;
 //		cv::Mat	mCurImage, mCurImageGray;
 		shared_ptr<cv::Mat> mCurImageAnnotated;
 
