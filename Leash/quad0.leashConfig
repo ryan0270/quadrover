@@ -41,17 +41,17 @@
          <x>0.000100</x>
          <y>0.000100</y>
          <z>0.000100</z>
-         <xVel>0.100000</xVel>
-         <yVel>0.100000</yVel>
-         <zVel>0.100000</zVel>
+         <xVel>0.200000</xVel>
+         <yVel>0.200000</yVel>
+         <zVel>0.400000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.000100</x>
          <y>0.000100</y>
          <z>0.000100</z>
-         <xVel>0.600000</xVel>
-         <yVel>0.600000</yVel>
-         <zVel>0.800000</zVel>
+         <xVel>1.000000</xVel>
+         <yVel>1.000000</yVel>
+         <zVel>1.200000</zVel>
       </DynVar>
       <AttBias>
          <roll>0.000000</roll>
@@ -100,8 +100,8 @@
    <FASTThreshold>20.000000</FASTThreshold>
    <PointCntTarget>50.000000</PointCntTarget>
    <FASTAdaptRate>0.050000</FASTAdaptRate>
-   <MeasurementCov>50.000000</MeasurementCov>
-   <ProbNoCorr>0.100000</ProbNoCorr>
+   <MeasurementCov>15.000000</MeasurementCov>
+   <ProbNoCorr>0.007500</ProbNoCorr>
 </Vision>
 <LogMask>537</LogMask>
 <ImgBufferSize>100</ImgBufferSize>

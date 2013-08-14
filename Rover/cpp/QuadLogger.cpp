@@ -314,6 +314,8 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_OPTIC_FLOW_VELOCITY_DELAY="+LOG_ID_OPTIC_FLOW_VELOCITY_DELAY+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_MAP_VEL="+LOG_ID_MAP_VEL+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_MAP_HEIGHT="+LOG_ID_MAP_HEIGHT+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_MAP_NUM_MATCHES="+LOG_ID_MAP_NUM_MATCHES+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_MAP_PEAK_PSD_VALUE="+LOG_ID_MAP_PEAK_PSD_VALUE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}
