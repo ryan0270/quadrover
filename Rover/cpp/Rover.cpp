@@ -111,19 +111,19 @@ void Rover::initialize()
 //	mVisionProcessor.addListener(&mObsvTranslational);
 //	mVisionProcessor.addListener(this);
 
+	mFeatureFinder.initialize();
 	mFeatureFinder.setStartTime(mStartTime);
 	mFeatureFinder.setQuadLogger(&mQuadLogger);
-	mFeatureFinder.initialize();
 	mFeatureFinder.start();
 	mSensorManager.addListener(&mFeatureFinder);
 	mCommManager.addListener(&mFeatureFinder);
 	mFeatureFinder.addListener(this);
 
+	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(mStartTime);
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
 	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
-	mVelocityEstimator.initialize();
 	mVelocityEstimator.start();
 	mVelocityEstimator.addListener(&mObsvTranslational);
 	mFeatureFinder.addListener(&mVelocityEstimator);
@@ -488,6 +488,12 @@ void Rover::transmitImage()
 	mFeatureFinder.getLastImageAnnotated(&img);
 	mMutex_vision.unlock();
 
+	if(img.rows == 0 || img.cols == 0)
+	{
+		mImageIsSending = false;
+		return;
+	}
+
 	// save on transmitted data
 	cv::resize(img, img, cv::Size(320,240));
 
@@ -558,6 +564,9 @@ void Rover::onNewCommTimeSync(int time)
 	
 	mSensorManager.setStartTime(mStartTime);
 	mQuadLogger.setStartTime(mStartTime);
+
+	mFeatureFinder.setStartTime(mStartTime);
+	mVelocityEstimator.setStartTime(mStartTime);
 
 	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_TIME_SYNC + "\t" + delta;
 	mMutex_cntl.unlock();

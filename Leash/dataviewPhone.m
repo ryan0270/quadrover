@@ -101,6 +101,14 @@ cpuUsage = phoneData(cpuUsageIndices,3:end)';
 % phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
 % phoneTemp = phoneData(phoneTempIndices,3:6)';
 
+mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
+mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
+mapVelEst = phoneData(mapVelEstIndices,3:5)';
+
+mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
+mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
+mapHeightEst = phoneData(mapHeightEstIndices,3)';
+
 velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 velEstTime = phoneData(velEstIndices,1)'/1000;
 velEst = phoneData(velEstIndices,3:5)';
@@ -144,17 +152,17 @@ if exist('cpuUsage','var') && ~isempty(cpuUsage)
 end
 
 %%
-if exist('phoneTemp','var') && ~isempty(phoneTemp)
-	figure(500); set(gcf,'Name','Batt Temp');
-	plot(phoneTempTime, phoneTemp(1,:)); hold all
-	plot(phoneTempTime, phoneTemp(2,:)); hold all
-	plot(phoneTempTime, phoneTemp(3,:)); hold all
-	plot(phoneTempTime, phoneTemp(4,:)); hold all
-	hold off
-	xlabel('Time [s]');
-	ylabel('Temp [degC]');
-	legend('Batt','SEC','Fuelgauge','TMU');
-end
+% if exist('phoneTemp','var') && ~isempty(phoneTemp)
+% 	figure(500); set(gcf,'Name','Batt Temp');
+% 	plot(phoneTempTime, phoneTemp(1,:)); hold all
+% 	plot(phoneTempTime, phoneTemp(2,:)); hold all
+% 	plot(phoneTempTime, phoneTemp(3,:)); hold all
+% 	plot(phoneTempTime, phoneTemp(4,:)); hold all
+% 	hold off
+% 	xlabel('Time [s]');
+% 	ylabel('Temp [degC]');
+% 	legend('Batt','SEC','Fuelgauge','TMU');
+% end
 
 %%
 stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
@@ -185,29 +193,29 @@ if exist('state','var') && ~isempty(state)
 end
  
 %%
-gyroBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
-if exist('gyroBias','var') && ~isempty(gyroBias)
-    figure(643); set(gcf,'name','Gyro Bias')
-    for i=1:3
-        subplot(3,1,i)
-        plot(gyroBiasTime, gyroBias(i,:));
-        xlabel('Time [s]');
-        ylabel(gyroBiasLabels(i));
-    end
-end
+% gyroBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
+% if exist('gyroBias','var') && ~isempty(gyroBias)
+%     figure(643); set(gcf,'name','Gyro Bias')
+%     for i=1:3
+%         subplot(3,1,i)
+%         plot(gyroBiasTime, gyroBias(i,:));
+%         xlabel('Time [s]');
+%         ylabel(gyroBiasLabels(i));
+%     end
+% end
 
 %%
-attBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
-if exist('attBias','var') && ~isempty(attBias)
-    baseFigAttBias=700;
-    figure(baseFigAttBias+10); set(gcf,'name','Att Bias')
-    for i=1:3
-        subplot(3,1,i)
-        plot(attBiasTime, attBias(i,:));
-        xlabel('Time [s]');
-        ylabel(attBiasLabels(i));
-    end
-end
+% attBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
+% if exist('attBias','var') && ~isempty(attBias)
+%     baseFigAttBias=700;
+%     figure(baseFigAttBias+10); set(gcf,'name','Att Bias')
+%     for i=1:3
+%         subplot(3,1,i)
+%         plot(attBiasTime, attBias(i,:));
+%         xlabel('Time [s]');
+%         ylabel(attBiasLabels(i));
+%     end
+% end
 
 %%
 if exist('forceScaling','var') && ~isempty(forceScaling)
@@ -218,120 +226,119 @@ if exist('forceScaling','var') && ~isempty(forceScaling)
 end
 
 %%
-if ~isempty(mag)
-    baseFigMag = 100;
-    labelsMag = {'Mag x [\muT]' 'Mag y [\muT]' 'Mag z [\muT]'};
-
-    figure(baseFigMag+5);
-    set(gcf,'Units','Inches');
-    curPos = get(gcf,'Position'); figSize = [6 4];
-    set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-    resetIndex = [];
-    for i=1:3
-        subplot(3,1,i)
-        plot(magTime, mag(i,:)); hold all
-        hold off
-        title(labelsMag(i));
-    end
-
-end
-%%
-if exist('gyro','var') && ~isempty(gyro)
-    labelsGyro = {'Gyro x [rad/s]' 'Gyro y [rad/s]' 'Gyro z [rad/s]'};
-    baseFig = 20;
-
-    figure(baseFig+2);set(gcf,'Units','Inches');
-    % curPos = get(gcf,'Position'); figSize = [6 4];
-    % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-    for i=1:3
-        subplot(3,1,i)
-        plot(gyroTime, gyro(i,:));
-        ax = axis;
-        axis([gyroTime(1) gyroTime(end) ax(3) ax(4)]);
-        title(labelsGyro(i));
-    end
-
-end
-
-%%
-if isfinite(accel_dt)
-    labelsAccel = {'Accel x [m/s^2]' 'Accel y [m/s^2]' 'Accel z [m/s^2]'};
-    baseFig = 30;
-        
-    figure(baseFig+2);set(gcf,'Units','Inches');
+% if ~isempty(mag)
+%     baseFigMag = 100;
+%     labelsMag = {'Mag x [\muT]' 'Mag y [\muT]' 'Mag z [\muT]'};
+% 
+%     figure(baseFigMag+5);
+%     set(gcf,'Units','Inches');
 %     curPos = get(gcf,'Position'); figSize = [6 4];
 %     set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-    for i=1:3
-        subplot(3,1,i)
-        plot(accelTime, accel(i,:)); hold all
-%         plot(accelTime, accelFilt(i,:));
-        hold off;
-        ax = axis;
-        axis([accelTime(1) accelTime(end) -20 20]);
-        title(labelsAccel(i));
-    end
-end
+%     resetIndex = [];
+%     for i=1:3
+%         subplot(3,1,i)
+%         plot(magTime, mag(i,:)); hold all
+%         hold off
+%         title(labelsMag(i));
+%     end
+% end
+%%
+% if exist('gyro','var') && ~isempty(gyro)
+%     labelsGyro = {'Gyro x [rad/s]' 'Gyro y [rad/s]' 'Gyro z [rad/s]'};
+%     baseFig = 20;
+% 
+%     figure(baseFig+2);set(gcf,'Units','Inches');
+%     % curPos = get(gcf,'Position'); figSize = [6 4];
+%     % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+%     for i=1:3
+%         subplot(3,1,i)
+%         plot(gyroTime, gyro(i,:));
+%         ax = axis;
+%         axis([gyroTime(1) gyroTime(end) ax(3) ax(4)]);
+%         title(labelsGyro(i));
+%     end
+% 
+% end
 
 %%
-if exist('pressure','var') && ~isempty(pressure)
-	baseFig = 60;
-	figure(baseFig);
-	plot(pressureTime, pressure(1,:));
-	xlabel('Time [s]');
-	ylabel('Pressure [mBar]');
-	
-	Rstar = 8.31432; % N??m /(mol??K)
-	Tb = 288.15; % K
-	g0 = 9.80665; % m/s^2
-	M = 0.0289644; % kg/mol
-	Pb = 1013.25; % milliBar
-	h0 = -Rstar*Tb/g0/M*log(pressure(1,1)/Pb)*0;
-	h = -Rstar*Tb/g0/M*log(pressure(1,:)/Pb) - h0;
-	
-	tempInterp = interp1(phoneTempTime, phoneTemp(4,:), pressureTime,[],'extrap');
-	k = (999.5-1000)/(45-37);
-	pressComp = pressure(1,:)-k*(tempInterp-37);
-	hComp = -Rstar*Tb/g0/M*log(pressComp/Pb) - h0;
-	figure(baseFig+1);
-	plot(pressureTime, h); hold all
-	plot(pressureTime, hComp);
-	hold off
-	xlabel('Time [s]');
-	ylabel('Height [m]');
-	legend('Raw','Temp Comp')
-end
+% if isfinite(accel_dt)
+%     labelsAccel = {'Accel x [m/s^2]' 'Accel y [m/s^2]' 'Accel z [m/s^2]'};
+%     baseFig = 30;
+%         
+%     figure(baseFig+2);set(gcf,'Units','Inches');
+% %     curPos = get(gcf,'Position'); figSize = [6 4];
+% %     set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+%     for i=1:3
+%         subplot(3,1,i)
+%         plot(accelTime, accel(i,:)); hold all
+% %         plot(accelTime, accelFilt(i,:));
+%         hold off;
+%         ax = axis;
+%         axis([accelTime(1) accelTime(end) -20 20]);
+%         title(labelsAccel(i));
+%     end
+% end
 
 %%
-if isfinite(motor_dt)
-    labelsCntl = {'Throttle' 'Cntl Roll' 'Cntl Pitch' 'Cntl Yaw'};
-    labelsMotor = {'Motor North' 'Motor East' 'Motor South' 'Motor West'};
-    baseFig = 1000;
-
-    figure(baseFig+2);set(gcf,'Units','Inches');
-    % curPos = get(gcf,'Position'); figSize = [6 6];
-    % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-    for i=1:4
-        subplot(2,2,i)
-        plot(motorTime, motorCmd(i,:));
-        title(labelsMotor(i));
-    end
-end
+% if exist('pressure','var') && ~isempty(pressure)
+% 	baseFig = 60;
+% 	figure(baseFig);
+% 	plot(pressureTime, pressure(1,:));
+% 	xlabel('Time [s]');
+% 	ylabel('Pressure [mBar]');
+% 	
+% 	Rstar = 8.31432; % N??m /(mol??K)
+% 	Tb = 288.15; % K
+% 	g0 = 9.80665; % m/s^2
+% 	M = 0.0289644; % kg/mol
+% 	Pb = 1013.25; % milliBar
+% 	h0 = -Rstar*Tb/g0/M*log(pressure(1,1)/Pb)*0;
+% 	h = -Rstar*Tb/g0/M*log(pressure(1,:)/Pb) - h0;
+% 	
+% 	tempInterp = interp1(phoneTempTime, phoneTemp(4,:), pressureTime,[],'extrap');
+% 	k = (999.5-1000)/(45-37);
+% 	pressComp = pressure(1,:)-k*(tempInterp-37);
+% 	hComp = -Rstar*Tb/g0/M*log(pressComp/Pb) - h0;
+% 	figure(baseFig+1);
+% 	plot(pressureTime, h); hold all
+% 	plot(pressureTime, hComp);
+% 	hold off
+% 	xlabel('Time [s]');
+% 	ylabel('Height [m]');
+% 	legend('Raw','Temp Comp')
+% end
 
 %%
-if exist('featureFindTime','var') && ~isempty(featureFindTime)
-	figure(601);
-	plot(featureFindTimeTime, featureFindTime*1000);
-	xlabel('Time [s]');
-	ylabel('Feature find time [ms]');
-end
+% if isfinite(motor_dt)
+%     labelsCntl = {'Throttle' 'Cntl Roll' 'Cntl Pitch' 'Cntl Yaw'};
+%     labelsMotor = {'Motor North' 'Motor East' 'Motor South' 'Motor West'};
+%     baseFig = 1000;
+% 
+%     figure(baseFig+2);set(gcf,'Units','Inches');
+%     % curPos = get(gcf,'Position'); figSize = [6 6];
+%     % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+%     for i=1:4
+%         subplot(2,2,i)
+%         plot(motorTime, motorCmd(i,:));
+%         title(labelsMotor(i));
+%     end
+% end
 
 %%
-if exist('mapVelCalcTime','var') && ~isempty(mapVelCalcTime)
-	figure(602);
-	plot(mapVelCalcTimeTime, mapVelCalcTime*1000);
-	xlabel('Time [s]');
-	ylabel('MAP vel calc time [ms]');
-end
+% if exist('featureFindTime','var') && ~isempty(featureFindTime)
+% 	figure(601);
+% 	plot(featureFindTimeTime, featureFindTime*1000);
+% 	xlabel('Time [s]');
+% 	ylabel('Feature find time [ms]');
+% end
+
+%%
+% if exist('mapVelCalcTime','var') && ~isempty(mapVelCalcTime)
+% 	figure(602);
+% 	plot(mapVelCalcTimeTime, mapVelCalcTime*1000);
+% 	xlabel('Time [s]');
+% 	ylabel('MAP vel calc time [ms]');
+% end
 
 %%
 if exist('velCalcDelayTotalTime','var') && ~isempty(velCalcDelayTotalTime)
@@ -339,6 +346,26 @@ if exist('velCalcDelayTotalTime','var') && ~isempty(velCalcDelayTotalTime)
 	plot(velCalcDelayTotalTimeTime, velCalcDelayTotalTime*1000);
 	xlabel('Time [s]');
 	ylabel('Vel Total Delay Time [ms]');
+end
+
+%%
+if exist('mapVelEst','var') && ~isempty(mapVelEst)
+	labels = {'MAP x vel [m/s]','MAP y vel [m/s]','MAP z vel [m/s]'};
+	figure(610); clf
+	for i=1:3
+		subplot(3,1,i);
+		plot(mapVelEstTime, mapVelEst(i,:));
+		xlabel('Time [s]');
+		ylabel(labels{i});
+	end
+end
+
+%%
+if exist('mapHeightEst','var') && ~isempty(mapHeightEst)
+	figure(611); clf
+	plot(mapHeightEstTime, mapHeightEst);
+	xlabel('Time [s]');
+	ylabel('MAP z [m]');
 end
 
 %%

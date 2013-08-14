@@ -82,6 +82,14 @@ cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CAMERA_
 cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
 cameraPos = phoneData(cameraPosIndices,3:5)';
 
+mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
+mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
+mapVelEst = phoneData(mapVelEstIndices,3:5)';
+
+mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
+mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
+mapHeightEst = phoneData(mapHeightEstIndices,3)';
+
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
 RotQuadToPhone = createRotMat(3,-pi/4)*...
@@ -126,9 +134,9 @@ end
 
 %%
 if exist('state','var') && ~isempty(state)
-	figure(1);
 	stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
 				  'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
+  	figure(1);
 	mask = viconStateTime <= stateTime(end);
 	for i=1:12
 		subplot(4,3,i)
@@ -145,19 +153,28 @@ if exist('state','var') && ~isempty(state)
 	
 % 		axis([30 50 -1 1]);
 	end
-	% legend('Vicon','Phone');
+% 	% legend('Vicon','Phone');
 	
 	figure(2);
 	for i=10:12
 		subplot(3,1,i-9)
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
 		plot(stateTime, state(i,:)); hold all
+		plot(mapVelEstTime, mapVelEst(i-9,:)); hold all
 		hold off
 		xlabel('Time [s]');
 		ylabel(stateLabels{i});
 		
 % 		axis([30 50 -1 1])
 	end
+	
+	figure(3);
+	plot(viconStateTime(mask), viconState(9,mask)); hold all
+	plot(stateTime, state(9,:)); hold all
+	plot(mapHeightEstTime, mapHeightEst);
+	hold off
+	xlabel('Time [s]');
+	ylabel(stateLabels{9});
 end
 
 %%
@@ -259,84 +276,3 @@ if exist('cameraPos','var') && ~isempty(cameraPos)
 		ylabel(stateLabels{i+6})
 	end
 end
-
-% %%
-% kfBlindTime = tranStateTime;
-% kfBlind = zeros(6,length(kfBlindTime));
-% kfBlind(:,1) = viconReceive(7:12,1);
-% % measVar = diag([0.02 0.02 0.02 0.01 0.01 0.01].^2);
-% % dynVar = diag([0.01 0.01 0.01 0.1 0.1 0.2].^2);
-% measVar = diag([0.0002 0.0002 0.0002 0.01 0.01 0.01]);
-% dynVar = diag([1e-4 1e-4 1e-4 0.01 0.01 0.02]);
-% mass = 1.1;
-% mask = 1+find(diff(attBiasTime)>0);
-% attBiasInterp = interp1(attBiasTime(mask),attBias(:,mask)',kfBlindTime,[],'extrap')';
-% mask = 1+find(diff(forceScalingTime)>0);
-% forceScalingInterp = interp1(forceScalingTime(mask), forceScaling(mask), kfBlindTime,[],'extrap');
-% motorCmdInterp = interp1(motorTime, motorCmd', kfBlindTime,[],'extrap')';
-% attHist = interp1(angleStateTime, angleState(1:3,:)', kfBlindTime,[],'extrap')';
-% S = 1e-4*eye(6);
-% lastMeasIndex = -1;
-% for i=1:length(kfBlindTime)-1
-% 	dt = kfBlindTime(i+1)-kfBlindTime(i);
-% 	att = attHist(:,i);
-% 	attBias1 = attBiasInterp(:,i);
-% 	forceGain = forceScalingInterp(i);
-% 	s1 = sin(att(3)); c1 = cos(att(3));
-% 	s2 = sin(att(2)-attBias1(2)); c2 = cos(att(2)-attBias1(2));
-% 	s3 = sin(att(1)-attBias1(1)); c3 = cos(att(1)-attBias1(1));
-% 	r = [s1*s3+c1*c3*s2;
-% 		 c3*s1*s2-c1*s3;
-% 		 c2*c3];
-% 	 
-% 	 thrust = forceGain*sum(motorCmdInterp(:,i));
-% 	 if norm(thrust) < 1e-3
-% 		 accel = zeros(3,1);
-% 	 else
-% 		 accel = thrust/mass*r;
-% 		 accel(3) = accel(3)-9.81;
-% 	 end
-% 	 
-% 	 % time update
-% 	 A = [eye(3) dt*eye(3);
-% 		  zeros(3) eye(3)];
-% 	 B = [zeros(3); dt*eye(3)];
-% 	 kfState = A*kfBlind(:,i)+B*accel;
-% 	 S = A*S*A'+dynVar;
-% 	 
-% 	 % see if there's a new position measurement
-% 	 [minTime, minIndex] = min(abs(viconReceiveTime-kfBlindTime(i)));
-% 	 if minTime < kfBlindTime(i) && minIndex > lastMeasIndex
-% 		 meas = viconReceive(7:9,minIndex);
-% 		 lastMeasIndex = minIndex;
-% 		 
-% 		 C = [eye(3) zeros(3)];
-% 		 cov = measVar(1:3,1:3);
-% 		 m1_T = (S*C')';
-% 		 m2_T = (C*S*C'+cov)';		 
-% 		 K = (m2_T\m1_T)';
-% 		 
-% 		 err = meas-C*kfState;
-% 		 kfState = kfState+K*err;
-% 		 S = (eye(6)-K*C)*S;
-% 	 end
-% 	 
-% 	 kfBlind(:,i+1) = kfState;
-% end
-% 
-% %%
-% figure(20508); clf; set(gcf,'Name','Blind KF');
-% for i=4:6
-% 	subplot(3,1,i-3);
-% % 	mask = viconStateTime <= stateTime(end);
-% 	mask = viconStateTime < 120;
-% 	plot(viconStateTime(mask),viconState(i+6,mask)); hold all
-% 	mask = stateTime < 120;
-% 	plot(stateTime(mask),state(i+6,mask)); hold all
-% 	mask = kfBlindTime<120;
-% 	plot(kfBlindTime(mask), kfBlind(i,mask)); hold all
-% 	hold off
-% 	xlabel('Time [s]');
-% 	ylabel(stateLabels{i+6});
-% end
-% % legend('Vicon','KF','KF Blind');
