@@ -2,19 +2,19 @@
 <Controller>
    <Translation>
       <P>
-         <x>2.000000</x>
-         <y>2.000000</y>
+         <x>1.000000</x>
+         <y>1.000000</y>
          <z>2.000000</z>
       </P>
       <D>
-         <x>3.000000</x>
-         <y>3.000000</y>
-         <z>3.000000</z>
+         <x>1.000000</x>
+         <y>1.000000</y>
+         <z>1.000000</z>
       </D>
       <I>
          <x>0.000000</x>
          <y>0.000000</y>
-         <z>2.000000</z>
+         <z>1.000000</z>
       </I>
       <ILimit>
          <x>2.000000</x>
@@ -41,17 +41,17 @@
          <x>0.000100</x>
          <y>0.000100</y>
          <z>0.000100</z>
-         <xVel>0.010000</xVel>
-         <yVel>0.010000</yVel>
-         <zVel>0.010000</zVel>
+         <xVel>0.100000</xVel>
+         <yVel>0.100000</yVel>
+         <zVel>0.100000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.000100</x>
          <y>0.000100</y>
          <z>0.000100</z>
-         <xVel>0.150000</xVel>
-         <yVel>0.150000</yVel>
-         <zVel>0.150000</zVel>
+         <xVel>0.600000</xVel>
+         <yVel>0.600000</yVel>
+         <zVel>0.800000</zVel>
       </DynVar>
       <AttBias>
          <roll>0.000000</roll>
@@ -63,7 +63,7 @@
          <pitch>0.005000</pitch>
          <yaw>0.000000</yaw>
       </AttBiasAdaptRate>
-      <ForceGainAdaptRate>0.006000</ForceGainAdaptRate>
+      <ForceGainAdaptRate>0.003000</ForceGainAdaptRate>
       <BarometerZeroHeight>76.000000</BarometerZeroHeight>
    </Translation>
    <Attitude>
@@ -98,7 +98,7 @@
    <QualityLevel>0.010000</QualityLevel>
    <SeparationDistance>10.000000</SeparationDistance>
    <FASTThreshold>20.000000</FASTThreshold>
-   <PointCntTarget>30.000000</PointCntTarget>
+   <PointCntTarget>50.000000</PointCntTarget>
    <FASTAdaptRate>0.050000</FASTAdaptRate>
    <MeasurementCov>50.000000</MeasurementCov>
    <ProbNoCorr>0.100000</ProbNoCorr>
