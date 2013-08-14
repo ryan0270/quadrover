@@ -160,7 +160,7 @@ if exist('state','var') && ~isempty(state)
 		subplot(3,1,i-9)
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
 		plot(stateTime, state(i,:)); hold all
-		plot(mapVelEstTime, mapVelEst(i-9,:)); hold all
+		plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
 		hold off
 		xlabel('Time [s]');
 		ylabel(stateLabels{i});
@@ -170,7 +170,7 @@ if exist('state','var') && ~isempty(state)
 	
 	figure(3);
 	plot(viconStateTime(mask), viconState(9,mask)); hold all
-	plot(stateTime, state(9,:)); hold all
+	plot(stateTime, state(9,:),'.'); hold all
 	plot(mapHeightEstTime, mapHeightEst);
 	hold off
 	xlabel('Time [s]');

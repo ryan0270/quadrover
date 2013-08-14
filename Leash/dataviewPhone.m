@@ -125,9 +125,9 @@ numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_F
 numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
 numFeatures = phoneData(numFeaturesIndices,3)';
 
-% kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
-% kfCovTime = phoneData(kfCovIndices,1)'/1000;
-% kfCov = phoneData(kfCovIndices,3:11)';
+kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
+kfCovTime = phoneData(kfCovIndices,1)'/1000;
+kfCov = phoneData(kfCovIndices,3:11)';
 
 cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CAMERA_POS);
 cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
