@@ -2,7 +2,7 @@
 #include <Adb.h>
 #include <Wire.h>
 
-int verbosity=1;
+int verbosity=0;
 
 short motorCommands[4];
 
@@ -93,9 +93,6 @@ void setup()
   connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
   
   delay(1000);
-  
-  
-  
 
   Wire.begin();
   motorAddr[0] = MOTOR_ADDR_N;
