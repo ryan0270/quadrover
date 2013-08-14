@@ -89,7 +89,13 @@ void setup()
   for(int i=0; i<4; i++)
   {
     motorVals[i] = 0;
-    sendCommand(motorAddr[i], 0);
+//    sendCommand(motorAddr[i], 0);
+    Wire.beginTransmission(motorAddr[i]);
+    byte upper = 0;
+    byte lower = 0;
+    Wire.write(upper);
+    Wire.write( lower & 0x07 );
+    byte result = Wire.endTransmission(true);
   }
 
   doRegularMotorStart();
@@ -124,11 +130,8 @@ void loop()
     for(int motorID=0; motorID<NUM_MOTORS; motorID++)
       sendCommand(motorAddr[motorID], 0);
   }
-  
-//  if(Serial.available() > 0)
-    digitalWrite(PIN_LED, HIGH);
 
-  if(Serial.available() >= 4 )
+  if(Serial.available() > 0 )
   {
     int start = millis();
     
@@ -140,11 +143,12 @@ void loop()
       for(int b=0; b<4; b++)
         commMsg.byteVal[b] = Serial.read();
         
-      if( commMsg.uint32Val == COMM_FLAG_MESSAGE_PREFIX )
+      if( commMsg.uint32Val == COMM_FLAG_MESSAGE_PREFIX)
+//      if( (commMsg.uint32Val & 0xCCBBAA00) == 0xCCBBAA00 )
       {
         nextMotorID = 0;
         lastUsbCommTime = millis();
-        if(!isConnected)
+//        if(!isConnected)
           digitalWrite(PIN_LED, HIGH);
         isConnected = true;
         currentCommState = COMM_STATE_RECEIVED_START_MESSAGE;
@@ -152,7 +156,7 @@ void loop()
       else if(currentCommState == COMM_STATE_RECEIVED_START_MESSAGE)
       {
         motorVals[nextMotorID] = (commMsg.uint32Val & 0x0000FFFF); // ints on the mega ADK are 16-bit
-        sendCommand(motorAddr[nextMotorID], motorVals[nextMotorID]);
+//        sendCommand(motorAddr[nextMotorID], motorVals[nextMotorID]);
         analogWrite(motorPins[nextMotorID], (int)( (float)motorVals[nextMotorID]/MAXCMD*255));
         nextMotorID = (nextMotorID+1) % 4;
       }
