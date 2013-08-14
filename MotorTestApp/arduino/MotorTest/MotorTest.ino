@@ -1,4 +1,3 @@
-#include <SPI.h>
 #include <Wire.h>
 
 #define PIN_LED 12
@@ -39,7 +38,7 @@ enum
   COMM_FLAG_MESSAGE_PREFIX = 0x00CCBBAA,
 };
 
-unsigned long lastCommTime;
+unsigned long lastUsbCommTime, lastEscCommTime;
 boolean isConnected = false;
 int timeoutMS = 500;
 int motorVals[NUM_MOTORS];
@@ -47,10 +46,7 @@ int motorPins[4];
 void setup()
 {
   delay(500);
-  Serial.begin(115200);
-  pinMode(PIN_LED,OUTPUT);
-  digitalWrite(PIN_LED,LOW);
-
+  
   // Ground pins
   pinMode(9,OUTPUT); 
   digitalWrite(9,LOW);
@@ -62,6 +58,8 @@ void setup()
   digitalWrite(3,LOW);
 
   // active pins
+  pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED, LOW);
   pinMode(PIN_MOTOR_0,OUTPUT); 
   digitalWrite(PIN_MOTOR_0,LOW);
   pinMode(PIN_MOTOR_1,OUTPUT); 
@@ -70,26 +68,24 @@ void setup()
   digitalWrite(PIN_MOTOR_2,LOW);
   pinMode(PIN_MOTOR_3,OUTPUT); 
   digitalWrite(PIN_MOTOR_3,LOW);
+  
+  motorAddr[0] = MOTOR_ADDR_N;
+  motorAddr[1] = MOTOR_ADDR_E;
+  motorAddr[2] = MOTOR_ADDR_S;
+  motorAddr[3] = MOTOR_ADDR_W;
 
   currentCommState = COMM_STATE_NONE;
-
   commMsg.intVal = 0;
-  while(Serial.available())
-    Serial.read();
-
-  lastCommTime = 0;
+  
+  lastUsbCommTime = 0;
+  lastEscCommTime = 0;
 
   motorPins[0] = PIN_MOTOR_0;
   motorPins[1] = PIN_MOTOR_1;
   motorPins[2] = PIN_MOTOR_2;
   motorPins[3] = PIN_MOTOR_3;
   
-  Wire.begin();
-  motorAddr[0] = MOTOR_ADDR_N;
-  motorAddr[1] = MOTOR_ADDR_E;
-  motorAddr[2] = MOTOR_ADDR_S;
-  motorAddr[3] = MOTOR_ADDR_W;
-  
+  Wire.begin();  
   for(int i=0; i<4; i++)
   {
     motorVals[i] = 0;
@@ -98,13 +94,15 @@ void setup()
 
   doRegularMotorStart();
 
-
+  Serial.begin(115200);
+  while(Serial.available())
+    Serial.read(); 
 }
 
 byte nextMotorID = 0;
 void loop()
 {
-  if(millis()-lastCommTime > 1000)
+  if(millis()-lastUsbCommTime > 1000)
   {
     if(isConnected)
     {
@@ -118,13 +116,19 @@ void loop()
     isConnected = false;
   }
   
-  // for safety to to maintain the comm link with
+  // for safety and to maintain the comm link with
   // ESCs, this will happen every loop
-  if(!isConnected)
+  if(!isConnected && millis()-lastEscCommTime > 50)
+  {
+    lastEscCommTime = millis();
     for(int motorID=0; motorID<NUM_MOTORS; motorID++)
       sendCommand(motorAddr[motorID], 0);
+  }
+  
+//  if(Serial.available() > 0)
+    digitalWrite(PIN_LED, HIGH);
 
-  while(Serial.available() > 0 )
+  if(Serial.available() >= 4 )
   {
     int start = millis();
     
@@ -139,7 +143,7 @@ void loop()
       if( commMsg.uint32Val == COMM_FLAG_MESSAGE_PREFIX )
       {
         nextMotorID = 0;
-        lastCommTime = millis();
+        lastUsbCommTime = millis();
         if(!isConnected)
           digitalWrite(PIN_LED, HIGH);
         isConnected = true;
