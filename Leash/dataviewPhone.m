@@ -121,6 +121,10 @@ fastThreshIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FAST_T
 fastThreshTime = phoneData(fastThreshIndices,1)'/1000;
 fastThresh = phoneData(fastThreshIndices,3)';
 
+mapNumMatchesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_NUM_MATCHES);
+mapNumMatchesTime = phoneData(mapNumMatchesIndices,1)'/1000;
+mapNumMatches = phoneData(mapNumMatchesIndices,3)';
+
 numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
 numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
 numFeatures = phoneData(numFeaturesIndices,3)';
@@ -398,12 +402,20 @@ if exist('numFeatures','var') && ~isempty(numFeatures)
 	figure(1301); clf;
 	plot(numFeaturesTime, numFeatures,'x');
 	xlabel('Time [s]');
+	ylabel('Num Features [cnt]');
+end
+
+%%
+if exist('mapNumMatches','var') && ~isempty(mapNumMatches)
+	figure(1302); clf;
+	plot(mapNumMatchesTime, mapNumMatches,'x');
+	xlabel('Time [s]');
 	ylabel('Num Features Matched [cnt]');
 end
 
 %%
 if exist('fastThresh','var') && ~isempty(fastThresh)
-	figure(1302); clf;
+	figure(1303); clf;
 	plot(fastThreshTime, fastThresh);
 	xlabel('Time [s]');
 	ylabel('FAST threshold');

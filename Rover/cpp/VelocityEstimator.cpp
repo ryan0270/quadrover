@@ -73,7 +73,7 @@ void VelocityEstimator::run()
 				measCov = mMeasCov;
 				probNoCorr = mProbNoCorr;
 				mMutex_params.unlock();
-				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, mMeasCov, probNoCorr);
+				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
 
 				shared_ptr<DataVector<double> > velData(new DataVector<double>());
 				velData->data = velEst.copy();
@@ -127,15 +127,18 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &o
 										   double visionMeasCov,
 										   double probNoCorr) const
 {
-Time start;
+//Log::alert("=======================================================");
 	Time oldTime = oldFeatureData->imageData->timestamp;
 	Time curTime = curFeatureData->imageData->timestamp;
 	double dt = Time::calcDiffNS(oldTime, curTime)/1.0e9;
 
+	float scale = 1.0; // for a 640x480 image
+	if(curFeatureData->imageData->image->cols == 320)
+		scale = 0.5;
 	cv::Point2f center;
-	center.x = curFeatureData->imageData->centerX_640x480;
-	center.y = curFeatureData->imageData->centerY_640x480;
-	float focalLength = curFeatureData->imageData->focalLength_640x480;
+	center.x = scale*curFeatureData->imageData->centerX_640x480;
+	center.y = scale*curFeatureData->imageData->centerY_640x480;
+	float focalLength = scale*curFeatureData->imageData->focalLength_640x480;
 
 	// Get relevant state data
 	Array2D<double> oldState = mObsvTranslational->estimateStateAtTime(oldTime);
@@ -187,10 +190,14 @@ Time start;
 	priorDistList = calcPriorDistributions(oldPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
 	Array2D<double> C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv, probNoCorr);
 
-//	float numMatches = 0;
-//	for(int i=0; i<C.dim1()-1; i++)
-//		for(int j=0; j<C.dim2()-1; j++)
-//			numMatches += C[i][j];
+	double numMatches = 0;
+	for(int i=0; i<C.dim1()-1; i++)
+		for(int j=0; j<C.dim2()-1; j++)
+			numMatches += C[i][j];
+	{
+		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_MAP_NUM_MATCHES+"\t"+numMatches;
+		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
+	}
 	
 	Array2D<double> vel(3,1), covVel(3,3);
 	double z;
@@ -225,6 +232,13 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 	double sz = sqrt(varz);
 	double f = focalLength;
 	double fInv = 1.0/f;
+
+//printArray("mv:\t", mv);
+//printArray("Sv:\n",Sv);
+//printArray("w:\t",omega);
+//Log::alert(String()+"mz:\t"+mz);
+//Log::alert(String()+"vz:\t"+varz);
+//Log::alert(String()+"dt:\t"+dt);
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
 	vector<Array2D<double> > mDeltaList(points.size()), SDeltaList(points.size());
@@ -288,6 +302,9 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 	if(mz2Inv < mz1Inv*mz1Inv)
 		Log::alert(String()+"crap, mz2Inv >= mz1Inv*mz1Inv");
 
+//Log::alert(String()+"mz1Inv: "+mz1Inv);
+//Log::alert(String()+"mz2Inv: "+mz2Inv);
+
 	// calc distribution moments
 	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(mDeltaList.size());
 	Array2D<double> md(2,1), Sd(2,2,0.0), Lw(2,3);
@@ -314,6 +331,12 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
 		priorDistList[i] = pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy());
+
+//if(i == 0)
+//{
+//	printArray("md:\t", md);
+//	printArray("chad dist:\n", Sd);
+//}
 	}
 
 	return priorDistList;
@@ -443,7 +466,11 @@ Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double
 		peakCoeff = max(peakCoeff,coeffList[i]);
 	}
 
-	double thresh = probNoCorr*peakCoeff;
+//	{
+//		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_MAP_PEAK_PSD_VALUE+"\t"+peakCoeff;
+//		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
+//	}
+//	double thresh = probNoCorr*peakCoeff;
 	for(int j=0; j<N2; j++)
 		C[N1][j] = probNoCorr;
 

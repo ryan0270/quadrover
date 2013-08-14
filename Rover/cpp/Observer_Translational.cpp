@@ -421,10 +421,10 @@ using namespace ICSL::Constants;
 		posData->timestamp.setTime(now);
 		posData->data = pos.copy();
 
-		shared_ptr<DataVector<double> > velData(new DataVector<double>() );
-		velData->type = DATA_TYPE_VICON_VEL;
-		velData->timestamp.setTime(now);
-		velData->data = vel.copy();
+//		shared_ptr<DataVector<double> > velData(new DataVector<double>() );
+//		velData->type = DATA_TYPE_VICON_VEL;
+//		velData->timestamp.setTime(now);
+//		velData->data = vel.copy();
 
 //		shared_ptr<Data<double> > heightData = shared_ptr<Data<double> >(new Data<double>());
 //		heightData->type = DATA_TYPE_VICON_HEIGHT;
@@ -436,7 +436,7 @@ using namespace ICSL::Constants;
 		mLastViconVel.inject(vel);
 
 		mNewEventsBuffer.push_back(posData);
-		mNewEventsBuffer.push_back(velData);
+//		mNewEventsBuffer.push_back(velData);
 //		mHeightBuffer.push_back(heightData);
 
 		mLastPosReceiveTime.setTime(now);
@@ -957,7 +957,7 @@ double mHeightMeasCov = 0.1*0.1;
 			mMutex_adaptation.unlock();
 			return;
 		}
-		double dt = min((double)1.0, mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6);
+		double dt = min((double)0.1, mLastForceGainUpdateTime.getElapsedTimeUS()/1.0e6);
 		mForceGain -= mForceGainAdaptRate*dt*err[2][0];
 		mLastForceGainUpdateTime.setTime();
 
