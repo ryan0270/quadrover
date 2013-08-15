@@ -4,13 +4,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-using ::int64;
-using ::uint64;
 
 #include "toadlet/egg.h"
-//using toadlet::int64;
-//using toadlet::uint64;
-
 
 #include <fstream>
 #include <iostream>
@@ -29,6 +24,7 @@ using ::uint64;
 
 #include "ICSL/xml_utils/xml_utils.h"
 #include "ICSL/TNT_Utils/TNT_Utils.h"
+#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 
 #include "ui_Leash.h"
 #include "../../Rover/cpp/Common.h"
@@ -228,6 +224,9 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		normal_distribution<float> mGaussDist;
 
 		void pingRover();
+
+		string mCntlSysFile;
+		void sendTransSystemController();
 };
 }
 }

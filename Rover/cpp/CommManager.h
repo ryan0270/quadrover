@@ -19,13 +19,13 @@ class CommManagerListener
 
 	virtual void onNewCommMotorOn(){};
 	virtual void onNewCommMotorOff(){};
-	virtual void onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float const yawPID[3]){};
+//	virtual void onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float const yawPID[3]){};
 	virtual void onNewCommMotorTrim(int const trim[4]){};
 	virtual void onNewCommObserverReset(){};
 	virtual void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight){};
 	virtual void onNewCommTimeSync(int time){};
 	virtual void onNewCommLogTransfer(){};
-	virtual void onNewCommControlSystemGains(Collection<float> const &gains){};
+//	virtual void onNewCommControlSystemGains(Collection<float> const &gains){};
 	virtual void onNewCommSendControlSystem(Collection<tbyte> const &buff){};
 	virtual void onNewCommLogMask(uint32 mask){};
 	virtual void onNewCommLogClear(){};
@@ -35,7 +35,7 @@ class CommManagerListener
 	virtual void onNewCommForceGain(float k){};
 	virtual void onNewCommTorqueGain(float k){};
 	virtual void onNewCommMass(float m){};
-	virtual void onNewCommIbvsGains(toadlet::egg::Collection<float> const &gains){};
+//	virtual void onNewCommIbvsGains(toadlet::egg::Collection<float> const &gains){};
 	virtual void onNewCommUseIbvs(bool useIbvs){};
 	virtual void onNewCommAttBias(float rollBias, float pitchBias, float yawBias){};
 	virtual void onNewCommAttBiasAdaptRate(toadlet::egg::Collection<float> const &rate){};

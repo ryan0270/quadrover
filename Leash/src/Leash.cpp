@@ -84,6 +84,8 @@ Leash::Leash(QWidget *parent) :
 	mRotPhoneToVicon = transpose(mRotViconToPhone);
 	
 	mLastTelemSendTime = 0;
+
+	mCntlSysFile = "";
 }
 
 Leash::~Leash()
@@ -170,8 +172,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-		mTelemVicon.connect("192.168.100.108");
-//		mTelemVicon.connect("localhost");
+//		mTelemVicon.connect("192.168.100.108");
+		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -749,6 +751,7 @@ bool Leash::sendMotorStart()
 	}
 
 	sendParams();
+	sendTransSystemController();
 
 	int code = COMM_MOTOR_ON;
 	return sendTCP((tbyte*)&code,sizeof(code));
@@ -988,6 +991,7 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 		mxml_node_t *d = mxmlFindElement(transCntl, transCntl, "D", NULL, NULL, MXML_DESCEND);
 		mxml_node_t *i = mxmlFindElement(transCntl, transCntl, "I", NULL, NULL, MXML_DESCEND);
 		mxml_node_t *iLimit = mxmlFindElement(transCntl, transCntl, "ILimit", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *cntlSysFileNode = mxmlFindElement(transCntl, transCntl, "ControlSysFile", NULL, NULL, MXML_DESCEND);
 
 		if(p != NULL)
 		{
@@ -1032,6 +1036,8 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainTransILimit[1];
 			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainTransILimit[2];
 		}
+
+		if(cntlSysFileNode != NULL) mCntlSysFile = cntlSysFileNode->child->value.text.string;
 	}
 	else
 		cout << "Translation controller section not found in config file" << endl;
@@ -1292,6 +1298,7 @@ void Leash::saveControllerConfig(mxml_node_t *cntlRoot)
 			mxmlNewReal(mxmlNewElement(iLimitNode,"x"), mCntlGainTransILimit[0]);
 			mxmlNewReal(mxmlNewElement(iLimitNode,"y"), mCntlGainTransILimit[1]);
 			mxmlNewReal(mxmlNewElement(iLimitNode,"z"), mCntlGainTransILimit[2]);
+		mxmlNewText(mxmlNewElement(transNode,"ControlSysFile"), 0, mCntlSysFile.c_str());
 	}
 	mxml_node_t *attNode = mxmlNewElement(cntlRoot,"Attitude");
 	{
@@ -1402,6 +1409,8 @@ void Leash::applyControllerConfig()
 		mCntlGainAttP[i] = ui->tblAttCntl->item(i,0)->text().toDouble();
 		mCntlGainAttD[i] = ui->tblAttCntl->item(i,1)->text().toDouble();
 	}
+
+	mCntlSysFile = ui->txtTransControllerFileLocation->text().toStdString();
 }
 
 void Leash::applyObserverConfig()
@@ -1533,6 +1542,7 @@ void Leash::onBtnConnect_clicked()
 			ui->btnConnect->setText("Disconnect");
 
 			sendParams();
+			sendTransSystemController();
 		}
 		catch (...)
 		{ 
@@ -1574,6 +1584,7 @@ void Leash::onBtnSendParams_clicked()
 	}
 
 	sendParams();
+	sendTransSystemController();
 }
 
 void Leash::onBtnResetObserver_clicked()
@@ -1684,6 +1695,7 @@ void Leash::onBtnSetDesiredPos_clicked()
 void Leash::onBtnStartMotors_clicked()
 {
 	sendParams();
+	sendTransSystemController();
 	sendMotorStart();
 }
 
@@ -1769,6 +1781,8 @@ void Leash::populateControlUI()
 		ui->tblAttCntl->item(i,0)->setText(QString::number(mCntlGainAttP[i]));
 		ui->tblAttCntl->item(i,1)->setText(QString::number(mCntlGainAttD[i]));
 	}
+
+	ui->txtTransControllerFileLocation->setText(mCntlSysFile.c_str());
 
 	resizeTableWidget(ui->tblTransCntl);
 	resizeTableWidget(ui->tblAttCntl);
@@ -2086,6 +2100,37 @@ void Leash::onToggleIbvs()
 	bool result = true;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&useIbvs, sizeof(useIbvs));
+}
+
+void Leash::sendTransSystemController()
+{
+	if(mSocketTCP == NULL)
+	{
+		QMessageBox box(QMessageBox::Warning, "Connection Error", "Can't send controller because I'm currently not connected to the phone.");
+		box.exec();
+		return;
+	}
+	int code = COMM_SEND_TRANS_CNTL_SYSTEM;
+
+	cout << "Sending translation system controller" << endl;
+	try
+	{
+		SystemModelLinear sys;
+		sys.loadFromFile(mCntlSysFile.c_str());
+		cout << "System loaded from " << mCntlSysFile << endl;
+		vector<tbyte> buff;
+		sys.serialize(buff);
+		cout << buff.size() << " bytes serialized" << endl;
+		uint32 size = (uint32)buff.size();
+		sendTCP((tbyte*)&code, sizeof(code));
+		sendTCP((tbyte*)&size, sizeof(size));
+		sendTCP(&(buff[0]), size);
+	}
+	catch(exception e)
+	{
+		QMessageBox box(QMessageBox::Warning, "Send Error", QString("Failed to send mu controller. ")+e.what());
+		box.exec();
+	}
 }
 
 } // namespace Quadrotor

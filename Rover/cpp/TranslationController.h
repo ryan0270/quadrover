@@ -9,6 +9,7 @@
 
 #include "constants.h"
 
+#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 #include "Time.h"
 #include "CommManager.h"
 #include "QuadLogger.h"
@@ -58,7 +59,9 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void onNewCommMass(float m){mMass = m;}
 	void onNewCommDesState(toadlet::egg::Collection<float> const &data);
 	void onNewCommSetDesiredPos();
-	void onNewCommMotorOn();
+	void onNewCommMotorOn(){reset();}
+	void onNewCommMotorOff(){reset();}
+	void onNewCommSendControlSystem(Collection<tbyte> const &buff);
 
 	// for Observer_TranslationalListener
 	void onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel);
@@ -68,7 +71,6 @@ class TranslationController : 	public Observer_TranslationalListener,
 	bool mNewMeasAvailable;
 	QuadLogger *mQuadLogger;
 	TNT::Array2D<double> mCurState, mDesState, mDesPosAccel;
-	TNT::Array2D<double> mAccelCmd;
 	TNT::Array2D<double> mGainP, mGainD, mGainI;
 	TNT::Array2D<double> mErrInt, mErrIntLimit;
 	TNT::Array2D<double> mRotViconToPhone;
@@ -85,6 +87,11 @@ class TranslationController : 	public Observer_TranslationalListener,
 	{ return min(maxVal, max(minVal, val)); }
 
 	TNT::Array2D<double> calcControlPID(TNT::Array2D<double> const &error, double dt);
+
+	// for the Hinf controller
+	ICSL::SystemModelLinear mCntlSys;
+	TNT::Array2D<double> mGainCntlSys;
+	TNT::Array2D<double> calcControlSystem(TNT::Array2D<double> const &error, double dt);
 
 	int mThreadPriority, mScheduler;
 };

@@ -48,8 +48,6 @@ void VelocityEstimator::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
-	Log::alert(String()+"Chad's start time is: " + mStartTime.getMS());
-
 	shared_ptr<ImageFeatureData> oldImageFeatureData, curImageFeatureData;
 	oldImageFeatureData = curImageFeatureData = NULL;
 	Time procTimer;
