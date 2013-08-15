@@ -14,6 +14,7 @@
 #include "CommManager.h"
 #include "QuadLogger.h"
 #include "Observer_Translational.h"
+#include "MotorInterface.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -28,7 +29,8 @@ class TranslationControllerListener
 };
 
 class TranslationController : 	public Observer_TranslationalListener,
-								public CommManagerListener
+								public CommManagerListener,
+								public MotorInterfaceListener
 {
 	public:
 	TranslationController();
@@ -65,6 +67,9 @@ class TranslationController : 	public Observer_TranslationalListener,
 
 	// for Observer_TranslationalListener
 	void onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel);
+
+	// for MotorInterfaceListener
+	void onMotorWarmupDone(){reset();Log::alert("Tran Controller Received motor warmup done");}
 
 	protected:
 	bool mRunning, mDone;

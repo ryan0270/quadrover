@@ -53,11 +53,12 @@ namespace Quadrotor {
 //				if(mImageQueue.size() > 1)
 //					Log::alert(String()+"Backlog: "+mImageQueue.size());
 
-				shared_ptr<ImageMatchData> data = mImageQueue.front();
+//				shared_ptr<ImageMatchData> data = mImageQueue.front();
+				shared_ptr<DataImage> data = mImageQueue.front();
 
-				id = data->imageData1->id;
+				id = data->id;
 				String filename = String()+"/sdcard/RoverService/video/image_"+id+".bmp";
-				cv::Mat image = *(data->imageData1->image);
+				cv::Mat image = *(data->image);
 				mImageQueue.pop();
   				mMutex_imageQueue.unlock();
 				cv::imwrite(filename.c_str(), image);
@@ -71,23 +72,35 @@ namespace Quadrotor {
 		mDone = true;
 	}
 
-	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const &data)
+//	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const &data)
+//	{
+////		if( Time::calcDiffMS(mLastImageTime, data->imageData1->timestamp) > 100
+////				&& mMotorOn
+////				)
+//		if(mMotorOn)
+//		{
+//			mMutex_imageQueue.lock();
+//			mLastImageTime.setTime(data->imageData1->timestamp);
+//			while(mImageQueue.size() > 100) 
+//			{// This is to cap the RAM usage. It WILL delay the calling thread.
+//				mMutex_imageQueue.unlock();
+//				System::msleep(1);
+//				mMutex_imageQueue.lock();
+//			}
+//			mImageQueue.push(data);
+//			mMutex_imageQueue.unlock();
+//		}
+//	}
+
+	void VideoMaker::onNewSensorUpdate(shared_ptr<IData> const &data)
 	{
-//		if( Time::calcDiffMS(mLastImageTime, data->imageData1->timestamp) > 100
-//				&& mMotorOn
-//				)
-		if(mMotorOn)
+		if(data->type == DATA_TYPE_IMAGE && mMotorOn)
 		{
-			mMutex_imageQueue.lock();
-			mLastImageTime.setTime(data->imageData1->timestamp);
-			while(mImageQueue.size() > 100) 
-			{// This is to cap the RAM usage. It WILL delay the calling thread.
-				mMutex_imageQueue.unlock();
-				System::msleep(1);
-				mMutex_imageQueue.lock();
-			}
-			mImageQueue.push(data);
-			mMutex_imageQueue.unlock();
+			shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);
+			if(mImageQueue.size() < 100)
+				mImageQueue.push(imgData);
+			else
+				Log::alert("Chad can't get it up");
 		}
 	}
 

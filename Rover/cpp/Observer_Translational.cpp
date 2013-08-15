@@ -820,14 +820,14 @@ double mHeightMeasCov = 0.1*0.1;
 		if(mUseViconPos)
 		{
 			posBuffer = &mViconPosBuffer;
-			velBuffer = &mViconVelBuffer;
+//			velBuffer = &mViconVelBuffer;
 		}
 		else
 		{
 			posBuffer = &mCameraPosBuffer;
 //			velBuffer = &mCameraVelBuffer;
 		}
-//		velBuffer = &mMapVelBuffer;
+		velBuffer = &mMapVelBuffer;
 
 		// These iters point to the last data point with iter->timestamp < dataTime 
 		posIter = IData::findIndexReverse(dataTime, *posBuffer);

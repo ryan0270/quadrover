@@ -64,7 +64,7 @@
          <pitch>0.005000</pitch>
          <yaw>0.000000</yaw>
       </AttBiasAdaptRate>
-      <ForceGainAdaptRate>0.001000</ForceGainAdaptRate>
+      <ForceGainAdaptRate>0.003000</ForceGainAdaptRate>
       <BarometerZeroHeight>76.000000</BarometerZeroHeight>
    </Translation>
    <Attitude>
