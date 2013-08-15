@@ -110,7 +110,8 @@ namespace Quadrotor{
 
 		// Now try load camera calibration params
 		cv::FileStorage fs;
-		String filename = "sdcard/RoverService/s4Calib_640x480.yml";
+//		String filename = "sdcard/RoverService/s4Calib_640x480.yml";
+		String filename = "sdcard/RoverService/s3Calib_640x480.yml";
 		fs.open(filename.c_str(), cv::FileStorage::READ);
 		if( fs.isOpened() )
 		{
