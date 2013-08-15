@@ -21,6 +21,7 @@
          <y>2.000000</y>
          <z>5.000000</z>
       </ILimit>
+      <ControlSysFile>../transControllers/tranCntlSys9.xml</ControlSysFile>
    </Translation>
    <Attitude>
       <P>

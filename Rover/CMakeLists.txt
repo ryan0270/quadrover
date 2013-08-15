@@ -73,6 +73,7 @@ set (SRC ${SRC}
 	./cpp/Observer_Angular.cpp
 	./cpp/VelocityEstimator.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
+	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 )
 
 # Headers
@@ -98,6 +99,9 @@ set (H ${H}
 	./cpp/Data.h
 	./cpp/VelocityEstimator.h
 	${CPUFEATURES_PATH}/cpu-features.h
+	./cpp/ICSL/SystemModel/ISystemModel.h
+	./cpp/ICSL/SystemModel/ISystemModelAffine.h
+	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
 )
 
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")

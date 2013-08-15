@@ -652,6 +652,27 @@ void CommManager::pollTCP()
 					for(int i=0; i<mListeners.size(); i++)
 						mListeners[i]->onNewCommSetDesiredPos();
 					break;
+				case COMM_SEND_TRANS_CNTL_SYSTEM:
+					{
+						uint32 size;
+						Collection<tbyte> buff;
+						bool received = receiveTCP((tbyte*)&size, sizeof(size));
+						if(received)
+						{
+							buff.resize(size);
+							bool receieved = receiveTCP(buff.begin(), size);
+							if(received)
+							{
+								for(int i=0; i<mListeners.size(); i++)
+									mListeners[i]->onNewCommSendControlSystem(buff);
+							}
+							else
+								resetSocket = true;
+						}
+						else
+							resetSocket = true;
+					}
+					break;
 				default:
 					Log::alert(String()+"Unknown code: " + code);
 			}

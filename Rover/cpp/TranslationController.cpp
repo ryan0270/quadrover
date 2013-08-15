@@ -15,8 +15,8 @@ using namespace TNT;
 		mGainI(3,1,0.0),
 		mErrInt(3,1,0.0),
 		mErrIntLimit(3,1,0.0),
+		mGainCntlSys(6,1,1.0),
 		mRotViconToPhone(3,3,0.0),
-		mAccelCmd(3,1,0.0),
 		mDesAccel(3,1,0.0)
 	{
 		mRunning = false;
@@ -85,7 +85,9 @@ using namespace TNT;
 		mMutex_state.unlock();
 
 		Array2D<double> accelCmd;
-		accelCmd = calcControlPID(error,dt);
+
+		accelCmd = calcControlSystem(error,dt);
+//		accelCmd = calcControlPID(error,dt);
 
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onTranslationControllerAccelCmdUpdated(accelCmd);
@@ -110,6 +112,7 @@ using namespace TNT;
 
 	Array2D<double> TranslationController::calcControlPID(Array2D<double> const &error,double dt)
 	{
+		Array2D<double> accelCmd(3,1);
 		mMutex_data.lock();
 		for(int i=0; i<3; i++)
 			mErrInt[i][0] = constrain(mErrInt[i][0]+dt*error[i][0],-mErrIntLimit[i][0],mErrIntLimit[i][0]);
@@ -119,13 +122,32 @@ using namespace TNT;
 		if(mDesState[2][0] > 0.1) // don't build up the integrator when we're sitting still
 			tempI.inject(mGainI);
 		for(int i=0; i<3; i++)
-			mAccelCmd[i][0] =	-mGainP[i][0]*error[i][0]
+			accelCmd[i][0] =	-mGainP[i][0]*error[i][0]
 								-mGainD[i][0]*error[i+3][0]
 								-tempI[i][0]*mErrInt[i][0]
 								+mDesAccel[i][0];
-		mAccelCmd[2][0] += GRAVITY;
-		Array2D<double> accelCmd= mAccelCmd.copy();
+		accelCmd[2][0] += GRAVITY;
 		mMutex_data.unlock();
+
+		return accelCmd;
+	}
+
+	Array2D<double> TranslationController::calcControlSystem(Array2D<double> const &error, double dt)
+	{
+		Array2D<double> accelCmd(3,1);
+		if(mCntlSys.isInitialized())
+		{
+			mMutex_data.lock();
+			Array2D<double> u = mGainCntlSys*error;
+			Array2D<double> x = mCntlSys.simulateEuler(u,dt);
+			accelCmd = matmult(mCntlSys.getC(),x) + matmult(mCntlSys.getD(),u);
+			accelCmd += mDesAccel;
+			mMutex_data.unlock();
+		}
+		else
+			accelCmd = Array2D<double>(3,1,0.0);
+
+		accelCmd[2][0] += GRAVITY;
 
 		return accelCmd;
 	}
@@ -136,6 +158,7 @@ using namespace TNT;
 		for(int i=0; i<mErrInt.dim1(); i++)
 			mErrInt[i][0] = 0;
 
+		mCntlSys.reset();
 		mMutex_data.unlock();
 	}
 
@@ -148,6 +171,9 @@ using namespace TNT;
 			mGainD[i][0] = gains[i+3];
 			mGainI[i][0] = gains[i+6];
 			mErrIntLimit[i][0] = gains[i+9];
+
+			mGainCntlSys[i][0] = gains[i];
+			mGainCntlSys[i+3][0] = gains[i+3];
 		}
 		mMutex_data.unlock();
 
@@ -191,11 +217,25 @@ using namespace TNT;
 			mDesState[i][0] = mCurState[i][0];
 		mMutex_state.unlock();
 		Log::alert("Desired position set.");
+
+		reset();
 	}
 
-	void TranslationController::onNewCommMotorOn()
+	void TranslationController::onNewCommSendControlSystem(Collection<tbyte> const &buff)
 	{
-		reset();
+		mMutex_data.lock();
+		mCntlSys.deserialize(buff);
+
+		int numIn = mCntlSys.getNumInputs();
+		int numState = mCntlSys.getNumStates();
+		int numOut = mCntlSys.getNumOutputs();
+
+		mCntlSys.setCurState(Array2D<double>(numState,1,0.0));
+		mMutex_data.unlock();
+
+		String str = String()+"TranslationController -- Received controller system: ";
+		str = str +numIn+" inputs x "+numOut+" outputs x "+numState+" states";
+		Log::alert(str);
 	}
 
 	void TranslationController::onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel)
