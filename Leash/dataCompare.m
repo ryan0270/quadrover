@@ -276,3 +276,60 @@ if exist('cameraPos','var') && ~isempty(cameraPos)
 		ylabel(stateLabels{i+6})
 	end
 end
+
+
+%%
+idx = find(state(12,:) > 0.5, 1, 'first');
+tStart = stateTime(idx);
+maskMap = find(mapVelEstTime > tStart+20);
+maskKf = find(stateTime > tStart+20);
+viconMapInterp = interp1(viconStateTime, viconState',mapVelEstTime(maskMap),[],'extrap')';
+viconKfInterp = interp1(viconStateTime, viconState', stateTime(maskKf),[],'extrap')';
+disp([rms(viconMapInterp(10,:)-mapVelEst(1,maskMap)) rms(viconMapInterp(11,:)-mapVelEst(2,maskMap)) rms(viconMapInterp(12,:)-mapVelEst(3,maskMap))]);
+disp([rms(viconKfInterp(10,:)-state(10,maskKf)) rms(viconKfInterp(11,:)-state(11,maskKf)) rms(viconKfInterp(12,:)-state(12,maskKf))]);
+disp([std(viconKfInterp(7,:)-state(7,maskKf)) std(viconKfInterp(8,:)-state(8,maskKf)) std(viconKfInterp(9,:)-state(9,maskKf))])
+
+% try calc phase lag
+dt = 0.01;
+time = mapVelEstTime(1):dt:mapVelEstTime(end);
+viconInterp = interp1(viconStateTime, viconState',time,[],'extrap')';
+
+opts = optimoptions('fminunc');
+opts = optimoptions(opts, 'Algorithm','quasi-newton');
+opts = optimoptions(opts, 'FinDiffType', 'central');
+opts = optimoptions(opts, 'Display', 'none');
+optimFuncMap = @(lag) rms(viconInterp(11,:) - interp1(mapVelEstTime, mapVelEst(2,:), time+lag,[],'extrap'));
+optimFuncKf = @(lag) rms(viconInterp(11,:) - interp1(stateTime, stateTime(11,:), time+lag,[],'extrap'));
+lagMap = fminunc(@(x) optimFuncMap(abs(x)), 0.2, opts);
+lagKf = fminunc(@(x) optimFuncMap(abs(x)), 0.2, opts);
+
+fprintf('lag: %1.3f vs. %1.3f\n',lagMap, lagKf);
+
+% [b, a] = butter(5,1/nyq);
+% for i=1:12
+% 	viconInterp(i,:) = filtfilt(b,a,viconInterp(i,:));
+% 	kfInterp(i,:) = filtfilt(b,a,kfInterp(i,:));
+% end
+% for i=1:3
+% 	mapInterp(i,:) = filtfilt(b,a,mapInterp(i,:));
+% end
+% % figure(4);
+% % plot(time,viconInterp(10,:),time,kfInterp(10,:));
+% for st=1:3
+% 	sig1 = viconInterp(st+9,:);
+% 	sig2 = mapInterp(st,:);
+% 	sig3 = kfInterp(st+9,:);
+% 	sig1 = sig1-mean(sig1);
+% 	sig2 = sig2-mean(sig2);
+% 	sig3 = sig3-mean(sig3);
+% 	fft1 = fft(sig1);
+% 	fft2 = fft(sig2);
+% 	fft3 = fft(sig3);
+% 	[mag1, id1] = max(abs(fft1));
+% 	[mag2, id2] = max(abs(fft2));
+% 	[mag3, id3] = max(abs(fft3));
+% 	p1 = angle(fft1(id1));
+% 	p2 = angle(fft2(id2));
+% 	p3 = angle(fft3(id3));
+% 	fprintf('st: %i -- mag ratios: %1.2f vs. %1.2f ----- phase lags: %1.2f vs. %1.2f\n', st+9, mag2/mag1, mag3/mag1, p2-p1, p3-p1);
+% end

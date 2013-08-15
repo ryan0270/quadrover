@@ -15,6 +15,12 @@ enum{
 	MAX_MOTOR_CMD = 1<<11
 };
 
+class MotorInterfaceListener
+{
+	public:
+	virtual void onMotorWarmupDone()=0;
+};
+
 class MotorInterface
 {
 	public:
@@ -36,6 +42,8 @@ class MotorInterface
 	void start(){ thread th(&MotorInterface::run, this); th.detach(); }
 	void run();
 
+	void addListener(MotorInterfaceListener *listener){mListeners.push_back(listener);}
+
 	protected:
 	toadlet::egg::Socket::ptr mServerSocket, mSocket;
 	bool mRunning, mShutdown;
@@ -52,6 +60,8 @@ class MotorInterface
 
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
+
+	Collection<MotorInterfaceListener*> mListeners;
 };
 
 } // namespace Quadrotor

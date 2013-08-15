@@ -19,6 +19,7 @@
 #include "SensorManager.h"
 #include "VisionProcessor.h"
 #include "Data.h"
+#include "MotorInterface.h"
 #define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 #include "VelocityEstimator.h"
 #undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
@@ -39,7 +40,8 @@ class Observer_Translational : public Observer_AngularListener,
 								public AttitudeThrustControllerListener,
 								public SensorManagerListener,
 //								public VisionProcessorListener,
-								public VelocityEstimatorListener
+								public VelocityEstimatorListener,
+								public MotorInterfaceListener
 {
 	public:
 	Observer_Translational();
@@ -77,7 +79,7 @@ class Observer_Translational : public Observer_AngularListener,
 	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommBarometerZeroHeight(float h);
-	void onNewCommMotorOn(){mMotorOn = true;}
+	void onNewCommMotorOn(){/* mMotorOn = true; // this is now done in onMotorWarmupDone() */}
 	void onNewCommMotorOff(){mMotorOn = false;}
 	void onNewCommUseIbvs(bool useIbvs);
 
@@ -94,6 +96,9 @@ class Observer_Translational : public Observer_AngularListener,
 
 	// for VelocityEstimatorListener
 	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData);
+
+	// for MotorInterfaceListener
+	void onMotorWarmupDone(){mMotorOn = true; Log::alert("Trans observer received warmup done");}
 
 	protected:
 	bool mRunning, mDone;

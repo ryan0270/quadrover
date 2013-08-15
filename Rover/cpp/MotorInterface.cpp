@@ -80,6 +80,9 @@ namespace Quadrotor{
 				{
 					mDoMotorWarmup = false;
 					mMotorsEnabled = true;
+
+					for(int i=0; i<mListeners.size(); i++)
+						mListeners[i]->onMotorWarmupDone();
 					Log::alert("Warmup done");
 				}
 			}

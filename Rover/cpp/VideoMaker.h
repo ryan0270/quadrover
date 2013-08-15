@@ -4,6 +4,7 @@
 #include <queue>
 #include <thread>
 
+#include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include "toadlet/egg.h"
@@ -14,7 +15,7 @@
 namespace ICSL{
 namespace Quadrotor{
 
-class VideoMaker : 	public VisionProcessorListener,
+class VideoMaker : 	public SensorManagerListener,
 					public CommManagerListener
 {
 	public:
@@ -28,9 +29,12 @@ class VideoMaker : 	public VisionProcessorListener,
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 		// for VisionProcessorListener
-		void onImageProcessed(shared_ptr<ImageMatchData> const &data);
-		void onImageTargetFound(shared_ptr<ImageTargetFindData> const &data){};
-		void onImageLost(){};
+//		void onImageProcessed(shared_ptr<ImageMatchData> const &data);
+//		void onImageTargetFound(shared_ptr<ImageTargetFindData> const &data){};
+//		void onImageLost(){};
+
+		// for SensorManagerListener
+		void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 		// from CommManagerListener
 		void onNewCommMotorOn(){mMotorOn = true;}
@@ -39,8 +43,8 @@ class VideoMaker : 	public VisionProcessorListener,
 	protected:
 		bool mRunning, mDone;
 		bool mMotorOn;
-//		std::queue<shared_ptr<cv::Mat> > mImageQueue;
-		std::queue<shared_ptr<ImageMatchData> > mImageQueue;
+		std::queue<shared_ptr<DataImage> > mImageQueue;
+//		std::queue<shared_ptr<ImageMatchData> > mImageQueue;
 
 		Time mLastImageTime;
 		toadlet::egg::Mutex mMutex_imageQueue;

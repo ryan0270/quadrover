@@ -133,6 +133,7 @@ void Rover::initialize()
 	mVideoMaker.initialize();
 	mVideoMaker.start();
 	mCommManager.addListener(&mVideoMaker);
+	mSensorManager.addListener(&mVideoMaker);
 //	mVisionProcessor.addListener(&mVideoMaker);
 
 	mSensorManager.setStartTime(mStartTime);
@@ -146,6 +147,9 @@ void Rover::initialize()
 	mSensorManager.addListener(this);
 
 	mQuadLogger.setStartTime(mStartTime);
+
+	mMotorInterface.addListener(&mObsvTranslational);
+	mMotorInterface.addListener(&mTranslationController);
 
 	mNumCpuCores = android_getCpuCount();
 
