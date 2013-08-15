@@ -20,7 +20,7 @@ Leash::Leash(QWidget *parent) :
 	mState(12,1,0.0),
 	mDesState(12,1,0.0),
 	mViconState(12,1,0.0),
-	mGaussDist(0,0.01)
+	mStdGaussDist(0,1)
 {
 	ui->setupUi(this);
 	mTmrGui = new QTimer(this);
@@ -172,8 +172,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -2035,8 +2035,8 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 			for(int i=0; i<mViconState.dim1(); i++)
 			{
 				float noise = 0;
-//				if(i >= 6 && i<9)
-//					noise = mGaussDist(mRandGenerator);
+				if(i >= 6 && i<9)
+					noise = 0.005*mStdGaussDist(mRandGenerator);
 				pState.dataFloat[i] = mViconState[i][0]+noise;
 			}
 			Collection<tbyte> buff;

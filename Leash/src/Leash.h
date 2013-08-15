@@ -221,7 +221,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		uint64 mLastTelemSendTime;
 
 		default_random_engine mRandGenerator;
-		normal_distribution<float> mGaussDist;
+		normal_distribution<float> mStdGaussDist;
 
 		void pingRover();
 
