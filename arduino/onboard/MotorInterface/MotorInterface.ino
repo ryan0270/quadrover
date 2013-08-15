@@ -88,16 +88,16 @@ void setup()
   
   delay(500);
   
-<<<<<<< local
-=======
-  // Initialise the ADB subsystem.  
-  ADB::init();
-  // Open an ADB stream to the phone's shell. Auto-reconnect
-  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
-  
-  delay(1000);
-
->>>>>>> other
+//<<<<<<< local
+//=======
+//  // Initialise the ADB subsystem.  
+//  ADB::init();
+//  // Open an ADB stream to the phone's shell. Auto-reconnect
+//  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
+//  
+//  delay(1000);
+//
+//>>>>>>> other
   Wire.begin();
   motorAddr[0] = MOTOR_ADDR_N;
   motorAddr[1] = MOTOR_ADDR_E;
