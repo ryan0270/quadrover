@@ -403,6 +403,7 @@ if exist('numFeatures','var') && ~isempty(numFeatures)
 	plot(numFeaturesTime, numFeatures,'x');
 	xlabel('Time [s]');
 	ylabel('Num Features [cnt]');
+	title(sprintf('Avg num features: %1.1f', mean(numFeatures(numFeatures>0))));
 end
 
 %%
@@ -411,6 +412,7 @@ if exist('mapNumMatches','var') && ~isempty(mapNumMatches)
 	plot(mapNumMatchesTime, mapNumMatches,'x');
 	xlabel('Time [s]');
 	ylabel('Num Features Matched [cnt]');
+	title(sprintf('Avg num matches: %1.1f',mean(mapNumMatches)));
 end
 
 %%

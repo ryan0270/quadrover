@@ -35,7 +35,7 @@ tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
 
 if ~isempty(tranState)
-	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime)';
+	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime,[],'extrap')';
 	stateTime = angleStateTime;
 	state = [angleState; tranStateInterp];
 	state_dt = mean(diff(stateTime));
@@ -155,7 +155,7 @@ if exist('state','var') && ~isempty(state)
 	end
 % 	% legend('Vicon','Phone');
 	
-	figure(2);
+	figure(2); clf
 	for i=10:12
 		subplot(3,1,i-9)
 		plot(viconStateTime(mask), viconState(i,mask)); hold all

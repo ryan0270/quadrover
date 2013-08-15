@@ -2036,7 +2036,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 			{
 				float noise = 0;
 				if(i >= 6 && i<9)
-					noise = 0.005*mStdGaussDist(mRandGenerator);
+					noise = 0.010*mStdGaussDist(mRandGenerator);
 				pState.dataFloat[i] = mViconState[i][0]+noise;
 			}
 			Collection<tbyte> buff;

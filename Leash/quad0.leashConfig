@@ -4,12 +4,12 @@
       <P>
          <x>1.000000</x>
          <y>1.000000</y>
-         <z>2.000000</z>
+         <z>1.000000</z>
       </P>
       <D>
-         <x>2.000000</x>
-         <y>2.000000</y>
-         <z>2.000000</z>
+         <x>1.000000</x>
+         <y>1.000000</y>
+         <z>1.000000</z>
       </D>
       <I>
          <x>0.000000</x>
@@ -39,20 +39,20 @@
 <Observer>
    <Translation>
       <MeasVar>
-         <x>0.000100</x>
-         <y>0.000100</y>
-         <z>0.000100</z>
-         <xVel>0.200000</xVel>
-         <yVel>0.200000</yVel>
-         <zVel>0.400000</zVel>
+         <x>0.000200</x>
+         <y>0.000200</y>
+         <z>0.000200</z>
+         <xVel>0.500000</xVel>
+         <yVel>0.500000</yVel>
+         <zVel>0.700000</zVel>
       </MeasVar>
       <DynVar>
-         <x>0.000100</x>
-         <y>0.000100</y>
-         <z>0.000100</z>
-         <xVel>1.000000</xVel>
-         <yVel>1.000000</yVel>
-         <zVel>1.200000</zVel>
+         <x>0.000200</x>
+         <y>0.000200</y>
+         <z>0.000200</z>
+         <xVel>0.800000</xVel>
+         <yVel>0.800000</yVel>
+         <zVel>0.800000</zVel>
       </DynVar>
       <AttBias>
          <roll>0.000000</roll>
@@ -64,7 +64,7 @@
          <pitch>0.005000</pitch>
          <yaw>0.000000</yaw>
       </AttBiasAdaptRate>
-      <ForceGainAdaptRate>0.003000</ForceGainAdaptRate>
+      <ForceGainAdaptRate>0.001000</ForceGainAdaptRate>
       <BarometerZeroHeight>76.000000</BarometerZeroHeight>
    </Translation>
    <Attitude>
@@ -84,7 +84,7 @@
    </Attitude>
 </Observer>
 <Hardware>
-   <MotorForceGain>0.001800</MotorForceGain>
+   <MotorForceGain>0.002000</MotorForceGain>
    <MotorTorqueGain>0.000500</MotorTorqueGain>
    <MotorArmLength>0.200000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
@@ -99,10 +99,10 @@
    <QualityLevel>0.010000</QualityLevel>
    <SeparationDistance>10.000000</SeparationDistance>
    <FASTThreshold>20.000000</FASTThreshold>
-   <PointCntTarget>50.000000</PointCntTarget>
+   <PointCntTarget>30.000000</PointCntTarget>
    <FASTAdaptRate>0.050000</FASTAdaptRate>
    <MeasurementCov>15.000000</MeasurementCov>
-   <ProbNoCorr>0.007500</ProbNoCorr>
+   <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
 <LogMask>537</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
