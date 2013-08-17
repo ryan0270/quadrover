@@ -639,7 +639,7 @@ void Rover::copyImageData(cv::Mat *m)
 	if(!mRunning) // use this as an indicator that we are shutting down
 		return;
 
-	if(mTargetData != NULL)
+	if(mObsvTranslational.isTargetFound() && mTargetData != NULL)
 	{
 		mTargetData->lock();
 		m->create(mTargetData->imageAnnotatedData->imageAnnotated->size(), mTargetData->imageAnnotatedData->imageAnnotated->type());
@@ -650,12 +650,9 @@ void Rover::copyImageData(cv::Mat *m)
 	{
 		mFeatureData->lock();
 		m->create(mFeatureData->imageAnnotated->imageAnnotated->size(), mFeatureData->imageAnnotated->imageAnnotated->type());
-Log::alert(String()+"channels: " + mFeatureData->imageAnnotated->imageAnnotated->channels());
 		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
 		mFeatureData->unlock();
 	}
-
-	mTargetData = NULL; // TODO: This is a bad hack for now
 }
 
 Array2D<double> Rover::getGyroValue()

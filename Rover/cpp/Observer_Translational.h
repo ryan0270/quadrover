@@ -67,6 +67,8 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> estimateStateAtTime(Time const &t);
 	TNT::Array2D<double> estimateErrCovAtTime(Time const &t);
 
+	bool isTargetFound(){return mHaveFirstCameraPos;}
+
 	// from Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
 
