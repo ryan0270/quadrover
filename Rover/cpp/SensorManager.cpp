@@ -551,9 +551,9 @@ namespace Quadrotor{
 //		data->att.inject(attCam);
 //		data->angularVel.inject(matmult(mRotPhoneToCam, angVel));
 
+		data->image = imageBGR;
 		shared_ptr<cv::Mat> gray(new cv::Mat());
 		cv::cvtColor(*imageBGR, *gray, CV_BGR2GRAY);
-		data->image = imageBGR;
 		data->imageGray = gray;
 		data->imageFormat = IMG_FORMAT_BGR;
 		data->cap = NULL;

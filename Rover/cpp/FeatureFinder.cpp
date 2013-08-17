@@ -93,8 +93,12 @@ void FeatureFinder::run()
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
-			curImage = *(imageData->image);
-			curImageGray = *(imageData->imageGray);
+			imageData->lock();
+			curImage.create(imageData->image->size(), imageData->image->type());
+			curImageGray.create(imageData->imageGray->size(), imageData->imageGray->type());
+			imageData->image->copyTo(curImage);
+			imageData->imageGray->copyTo(curImageGray);
+			imageData->unlock();
 			if(curImageGray.cols == 640)
 				cv::pyrDown(curImageGray, pyr1ImageGray);
 			else

@@ -101,13 +101,13 @@ cpuUsage = phoneData(cpuUsageIndices,3:end)';
 % phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
 % phoneTemp = phoneData(phoneTempIndices,3:6)';
 
-mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
-mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
-mapVelEst = phoneData(mapVelEstIndices,3:5)';
-
-mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
-mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
-mapHeightEst = phoneData(mapHeightEstIndices,3)';
+% mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
+% mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
+% mapVelEst = phoneData(mapVelEstIndices,3:5)';
+% 
+% mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
+% mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
+% mapHeightEst = phoneData(mapHeightEstIndices,3)';
 
 velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 velEstTime = phoneData(velEstIndices,1)'/1000;
@@ -125,25 +125,37 @@ mapNumMatchesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP
 mapNumMatchesTime = phoneData(mapNumMatchesIndices,1)'/1000;
 mapNumMatches = phoneData(mapNumMatchesIndices,3)';
 
-numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
-numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
-numFeatures = phoneData(numFeaturesIndices,3)';
+% numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
+% numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
+% numFeatures = phoneData(numFeaturesIndices,3)';
 
-kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
-kfCovTime = phoneData(kfCovIndices,1)'/1000;
-kfCov = phoneData(kfCovIndices,3:11)';
-
-cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CAMERA_POS);
-cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
-cameraPos = phoneData(cameraPosIndices,3:5)';
+% kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
+% kfCovTime = phoneData(kfCovIndices,1)'/1000;
+% kfCov = phoneData(kfCovIndices,3:11)';
 
 % obsvTransProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_PROC_TIME);
 % obsvTransProcTimeTime = phoneData(obsvTransProcTimeIndices,1)'/1000;
 % obsvTransProcTime = phoneData(obsvTransProcTimeIndices,3:6)';
 
-attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
-attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
-attInnovation = phoneData(attInnovationIndices,3:5)';
+% attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+% attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+% attInnovation = phoneData(attInnovationIndices,3:5)';
+
+targetFindProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_PROC_TIME);
+targetFindProcTimeTime = phoneData(targetFindProcTimeIndices,1)'/1000;
+targetFindProcTime = phoneData(targetFindProcTimeIndices,3)';
+
+targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_CENTERS);
+targetLocTime = phoneData(targetLocIndices,1)'/1000;
+targetLoc = phoneData(targetLocIndices,3:6)';
+
+targetAreasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_AREAS);
+targetAreasTime = phoneData(targetAreasIndices,1)'/1000;
+targetAreas = phoneData(targetAreasIndices,3:6)';
+
+cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_ESTIMATED_POS);
+cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
+cameraPos = phoneData(cameraPosIndices,3:5)';
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
@@ -449,6 +461,44 @@ if exist('obsvTransProcTime','var') && ~isempty(obsvTransProcTime)
 	xlabel('Time [s]');
 	ylabel('Proc time [ms]');
 	legend('1','2','3','4')
+end
+
+%%
+if exist('targetFindProcTime','var') && ~isempty(targetFindProcTime)
+	figure(6000); clf; set(gcf,'Name','Target Find Proc Time');
+	plot(targetFindProcTimeTime, targetFindProcTime*1000);
+	xlabel('Time [s]');
+	ylabel('Target Find Time [ms]');
+end
+
+%%
+if exist('targetLoc','var') && ~isempty(targetLoc)
+	figure(6001); clf; set(gcf,'Name','Target Location');
+	for i=1:4
+		plot(targetLocTime, targetLoc(i,:)); hold all
+	end
+	hold off
+	xlabel('Time [s]');
+	ylabel('Target Location [px]');
+end
+
+%%
+if exist('targetAreas','var') && ~isempty(targetAreas)
+	figure(6002); clf; set(gcf,'Name','Target Rect Areas');
+	for i=1:4
+		plot(targetAreasTime, targetAreas(i,:)); hold all
+	end
+	hold off
+	xlabel('Time [s]');
+	ylabel('Target areas [px^2]');
+	
+	figure(6003); clf; set(gcf,'Name','Target Rect Area Ratios');
+	subplot(3,1,1);	plot(targetAreasTime, targetAreas(1,:)./targetAreas(2,:));
+	subplot(3,1,2);	plot(targetAreasTime, targetAreas(1,:)./targetAreas(3,:));
+	subplot(3,1,3);	plot(targetAreasTime, targetAreas(2,:)./targetAreas(3,:));
+	xlabel('Time [s]');
+	ylabel('Target Area Ratios');
+
 end
 
 %%

@@ -75,8 +75,12 @@ void TargetFinder::run()
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
-			curImage = *(imageData->image);
-			curImageGray = *(imageData->imageGray);
+			imageData->lock();
+			curImage.create(imageData->image->size(), imageData->image->type());
+			curImageGray.create(imageData->imageGray->size(), imageData->imageGray->type());
+			imageData->image->copyTo(curImage);
+			imageData->imageGray->copyTo(curImageGray);
+			imageData->unlock();
 			if(curImageGray.cols == 640)
 				cv::pyrDown(curImageGray, pyr1ImageGray);
 			else
@@ -102,24 +106,12 @@ void TargetFinder::run()
 			if(curImage.cols == 640)
 				Log::alert("TargetFinder doesn't handle 640x480 images at this time");
 
-			if(target != NULL)
-			{
-				targetRatios[0] = target->squareData[0]->area/target->squareData[1]->area;
-				targetRatios[1] = target->squareData[0]->area/target->squareData[2]->area;
-				targetRatios[2] = target->squareData[1]->area/target->squareData[2]->area;
-
-				String str = "ratios:\t";
-				for(int i=0; i<3; i++)
-					str = str+targetRatios[i]+"\t";
-				Log::alert(str);
-			}
+			double procTime = procStart.getElapsedTimeNS()/1.0e9;
 
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 			curImage.copyTo(*imageAnnotated);
 			if(target != NULL)
 				drawTarget(*imageAnnotated, target);
-			else
-				Log::alert("No target");
 			
 			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
 			imageAnnotatedData->imageAnnotated = imageAnnotated;
@@ -128,6 +120,7 @@ void TargetFinder::run()
 			mImageAnnotatedLast = imageAnnotatedData;
 
 			shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
+			data->type = DATA_TYPE_CAMERA_POS;
 			data->target = target;
 			data->imageData = imageData;
 			data->imageAnnotatedData = imageAnnotatedData;
@@ -135,26 +128,30 @@ void TargetFinder::run()
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onTargetFound(data);
 
-//			mImageProcTimeUS = procStart.getElapsedTimeUS();
-//			if(mQuadLogger != NULL)
-//			{
-//				logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_FEATURE_FIND_TIME + "\t" + (mImageProcTimeUS/1.0e6);
-//				mMutex_logger.lock();
-//				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
-//				mMutex_logger.unlock();
-//
-//				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
-//				logString = logString+points.size();
-//				mMutex_logger.lock();
-//				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
-//				mMutex_logger.unlock();
-//
-//				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_FAST_THRESHOLD+"\t";
-//				logString = logString+fastThresh;
-//				mMutex_logger.lock();
-//				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
-//				mMutex_logger.unlock();
-//			}
+			if(target != NULL)
+			{
+
+				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_CENTERS+"\t";
+				for(int i=0; i<target->squareData.size(); i++)
+					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
+				mQuadLogger->addLine(logString, LOG_FLAG_CAM_RESULTS);
+
+				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_AREAS+"\t";
+				for(int i=0; i<target->squareData.size(); i++)
+					logString = logString+target->squareData[i]->area+"\t";
+				mQuadLogger->addLine(logString, LOG_FLAG_CAM_RESULTS);
+
+				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_PROC_TIME+"\t"+procTime;
+				mQuadLogger->addLine(logString, LOG_FLAG_CAM_RESULTS);
+				
+//				targetRatios[0] = target->squareData[0]->area/target->squareData[1]->area;
+//				targetRatios[1] = target->squareData[0]->area/target->squareData[2]->area;
+//				targetRatios[2] = target->squareData[1]->area/target->squareData[2]->area;
+//				String str = "ratios:\t";
+//				for(int i=0; i<3; i++)
+//					str = str+targetRatios[i]+"\t";
+//				Log::alert(str);
+			}
 		}
 
 		System::msleep(1);
@@ -169,9 +166,9 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 	vector<vector<cv::Point> > contours;
 
 	cv::Mat gray0, gray;
-	if(image.channels() == 3)
-		cvtColor(image, gray0, CV_BGR2GRAY);
-	else
+//	if(image.channels() == 3)
+//		cvtColor(image, gray0, CV_BGR2GRAY);
+//	else
 		image.copyTo(gray0);
 //	medianBlur(image, gray0, 5);
 
@@ -256,7 +253,7 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 	vector<shared_ptr<RectGroup> > candidateSets;
 	vector<double> candidateSetScores;
 //	float idealRatios[] = {1.411, 2.664, 38.968, 1.888, 27.621, 14.627};
-	float idealRatios[] = {1.888, 27.621, 14.627};
+	float idealRatios[] = {3.4, 30, 9};
 	for(int i=0; i<groups.size(); i++)
 	{
 		vector<double> ratios(groups.size(),0.0);
@@ -295,7 +292,9 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 				}
 			}
 
-			if(ratios[minIndex] != 0 && find(usedRatios.begin(), usedRatios.end(), minIndex) == usedRatios.end())
+//			if(ratios[minIndex] != 0 && find(usedRatios.begin(), usedRatios.end(), minIndex) == usedRatios.end())
+			if(minErr < 0.3*idealRatios[j] &&
+				find(usedRatios.begin(), usedRatios.end(), minIndex) == usedRatios.end())
 			{
 				usedRatios.push_back(minIndex);
 				groupSet.push_back(groups[minIndex]);

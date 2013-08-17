@@ -120,6 +120,7 @@ void Rover::initialize()
 	mSensorManager.addListener(&mTargetFinder);
 	mCommManager.addListener(&mTargetFinder);
 	mTargetFinder.addListener(this);
+	mTargetFinder.addListener(&mObsvTranslational);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(mStartTime);
@@ -640,16 +641,19 @@ void Rover::copyImageData(cv::Mat *m)
 
 	if(mTargetData != NULL)
 	{
-if(mTargetData->imageAnnotatedData == NULL)
-	Log::alert("crap 1");
-else if(mTargetData->imageAnnotatedData->imageAnnotated == NULL)
-	Log::alert("crap 2");
-else
-	Log::alert("ok");
+		mTargetData->lock();
+		m->create(mTargetData->imageAnnotatedData->imageAnnotated->size(), mTargetData->imageAnnotatedData->imageAnnotated->type());
 		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m);
+		mTargetData->unlock();
 	}
 	else if(mFeatureData != NULL)
+	{
+		mFeatureData->lock();
+		m->create(mFeatureData->imageAnnotated->imageAnnotated->size(), mFeatureData->imageAnnotated->imageAnnotated->type());
+Log::alert(String()+"channels: " + mFeatureData->imageAnnotated->imageAnnotated->channels());
 		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
+		mFeatureData->unlock();
+	}
 
 	mTargetData = NULL; // TODO: This is a bad hack for now
 }

@@ -17,12 +17,13 @@
 #include "Observer_Angular.h"
 #include "AttitudeThrustControllerListener.h"
 #include "SensorManager.h"
-//#include "VisionProcessor.h"
 #include "Data.h"
 #include "MotorInterface.h"
 #define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 #include "VelocityEstimator.h"
 #undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
+
+#include "TargetFinder.h"
 
 namespace ICSL{
 namespace Quadrotor{
@@ -39,9 +40,9 @@ class Observer_Translational : public Observer_AngularListener,
 								public CommManagerListener,
 								public AttitudeThrustControllerListener,
 								public SensorManagerListener,
-//								public VisionProcessorListener,
 								public VelocityEstimatorListener,
-								public MotorInterfaceListener
+								public MotorInterfaceListener,
+								public TargetFinderListener
 {
 	public:
 	Observer_Translational();
@@ -100,6 +101,9 @@ class Observer_Translational : public Observer_AngularListener,
 	// for MotorInterfaceListener
 	void onMotorWarmupDone(){mMotorOn = true; Log::alert("Trans observer received warmup done");}
 
+	// for TargetFinderListener
+	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
+
 	protected:
 	bool mRunning, mDone;
 	bool mDoMeasUpdate;
@@ -152,7 +156,7 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> mBarometerHeightState;
 
 	bool mNewImageResultsReady;
-	toadlet::egg::Mutex mMutex_imageData;
+	toadlet::egg::Mutex mMutex_imageData, mMutex_logger;
 	shared_ptr<ImageMatchData> mImageMatchData; 
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
