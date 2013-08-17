@@ -112,7 +112,7 @@ void TargetFinder::run()
 			curImage.copyTo(*imageAnnotated);
 			if(target != NULL)
 				drawTarget(*imageAnnotated, target);
-			
+
 			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
 			imageAnnotatedData->imageAnnotated = imageAnnotated;
 			imageAnnotatedData->imageDataSource = imageData;
@@ -130,7 +130,6 @@ void TargetFinder::run()
 
 			if(target != NULL)
 			{
-
 				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_CENTERS+"\t";
 				for(int i=0; i<target->squareData.size(); i++)
 					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
@@ -143,14 +142,6 @@ void TargetFinder::run()
 
 				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_PROC_TIME+"\t"+procTime;
 				mQuadLogger->addLine(logString, LOG_FLAG_CAM_RESULTS);
-				
-//				targetRatios[0] = target->squareData[0]->area/target->squareData[1]->area;
-//				targetRatios[1] = target->squareData[0]->area/target->squareData[2]->area;
-//				targetRatios[2] = target->squareData[1]->area/target->squareData[2]->area;
-//				String str = "ratios:\t";
-//				for(int i=0; i<3; i++)
-//					str = str+targetRatios[i]+"\t";
-//				Log::alert(str);
 			}
 		}
 
@@ -166,9 +157,9 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 	vector<vector<cv::Point> > contours;
 
 	cv::Mat gray0, gray;
-//	if(image.channels() == 3)
-//		cvtColor(image, gray0, CV_BGR2GRAY);
-//	else
+	if(image.channels() == 3)
+		cvtColor(image, gray0, CV_BGR2GRAY);
+	else
 		image.copyTo(gray0);
 //	medianBlur(image, gray0, 5);
 

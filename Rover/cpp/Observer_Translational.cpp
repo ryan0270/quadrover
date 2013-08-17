@@ -75,7 +75,8 @@ using namespace ICSL::Constants;
 		mUseViconPos = true;
 		mHaveFirstCameraPos = false;
 
-		mUseIbvs = false;
+//		mUseIbvs = false;
+		mUseIbvs = true;
 
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mStateBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mErrCovKFBuffer));
@@ -719,6 +720,9 @@ using namespace ICSL::Constants;
 
 	void Observer_Translational::onTargetFound(shared_ptr<ImageTargetFindData> const &data)
 	{
+		if(data->target == NULL)
+			return;
+
 		// assuming 320x240 images
 		double f = data->imageData->focalLength_640x480/2.0;;
 
