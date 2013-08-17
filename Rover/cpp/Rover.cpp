@@ -297,7 +297,6 @@ void Rover::transmitDataUDP()
 	Packet pTime;
 	mMutex_cntl.lock();
 	int arduinoStatus;
-	mMutex_cntl.lock();
 	if(mMotorInterface.isConnected())
 		arduinoStatus = 1;
 	else
@@ -358,7 +357,6 @@ void Rover::transmitDataUDP()
 
 	pUseIbvs.type = COMM_USE_IBVS;
 	pUseIbvs.dataBool.push_back(mUseIbvs);
-	mMutex_cntl.unlock();
 
 	Array2D<double> lastGyro, lastAccel, lastCompass;
 	mMutex_observer.lock();
@@ -426,12 +424,12 @@ void Rover::transmitDataUDP()
 //	}
 	if(mFeatureData != NULL)
 	{
-		mFeatureData->lock();
+//		mFeatureData->lock();
 		if(mFeatureData->featurePoints.size() > 0)
 			pNumFeatures.dataInt32.push_back(mFeatureData->featurePoints.size());
 		else
 			pNumFeatures.dataInt32.push_back(0);
-		mFeatureData->unlock();
+//		mFeatureData->unlock();
 	}
 	else
 		pNumFeatures.dataInt32.push_back(0);
@@ -496,17 +494,17 @@ void Rover::transmitImage()
 //	mFeatureFinder.getLastImageAnnotated(&img);
 	if(mObsvTranslational.isTargetFound() && mTargetData != NULL)
 	{
-		mTargetData->lock();
+//		mTargetData->lock();
 		try{ mTargetData->imageAnnotatedData->imageAnnotated->copyTo(img); }
-		catch(...) {Log::alert("copyTo error in Rover 1");}
-		mTargetData->unlock();
+		catch(...) {Log::alert("copyTo error in Rover 1"); /*mTargetData->unlock();*/}
+//		mTargetData->unlock();
 	}
 	else if(mFeatureData != NULL)
 	{
-		mFeatureData->lock();
+//		mFeatureData->lock();
 		try { mFeatureData->imageAnnotated->imageAnnotated->copyTo(img); }
-		catch(...) {Log::alert("copyTo error in Rover 2");}
-		mFeatureData->unlock();
+		catch(...) {Log::alert("copyTo error in Rover 2"); /*mTargetData->unlock();*/}
+//		mFeatureData->unlock();
 	}
 	mMutex_vision.unlock();
 
@@ -575,6 +573,7 @@ void Rover::onNewCommTimeSync(int time)
 	mMutex_cntl.lock();
 	mStartTime.setTimeMS(chad);
 //	mMutex_vision.lock(); mVisionProcessor.setStartTime(mStartTime); mMutex_vision.unlock();
+	mMutex_cntl.unlock();
 	mMutex_observer.lock(); 
 	mObsvAngular.setStartTime(mStartTime); 
 	mObsvTranslational.setStartTime(mStartTime);
@@ -592,7 +591,6 @@ void Rover::onNewCommTimeSync(int time)
 	mVelocityEstimator.setStartTime(mStartTime);
 
 	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_TIME_SYNC + "\t" + delta;
-	mMutex_cntl.unlock();
 	mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);
 }
 
@@ -654,19 +652,17 @@ void Rover::copyImageData(cv::Mat *m)
 
 	if(/*mObsvTranslational.isTargetFound() &&*/ mTargetData != NULL)
 	{
-		mTargetData->lock();
-		m->create(mTargetData->imageAnnotatedData->imageAnnotated->size(), mTargetData->imageAnnotatedData->imageAnnotated->type());
+//		mTargetData->lock();
 		try{ mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m); }
-		catch(...) {Log::alert("copyTo error in Rover 3");}
-		mTargetData->unlock();
+		catch(...) {Log::alert("copyTo error in Rover 3"); /*mTargetData->unlock();*/}
+//		mTargetData->unlock();
 	}
 	else if(mFeatureData != NULL)
 	{
-		mFeatureData->lock();
-		m->create(mFeatureData->imageAnnotated->imageAnnotated->size(), mFeatureData->imageAnnotated->imageAnnotated->type());
+//		mFeatureData->lock();
 		try{ mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m); }
-		catch(...) {Log::alert("copyTo error in Rover 4");}
-		mFeatureData->unlock();
+		catch(...) {Log::alert("copyTo error in Rover 4"); /*mFeatureData->unlock();*/}
+//		mFeatureData->unlock();
 	}
 }
 

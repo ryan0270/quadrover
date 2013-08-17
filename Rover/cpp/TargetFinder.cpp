@@ -75,14 +75,14 @@ void TargetFinder::run()
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
-			imageData->lock();
+//			imageData->lock();
 			try
 			{
 				imageData->image->copyTo(curImage);
 				imageData->imageGray->copyTo(curImageGray);
 			}
 			catch(...) {Log::alert("copyTo error in TargetFinder 1");}
-			imageData->unlock();
+//			imageData->unlock();
 			if(curImageGray.cols == 640)
 				cv::pyrDown(curImageGray, pyr1ImageGray);
 			else
@@ -102,7 +102,7 @@ void TargetFinder::run()
 				mHaveUpdatedSettings = false;
 			}
 
-			target = findTarget(pyr1ImageGray);
+			target = findTarget(pyr1ImageGray, *imageData->cameraMatrix, *imageData->distCoeffs);
 //			target = findTarget(curImage);
 			// TODO: Compensate for current attitdue
 			if(curImage.cols == 640)
@@ -153,7 +153,8 @@ void TargetFinder::run()
 	mFinished = true;
 }
 
-shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
+//shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
+shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, cv::Mat const &cameraMatrix, cv::Mat const &distCoeffs)
 {
 	vector<vector<cv::Point> > squares;
 	vector<vector<cv::Point> > contours;
@@ -211,10 +212,20 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 	}
 
 	// Make square object
+	double f = cameraMatrix.at<double>(0,0);
+	double cx = cameraMatrix.at<double>(0,2);
+	double cy = cameraMatrix.at<double>(1,2);
+	cv::Point2f center(cx, cy);
 	vector<shared_ptr<Rect> > squareData(squares.size());
 	for(int i=0; i<squares.size(); i++)
 	{
-		shared_ptr<Rect> data(new Rect(squares[i]));
+		vector<cv::Point2f> squares2(squares[i].size());
+		for(int j=0; j<squares[i].size(); j++)
+			squares2[j] = squares[i][j];
+		cv::undistortPoints(squares2, squares2, cameraMatrix, distCoeffs);
+		for(int j=0; j<squares2.size(); j++)
+			squares2[j] = squares2[j]*f+center;
+		shared_ptr<Rect> data(new Rect(squares2));
 		squareData[i] = data;
 	}
 

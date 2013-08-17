@@ -76,7 +76,7 @@ void FeatureFinder::run()
 
 	vector<cv::Point2f> points;
 	shared_ptr<DataImage> imageData;
-	cv::Mat curImage, curImageGray, pyr1ImageGray, imageAnnotated;
+	cv::Mat curImage, curImageGray, imageAnnotated;
 	String logString;
 	Time procStart;
 	float qualityLevel, fastThresh;
@@ -93,18 +93,13 @@ void FeatureFinder::run()
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
-			imageData->lock();
+//			imageData->lock();
 			try{
 				imageData->image->copyTo(curImage);
 				imageData->imageGray->copyTo(curImageGray);
 			}
 			catch(...) {Log::alert("copyTo error in FeatureFinder 1");}
-			imageData->unlock();
-			if(curImageGray.cols == 640)
-				cv::pyrDown(curImageGray, pyr1ImageGray);
-			else
-				pyr1ImageGray = curImageGray;
-//			cvtColor(pyr1Image, pyr1ImageGray, CV_BGR2GRAY);
+//			imageData->unlock();
 
 			if(mHaveUpdatedSettings)
 			{
@@ -119,10 +114,17 @@ void FeatureFinder::run()
 				mHaveUpdatedSettings = false;
 			}
 
-			points = findFeaturePoints(pyr1ImageGray, qualityLevel, sepDist, fastThresh);
-			if(curImageGray.cols == 640)
+			points = findFeaturePoints(curImageGray, qualityLevel, sepDist, fastThresh);
+			if(points.size() > 0)
+			{
+				double f = imageData->focalLength;
+				double cx = imageData->centerX;
+				double cy = imageData->centerY;
+				cv::Point2f center(cx, cy);
+				cv::undistortPoints(points, points, *imageData->cameraMatrix, *imageData->distCoeffs);
 				for(int i=0; i<points.size(); i++)
-					points[i] *= 2;
+					points[i] = points[i]*f+center;
+			}
 
 			// A little adaptation to achieve the target number of points
 			if(points.size() == 0)

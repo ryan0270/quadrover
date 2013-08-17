@@ -3,6 +3,7 @@
 #include <memory>
 #include <sched.h>
 #include <thread>
+#include <mutex>
 #include <cmath>
 #include <list>
 
@@ -89,9 +90,9 @@ class TargetFinder : public CommManagerListener,
 
 		QuadLogger *mQuadLogger;
 
-		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
-		toadlet::egg::Mutex mMutex_logger;
-		toadlet::egg::Mutex mMutex_params;
+		std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
+		std::mutex mMutex_logger;
+		std::mutex mMutex_params;
 
 		Collection<TargetFinderListener*> mListeners;
 
@@ -102,9 +103,9 @@ class TargetFinder : public CommManagerListener,
 
 		int mThreadPriority, mScheduler;
 
-		shared_ptr<RectGroup> findTarget(cv::Mat &image);
+//		shared_ptr<RectGroup> findTarget(cv::Mat &image);
+		shared_ptr<RectGroup> findTarget(cv::Mat &image, cv::Mat const &cameraMatrix, cv::Mat const &distCoeffs);
 		static void drawTarget(cv::Mat &img, shared_ptr<RectGroup> const &target);
-
 
 		// helper function:
 		// finds a cosine of angle between vectors

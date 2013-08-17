@@ -141,7 +141,7 @@ using namespace ICSL::Constants;
 			loopTime.setTime();
 
 			mMutex_meas.lock();
-			if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 500)
+			if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 1000)
 			{
 				mHaveFirstCameraPos = false;
 				String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_LOST+"\t";
@@ -149,16 +149,16 @@ using namespace ICSL::Constants;
 			}
 			mMutex_meas.unlock();
 
-//			if(mUseIbvs && mHaveFirstCameraPos)
-//			{
-//				mUseViconPos = false;
-//				mUseCameraPos = true;
-//			}
-//			else
-//			{
+			if(mUseIbvs && mHaveFirstCameraPos)
+			{
+				mUseViconPos = false;
+				mUseCameraPos = true;
+			}
+			else
+			{
 				mUseViconPos = true;
 				mUseCameraPos = false;
-//			}
+			}
 
 			// process new events
 			events.clear();
@@ -580,9 +580,9 @@ using namespace ICSL::Constants;
 					mMutex_phoneTempData.unlock();
 					return;
 				}
-				mPhoneTempData->lock();
+//				mPhoneTempData->lock();
 				float curTemp = mPhoneTempData->secTemp;
-				mPhoneTempData->unlock();
+//				mPhoneTempData->unlock();
 				mMutex_phoneTempData.unlock();
 				double k = (999.5-1000.0)/(45.0-37.0); // taken from experimental data
 				double pressComp = pressure-k*(curTemp-37.0);
@@ -716,10 +716,10 @@ using namespace ICSL::Constants;
 
 	void Observer_Translational::onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData)
 	{
-		mMutex_meas.lock();
-		mNewEventsBuffer.push_back(velData);
-		mNewEventsBuffer.push_back(heightData);
-		mMutex_meas.unlock();
+//		mMutex_meas.lock();
+//		mNewEventsBuffer.push_back(velData);
+//		mNewEventsBuffer.push_back(heightData);
+//		mMutex_meas.unlock();
 	}
 
 	void Observer_Translational::onTargetFound(shared_ptr<ImageTargetFindData> const &data)
@@ -739,20 +739,21 @@ using namespace ICSL::Constants;
 		mLastCameraPosTime.setTime();
 
 		// assuming 320x240 images
-		double f = data->imageData->focalLength_640x480/2.0;;
-		double cx = data->imageData->centerX_640x480/2.0;
-		double cy = data->imageData->centerY_640x480/2.0;
+		double f = data->imageData->focalLength;
+		double cx = data->imageData->centerX;
+		double cy = data->imageData->centerY;
 
 		// rotation compensation
 		Array2D<double> att = data->imageData->att.copy();
-		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
-		Array2D<double> R_T = transpose(R);
+//		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
+		Array2D<double> R = createIdentity(3.0);
+//		Array2D<double> R_T = transpose(R);
 
 		Array2D<double> p(3,1);
 		p[0][0] = -(data->target->meanCenter.x - cx);
 		p[1][0] = -(data->target->meanCenter.y - cy);
 		p[2][0] = -f;
-		p = matmult(R_T, matmult(mRotCamToPhone, p));
+		p = matmult(R, matmult(mRotCamToPhone, p));
 
 		// Now estimate the pos
 		double avgLength = 0;
@@ -780,7 +781,7 @@ using namespace ICSL::Constants;
 		posData->data = pos.copy();
 
 		mMutex_meas.lock();
-		mNewEventsBuffer.push_back(data);
+		mNewEventsBuffer.push_back(posData);
 		mMutex_meas.unlock();
 
 		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ESTIMATED_POS+"\t";
@@ -839,7 +840,7 @@ using namespace ICSL::Constants;
 				mCameraPosBuffer.push_back(static_pointer_cast<DataVector<double> >(data));
 				if(mUseCameraPos)
 				{
-Log::alert("chad is using it");
+					shared_ptr<DataVector<double> > chad = static_pointer_cast<DataVector<double> >(data);
 					Array2D<double> err = submat(mStateKF,0,2,0,0) - static_pointer_cast<DataVector<double> >(data)->data;
 					doForceGainAdaptation(err);
 					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double> >(data)->data, mPosMeasCov, mStateKF, mErrCovKF);

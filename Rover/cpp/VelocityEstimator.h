@@ -24,6 +24,7 @@ class VelocityEstimatorListener
 #include <memory>
 #include <sched.h>
 #include <thread>
+#include <mutex>
 
 #include "toadlet/egg.h"
 
@@ -86,7 +87,7 @@ class VelocityEstimator : public FeatureFinderListener,
 	bool mNewImageDataAvailable;
 	shared_ptr<ImageFeatureData> mLastImageFeatureData;
 
-	toadlet::egg::Mutex mMutex_imageData, mMutex_data, mMutex_params;
+	std::mutex mMutex_imageData, mMutex_data, mMutex_params;
 
 	Observer_Translational *mObsvTranslational;
 

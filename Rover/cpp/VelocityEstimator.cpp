@@ -65,37 +65,40 @@ void VelocityEstimator::run()
 			curImageFeatureData = mLastImageFeatureData;
 			mNewImageDataAvailable = false;
 			
+//			if(oldImageFeatureData != NULL && curImageFeatureData != NULL)
+//			{ oldImageFeatureData->lock(); curImageFeatureData->lock();}
 			if(oldImageFeatureData != NULL && oldImageFeatureData->featurePoints.size() > 5 && curImageFeatureData->featurePoints.size() > 5)
 			{
+//				curImageFeatureData->unlock(); oldImageFeatureData->unlock();
 				mMutex_params.lock();
 				measCov = mMeasCov;
 				probNoCorr = mProbNoCorr;
 				mMutex_params.unlock();
-				curImageFeatureData->lock();
 				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
-				curImageFeatureData->unlock();
 
 				shared_ptr<DataVector<double> > velData(new DataVector<double>());
 				velData->data = velEst.copy();
 				velData->type = DATA_TYPE_MAP_VEL;
-				curImageFeatureData->lock();
+//				curImageFeatureData->lock();
 				velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
-				curImageFeatureData->unlock();
+//				curImageFeatureData->unlock();
 
 				shared_ptr<Data<double> > heightData(new Data<double>());
 				heightData->data = heightEst;
 				heightData->type = DATA_TYPE_MAP_HEIGHT;
-				curImageFeatureData->lock();
+//				curImageFeatureData->lock();
 				heightData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
-				curImageFeatureData->unlock();
+//				curImageFeatureData->unlock();
 
 				for(int i=0; i<mListeners.size(); i++)
+				{
 					mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
+				}
 
 				procTime = procTimer.getElapsedTimeNS()/1.0e9;
-				curImageFeatureData->lock();
+//				curImageFeatureData->lock();
 				delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
-				curImageFeatureData->unlock();
+//				curImageFeatureData->unlock();
 				mMutex_data.lock();
 				mLastDelayTimeUS = delayTime*1.0e6;
 				mMutex_data.unlock();
@@ -117,6 +120,8 @@ void VelocityEstimator::run()
 					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
 				}
 			}
+//			else if(oldImageFeatureData != NULL && curImageFeatureData != NULL)
+//			{curImageFeatureData->unlock(); oldImageFeatureData->unlock();}
 		}
 
 		System::msleep(1);
@@ -134,17 +139,21 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &o
 										   double probNoCorr) const
 {
 //Log::alert("=======================================================");
+//	oldFeatureData->lock();
+//	curFeatureData->lock();
 	Time oldTime = oldFeatureData->imageData->timestamp;
 	Time curTime = curFeatureData->imageData->timestamp;
 	double dt = Time::calcDiffNS(oldTime, curTime)/1.0e9;
 
-	float scale = 1.0; // for a 640x480 image
-	if(curFeatureData->imageData->image->cols == 320)
-		scale = 0.5;
+//	float scale = 1.0; // for a 640x480 image
+//	if(curFeatureData->imageData->image->cols == 320)
+//		scale = 0.5;
 	cv::Point2f center;
-	center.x = scale*curFeatureData->imageData->centerX_640x480;
-	center.y = scale*curFeatureData->imageData->centerY_640x480;
-	float focalLength = scale*curFeatureData->imageData->focalLength_640x480;
+	center.x = curFeatureData->imageData->centerX;
+	center.y = curFeatureData->imageData->centerY;
+	float focalLength = curFeatureData->imageData->focalLength;
+//	oldFeatureData->unlock();
+//	curFeatureData->unlock();
 
 	// Get relevant state data
 	Array2D<double> oldState = mObsvTranslational->estimateStateAtTime(oldTime);
@@ -168,13 +177,17 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &o
 	curErrCov = matmult( mRotPhoneToCam2, matmult(curErrCov, mRotCamToPhone2));
 
 	// get prior distributions
+//	oldFeatureData->lock();
 	vector<cv::Point2f> oldPoints(oldFeatureData->featurePoints.size());
 	for(int i=0; i<oldPoints.size(); i++)
 		oldPoints[i] = oldFeatureData->featurePoints[i]-center;
+//	oldFeatureData->unlock();
 
+//	curFeatureData->lock();
 	vector<cv::Point2f> curPoints(curFeatureData->featurePoints.size());
 	for(int i=0; i<curPoints.size(); i++)
 		curPoints[i] = curFeatureData->featurePoints[i]-center;
+//	curFeatureData->unlock();
 
 //while(curPoints.size() > 10)
 //	curPoints.pop_back();

@@ -3,6 +3,7 @@
 #include <sched.h>
 #include <queue>
 #include <thread>
+#include <mutex>
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -49,7 +50,7 @@ class VideoMaker : 	public SensorManagerListener,
 //		std::queue<shared_ptr<ImageMatchData> > mImageQueue;
 
 		Time mLastImageTime;
-		toadlet::egg::Mutex mMutex_imageQueue;
+		std::mutex mMutex_imageQueue;
 		int mThreadPriority, mScheduler;
 };
 } // namespace Quadrotor
