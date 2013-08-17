@@ -13,9 +13,12 @@
 #include "Time.h"
 #include "TNT_Utils.h"
 #include "BlobDetector.h"
+#include "constants.h"
 
 namespace ICSL {
 namespace Quadrotor {
+using namespace ICSL::Constants;
+
 enum ImageFormat
 {
 	IMG_FORMAT_BGR=1,
@@ -139,7 +142,8 @@ class DataVector : public IData
 class DataImage : public IData
 {
 	public:
-	DataImage() : att(3,1,0.0), angularVel(3,1,0.)  {
+	DataImage() //: att(3,1,0.0), angularVel(3,1,0.) 
+	{
 		type = DATA_TYPE_IMAGE; 
 		imageFormat = IMG_FORMAT_BGR; 
 		image = shared_ptr<cv::Mat>(new cv::Mat());
@@ -151,8 +155,9 @@ class DataImage : public IData
 	
 	unsigned int id;
 	shared_ptr<cv::Mat> image;
-	TNT::Array2D<double> att;
-	TNT::Array2D<double> angularVel;
+	shared_ptr<cv::Mat> imageGray;
+//	TNT::Array2D<double> att;
+//	TNT::Array2D<double> angularVel;
 	ImageFormat imageFormat;
 	float focalLength_640x480;
 	float centerX_640x480, centerY_640x480;
@@ -208,11 +213,86 @@ class ImageFeatureData : public IData
 	toadlet::egg::Mutex mMutex;
 };
 
+class Rect
+{
+	public:
+	Rect(){center.x = 0; center.y = 0; area = 0;}
+	Rect(vector<cv::Point> startContour)
+	{
+		contourInt = startContour;
+
+		for(int i=0; i<startContour.size(); i++)
+			contour.push_back(startContour[i]);
+
+		mom = moments(startContour);
+		center.x = mom.m10/mom.m00;
+		center.y = mom.m01/mom.m00;
+		area = mom.m00;
+
+		int maxIndex;
+		double maxLength = -1;
+		for(int i=0; i<contour.size(); i++)
+		{
+			lineLengths.push_back( norm(contour[(i+1)%4]-contour[i]) );
+			if(lineLengths[i] > maxLength)
+			{
+				maxIndex = i;
+				maxLength = lineLengths[i];
+			}
+		}
+
+		cv::Point2f p1, p2;
+		p1 = contour[maxIndex];
+		p2 = contour[(maxIndex+1)%4];
+		angle = atan2(p2.y-p1.y, p2.x-p1.x);
+		while(angle < -PI/2.0)
+			angle += PI;
+		while(angle > PI/2.0)
+			angle -= PI;
+	}
+
+	vector<cv::Point> contourInt;
+	vector<cv::Point2f> contour;
+	cv::Point2f center;
+	double area;
+	cv::Moments mom;
+	vector<double> lineLengths;
+	double angle; // of the longest line, from -PI/2 to PI/2
+
+	static double accumAreaFunc(double const &val, shared_ptr<Rect> const &data){return val+data->area;}
+	static cv::Point2f accumCenterFunc(cv::Point2f const &val, shared_ptr<Rect> const &data){return val+data->center;}
+};
+
+class RectGroup
+{
+	public:
+	RectGroup() : zeroPoint(0,0) {};
+	RectGroup(shared_ptr<Rect> &data){add(data);}
+
+	cv::Point2f meanCenter;
+	double meanArea;
+	vector<shared_ptr<Rect> > squareData;
+
+	void add(shared_ptr<Rect> &data)
+	{
+		squareData.push_back(data);
+
+		meanArea = accumulate(squareData.begin(), squareData.end(), 0.0, Rect::accumAreaFunc) / (float)squareData.size();
+		meanCenter = accumulate(squareData.begin(), squareData.end(), zeroPoint, Rect::accumCenterFunc);
+		meanCenter.x /= (float)squareData.size();
+		meanCenter.y /= (float)squareData.size();
+	}
+
+	private:
+	const cv::Point2f zeroPoint; // this should be static but then I'd have to make a .cpp file just for it
+};
+
 class ImageTargetFindData : public IData
 {
 	public:
-	vector<BlobDetector::Blob> circleBlobs;
+	shared_ptr<RectGroup> target;
 	shared_ptr<DataImage> imageData;
+	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
 
 	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock();}
 	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock();}

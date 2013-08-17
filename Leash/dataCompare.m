@@ -136,7 +136,10 @@ end
 if exist('state','var') && ~isempty(state)
 	stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
 				  'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
-  	figure(1);
+  	figure(1); clf;
+	set(gcf,'Units','Inches');
+	curPos = get(gcf,'Position'); figSize = [6 4];
+	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 	mask = viconStateTime <= stateTime(end);
 	for i=1:12
 		subplot(4,3,i)
@@ -155,7 +158,10 @@ if exist('state','var') && ~isempty(state)
 	end
 % 	% legend('Vicon','Phone');
 	
-	figure(2); clf
+	figure(2); clf;
+	set(gcf,'Units','Inches');
+	curPos = get(gcf,'Position'); figSize = [8 6];
+	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 	for i=10:12
 		subplot(3,1,i-9)
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
@@ -163,10 +169,9 @@ if exist('state','var') && ~isempty(state)
 		plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
 		hold off
 		xlabel('Time [s]');
-		ylabel(stateLabels{i});
-		
-% 		axis([30 50 -1 1])
+		ylabel(stateLabels{i});		
 	end
+	legend('Vicon','KF','MAP Vel')
 	
 	figure(3);
 	plot(viconStateTime(mask), viconState(9,mask)); hold all
@@ -277,7 +282,6 @@ if exist('cameraPos','var') && ~isempty(cameraPos)
 	end
 end
 
-
 %%
 idx = find(state(12,:) > 0.5, 1, 'first');
 tStart = stateTime(idx);
@@ -290,19 +294,26 @@ disp([rms(viconKfInterp(10,:)-state(10,maskKf)) rms(viconKfInterp(11,:)-state(11
 disp([std(viconKfInterp(7,:)-state(7,maskKf)) std(viconKfInterp(8,:)-state(8,maskKf)) std(viconKfInterp(9,:)-state(9,maskKf))])
 
 % try calc phase lag
-dt = 0.01;
+dt = 0.001;
 time = mapVelEstTime(1):dt:mapVelEstTime(end);
 viconInterp = interp1(viconStateTime, viconState',time,[],'extrap')';
 
-opts = optimoptions('fminunc');
-opts = optimoptions(opts, 'Algorithm','quasi-newton');
-opts = optimoptions(opts, 'FinDiffType', 'central');
-opts = optimoptions(opts, 'Display', 'none');
+opts = optimset('fminunc');
+% opts = optimset(opts, 'Algorithm','quasi-newton');
+opts = optimset(opts, 'LargeScale','off');
+opts = optimset(opts, 'FinDiffType', 'central');
+opts = optimset(opts, 'Display', 'none');
+% mask = 1+find(diff(viconReceiveTime) == 0);
+% viconReceiveTime(mask) = [];
+% viconReceive(:,mask) = [];
+optimFuncWifi = @(lag) rms(viconInterp(7,:) - interp1(viconReceiveTime, viconReceive(7,:), time+lag,[],'extrap'));
 optimFuncMap = @(lag) rms(viconInterp(11,:) - interp1(mapVelEstTime, mapVelEst(2,:), time+lag,[],'extrap'));
 optimFuncKf = @(lag) rms(viconInterp(11,:) - interp1(stateTime, stateTime(11,:), time+lag,[],'extrap'));
-lagMap = fminunc(@(x) optimFuncMap(abs(x)), 0.2, opts);
-lagKf = fminunc(@(x) optimFuncMap(abs(x)), 0.2, opts);
+lagWifi = fminunc(@(x) optimFuncWifi(x), 0.01, opts);
+lagMap = fminunc(@(x) optimFuncMap(x), 0.05, opts);
+lagKf = fminunc(@(x) optimFuncMap(x), 0.05, opts);
 
+fprintf('wifi lag: %1.3f\n', lagWifi);
 fprintf('lag: %1.3f vs. %1.3f\n',lagMap, lagKf);
 
 % [b, a] = butter(5,1/nyq);

@@ -36,7 +36,7 @@ class VelocityEstimatorListener
 #include "Data.h"
 #include "Observer_Angular.h"
 #include "Observer_Translational.h"
-#include "VisionProcessor.h"
+//#include "VisionProcessor.h"
 #include "FeatureFinder.h"
 
 namespace ICSL {
@@ -67,7 +67,7 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	uint32 getLastVisionDelayTimeUS(){mMutex_data.lock(); uint32 temp=mLastDelayTimeUS; mMutex_data.unlock(); return temp;};
 
-	// for VisionProcessorListener
+	// for CommManagerListener
 	void onNewCommVelEstMeasCov(float const &measCov);
 	void onNewCommVelEstProbNoCorr(float const &probNoCorr);
 

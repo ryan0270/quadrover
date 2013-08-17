@@ -347,7 +347,7 @@ end
 %%
 if exist('velCalcDelayTotalTime','var') && ~isempty(velCalcDelayTotalTime)
 	figure(603);
-	plot(velCalcDelayTotalTimeTime, velCalcDelayTotalTime*1000);
+	plot(velCalcDelayTotalTimeTime, velCalcDelayTotalTime*1000,'.');
 	xlabel('Time [s]');
 	ylabel('Vel Total Delay Time [ms]');
 end
