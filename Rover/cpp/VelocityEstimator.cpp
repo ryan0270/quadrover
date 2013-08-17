@@ -184,7 +184,7 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &o
 	double mz = -curState[2][0];
 	double sz = sqrt(curErrCov[2][2]);
 
-	double camOffset = 0.05;
+	double camOffset = 0.087;
 	mz -= camOffset;
 	mz = max(mz, 0.130);
 

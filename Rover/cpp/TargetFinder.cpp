@@ -68,7 +68,7 @@ void TargetFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-//			&& mIsMotorOn
+			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -76,10 +76,12 @@ void TargetFinder::run()
 
 			imageData = mImageDataNext;
 			imageData->lock();
-			curImage.create(imageData->image->size(), imageData->image->type());
-			curImageGray.create(imageData->imageGray->size(), imageData->imageGray->type());
-			imageData->image->copyTo(curImage);
-			imageData->imageGray->copyTo(curImageGray);
+			try
+			{
+				imageData->image->copyTo(curImage);
+				imageData->imageGray->copyTo(curImageGray);
+			}
+			catch(...) {Log::alert("copyTo error in TargetFinder 1");}
 			imageData->unlock();
 			if(curImageGray.cols == 640)
 				cv::pyrDown(curImageGray, pyr1ImageGray);
@@ -160,10 +162,14 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 	if(image.channels() == 3)
 		cvtColor(image, gray0, CV_BGR2GRAY);
 	else
-		image.copyTo(gray0);
+	{
+		try{ image.copyTo(gray0); }
+		catch(...) {Log::alert("copyTo error in TargetFinder 2"); return NULL;}
+	}
 //	medianBlur(image, gray0, 5);
 
-	Canny(gray0, gray, 10, 20, 3);
+
+	Canny(gray0, gray, 50, 150, 3);
 
 	// find contours and store them all as a list
 	findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
@@ -172,6 +178,9 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 	// test each contour for rectangle-ishness
 	for( size_t i = 0; i < contours.size(); i++ )
 	{
+		if( fabs(contourArea(cv::Mat(contours[i]))) < 30)
+				continue;
+
 		// approximate contour with accuracy proportional
 		// to the contour perimeter
 		approxPolyDP(cv::Mat(contours[i]), approx, arcLength(cv::Mat(contours[i]), true)*0.04, true);
@@ -182,9 +191,7 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 		// Note: absolute value of an area is used because
 		// area may be positive or negative - in accordance with the
 		// contour orientation
-		if( approx.size() == 4 &&
-				fabs(contourArea(cv::Mat(approx))) > 30 /*&&
-				isContourConvex(cv::Mat(approx)) */)
+		if( approx.size() == 4 )
 		{
 			double maxCosine = 0;
 

@@ -125,9 +125,9 @@ mapNumMatchesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP
 mapNumMatchesTime = phoneData(mapNumMatchesIndices,1)'/1000;
 mapNumMatches = phoneData(mapNumMatchesIndices,3)';
 
-% numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
-% numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
-% numFeatures = phoneData(numFeaturesIndices,3)';
+numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
+numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
+numFeatures = phoneData(numFeaturesIndices,3)';
 
 % kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
 % kfCovTime = phoneData(kfCovIndices,1)'/1000;
@@ -469,6 +469,8 @@ if exist('targetFindProcTime','var') && ~isempty(targetFindProcTime)
 	plot(targetFindProcTimeTime, targetFindProcTime*1000);
 	xlabel('Time [s]');
 	ylabel('Target Find Time [ms]');
+	title(sprintf('Mean find time: %1.2fms', mean(targetFindProcTime*1000)));
+	fprintf('Mean find time: %1.2fms\n', mean(targetFindProcTime*1000))
 end
 
 %%
@@ -478,22 +480,9 @@ if exist('targetLoc','var') && ~isempty(targetLoc)
 		plot(targetLoc(1+2*(i-1),:), targetLoc(2*i,:)); hold all
 	end
 	hold off
+	axis([0 320 0 240])
 	xlabel('Time [s]');
 	ylabel('Target Location [px]');
-end
-
-%%
-if exist('cameraPos','var') && ~isempty(cameraPos)
-	figure(6005); clf; set(gcf,'Name','Camera Pos');
-	plot(cameraPos(1,:), cameraPos(2,:));
-	xlabel('x pos [m]');
-	ylabel('y pos [m]');
-% 	for i=1:3
-% 		plot(cameraPos, cameraPos(i,:)); hold all
-% 	end
-% 	hold off
-% 	xlabel('Time [s]');
-% 	ylabel('Camera Pos [m]');
 end
 
 %%
