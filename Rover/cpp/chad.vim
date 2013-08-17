@@ -66,6 +66,8 @@ badd +107 VisionProcessor.h
 badd +365 VisionProcessor.cpp
 badd +62 FeatureFinder.h
 badd +70 FeatureFinder.cpp
+badd +1 TargetFinder.h
+badd +1 TargetFinder.cpp
 badd +78 VelocityEstimator.h
 badd +71 VelocityEstimator.cpp
 badd +1 Common.h

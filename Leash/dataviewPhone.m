@@ -147,7 +147,7 @@ targetFindProcTime = phoneData(targetFindProcTimeIndices,3)';
 
 targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_CENTERS);
 targetLocTime = phoneData(targetLocIndices,1)'/1000;
-targetLoc = phoneData(targetLocIndices,3:6)';
+targetLoc = phoneData(targetLocIndices,3:8)';
 
 targetAreasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_AREAS);
 targetAreasTime = phoneData(targetAreasIndices,1)'/1000;
@@ -474,12 +474,26 @@ end
 %%
 if exist('targetLoc','var') && ~isempty(targetLoc)
 	figure(6001); clf; set(gcf,'Name','Target Location');
-	for i=1:4
-		plot(targetLocTime, targetLoc(i,:)); hold all
+	for i=1:3
+		plot(targetLoc(1+2*(i-1),:), targetLoc(2*i,:)); hold all
 	end
 	hold off
 	xlabel('Time [s]');
 	ylabel('Target Location [px]');
+end
+
+%%
+if exist('cameraPos','var') && ~isempty(cameraPos)
+	figure(6005); clf; set(gcf,'Name','Camera Pos');
+	plot(cameraPos(1,:), cameraPos(2,:));
+	xlabel('x pos [m]');
+	ylabel('y pos [m]');
+% 	for i=1:3
+% 		plot(cameraPos, cameraPos(i,:)); hold all
+% 	end
+% 	hold off
+% 	xlabel('Time [s]');
+% 	ylabel('Camera Pos [m]');
 end
 
 %%
@@ -494,10 +508,13 @@ if exist('targetAreas','var') && ~isempty(targetAreas)
 	
 	figure(6003); clf; set(gcf,'Name','Target Rect Area Ratios');
 	subplot(3,1,1);	plot(targetAreasTime, targetAreas(1,:)./targetAreas(2,:));
+	ylabel('Ratio 1->2');
 	subplot(3,1,2);	plot(targetAreasTime, targetAreas(1,:)./targetAreas(3,:));
+	ylabel('Ratio 1->3');
 	subplot(3,1,3);	plot(targetAreasTime, targetAreas(2,:)./targetAreas(3,:));
 	xlabel('Time [s]');
-	ylabel('Target Area Ratios');
+	ylabel('Ratio 2->3');
+	
 
 end
 

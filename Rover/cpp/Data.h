@@ -142,7 +142,7 @@ class DataVector : public IData
 class DataImage : public IData
 {
 	public:
-	DataImage() //: att(3,1,0.0), angularVel(3,1,0.) 
+	DataImage() : att(3,1,0.0), angularVel(3,1,0.) 
 	{
 		type = DATA_TYPE_IMAGE; 
 		imageFormat = IMG_FORMAT_BGR; 
@@ -156,8 +156,8 @@ class DataImage : public IData
 	unsigned int id;
 	shared_ptr<cv::Mat> image;
 	shared_ptr<cv::Mat> imageGray;
-//	TNT::Array2D<double> att;
-//	TNT::Array2D<double> angularVel;
+	TNT::Array2D<double> att;
+	TNT::Array2D<double> angularVel;
 	ImageFormat imageFormat;
 	float focalLength_640x480;
 	float centerX_640x480, centerY_640x480;
