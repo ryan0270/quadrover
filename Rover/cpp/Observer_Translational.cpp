@@ -725,17 +725,31 @@ using namespace ICSL::Constants;
 
 		// assuming 320x240 images
 		double f = data->imageData->focalLength_640x480/2.0;;
+		double cx = data->imageData->centerX_640x480/2.0;
+		double cy = data->imageData->centerY_640x480/2.0;
 
+		// rotation compensation
+		Array2D<double> att = data->imageData->att.copy();
+		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
+		Array2D<double> R_T = transpose(R);
+
+		Array2D<double> p(3,1);
+		p[0][0] = -(data->target->meanCenter.x - cx);
+		p[1][0] = -(data->target->meanCenter.y - cy);
+		p[2][0] = -f;
+		p = matmult(R_T, matmult(mRotCamToPhone, p));
+
+		// Now estimate the pos
 		double avgLength = 0;
 		for(int i=0; i<data->target->squareData[0]->lineLengths.size(); i++)
 			avgLength += data->target->squareData[0]->lineLengths[i];
 		avgLength /= data->target->squareData[0]->lineLengths.size();
 
-		double nomLength =  0.3;
+		double nomLength =  0.2;
 		Array2D<double> pos(3,1);
 		pos[2][0] = nomLength/avgLength*f;
-		pos[0][0] = data->target->meanCenter.x/f*abs(pos[2][0]);
-		pos[1][0] = data->target->meanCenter.y/f*abs(pos[2][0]);
+		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
+		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
 
 		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ESTIMATED_POS+"\t";
 		for(int i=0; i<pos.dim1(); i++)

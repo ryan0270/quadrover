@@ -524,32 +524,32 @@ namespace Quadrotor{
 		data->type = DATA_TYPE_IMAGE;
 		data->timestamp.setTimeNS(timestampNS);
 
-//		Array2D<double> att, angVel;
-//		mMutex_accum.lock();
-//		if(mAttAccumCnt == 0)
-//			att = Array2D<double>(3,1,0.0);
-//		else
-//			att = 1.0/mAttAccumCnt*mAttAccum;
-//		if(mAngularVelAccumCnt == 0)
-//			angVel = Array2D<double>(3,1,0.0);
-//		else
-//			angVel = 1.0/mAngularVelAccumCnt*mAngularVelAccum;
-//
-//		for(int i=0; i<3; i++)
-//		{
-//			mAttAccum[i][0] = 0;
-//			mAngularVelAccum[i][0] = 0;
-//		}
-//		mAttAccumCnt = 0;
-//		mAngularVelAccumCnt = 0;
-//		mMutex_accum.unlock();
+		Array2D<double> att, angVel;
+		mMutex_accum.lock();
+		if(mAttAccumCnt == 0)
+			att = Array2D<double>(3,1,0.0);
+		else
+			att = 1.0/mAttAccumCnt*mAttAccum;
+		if(mAngularVelAccumCnt == 0)
+			angVel = Array2D<double>(3,1,0.0);
+		else
+			angVel = 1.0/mAngularVelAccumCnt*mAngularVelAccum;
 
-//		Array2D<double> attCam(3,1);
-//		attCam[0][0] = matmultS(submat(mRotPhoneToCam,0,0,0,2), att);
-//		attCam[1][0] = matmultS(submat(mRotPhoneToCam,1,1,0,2), att);
-//		attCam[2][0] = matmultS(submat(mRotPhoneToCam,2,2,0,2), att);
-//		data->att.inject(attCam);
-//		data->angularVel.inject(matmult(mRotPhoneToCam, angVel));
+		for(int i=0; i<3; i++)
+		{
+			mAttAccum[i][0] = 0;
+			mAngularVelAccum[i][0] = 0;
+		}
+		mAttAccumCnt = 0;
+		mAngularVelAccumCnt = 0;
+		mMutex_accum.unlock();
+
+		Array2D<double> attCam(3,1);
+		attCam[0][0] = matmultS(submat(mRotPhoneToCam,0,0,0,2), att);
+		attCam[1][0] = matmultS(submat(mRotPhoneToCam,1,1,0,2), att);
+		attCam[2][0] = matmultS(submat(mRotPhoneToCam,2,2,0,2), att);
+		data->att.inject(attCam);
+		data->angularVel.inject(matmult(mRotPhoneToCam, angVel));
 
 		data->image = imageBGR;
 		shared_ptr<cv::Mat> gray(new cv::Mat());
