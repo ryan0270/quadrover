@@ -2,6 +2,7 @@
 #define MOTORINTERFACE
 #include <sched.h>
 #include <thread>
+#include <mutex>
 
 #include "toadlet/egg.h"
 
@@ -51,7 +52,7 @@ class MotorInterface
 	bool mWaitingForConnection;
 	uint16 mMotorCmds[4];
 
-	toadlet::egg::Mutex mMutex_data, mMutex_socket;
+	std::mutex mMutex_data, mMutex_socket;
 
 	// skips enabled/disabled checks
 	void sendCommandForced(toadlet::egg::Collection<uint16> const &cmds);

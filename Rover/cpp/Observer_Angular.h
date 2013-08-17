@@ -22,6 +22,7 @@ class Observer_AngularListener
 #include <memory>
 #include <sched.h>
 #include <thread>
+#include <mutex>
 
 #include <toadlet/egg.h>
 
@@ -114,7 +115,7 @@ class Observer_Angular : public CommManagerListener,
 
 		Time mStartTime;
 		int mBurnCount;
-		toadlet::egg::Mutex mMutex_data, mMutex_cache;
+		std::mutex mMutex_data, mMutex_cache;
 
 //		void inputDetected(const InputData &data);
 		static int inputDetected(int fd, int events, void *data);

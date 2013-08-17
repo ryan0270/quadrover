@@ -5,6 +5,7 @@
 #include <sstream>
 #include <memory>
 #include <thread>
+#include <mutex>
 
 #include "mxml.h"
 
@@ -112,7 +113,7 @@ class QuadLogger
 		String mDir, mFilename;
 		uint32 mTypeMask;
 		FileStream::ptr mLogStream;
-		Mutex mMutex_file, mMutex_logQueue, mMutex_addLine;
+		std::mutex mMutex_file, mMutex_logQueue, mMutex_addLine;
 		Time mStartTime;
 
 		bool mPaused;

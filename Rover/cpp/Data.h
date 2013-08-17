@@ -1,6 +1,7 @@
 #ifndef ICSL_DATA_H
 #define ICSL_DATA_H
 #include <memory>
+#include <mutex>
 #include <list>
 
 #include <opencv2/core/core.hpp>
@@ -92,7 +93,7 @@ class IData
 	static bool timeSortPredicate(shared_ptr<IData> const &d1, shared_ptr<IData> const &d2){return d1->timestamp < d2->timestamp;}
 
 	protected:
-	toadlet::egg::Mutex mMutex;
+	std::mutex mMutex;
 };
 
 template<class Tclass>
@@ -148,8 +149,8 @@ class DataImage : public IData
 		imageFormat = IMG_FORMAT_BGR; 
 		image = shared_ptr<cv::Mat>(new cv::Mat());
 		cap = NULL;
-		centerX_640x480 = centerY_640x480 = 0;
-		focalLength_640x480 = 0;
+		centerX = centerY = 0;
+		focalLength = 0;
 		id = sNextID()++;
 	}
 	
@@ -159,9 +160,11 @@ class DataImage : public IData
 	TNT::Array2D<double> att;
 	TNT::Array2D<double> angularVel;
 	ImageFormat imageFormat;
-	float focalLength_640x480;
-	float centerX_640x480, centerY_640x480;
+	float focalLength;
+	float centerX, centerY;
 	shared_ptr<cv::VideoCapture> cap;
+	shared_ptr<cv::Mat> cameraMatrix;
+	shared_ptr<cv::Mat> distCoeffs;
 
 	private:
 	static inline unsigned int &sNextID(){ static unsigned int data = 0; return data;}
@@ -174,6 +177,9 @@ class DataAnnotatedImage : public IData
 
 	shared_ptr<cv::Mat> imageAnnotated;
 	shared_ptr<DataImage> imageDataSource;
+
+	void lock(){mMutex.lock(); if(imageDataSource != NULL) imageDataSource->lock();};
+	void unlock(){mMutex.unlock(); if(imageDataSource != NULL) imageDataSource->unlock();}
 };
 
 template <class T>
@@ -194,9 +200,6 @@ class ImageMatchData : public IData
 
 	void lock(){mMutex.lock(); if(imageData0 != NULL) imageData0->lock(); if(imageData1 != NULL) imageData1->lock();}
 	void unlock(){mMutex.unlock(); if(imageData0 != NULL) imageData0->unlock(); if(imageData1 != NULL) imageData1->unlock();}
-
-	protected:
-	toadlet::egg::Mutex mMutex;
 };
 
 class ImageFeatureData : public IData
@@ -206,23 +209,23 @@ class ImageFeatureData : public IData
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotated;
 
-	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); }
-	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); }
-
-	protected:
-	toadlet::egg::Mutex mMutex;
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotated != NULL) imageAnnotated->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotated != NULL) imageAnnotated->unlock();}
 };
 
 class Rect
 {
 	public:
 	Rect(){center.x = 0; center.y = 0; area = 0;}
-	Rect(vector<cv::Point> startContour)
+	Rect(vector<cv::Point2f> startContour)
 	{
-		contourInt = startContour;
-
+		contourInt.resize(startContour.size());
 		for(int i=0; i<startContour.size(); i++)
+		{
+			contourInt[i].x = (int)(startContour[i].x+0.5);
+			contourInt[i].y = (int)(startContour[i].y+0.5);
 			contour.push_back(startContour[i]);
+		}
 
 		mom = moments(startContour);
 		center.x = mom.m10/mom.m00;
@@ -294,11 +297,11 @@ class ImageTargetFindData : public IData
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
 
-	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock();}
-	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock();}
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 
 	protected:
-	toadlet::egg::Mutex mMutex;
+	std::mutex mMutex;
 };
 
 //////////////////////////////////////////// Template implementations //////////////////////////////////////

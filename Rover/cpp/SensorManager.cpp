@@ -35,6 +35,9 @@ namespace Quadrotor{
 
 		mAttAccumCnt = 0;
 		mAngularVelAccum = 0;
+
+		mCameraMatrix_640x480 = mCameraMatrix_320x240 = NULL;
+		mCameraDistortionCoeffs = NULL;
 	}
 
 	SensorManager::~SensorManager()
@@ -115,12 +118,20 @@ namespace Quadrotor{
 		fs.open(filename.c_str(), cv::FileStorage::READ);
 		if( fs.isOpened() )
 		{
+			mCameraMatrix_640x480 = shared_ptr<cv::Mat>(new cv::Mat());
+			mCameraDistortionCoeffs = shared_ptr<cv::Mat>(new cv::Mat());
+
 			String str = "Camera calib loaded from " + filename;
-			fs["camera_matrix"] >> mCameraMatrix_640x480;
-			str = str+"\n\t"+"Focal length: " + mCameraMatrix_640x480.at<double>(0,0);
-			str = str+"\n\t"+"centerX: " + mCameraMatrix_640x480.at<double>(0,2);
-			str = str+"\n\t"+"centerY: " + mCameraMatrix_640x480.at<double>(1,2);
+			fs["camera_matrix"] >> *mCameraMatrix_640x480;
+			fs["distortion_coefficients"] >> *mCameraDistortionCoeffs;
+			str = str+"\n\t"+"Focal length: " + mCameraMatrix_640x480->at<double>(0,0);
+			str = str+"\n\t"+"centerX: " + mCameraMatrix_640x480->at<double>(0,2);
+			str = str+"\n\t"+"centerY: " + mCameraMatrix_640x480->at<double>(1,2);
 			Log::alert(str);
+
+			mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
+			mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
+			(*mCameraMatrix_320x240) = (*mCameraMatrix_320x240)*0.5;
 		}
 		else
 		{
@@ -271,7 +282,9 @@ namespace Quadrotor{
 				{
 					mMutex_listeners.lock();
 					for(int i=0; i<mListeners.size(); i++)
+					{
 						mListeners[i]->onNewSensorUpdate(data);
+					}
 					mMutex_listeners.unlock();
 //					delete data;
 				}
@@ -557,22 +570,22 @@ namespace Quadrotor{
 		data->imageGray = gray;
 		data->imageFormat = IMG_FORMAT_BGR;
 		data->cap = NULL;
-		if(mCameraMatrix_640x480.rows > 0)
-		{
-			data->focalLength_640x480 = mCameraMatrix_640x480.at<double>(0,0);
-			data->centerX_640x480 = mCameraMatrix_640x480.at<double>(0,2);
-			data->centerY_640x480 = mCameraMatrix_640x480.at<double>(1,2);
-		}
+		if(imageBGR->rows = 240)
+			data->cameraMatrix = mCameraMatrix_320x240;
 		else
-		{
-			data->focalLength_640x480 = 580;
-			data->centerX_640x480 = 320;
-			data->centerY_640x480 = 240;
-		}
+			data->cameraMatrix = mCameraMatrix_640x480;
+		data->focalLength = data->cameraMatrix->at<double>(0,0);
+		data->centerX = data->cameraMatrix->at<double>(0,2);
+		data->centerY = data->cameraMatrix->at<double>(1,2);
+		data->distCoeffs = mCameraDistortionCoeffs;
 
 		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)
+		{
+//Log::alert(String()+"image update before: " + i);
 			mListeners[i]->onNewSensorUpdate(static_pointer_cast<IData>(data));
+//Log::alert(String()+"image update after: " + i);
+		}
 		mMutex_listeners.unlock();
 
 		if(mQuadLogger != NULL)

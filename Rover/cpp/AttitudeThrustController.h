@@ -2,6 +2,7 @@
 #define ICSL_ATITTUDETHRUSTCONTROLLER
 #include <sched.h>
 #include <thread>
+#include <mutex>
 
 #include "toadlet/egg.h"
 
@@ -88,7 +89,7 @@ class AttitudeThrustController : public CommManagerListener,
 
 	Collection<AttitudeThrustControllerListener*> mListeners;
 
-	toadlet::egg::Mutex mMutex_data, mMutex_motorInterface;
+	std::mutex mMutex_data, mMutex_motorInterface;
 
 	int mThreadPriority, mScheduler;
 };

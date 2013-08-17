@@ -2,6 +2,7 @@
 #define ICSL_COMM_MANAGER
 #include <sched.h>
 #include <thread>
+#include <mutex>
 
 #include <vector>
 #include <toadlet/egg.h>
@@ -78,7 +79,7 @@ class CommManager
 
 	protected:
 	bool mConnected;
-	Mutex mMutex_socketTCP, mMutex_socketUDP;
+	std::mutex mMutex_socketTCP, mMutex_socketUDP;
 	Socket::ptr mServerSocketTCP, mSocketTCP, mSocketUDP;
 	Time mLastPacketTime, mLastCmdRcvTime;
 	uint32 mAddrPC;

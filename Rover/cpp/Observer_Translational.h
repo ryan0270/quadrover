@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sched.h>
 #include <thread>
+#include <mutex>
 
 #include "toadlet/egg.h"
 
@@ -129,8 +130,8 @@ class Observer_Translational : public Observer_AngularListener,
 	Collection<double> mAttBiasAdaptRate;
 	double mForceGainAdaptRate;
 
-	toadlet::egg::Mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
-	toadlet::egg::Mutex mMutex_adaptation;
+	std::mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
+	std::mutex mMutex_adaptation;
 
 	Time mLastPosReceiveTime, mLastBarometerMeasTime;
 	Time mLastForceGainUpdateTime, mLastAttBiasUpdateTime;
@@ -158,7 +159,7 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> mBarometerHeightState;
 
 	bool mNewImageResultsReady;
-	toadlet::egg::Mutex mMutex_imageData, mMutex_logger;
+	std::mutex mMutex_imageData, mMutex_logger;
 	shared_ptr<ImageMatchData> mImageMatchData; 
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;

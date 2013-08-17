@@ -3,6 +3,7 @@
 #include <memory>
 #include <sched.h>
 #include <thread>
+#include <mutex>
 #include <cmath>
 #include <list>
 
@@ -98,9 +99,9 @@ class FeatureFinder : public CommManagerListener,
 
 		QuadLogger *mQuadLogger;
 
-		toadlet::egg::Mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
-		toadlet::egg::Mutex mMutex_logger;
-		toadlet::egg::Mutex mMutex_params;
+		std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
+		std::mutex mMutex_logger;
+		std::mutex mMutex_params;
 
 		Collection<FeatureFinderListener*> mListeners;
 

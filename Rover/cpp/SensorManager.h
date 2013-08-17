@@ -2,6 +2,7 @@
 #define ICSL_SENSOR_MANAGER
 #include <sched.h>
 #include <thread>
+#include <mutex>
 
 #include <memory>
 #include <string>
@@ -79,8 +80,8 @@ class SensorManager : public Observer_AngularListener
 
 	TNT::Array2D<double> mLastAccel, mLastGyro, mLastMag;
 	double mLastPressure;
-	toadlet::egg::Mutex mMutex_data, mMutex_listeners, mMutex_startTime, mMutex_attData;
-	toadlet::egg::Mutex mMutex_logger;
+	mutex mMutex_data, mMutex_listeners, mMutex_startTime, mMutex_attData;
+	std::mutex mMutex_logger;
 
 	Time mStartTime;
 
@@ -91,7 +92,7 @@ class SensorManager : public Observer_AngularListener
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
 	TNT::Array2D<double> mAttAccum, mAngularVelAccum; // accumulators so I can get the average during image acq interval
 	int mAttAccumCnt, mAngularVelAccumCnt;
-	toadlet::egg::Mutex mMutex_accum;
+	std::mutex mMutex_accum;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
@@ -102,7 +103,7 @@ class SensorManager : public Observer_AngularListener
 	double mImageDT;
 	int mImageCnt;
 
-	cv::Mat mCameraMatrix_640x480, mCameraMatrix_320x240;
+	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
 };
 
 

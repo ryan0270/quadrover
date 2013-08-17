@@ -101,13 +101,13 @@ cpuUsage = phoneData(cpuUsageIndices,3:end)';
 % phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
 % phoneTemp = phoneData(phoneTempIndices,3:6)';
 
-% mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
-% mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
-% mapVelEst = phoneData(mapVelEstIndices,3:5)';
-% 
-% mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
-% mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
-% mapHeightEst = phoneData(mapHeightEstIndices,3)';
+mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
+mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
+mapVelEst = phoneData(mapVelEstIndices,3:5)';
+
+mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
+mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
+mapHeightEst = phoneData(mapHeightEstIndices,3)';
 
 velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 velEstTime = phoneData(velEstIndices,1)'/1000;

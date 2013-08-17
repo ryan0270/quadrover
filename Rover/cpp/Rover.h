@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <thread>
+#include <mutex>
 
 #include <cpu-features.h>
 
@@ -110,7 +111,7 @@ protected:
 
 	TNT::Array2D<double> mRotViconToQuad, mRotQuadToPhone, mRotCamToPhone, mRotPhoneToCam, mRotViconToPhone;
 
-	Mutex mMutex_cntl, mMutex_observer, mMutex_vision, mMutex_vicon, mMutex_data;
+	std::mutex mMutex_cntl, mMutex_observer, mMutex_vision, mMutex_vicon, mMutex_data;
 	
 	void transmitDataUDP();
 	void transmitImage();
