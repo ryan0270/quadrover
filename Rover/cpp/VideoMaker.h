@@ -9,7 +9,9 @@
 
 #include "toadlet/egg.h"
 
-#include "VisionProcessor.h"
+//#include "VisionProcessor.h"
+#include "CommManager.h"
+#include "SensorManager.h"
 #include "Time.h"
 
 namespace ICSL{

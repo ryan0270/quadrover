@@ -11,16 +11,17 @@ FeatureFinder::FeatureFinder()
 	mRunning = false;
 	mFinished = true;
 	mUseIbvs = false;
-	mFirstImageProcessed = false;
+//	mFirstImageProcessed = false;
 	mHaveUpdatedSettings = true;
-	mCurImageAnnotated = NULL;
+//	mCurImageAnnotated = NULL;
 	mIsMotorOn = false;
 
 	mImageProcTimeUS = 0;
 
 	mLastProcessTime.setTimeMS(0);
 
-	mNewImageReady = mNewImageReady_targetFind = false;
+//	mNewImageReady = mNewImageReady_targetFind = false;
+	mNewImageReady = false;
 
 	mImageDataNext = NULL;
 
@@ -75,7 +76,7 @@ void FeatureFinder::run()
 
 	vector<cv::Point2f> points;
 	shared_ptr<DataImage> imageData;
-	cv::Mat curImage, pyr1Image, pyr1ImageGray, imageAnnotated;
+	cv::Mat curImage, curImageGray, pyr1ImageGray, imageAnnotated;
 	String logString;
 	Time procStart;
 	float qualityLevel, fastThresh;
@@ -85,7 +86,7 @@ void FeatureFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-			&& mIsMotorOn
+//			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -93,11 +94,12 @@ void FeatureFinder::run()
 
 			imageData = mImageDataNext;
 			curImage = *(imageData->image);
-			if(curImage.cols == 640)
-				cv::pyrDown(curImage, pyr1Image);
+			curImageGray = *(imageData->imageGray);
+			if(curImageGray.cols == 640)
+				cv::pyrDown(curImageGray, pyr1ImageGray);
 			else
-				pyr1Image = curImage;
-			cvtColor(pyr1Image, pyr1ImageGray, CV_BGR2GRAY);
+				pyr1ImageGray = curImageGray;
+//			cvtColor(pyr1Image, pyr1ImageGray, CV_BGR2GRAY);
 
 			if(mHaveUpdatedSettings)
 			{
@@ -113,7 +115,7 @@ void FeatureFinder::run()
 			}
 
 			points = findFeaturePoints(pyr1ImageGray, qualityLevel, sepDist, fastThresh);
-			if(curImage.cols == 640)
+			if(curImageGray.cols == 640)
 				for(int i=0; i<points.size(); i++)
 					points[i] *= 2;
 
@@ -362,9 +364,6 @@ void FeatureFinder::eigenValResponses(const cv::Mat& image, vector<cv::KeyPoint>
 		m01 =     c*scale_sq;
 		m11 = 0.5*b*scale_sq;
         points[ptidx].response = m00 + m11 - sqrt( (m00-m11)*(m00-m11) + m01*m01);
-		
-//cout << points[ptidx].response << endl;
-		int chad = 0;
     }
 }
 
@@ -380,35 +379,35 @@ void FeatureFinder::drawPoints(vector<cv::Point2f> const &points, cv::Mat &image
 	}
 }
 
-void FeatureFinder::enableIbvs(bool enable)
-{
-	mUseIbvs = enable;
-	if(mUseIbvs)
-	{
-		Log::alert("Turning IBVS on");
-		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
-		mMutex_logger.lock();
-		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
-		mMutex_logger.unlock();
-		mFirstImageProcessed = false;
-	}
-	else
-	{
-		Log::alert("Turning IBVS off");
-		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
-		mMutex_logger.lock();
-		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
-		mMutex_logger.unlock();
-		mFirstImageProcessed = false;
-	}
-}
+//void FeatureFinder::enableIbvs(bool enable)
+//{
+//	mUseIbvs = enable;
+//	if(mUseIbvs)
+//	{
+//		Log::alert("Turning IBVS on");
+//		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
+//		mMutex_logger.lock();
+//		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+//		mMutex_logger.unlock();
+//		mFirstImageProcessed = false;
+//	}
+//	else
+//	{
+//		Log::alert("Turning IBVS off");
+//		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
+//		mMutex_logger.lock();
+//		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+//		mMutex_logger.unlock();
+//		mFirstImageProcessed = false;
+//	}
+//}
 
 void FeatureFinder::onNewSensorUpdate(shared_ptr<IData> const &data)
 {
 	if(data->type == DATA_TYPE_IMAGE)
 	{
 		mImageDataNext = static_pointer_cast<DataImage>(data);
-		mNewImageReady = mNewImageReady_targetFind = true;
+		mNewImageReady = true;
 	}
 }
 

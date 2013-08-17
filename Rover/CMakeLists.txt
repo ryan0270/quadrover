@@ -60,7 +60,7 @@ set (SRC ${SRC}
 	./cpp/Observer_Translational.cpp
 	./cpp/QuadLogger.cpp
 	./cpp/CommManager.cpp
-	./cpp/VisionProcessor.cpp
+	./cpp/TargetFinder.cpp
 	./cpp/FeatureFinder.cpp
 	./cpp/TranslationController.cpp
 	./cpp/AttitudeThrustController.cpp
@@ -69,7 +69,6 @@ set (SRC ${SRC}
 	./cpp/Matcher.cpp
 	./cpp/VideoMaker.cpp
 	./cpp/BlobDetector.cpp
-#	./cpp/Data.cpp
 	./cpp/Observer_Angular.cpp
 	./cpp/VelocityEstimator.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
@@ -85,7 +84,7 @@ set (H ${H}
 	./cpp/QuadLogger.h
 	./cpp/Time.h
 	./cpp/CommManager.h
-	./cpp/VisionProcessor.h
+	./cpp/TargetFinder.h
 	./cpp/FeatureFinder.h
 	./cpp/TranslationController.h
 	./cpp/AttitudeThrustController.h
@@ -108,14 +107,6 @@ set (H ${H}
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti  -std=c++11")
 
 set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
-# Why doesn't this work?
-#if (COMMAND COPY_NATIVE_CAMERA_LIBS)
-#	message("Copying opencv camera libs to ${Rover_SOURCE_DIR}/libs/${NDK_NAME_ARCH}")
-#	COPY_NATIVE_CAMERA_LIBS(${Rover})
-#else()
-#	message("Failed to copy opencv camera libs: command not found")
-#endif()
-
 
 # Executable
 add_library (Rover SHARED ${SRC} ${H})

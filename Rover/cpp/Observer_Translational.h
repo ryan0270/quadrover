@@ -17,7 +17,7 @@
 #include "Observer_Angular.h"
 #include "AttitudeThrustControllerListener.h"
 #include "SensorManager.h"
-#include "VisionProcessor.h"
+//#include "VisionProcessor.h"
 #include "Data.h"
 #include "MotorInterface.h"
 #define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY

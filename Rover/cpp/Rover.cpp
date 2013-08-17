@@ -35,6 +35,7 @@ Rover::Rover() :
 
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
+	mTargetData = NULL;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -56,9 +57,10 @@ void Rover::initialize()
 	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
 	mVelocityEstimator.setThreadPriority(sched,maxPriority-1);
 	mFeatureFinder.setThreadPriority(sched,maxPriority-2);
+	mTargetFinder.setThreadPriority(sched,maxPriority-2);
 	mTranslationController.setThreadPriority(sched,maxPriority-2);
 	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
-	mVisionProcessor.setThreadPriority(sched,maxPriority-3);
+//	mVisionProcessor.setThreadPriority(sched,maxPriority-3);
 	mCommManager.setThreadPriority(sched,minPriority);
 	mQuadLogger.setThreadPriority(sched,minPriority);
 	mVideoMaker.setThreadPriority(sched,minPriority);
@@ -103,14 +105,6 @@ void Rover::initialize()
 	mCommManager.addListener(&mObsvTranslational);
 	mAttitudeThrustController.addListener(&mObsvTranslational);
 
-//	mVisionProcessor.setStartTime(mStartTime);
-//	mVisionProcessor.setQuadLogger(&mQuadLogger);
-//	mVisionProcessor.initialize();
-//	mVisionProcessor.start();
-//	mCommManager.addListener(&mVisionProcessor);
-//	mVisionProcessor.addListener(&mObsvTranslational);
-//	mVisionProcessor.addListener(this);
-
 	mFeatureFinder.initialize();
 	mFeatureFinder.setStartTime(mStartTime);
 	mFeatureFinder.setQuadLogger(&mQuadLogger);
@@ -118,6 +112,14 @@ void Rover::initialize()
 	mSensorManager.addListener(&mFeatureFinder);
 	mCommManager.addListener(&mFeatureFinder);
 	mFeatureFinder.addListener(this);
+
+	mTargetFinder.initialize();
+	mTargetFinder.setStartTime(mStartTime);
+	mTargetFinder.setQuadLogger(&mQuadLogger);
+	mTargetFinder.start();
+	mSensorManager.addListener(&mTargetFinder);
+	mCommManager.addListener(&mTargetFinder);
+	mTargetFinder.addListener(this);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(mStartTime);
@@ -176,15 +178,17 @@ void Rover::shutdown()
 
 	mCommManager.shutdown();
 
-	mVisionProcessor.shutdown();
+//	mVisionProcessor.shutdown();
 	mVelocityEstimator.shutdown();
 	mFeatureFinder.shutdown();
+	mTargetFinder.shutdown();
 	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
+	mTargetData = NULL;
 	mSensorManager.shutdown();
 
 	mMotorInterface.shutdown();
@@ -556,7 +560,7 @@ void Rover::onNewCommTimeSync(int time)
 	uint64 chad = mStartTime.getMS() + delta;
 	mMutex_cntl.lock();
 	mStartTime.setTimeMS(chad);
-	mMutex_vision.lock(); mVisionProcessor.setStartTime(mStartTime); mMutex_vision.unlock();
+//	mMutex_vision.lock(); mVisionProcessor.setStartTime(mStartTime); mMutex_vision.unlock();
 	mMutex_observer.lock(); 
 	mObsvAngular.setStartTime(mStartTime); 
 	mObsvTranslational.setStartTime(mStartTime);
@@ -570,6 +574,7 @@ void Rover::onNewCommTimeSync(int time)
 	mQuadLogger.setStartTime(mStartTime);
 
 	mFeatureFinder.setStartTime(mStartTime);
+	mTargetFinder.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 
 	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_TIME_SYNC + "\t" + delta;
@@ -623,15 +628,30 @@ void Rover::onFeaturesFound(shared_ptr<ImageFeatureData> const &data)
 	mFeatureData = data;
 }
 
+void Rover::onTargetFound(shared_ptr<ImageTargetFindData> const &data)
+{
+	mTargetData = data;
+}
+
 void Rover::copyImageData(cv::Mat *m)
 {
 	if(!mRunning) // use this as an indicator that we are shutting down
 		return;
 
-	mMutex_vision.lock();
-//	mVisionProcessor.getLastImageAnnotated(m);
-	mFeatureFinder.getLastImageAnnotated(m);
-	mMutex_vision.unlock();
+	if(mTargetData != NULL)
+	{
+if(mTargetData->imageAnnotatedData == NULL)
+	Log::alert("crap 1");
+else if(mTargetData->imageAnnotatedData->imageAnnotated == NULL)
+	Log::alert("crap 2");
+else
+	Log::alert("ok");
+		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m);
+	}
+	else if(mFeatureData != NULL)
+		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
+
+	mTargetData = NULL; // TODO: This is a bad hack for now
 }
 
 Array2D<double> Rover::getGyroValue()

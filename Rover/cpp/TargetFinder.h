@@ -1,5 +1,5 @@
-#ifndef ICSL_FEATUREFINDER_H
-#define ICSL_FEATUREFINDER_H
+#ifndef ICSL_TARGETFINDER_H
+#define ICSL_TARGETFINDER_H
 #include <memory>
 #include <sched.h>
 #include <thread>
@@ -9,11 +9,8 @@
 #include <toadlet/egg.h>
 
 #include <opencv2/core/core.hpp>
-//#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/features2d/features2d.hpp>
-//#include <opencv2/video/tracking.hpp>
-//#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 //#include "TNT/tnt.h"
 //#include "TNT_Utils.h"
@@ -22,6 +19,7 @@
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Observer_Angular.h"
+#include "Observer_Translational.h"
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
@@ -29,29 +27,28 @@
 
 namespace ICSL {
 namespace Quadrotor {
-class FeatureFinderListener
+class TargetFinderListener
 {
 	public:
-		virtual ~FeatureFinderListener(){};
+		virtual ~TargetFinderListener(){};
 
-		virtual void onFeaturesFound(shared_ptr<ImageFeatureData> const &data)=0;
+		virtual void onTargetFound(shared_ptr<ImageTargetFindData> const &data)=0;
 };
 
-class FeatureFinder : public CommManagerListener,
+class TargetFinder : public CommManagerListener,
 						public SensorManagerListener
 {
 	public:
-		explicit FeatureFinder();
-		virtual ~FeatureFinder(){};
+		explicit TargetFinder();
+		virtual ~TargetFinder(){};
 
 		void shutdown();
-		void start(){ thread th(&FeatureFinder::run, this); th.detach(); }
+		void start(){ thread th(&TargetFinder::run, this); th.detach(); }
 		void initialize();
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-//		bool isFirstImageProcessed(){return mFirstImageProcessed;}
+		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
-		void setVisionParams(toadlet::egg::Collection<int> const &p);
 		void setStartTime(Time t){mStartTime = t;}
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
@@ -60,29 +57,23 @@ class FeatureFinder : public CommManagerListener,
 		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
 		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
 		void getLastImage(cv::Mat *outImage);
-		void getLastImageAnnotated(cv::Mat *outImage);
 		toadlet::egg::Collection<int> getVisionParams();
 
-		void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
+		void addListener(TargetFinderListener *listener){mListeners.push_back(listener);}
 
 		// CommManagerListener functions
-		void onNewCommVisionFeatureFindQualityLevel(float const &qLevel);
-		void onNewCommVisionFeatureFindSeparationDistance(int const &sepDist);
-		void onNewCommVisionFeatureFindFASTThreshold(int const &thresh);
-		void onNewCommVisionFeatureFindPointCntTarget(int const &target);
-		void onNewCommVisionFeatureFindFASTAdaptRate(float const &r);
-		void onNewCommMotorOn(){mIsMotorOn = true;};
-		void onNewCommMotorOff(){mIsMotorOn = false;};
+		void onNewCommMotorOn(){mIsMotorOn = true;}
+		void onNewCommMotorOff(){mIsMotorOn = false;}
 		
 		// SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	protected:
 		bool mUseIbvs;
-//		bool mFirstImageProcessed;
+		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
-		bool mNewImageReady; //, mNewImageReady_targetFind;
-//		bool mLogImages;
+		bool mNewImageReady, mNewImageReady_targetFind;
+		bool mLogImages;
 		bool mHaveUpdatedSettings;
 		bool mIsMotorOn;
 //		cv::Mat	mCurImage, mCurImageGray;
@@ -92,7 +83,7 @@ class FeatureFinder : public CommManagerListener,
 		shared_ptr<DataImage> mImageDataNext;
 		shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
 
-		Time mStartTime, mLastProcessTime;
+		Time mStartTime;//, mLastProcessTime;
 
 		toadlet::uint32 mImageProcTimeUS;
 
@@ -102,26 +93,34 @@ class FeatureFinder : public CommManagerListener,
 		toadlet::egg::Mutex mMutex_logger;
 		toadlet::egg::Mutex mMutex_params;
 
-		Collection<FeatureFinderListener*> mListeners;
+		Collection<TargetFinderListener*> mListeners;
 
-		float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
-		int mSepDist, mPointCntTarget;
+//		float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
+//		int mSepDist, mPointCntTarget;
 
 		void run();
 
-
 		int mThreadPriority, mScheduler;
 
-		static vector<cv::Point2f> findFeaturePoints(cv::Mat const &image, 
-															 double const &qualityLevel,
-															 double const &minDistance,
-															 int const &fastThreshold);
-		static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
-		static void drawPoints(vector<cv::Point2f> const &points, cv::Mat &img);
+		shared_ptr<RectGroup> findTarget(cv::Mat &image);
+		static void drawTarget(cv::Mat &img, shared_ptr<RectGroup> const &target);
 
+
+		// helper function:
+		// finds a cosine of angle between vectors
+		// from pt0->pt1 and from pt0->pt2
+		static double angle( cv::Point pt1, cv::Point pt2, cv::Point pt0 )
+		{
+			double dx1 = pt1.x - pt0.x;
+			double dy1 = pt1.y - pt0.y;
+			double dx2 = pt2.x - pt0.x;
+			double dy2 = pt2.y - pt0.y;
+			return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
+		}
 };
 
 } // namespace Quadrotor
 } // namespace ICSL
 
 #endif
+

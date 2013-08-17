@@ -21,13 +21,15 @@
 #include "Observer_Translational.h"
 #include "QuadLogger.h"
 #include "CommManager.h"
-#include "VisionProcessor.h"
+//#include "VisionProcessor.h"
 #include "Time.h"
 #include "TranslationController.h"
 #include "AttitudeThrustController.h"
 #include "SensorManager.h"
 #include "VideoMaker.h"
 #include "MotorInterface.h"
+#include "FeatureFinder.h"
+#include "TargetFinder.h"
 #include "VelocityEstimator.h"
 
 namespace ICSL {
@@ -35,7 +37,8 @@ namespace Quadrotor {
 class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public SensorManagerListener,
-				 public FeatureFinderListener
+				 public FeatureFinderListener,
+				 public TargetFinderListener
 {
 public:
 	Rover();
@@ -60,7 +63,7 @@ public:
 	TNT::Array2D<double> getAccelValue();
 	TNT::Array2D<double> getMagValue();
 	TNT::Array2D<double> getAttitude();
-	int getImageProcTimeMS(){mMutex_vision.lock(); int temp = mVisionProcessor.getImageProcTimeMS(); mMutex_vision.unlock(); return temp;}
+	int getImageProcTimeMS(){mMutex_vision.lock(); int temp = mVelocityEstimator.getLastVisionDelayTimeUS()/1.0e3; mMutex_vision.unlock(); return temp;}
 //	void toggleViewType(){Log::alert("Not implemented");}
 //	void toggleUseIbvs(){onNewCommUseIbvs(!mUseIbvs);}
 //	toadlet::egg::Collection<int> getVisionParams();
@@ -88,6 +91,9 @@ public:
 	// for FeatureFinderListener
 	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
+	// for TargetFinderListener
+	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
+
 protected:
 	CommManager mCommManager;
 	bool mRunning, mRunnerIsDone;
@@ -111,9 +117,10 @@ protected:
 
 	QuadLogger mQuadLogger;
 
-	VisionProcessor mVisionProcessor;
+//	VisionProcessor mVisionProcessor;
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
+	TargetFinder mTargetFinder;
 
 	SensorManager mSensorManager;
 
@@ -127,6 +134,7 @@ protected:
 
 //	shared_ptr<ImageMatchData> mImageMatchData;
 	shared_ptr<ImageFeatureData> mFeatureData;
+	shared_ptr<ImageTargetFindData> mTargetData;
 
 	VideoMaker mVideoMaker;
 	

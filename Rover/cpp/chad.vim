@@ -31,7 +31,7 @@ set incsearch
 set mouse=a
 set omnifunc=omni#cpp#complete#Main
 set ruler
-set runtimepath=~/.vim,~/.vim/bundle/netrw,/usr/share/vim/vimfiles,/usr/share/vim/vim73,/usr/share/vim/vimfiles/after,~/.vim/after
+set runtimepath=~/.vim,~/.vim/bundle/netrw,/usr/share/vim/vimfiles,/usr/share/vim/vim74,/usr/share/vim/vimfiles/after,~/.vim/after
 set shiftwidth=4
 set showcmd
 set showmatch
