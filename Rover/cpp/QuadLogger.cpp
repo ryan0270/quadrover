@@ -316,6 +316,10 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_MAP_HEIGHT="+LOG_ID_MAP_HEIGHT+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_MAP_NUM_MATCHES="+LOG_ID_MAP_NUM_MATCHES+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_MAP_PEAK_PSD_VALUE="+LOG_ID_MAP_PEAK_PSD_VALUE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_TARGET_FIND_PROC_TIME="+LOG_ID_TARGET_FIND_PROC_TIME+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_TARGET_FIND_CENTERS="+LOG_ID_TARGET_FIND_CENTERS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_TARGET_FIND_AREAS="+LOG_ID_TARGET_FIND_AREAS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_TARGET_ESTIMATED_POS="+LOG_ID_TARGET_ESTIMATED_POS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}

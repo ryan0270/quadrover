@@ -57,7 +57,7 @@ public class RoverService extends Service {
 	private long mLastPreviewTimeNS = 0;
 	private int mImgProcCnt = 0;
 	private double mAvgDT = 0;
-	private Mat mImage;
+	private Mat mImage = null;
 	private Bitmap mBmp = null;
 
 	public class RoverBinder extends Binder 
@@ -307,7 +307,9 @@ public class RoverService extends Service {
 
 		try{
 			if(mImage == null)
-				mImage = new Mat(480,640,CvType.CV_8UC3);
+				mImage = new Mat(240,320,CvType.CV_8UC3);
+//				mImage = new Mat(480,640,CvType.CV_8UC3);
+
 			if( getImage(mImage.getNativeObjAddr()) )
 				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
 			else

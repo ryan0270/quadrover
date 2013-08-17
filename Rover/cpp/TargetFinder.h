@@ -19,7 +19,7 @@
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Observer_Angular.h"
-#include "Observer_Translational.h"
+//#include "Observer_Translational.h"
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"

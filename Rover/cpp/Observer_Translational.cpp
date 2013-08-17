@@ -251,7 +251,9 @@ using namespace ICSL::Constants;
 				String str = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
 				for(int i=0; i<errCov.dim1(); i++)
 					str = str+errCov[i][0]+"\t";
+				mMutex_logger.lock();
 				mQuadLogger->addLine(str,LOG_FLAG_STATE);
+				mMutex_logger.unlock();
 			}
 
 			for(int i=0; i<mListeners.size(); i++)
@@ -448,7 +450,9 @@ using namespace ICSL::Constants;
 			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_RECEIVE_VICON+"\t";
 			for(int i=0; i<data.size(); i++)
 				s = s+data[i]+"\t";
+			mMutex_logger.lock();
 			mQuadLogger->addLine(s, LOG_FLAG_STATE);
+			mMutex_logger.unlock();
 		}
 
 		mNewViconPosAvailable = true;
@@ -598,7 +602,9 @@ using namespace ICSL::Constants;
 //				if(mQuadLogger != NULL)
 //				{
 //					String s = String() + mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_BAROMETER_HEIGHT+"\t" + h + "\t" + hComp;
+//					mMutex_logger.lock();
 //					mQuadLogger->addLine(s,LOG_FLAG_PC_UPDATES);
+//					mMutex_logger.unlock();
 //				}
 			}
 			break;
@@ -695,7 +701,9 @@ using namespace ICSL::Constants;
 //			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CAMERA_POS+"\t";
 //			for(int i=0; i<pos.dim1(); i++)
 //				s = s+pos[i][0]+"\t";
+//			mMutex_logger.lock();
 //			mQuadLogger->addLine(s, LOG_FLAG_CAM_RESULTS);
+//			mMutex_logger.unlock();
 //		}
 //
 //		mNewCameraPosAvailable = true;
@@ -709,6 +717,34 @@ using namespace ICSL::Constants;
 		mMutex_meas.unlock();
 	}
 
+	void Observer_Translational::onTargetFound(shared_ptr<ImageTargetFindData> const &data)
+	{
+		// assuming 320x240 images
+		double f = data->imageData->focalLength_640x480/2.0;;
+
+		double avgLength = 0;
+		for(int i=0; i<data->target->squareData[0]->lineLengths.size(); i++)
+			avgLength += data->target->squareData[0]->lineLengths[i];
+		avgLength /= data->target->squareData[0]->lineLengths.size();
+
+		double nomLength =  0.3;
+		Array2D<double> pos(3,1);
+		pos[2][0] = nomLength/avgLength*f;
+		pos[0][0] = data->target->meanCenter.x/f*abs(pos[2][0]);
+		pos[1][0] = data->target->meanCenter.y/f*abs(pos[2][0]);
+
+		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ESTIMATED_POS+"\t";
+		for(int i=0; i<pos.dim1(); i++)
+			str = str+pos[i][0]+"\t";
+		mMutex_logger.lock();
+		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
+		mMutex_logger.unlock();
+
+//		mMutex_meas.lock();
+//		mNewEventsBuffer.push_back(data);
+//		mMutex_meas.unock();
+	}
+
 	void Observer_Translational::onNewCommUseIbvs(bool useIbvs)
 	{
 		mUseIbvs = useIbvs;
@@ -717,7 +753,9 @@ using namespace ICSL::Constants;
 			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_ENABLED+"\t";
 		else
 			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_DISABLED+"\t";
+		mMutex_logger.lock();
 		mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
+		mMutex_logger.unlock();
 	}
 
 	
@@ -964,7 +1002,9 @@ double mHeightMeasCov = 0.1*0.1;
 		{
 			String str2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_FORCE_GAIN+"\t";
 			str2 = str2+mForceGain+"\t";
+			mMutex_logger.lock();
 			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
+			mMutex_logger.unlock();
 		}
 		mMutex_adaptation.unlock();
 	}
@@ -990,7 +1030,9 @@ double mHeightMeasCov = 0.1*0.1;
 			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
 			for(int i=0; i<mAttBias.dim1(); i++)
 				str1 = str1+mAttBias[i][0]+"\t";
+			mMutex_logger.lock();
 			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
+			mMutex_logger.unlock();
 		}
 		mMutex_adaptation.unlock();
 	}
@@ -1032,6 +1074,5 @@ double mHeightMeasCov = 0.1*0.1;
 
 		return errCov;
 	}
-
 } // namespace Quadrotor
 } // namespace ICSL

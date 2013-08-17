@@ -71,23 +71,31 @@ void VelocityEstimator::run()
 				measCov = mMeasCov;
 				probNoCorr = mProbNoCorr;
 				mMutex_params.unlock();
+				curImageFeatureData->lock();
 				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
+				curImageFeatureData->unlock();
 
 				shared_ptr<DataVector<double> > velData(new DataVector<double>());
 				velData->data = velEst.copy();
 				velData->type = DATA_TYPE_MAP_VEL;
+				curImageFeatureData->lock();
 				velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
+				curImageFeatureData->unlock();
 
 				shared_ptr<Data<double> > heightData(new Data<double>());
 				heightData->data = heightEst;
 				heightData->type = DATA_TYPE_MAP_HEIGHT;
+				curImageFeatureData->lock();
 				heightData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
+				curImageFeatureData->unlock();
 
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
 
 				procTime = procTimer.getElapsedTimeNS()/1.0e9;
+				curImageFeatureData->lock();
 				delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
+				curImageFeatureData->unlock();
 				mMutex_data.lock();
 				mLastDelayTimeUS = delayTime*1.0e6;
 				mMutex_data.unlock();
