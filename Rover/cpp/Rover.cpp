@@ -493,8 +493,21 @@ void Rover::transmitImage()
 
 	cv::Mat img;
 	mMutex_vision.lock();
-//	mVisionProcessor.getLastImageAnnotated(&img);
-	mFeatureFinder.getLastImageAnnotated(&img);
+//	mFeatureFinder.getLastImageAnnotated(&img);
+	if(mObsvTranslational.isTargetFound() && mTargetData != NULL)
+	{
+		mTargetData->lock();
+		try{ mTargetData->imageAnnotatedData->imageAnnotated->copyTo(img); }
+		catch(...) {Log::alert("copyTo error in Rover 1");}
+		mTargetData->unlock();
+	}
+	else if(mFeatureData != NULL)
+	{
+		mFeatureData->lock();
+		try { mFeatureData->imageAnnotated->imageAnnotated->copyTo(img); }
+		catch(...) {Log::alert("copyTo error in Rover 2");}
+		mFeatureData->unlock();
+	}
 	mMutex_vision.unlock();
 
 	if(img.rows == 0 || img.cols == 0)
@@ -639,18 +652,20 @@ void Rover::copyImageData(cv::Mat *m)
 	if(!mRunning) // use this as an indicator that we are shutting down
 		return;
 
-	if(mObsvTranslational.isTargetFound() && mTargetData != NULL)
+	if(/*mObsvTranslational.isTargetFound() &&*/ mTargetData != NULL)
 	{
 		mTargetData->lock();
 		m->create(mTargetData->imageAnnotatedData->imageAnnotated->size(), mTargetData->imageAnnotatedData->imageAnnotated->type());
-		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m);
+		try{ mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m); }
+		catch(...) {Log::alert("copyTo error in Rover 3");}
 		mTargetData->unlock();
 	}
 	else if(mFeatureData != NULL)
 	{
 		mFeatureData->lock();
 		m->create(mFeatureData->imageAnnotated->imageAnnotated->size(), mFeatureData->imageAnnotated->imageAnnotated->type());
-		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
+		try{ mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m); }
+		catch(...) {Log::alert("copyTo error in Rover 4");}
 		mFeatureData->unlock();
 	}
 }

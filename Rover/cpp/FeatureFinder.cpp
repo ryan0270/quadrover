@@ -53,15 +53,15 @@ void FeatureFinder::initialize()
 
 void FeatureFinder::getLastImageAnnotated(cv::Mat *outImage)
 {
-	if(mImageAnnotatedLast != NULL)
-	{
-		mImageAnnotatedLast->lock();
-		shared_ptr<cv::Mat> image = mImageAnnotatedLast->imageAnnotated;
-		mImageAnnotatedLast->unlock();
-//		outImage->create(image.rows,image.cols,image.type());
-		image->copyTo(*outImage);
-	}
-	else
+//	if(mImageAnnotatedLast != NULL)
+//	{
+//		mImageAnnotatedLast->lock();
+//		shared_ptr<cv::Mat> image = mImageAnnotatedLast->imageAnnotated;
+//		mImageAnnotatedLast->unlock();
+////		outImage->create(image.rows,image.cols,image.type());
+//		image->copyTo(*outImage);
+//	}
+//	else
 		(*outImage) = cv::Scalar(0);
 }
 
@@ -86,7 +86,7 @@ void FeatureFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-//			&& mIsMotorOn
+			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -94,10 +94,11 @@ void FeatureFinder::run()
 
 			imageData = mImageDataNext;
 			imageData->lock();
-			curImage.create(imageData->image->size(), imageData->image->type());
-			curImageGray.create(imageData->imageGray->size(), imageData->imageGray->type());
-			imageData->image->copyTo(curImage);
-			imageData->imageGray->copyTo(curImageGray);
+			try{
+				imageData->image->copyTo(curImage);
+				imageData->imageGray->copyTo(curImageGray);
+			}
+			catch(...) {Log::alert("copyTo error in FeatureFinder 1");}
 			imageData->unlock();
 			if(curImageGray.cols == 640)
 				cv::pyrDown(curImageGray, pyr1ImageGray);
@@ -137,7 +138,8 @@ void FeatureFinder::run()
 			}
 
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-			curImage.copyTo(*imageAnnotated);
+			try{ curImage.copyTo(*imageAnnotated); }
+			catch(...) {Log::alert("copyTo error in FeatureFinder 2");}
 			drawPoints(points, *imageAnnotated);
 			
 			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());

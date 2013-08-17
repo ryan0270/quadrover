@@ -75,8 +75,8 @@ using namespace ICSL::Constants;
 		mUseViconPos = true;
 		mHaveFirstCameraPos = false;
 
-//		mUseIbvs = false;
-		mUseIbvs = true;
+		mUseIbvs = false;
+//		mUseIbvs = true;
 
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mStateBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double> > >*)(&mErrCovKFBuffer));
@@ -142,19 +142,23 @@ using namespace ICSL::Constants;
 
 			mMutex_meas.lock();
 			if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 500)
+			{
 				mHaveFirstCameraPos = false;
+				String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_LOST+"\t";
+				mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
+			}
 			mMutex_meas.unlock();
 
-			if(mUseIbvs && mHaveFirstCameraPos)
-			{
-				mUseViconPos = false;
-				mUseCameraPos = true;
-			}
-			else
-			{
+//			if(mUseIbvs && mHaveFirstCameraPos)
+//			{
+//				mUseViconPos = false;
+//				mUseCameraPos = true;
+//			}
+//			else
+//			{
 				mUseViconPos = true;
 				mUseCameraPos = false;
-			}
+//			}
 
 			// process new events
 			events.clear();
@@ -723,6 +727,17 @@ using namespace ICSL::Constants;
 		if(data->target == NULL)
 			return;
 
+		if(mUseIbvs)
+		{
+			if(!mHaveFirstCameraPos)
+			{
+				String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ACQUIRED+"\t";
+				mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
+			}
+			mHaveFirstCameraPos = true;
+		}
+		mLastCameraPosTime.setTime();
+
 		// assuming 320x240 images
 		double f = data->imageData->focalLength_640x480/2.0;;
 		double cx = data->imageData->centerX_640x480/2.0;
@@ -745,11 +760,28 @@ using namespace ICSL::Constants;
 			avgLength += data->target->squareData[0]->lineLengths[i];
 		avgLength /= data->target->squareData[0]->lineLengths.size();
 
-		double nomLength =  0.2;
+		
+		double nomLength =  0.21;
 		Array2D<double> pos(3,1);
 		pos[2][0] = nomLength/avgLength*f;
 		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
 		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
+
+		Array2D<double> viconOffset(3,1);
+		viconOffset[0][0] = 0.750;
+		viconOffset[1][0] = 0.691;
+		viconOffset[2][0] = 0.087;
+
+		pos = pos+viconOffset;
+
+		shared_ptr<DataVector<double> > posData(new DataVector<double>());
+		posData->type = DATA_TYPE_CAMERA_POS;
+		posData->timestamp.setTime(data->imageData->timestamp);
+		posData->data = pos.copy();
+
+		mMutex_meas.lock();
+		mNewEventsBuffer.push_back(data);
+		mMutex_meas.unlock();
 
 		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ESTIMATED_POS+"\t";
 		for(int i=0; i<pos.dim1(); i++)
@@ -757,10 +789,6 @@ using namespace ICSL::Constants;
 		mMutex_logger.lock();
 		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
 		mMutex_logger.unlock();
-
-//		mMutex_meas.lock();
-//		mNewEventsBuffer.push_back(data);
-//		mMutex_meas.unock();
 	}
 
 	void Observer_Translational::onNewCommUseIbvs(bool useIbvs)
@@ -770,7 +798,10 @@ using namespace ICSL::Constants;
 		if(useIbvs)
 			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_ENABLED+"\t";
 		else
+		{
 			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_DISABLED+"\t";
+			mHaveFirstCameraPos = false;
+		}
 		mMutex_logger.lock();
 		mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
 		mMutex_logger.unlock();
@@ -806,13 +837,14 @@ using namespace ICSL::Constants;
 				break;
 			case DATA_TYPE_CAMERA_POS:
 				mCameraPosBuffer.push_back(static_pointer_cast<DataVector<double> >(data));
-//				if(mUseCameraPos)
-//				{
-//					Array2D<double> err = submat(mStateKF,0,2,0,0) - static_pointer_cast<DataVector<double> >(data)->data;
-//					doForceGainAdaptation(err);
-//					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double> >(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
-//				}
-//				else
+				if(mUseCameraPos)
+				{
+Log::alert("chad is using it");
+					Array2D<double> err = submat(mStateKF,0,2,0,0) - static_pointer_cast<DataVector<double> >(data)->data;
+					doForceGainAdaptation(err);
+					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double> >(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
+				}
+				else
 				{
 					mMutex_data.unlock();
 					return dataTime;
@@ -963,8 +995,9 @@ double mHeightMeasCov = 0.1*0.1;
 						for(int i=0; i<3; i++)
 							accel[i][0] = 0;
 					break;
-				case DATA_TYPE_VICON_POS:
 				case DATA_TYPE_CAMERA_POS:
+Log::alert("Chad has some pos data here too");
+				case DATA_TYPE_VICON_POS:
 					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double> >(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_VICON_VEL:
