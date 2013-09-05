@@ -77,8 +77,6 @@ class Observer_Translational : public Observer_AngularListener,
 	void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
 	void onNewCommMass(float m);
 	void onNewCommForceGain(float k);
-	void onNewCommAttBias(float roll, float pitch, float yaw);
-	void onNewCommAttBiasAdaptRate(toadlet::egg::Collection<float> const &rate);
 	void onNewCommForceGainAdaptRate(float rate);
 	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
@@ -92,11 +90,6 @@ class Observer_Translational : public Observer_AngularListener,
 
 	// for SensorManagerListener
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
-
-	// for VisionProcessorListener
-//	void onImageProcessed(shared_ptr<ImageMatchData> const data);
-//	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data);
-//	void onImageLost(){};
 
 	// for VelocityEstimatorListener
 	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData);
@@ -124,17 +117,15 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> mMeasCov, mPosMeasCov, mVelMeasCov; 
 	TNT::Array2D<double> mDynCov, mErrCovKF;
 	TNT::Array2D<double> mStateKF;
-	TNT::Array2D<double> mAttBias, mAttBiasReset;
 	TNT::Array2D<double> mLastViconPos, mLastCameraPos;
 	double mMass, mForceGainReset, mForceGain;
-	Collection<double> mAttBiasAdaptRate;
 	double mForceGainAdaptRate;
 
 	std::mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
 	std::mutex mMutex_adaptation;
 
 	Time mLastPosReceiveTime, mLastBarometerMeasTime;
-	Time mLastForceGainUpdateTime, mLastAttBiasUpdateTime;
+	Time mLastForceGainUpdateTime;
 
 	static void doTimeUpdateKF(TNT::Array2D<double> const &accel, 
 							   double const &dt,
@@ -186,7 +177,6 @@ class Observer_Translational : public Observer_AngularListener,
 
 	Time applyData(shared_ptr<IData> const &data);
 	void doForceGainAdaptation(TNT::Array2D<double> const &err);
-	void doAttBiasAdaptation(TNT::Array2D<double> const &err);
 };
 
 } // namespace Quadrotor

@@ -37,7 +37,6 @@ class VelocityEstimatorListener
 #include "Data.h"
 #include "Observer_Angular.h"
 #include "Observer_Translational.h"
-//#include "VisionProcessor.h"
 #include "FeatureFinder.h"
 
 namespace ICSL {

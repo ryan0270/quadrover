@@ -16,9 +16,6 @@ using namespace ICSL::Constants;
 		mDynCov(6,6,0.0),
 		mErrCovKF(6,6,0.0),
 		mStateKF(6,1,0.0),
-		mAttBias(3,1,0.0),
-		mAttBiasReset(3,1,0.0),
-		mAttBiasAdaptRate(3,0.0),
 		mLastViconPos(3,1,0.0),
 		mLastCameraPos(3,1,0.0),
 		mBarometerHeightState(2,1,0.0),
@@ -34,7 +31,6 @@ using namespace ICSL::Constants;
 		mForceGain = mForceGainReset;
 		
 		mLastForceGainUpdateTime.setTimeMS(0);
-		mLastAttBiasUpdateTime.setTimeMS(0);
 		mLastPosReceiveTime.setTimeMS(0);
 		mLastBarometerMeasTime.setTimeMS(0);
 		
@@ -209,7 +205,6 @@ using namespace ICSL::Constants;
 				for(int i=0; i<accel.dim1(); i++)
 					accel[i][0] = 0;
 				mMutex_adaptation.lock();
-				mAttBias.inject(mAttBiasReset);
 				mForceGain = mForceGainReset;
 				mMutex_adaptation.unlock();
 			}
@@ -383,8 +378,8 @@ using namespace ICSL::Constants;
 		// third column of orientation matrix, i.e. R*e3
 		double s1 = sin(att[2][0]); double c1 = cos(att[2][0]);
 		mMutex_adaptation.lock();
-		double s2 = sin(att[1][0]-mAttBias[1][0]); double c2 = cos(att[1][0]-mAttBias[1][0]);
-		double s3 = sin(att[0][0]-mAttBias[0][0]); double c3 = cos(att[0][0]-mAttBias[0][0]);
+		double s2 = sin(att[1][0]); double c2 = cos(att[1][0]);
+		double s3 = sin(att[0][0]); double c3 = cos(att[0][0]);
 		mMutex_adaptation.unlock();
 		Array2D<double> r(3,1);
 		r[0][0] = s1*s3+c1*c3*s2;
@@ -477,31 +472,6 @@ using namespace ICSL::Constants;
 		mForceGain = k;
 		Log::alert(String()+"Force gain updated: \t"+mForceGain);
 		mMutex_data.unlock();
-	}
-
-	void Observer_Translational::onNewCommAttBias(float roll, float pitch, float yaw)
-	{
-		mMutex_adaptation.lock();
-		mAttBiasReset[0][0] = roll;
-		mAttBiasReset[1][0] = pitch;
-		mAttBiasReset[2][0] = yaw;
-		mAttBias.inject(mAttBiasReset);
-		printArray("att bias: \t",transpose(mAttBias));
-		mMutex_adaptation.unlock();
-	}
-
-	void Observer_Translational::onNewCommAttBiasAdaptRate(Collection<float> const &rate)
-	{
-		mMutex_adaptation.lock();
-		for(int i=0; i<3; i++)
-			mAttBiasAdaptRate[i] = rate[i];
-		mMutex_adaptation.unlock();
-		{
-			String s = "Att bias adapt rate updated: ";
-			for(int i=0; i<rate.size(); i++)
-				s = s+rate[i]+"\t";
-			Log::alert(s);
-		}
 	}
 
 	void Observer_Translational::onNewCommForceGainAdaptRate(float rate)
@@ -1056,34 +1026,6 @@ Log::alert("Chad has some pos data here too");
 			str2 = str2+mForceGain+"\t";
 			mMutex_logger.lock();
 			mQuadLogger->addLine(str2,LOG_FLAG_STATE);
-			mMutex_logger.unlock();
-		}
-		mMutex_adaptation.unlock();
-	}
-
-	void Observer_Translational::doAttBiasAdaptation(Array2D<double> const &err)
-	{
-		mMutex_adaptation.lock();
-		if(mLastAttBiasUpdateTime.getMS() == 0)
-		{
-			mLastAttBiasUpdateTime.setTime();
-			mMutex_adaptation.unlock();
-			return;
-		}
-		double dt = mLastAttBiasUpdateTime.getElapsedTimeUS()/1.0e6;
-
-		if(dt < 0.1)
-		{
-			mAttBias[0][0] += mAttBiasAdaptRate[0]*dt*err[1][0];
-			mAttBias[1][0] += mAttBiasAdaptRate[1]*dt*(-err[0][0]);
-		}
-
-		{
-			String str1 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_OBSV_TRANS_ATT_BIAS+"\t";
-			for(int i=0; i<mAttBias.dim1(); i++)
-				str1 = str1+mAttBias[i][0]+"\t";
-			mMutex_logger.lock();
-			mQuadLogger->addLine(str1,LOG_FLAG_STATE);
 			mMutex_logger.unlock();
 		}
 		mMutex_adaptation.unlock();

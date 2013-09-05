@@ -10,7 +10,6 @@
 
 #include "toadlet/egg.h"
 
-//#include "VisionProcessor.h"
 #include "CommManager.h"
 #include "SensorManager.h"
 #include "Time.h"
@@ -30,11 +29,6 @@ class VideoMaker : 	public SensorManagerListener,
 		void run();
 		void shutdown();
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
-
-		// for VisionProcessorListener
-//		void onImageProcessed(shared_ptr<ImageMatchData> const &data);
-//		void onImageTargetFound(shared_ptr<ImageTargetFindData> const &data){};
-//		void onImageLost(){};
 
 		// for SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<IData> const &data);
