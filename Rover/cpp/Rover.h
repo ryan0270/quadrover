@@ -22,7 +22,6 @@
 #include "Observer_Translational.h"
 #include "QuadLogger.h"
 #include "CommManager.h"
-//#include "VisionProcessor.h"
 #include "Time.h"
 #include "TranslationController.h"
 #include "AttitudeThrustController.h"
@@ -84,11 +83,6 @@ public:
 	// for SensorManagerListener
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
-	// for VisionProcessorListener
-//	void onImageProcessed(shared_ptr<ImageMatchData> const &data);
-//	void onImageTargetFound(shared_ptr<ImageTargetFindData> const data){};
-//	void onImageLost(){};
-
 	// for FeatureFinderListener
 	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
@@ -118,7 +112,6 @@ protected:
 
 	QuadLogger mQuadLogger;
 
-//	VisionProcessor mVisionProcessor;
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
 	TargetFinder mTargetFinder;

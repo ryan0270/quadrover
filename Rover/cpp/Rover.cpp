@@ -60,7 +60,6 @@ void Rover::initialize()
 	mTargetFinder.setThreadPriority(sched,maxPriority-2);
 	mTranslationController.setThreadPriority(sched,maxPriority-2);
 	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
-//	mVisionProcessor.setThreadPriority(sched,maxPriority-3);
 	mCommManager.setThreadPriority(sched,minPriority);
 	mQuadLogger.setThreadPriority(sched,minPriority);
 	mVideoMaker.setThreadPriority(sched,minPriority);
@@ -131,13 +130,11 @@ void Rover::initialize()
 	mVelocityEstimator.addListener(&mObsvTranslational);
 	mFeatureFinder.addListener(&mVelocityEstimator);
 	mCommManager.addListener(&mVelocityEstimator);
-//	mVisionProcessor.addListener(&mVelocityEstimator);
 
 	mVideoMaker.initialize();
 	mVideoMaker.start();
 	mCommManager.addListener(&mVideoMaker);
 	mSensorManager.addListener(&mVideoMaker);
-//	mVisionProcessor.addListener(&mVideoMaker);
 
 	mSensorManager.setStartTime(mStartTime);
 	mSensorManager.setQuadLogger(&mQuadLogger);
@@ -146,7 +143,6 @@ void Rover::initialize()
 	mObsvAngular.addListener(&mSensorManager);
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
-//	mSensorManager.addListener(&mVisionProcessor);
 	mSensorManager.addListener(this);
 
 	mQuadLogger.setStartTime(mStartTime);
@@ -179,7 +175,6 @@ void Rover::shutdown()
 
 	mCommManager.shutdown();
 
-//	mVisionProcessor.shutdown();
 	mVelocityEstimator.shutdown();
 	mFeatureFinder.shutdown();
 	mTargetFinder.shutdown();
@@ -351,7 +346,6 @@ void Rover::transmitDataUDP()
 
 	pImgProcTime.type = COMM_IMGPROC_TIME_US;
 	mMutex_vision.lock();
-//	pImgProcTime.dataInt32.push_back(mVisionProcessor.getImageProcTimeUS());
 	pImgProcTime.dataInt32.push_back(mVelocityEstimator.getLastVisionDelayTimeUS());
 	mMutex_vision.unlock();
 
@@ -572,7 +566,6 @@ void Rover::onNewCommTimeSync(int time)
 	uint64 chad = mStartTime.getMS() + delta;
 	mMutex_cntl.lock();
 	mStartTime.setTimeMS(chad);
-//	mMutex_vision.lock(); mVisionProcessor.setStartTime(mStartTime); mMutex_vision.unlock();
 	mMutex_cntl.unlock();
 	mMutex_observer.lock(); 
 	mObsvAngular.setStartTime(mStartTime); 

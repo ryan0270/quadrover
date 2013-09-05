@@ -46,12 +46,12 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +110 Rover.h
+badd +1 Rover.h
 badd +1 Rover.cpp
-badd +96 Observer_Angular.h
-badd +222 Observer_Angular.cpp
-badd +105 Observer_Translational.h
-badd +231 Observer_Translational.cpp
+badd +1 Observer_Angular.h
+badd +1 Observer_Angular.cpp
+badd +1 Observer_Translational.h
+badd +1 Observer_Translational.cpp
 badd +1 AttitudeThrustController.h
 badd +1 AttitudeThrustController.cpp
 badd +1 TranslationController.h
@@ -60,23 +60,21 @@ badd +1 MotorInterface.h
 badd +1 MotorInterface.cpp
 badd +1 CommManager.h
 badd +1 CommManager.cpp
-badd +166 SensorManager.h
-badd +308 SensorManager.cpp
-badd +107 VisionProcessor.h
-badd +365 VisionProcessor.cpp
-badd +62 FeatureFinder.h
-badd +70 FeatureFinder.cpp
+badd +1 SensorManager.h
+badd +1 SensorManager.cpp
+badd +1 FeatureFinder.h
+badd +1 FeatureFinder.cpp
 badd +1 TargetFinder.h
 badd +1 TargetFinder.cpp
-badd +78 VelocityEstimator.h
-badd +71 VelocityEstimator.cpp
+badd +1 VelocityEstimator.h
+badd +1 VelocityEstimator.cpp
 badd +1 Common.h
 badd +1 Data.h
-badd +47 QuadLogger.h
-badd +76 QuadLogger.cpp
-badd +45 VideoMaker.h
-badd +58 VideoMaker.cpp
-args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp VisionProcessor.h VisionProcessor.cpp
+badd +1 QuadLogger.h
+badd +1 QuadLogger.cpp
+badd +1 VideoMaker.h
+badd +1 VideoMaker.cpp
+args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp
 edit Rover.cpp
 set splitbelow splitright
 wincmd _ | wincmd |
