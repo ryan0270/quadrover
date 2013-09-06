@@ -166,15 +166,15 @@ namespace Quadrotor{
 		mRunning = true;
 		thread tempMonitorTh(&SensorManager::runTemperatureMonitor, this);
 
-		double accelCal1X = -0.0002;
-		double accelCal1Y = 0.1116;
-		double accelCal1Z = 9.4939;
-		double accelCal2X = -0.0568;
-		double accelCal2Y = -0.0564;
-		double accelCal2Z = -10.0235;
+		double accelCal1X = 0.05;
+		double accelCal1Y = 0.06;
+		double accelCal1Z = 9.38;
+		double accelCal2X = 0.06;
+		double accelCal2Y = -0.16;
+		double accelCal2Z = -10.10;
 
 		double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
-		// double have information on these so assume they are the same
+		// don't have information on these so assume they are the same
 		double accelScaleX = accelScaleZ;
 		double accelScaleY = accelScaleZ;
 

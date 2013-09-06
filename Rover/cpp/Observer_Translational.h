@@ -16,10 +16,8 @@
 #include "CommManager.h"
 #include "QuadLogger.h"
 #include "Observer_Angular.h"
-#include "AttitudeThrustControllerListener.h"
 #include "SensorManager.h"
 #include "Data.h"
-#include "MotorInterface.h"
 #define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 #include "VelocityEstimator.h"
 #undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
@@ -39,10 +37,8 @@ class Observer_TranslationalListener
 
 class Observer_Translational : public Observer_AngularListener,
 								public CommManagerListener,
-								public AttitudeThrustControllerListener,
 								public SensorManagerListener,
 								public VelocityEstimatorListener,
-								public MotorInterfaceListener,
 								public TargetFinderListener
 {
 	public:
@@ -59,9 +55,6 @@ class Observer_Translational : public Observer_AngularListener,
 	void setStartTime(Time t);
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 	void setRotViconToPhone(TNT::Array2D<double> const &rot){mRotViconToPhone.inject(rot);}
-	void setMotorCmds(double const cmds[4]);
-
-	double getBarometerHeight(){mMutex_meas.lock(); double temp = mBarometerHeightState[0][0]+mZeroHeight; mMutex_meas.unlock(); return temp;}
 
 	void addListener(Observer_TranslationalListener *listener){mListeners.push_back(listener);}
 
@@ -75,27 +68,15 @@ class Observer_Translational : public Observer_AngularListener,
 
 	// from CommManagerListener
 	void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
-	void onNewCommMass(float m);
-	void onNewCommForceGain(float k);
-	void onNewCommForceGainAdaptRate(float rate);
 	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
-	void onNewCommBarometerZeroHeight(float h);
-	void onNewCommMotorOn(){/* mMotorOn = true; // this is now done in onMotorWarmupDone() */}
-	void onNewCommMotorOff(){mMotorOn = false;}
 	void onNewCommUseIbvs(bool useIbvs);
-
-	// from MotorInterfaceListener
-	void onAttitudeThrustControllerCmdsSent(double const cmds[4]);
 
 	// for SensorManagerListener
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for VelocityEstimatorListener
 	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData);
-
-	// for MotorInterfaceListener
-	void onMotorWarmupDone(){mMotorOn = true; Log::alert("Trans observer received warmup done");}
 
 	// for TargetFinderListener
 	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
@@ -113,19 +94,27 @@ class Observer_Translational : public Observer_AngularListener,
 	Collection<Observer_TranslationalListener*> mListeners;
 
 	// for the translational Kalman Filter
-	TNT::Array2D<double> mCkf, mCkf_T;
 	TNT::Array2D<double> mMeasCov, mPosMeasCov, mVelMeasCov; 
 	TNT::Array2D<double> mDynCov, mErrCovKF;
+	// State vector
+	// 0. x
+	// 1. y
+	// 2. z
+	// 3. x vel
+	// 4. y vel
+	// 5. z vel
+	// 6. x accel bias
+	// 7. y accel bias
+	// 8. z accel bias
 	TNT::Array2D<double> mStateKF;
 	TNT::Array2D<double> mLastViconPos, mLastCameraPos;
-	double mMass, mForceGainReset, mForceGain;
-	double mForceGainAdaptRate;
+	TNT::Array2D<double> mAccelBiasReset;
 
 	std::mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
+	std::mutex mMutex_accel, mMutex_gravDir;
 	std::mutex mMutex_adaptation;
 
-	Time mLastPosReceiveTime, mLastBarometerMeasTime;
-	Time mLastForceGainUpdateTime;
+	Time mLastPosReceiveTime;
 
 	static void doTimeUpdateKF(TNT::Array2D<double> const &accel, 
 							   double const &dt,
@@ -145,9 +134,10 @@ class Observer_Translational : public Observer_AngularListener,
 										  TNT::Array2D<double> &state, 
 										  TNT::Array2D<double> &errCov);
 
-	shared_ptr<DataPhoneTemp<double> > mPhoneTempData;
 	double mZeroHeight;
-	TNT::Array2D<double> mBarometerHeightState;
+
+//	shared_ptr<DataVector<double>> mAccelData;
+//	bool mNewAccelReady;
 
 	bool mNewImageResultsReady;
 	std::mutex mMutex_imageData, mMutex_logger;
@@ -155,17 +145,14 @@ class Observer_Translational : public Observer_AngularListener,
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
-	bool mMotorOn;
-
 	int mThreadPriority, mScheduler;
 
-	vector<list<shared_ptr<Data<double> > > *> mDataBuffers;
-	list<shared_ptr<DataVector<double> > > mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
-	list<shared_ptr<DataVector<double> > > mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer, mMapVelBuffer;
-	list<shared_ptr<Data<double> > > /*mHeightDataBuffer,*/ mMapHeightBuffer;
-	list<shared_ptr<DataVector<double> > > mMotorCmdsBuffer, mThrustDirBuffer;
-	list<shared_ptr<Data<double> > > mThrustBuffer;
-	list<shared_ptr<IData> > mNewEventsBuffer;
+	vector<list<shared_ptr<Data<double>>> *> mDataBuffers;
+	list<shared_ptr<DataVector<double>>> mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
+	list<shared_ptr<DataVector<double>>> mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer, mMapVelBuffer;
+	list<shared_ptr<Data<double>>> /*mHeightDataBuffer,*/ mMapHeightBuffer;
+	list<shared_ptr<DataVector<double>>> mRawAccelDataBuffer, mGravityDirDataBuffer;
+	list<shared_ptr<IData>> mNewEventsBuffer;
 
 	bool mHaveFirstCameraPos;
 	Time mLastCameraPosTime, mLastViconPosTime;
@@ -176,7 +163,6 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> mViconCameraOffset;
 
 	Time applyData(shared_ptr<IData> const &data);
-	void doForceGainAdaptation(TNT::Array2D<double> const &err);
 };
 
 } // namespace Quadrotor

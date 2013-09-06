@@ -102,7 +102,7 @@ void Rover::initialize()
 	mObsvTranslational.addListener(&mTranslationController);
 	mObsvAngular.addListener(&mObsvTranslational);
 	mCommManager.addListener(&mObsvTranslational);
-	mAttitudeThrustController.addListener(&mObsvTranslational);
+//	mAttitudeThrustController.addListener(&mObsvTranslational);
 
 	mFeatureFinder.initialize();
 	mFeatureFinder.setStartTime(mStartTime);
@@ -147,7 +147,7 @@ void Rover::initialize()
 
 	mQuadLogger.setStartTime(mStartTime);
 
-	mMotorInterface.addListener(&mObsvTranslational);
+//	mMotorInterface.addListener(&mObsvTranslational);
 	mMotorInterface.addListener(&mTranslationController);
 
 	mNumCpuCores = android_getCpuCount();
@@ -367,7 +367,8 @@ void Rover::transmitDataUDP()
 		lastCompass = mObsvAngular.getLastMagnometer();
 	}
 
-	pBarometerHeight.dataFloat.push_back(mObsvTranslational.getBarometerHeight());
+//	pBarometerHeight.dataFloat.push_back(mObsvTranslational.getBarometerHeight());
+	pBarometerHeight.dataFloat.push_back(0);//mObsvTranslational.getBarometerHeight());
 	pBarometerHeight.type = COMM_BAROMETER_HEIGHT;
 	mMutex_observer.unlock();
 	pGyro.dataFloat.resize(3);
