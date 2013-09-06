@@ -53,6 +53,8 @@ enum DataType
 	DATA_TYPE_ANGULAR_VEL,
 	DATA_TYPE_MAP_VEL,
 	DATA_TYPE_MAP_HEIGHT,
+	DATA_TYPE_GRAVITY_DIR,
+	DATA_TYPE_RAW_ACCEL,
 };
 
 template<class T> class Data;
@@ -461,7 +463,7 @@ typename list<shared_ptr<DataVector<T> > >::iterator IData::findIndexReverse(Tim
 		return i;
 
 	i--;
-	while(i != d.begin() && (*i)->timestamp > t)
+	while(i != d.begin() && (*i)->timestamp >= t)
 		i--;
 	return i;
 }

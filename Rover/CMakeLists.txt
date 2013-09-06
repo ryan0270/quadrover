@@ -55,8 +55,6 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
-	./cpp/Rover.cpp
-	jni/jni_part.cpp
 	./cpp/Observer_Translational.cpp
 	./cpp/QuadLogger.cpp
 	./cpp/CommManager.cpp
@@ -73,6 +71,8 @@ set (SRC ${SRC}
 	./cpp/VelocityEstimator.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
 	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
+	./cpp/Rover.cpp
+	jni/jni_part.cpp
 )
 
 # Headers

@@ -26,12 +26,12 @@ Observer_Angular::Observer_Angular() :
 	mDone = true;
 
 	mGainP = 1;
-	mGainI = 0.0; 
-	mAccelWeight = 2;
-	mMagWeight = 0;
+	mGainI = 0.05; 
+	mAccelWeight = 5;
+	mMagWeight = 1;
 
-	mGainB = 2;
-	mIntSat = 0.005;
+//	mGainB = 2;
+//	mIntSat = 0.005;
 	// abs(mBias) < mIntSat+mGainI/mGainB*sum(weight)
 
 	mQuadLogger = NULL;
@@ -110,19 +110,19 @@ void Observer_Angular::run()
 	bool accelProcessed = true; // "processed" means used to calculate the innovation term
 	bool magProcessed = true;
 	bool gyroProcessed = true;
-	double calMinX = -9.7;
-	double calMaxX = 9.65;
-	double calMinY = -10.2;
-	double calMaxY = 10.05;
-	double calMinZ = -10.05;
-	double calMaxZ = 9.5;
-
-	double offsetX = 0.5*(calMaxX+calMinX);
-	double offsetY = 0.5*(calMaxY+calMinY);
-	double offsetZ = 0.5*(calMaxZ+calMinZ);
-	double scaleX = 0.5*(calMaxX-calMinX)/GRAVITY;
-	double scaleY = 0.5*(calMaxY-calMinY)/GRAVITY;
-	double scaleZ = 0.5*(calMaxZ-calMinZ)/GRAVITY;
+//	double calMinX = -9.7;
+//	double calMaxX = 9.65;
+//	double calMinY = -10.2;
+//	double calMaxY = 10.05;
+//	double calMinZ = -10.05;
+//	double calMaxZ = 9.5;
+//
+//	double offsetX = 0.5*(calMaxX+calMinX);
+//	double offsetY = 0.5*(calMaxY+calMinY);
+//	double offsetZ = 0.5*(calMaxZ+calMinZ);
+//	double scaleX = 0.5*(calMaxX-calMinX)/GRAVITY;
+//	double scaleY = 0.5*(calMaxY-calMinY)/GRAVITY;
+//	double scaleZ = 0.5*(calMaxZ-calMinZ)/GRAVITY;
 
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
@@ -144,6 +144,9 @@ void Observer_Angular::run()
 				if(gyroData != NULL) {gyroData->lock(); gyroSum += gyroData->dataCalibrated; gyroData->unlock();}
 				if(magData != NULL) {magData->lock(); magSum += magData->dataCalibrated; magData->unlock();}
 				if(accelData != NULL) {accelData->lock(); accelSum += accelData->dataCalibrated; accelData->unlock();}
+//				if(gyroData != NULL) {gyroData->lock(); gyroSum += gyroData->data; gyroData->unlock();}
+//				if(magData != NULL) {magData->lock(); magSum += magData->data; magData->unlock();}
+//				if(accelData != NULL) {accelData->lock(); accelSum += accelData->data; accelData->unlock();}
 				mBurnCount++;
 				if(mBurnCount == 2000)
 				{
@@ -215,6 +218,8 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 {
 	accelData->lock(); Array2D<double> accel = accelData->dataCalibrated.copy(); accelData->unlock();
 	magData->lock(); Array2D<double> mag = magData->dataCalibrated.copy(); magData->unlock();
+//	accelData->lock(); Array2D<double> accel = accelData->data.copy(); accelData->unlock();
+//	magData->lock(); Array2D<double> mag = magData->data.copy(); magData->unlock();
 
 	mMutex_data.lock();
 	// orthogonalize the directions (see Hua et al (2011) - Nonlinear attitude estimation with measurement decoupling and anti-windpu gyro-bias compensation)
@@ -226,14 +231,14 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 	vI = 1.0/norm2(vI)*vI;
 
 	Array2D<double> transR = transpose(mCurRotMat);
-	if(norm2(accel-mAccelDirNom*GRAVITY) < 3)
+//	if(norm2(accel-mAccelDirNom*GRAVITY) < 3)
 //	if( (norm2(accel)-GRAVITY) < 2)
 	{
 		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));
 		mInnovation += mMagWeight*cross(vB, matmult(transR, vI));
 	}
-	else
-		mInnovation = mMagWeight*cross(vB, matmult(transR, vI));
+//	else
+//		mInnovation = mMagWeight*cross(vB, matmult(transR, vI));
 
 	// add any extra measurements that may have come in
 	while(mExtraDirsMeasured.size() > 0)
@@ -386,6 +391,8 @@ Array2D<double> Observer_Angular::getLastAccel()
 	mMutex_cache.lock();
 	if(mAccelData != NULL)
 	{ mAccelData->lock(); lastAccel = mAccelData->dataCalibrated.copy(); mAccelData->unlock(); }
+//	if(mAccelData != NULL)
+//	{ mAccelData->lock(); lastAccel = mAccelData->data.copy(); mAccelData->unlock(); }
 	mMutex_cache.unlock();
 	return lastAccel;
 }
@@ -396,6 +403,8 @@ Array2D<double> Observer_Angular::getLastMagnometer()
 	mMutex_cache.lock();
 	if(mMagData != NULL)
 	{ mMagData->lock(); lastMag = mMagData->dataCalibrated.copy(); mMagData->unlock(); }
+//	if(mMagData != NULL)
+//	{ mMagData->lock(); lastMag = mMagData->data.copy(); mMagData->unlock(); }
 	mMutex_cache.unlock();
 	return lastMag;
 }
@@ -424,6 +433,7 @@ void Observer_Angular::setYawZero()
 	Array2D<double> rot = createRotMat(2, -mCurAttitude[2][0]);
 	mCurRotMat = matmult(rot, mCurRotMat);
 	mMagData->lock(); Array2D<double> mag = mMagData->dataCalibrated; mMagData->unlock();
+//	mMagData->lock(); Array2D<double> mag = mMagData->data; mMagData->unlock();
 	mMagDirNom.inject(1.0/norm2(mag)*mag);
 	temp = mMagDirNom.copy();
 	mMutex_data.unlock();
