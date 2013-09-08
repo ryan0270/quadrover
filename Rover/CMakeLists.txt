@@ -64,9 +64,7 @@ set (SRC ${SRC}
 	./cpp/AttitudeThrustController.cpp
 	./cpp/MotorInterface.cpp
 	./cpp/SensorManager.cpp
-	./cpp/Matcher.cpp
 	./cpp/VideoMaker.cpp
-	./cpp/BlobDetector.cpp
 	./cpp/Observer_Angular.cpp
 	./cpp/VelocityEstimator.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
@@ -91,10 +89,8 @@ set (H ${H}
 	./cpp/AttitudeThrustControllerListener.h
 	./cpp/MotorInterface.h
 	./cpp/SensorManager.h
-	./cpp/Matcher.h
 	./cpp/VideoMaker.h
 	./cpp/constants.h
-	./cpp/BlobDetector.h
 	./cpp/Data.h
 	./cpp/VelocityEstimator.h
 	${CPUFEATURES_PATH}/cpu-features.h

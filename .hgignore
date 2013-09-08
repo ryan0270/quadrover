@@ -32,3 +32,4 @@ Rover/video_*/*
 Rover/camcorder*/*
 VisionTesting/video*/*
 VisionTesting/backup*/*
+ObserverTuning/dataSets*

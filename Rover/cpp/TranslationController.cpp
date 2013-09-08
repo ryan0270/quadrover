@@ -3,9 +3,8 @@
 
 namespace ICSL {
 namespace Quadrotor {
-using namespace toadlet;
-using namespace ICSL::Constants;
-using namespace TNT;
+//using namespace ICSL::Constants;
+//using namespace TNT;
 	TranslationController::TranslationController() :
 		mCurState(6,1,0.0),
 		mDesState(6,1,0.0),

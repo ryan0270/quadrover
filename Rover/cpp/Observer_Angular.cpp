@@ -3,11 +3,10 @@
 
 #include <time.h>
 
-using namespace TNT;
-using namespace ICSL::Constants;
-
 namespace ICSL{
 namespace Quadrotor{
+using namespace TNT;
+using namespace ICSL::Constants;
 
 Observer_Angular::Observer_Angular() :
 	mGyroBias(3,1,0.0),

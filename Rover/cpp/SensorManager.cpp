@@ -1,12 +1,10 @@
 #include "SensorManager.h"
 
-using namespace std;
-using namespace toadlet::egg;
-using namespace TNT;
-using namespace ICSL::Constants;
-
 namespace ICSL{
 namespace Quadrotor{
+//using namespace std;
+//using namespace TNT;
+//using namespace ICSL::Constants;
 	SensorManager::SensorManager() :
 		mLastAccel(3,1,0.0),
 		mLastGyro(3,1,0.0),

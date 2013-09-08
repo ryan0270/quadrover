@@ -1,5 +1,22 @@
 #ifndef ICSL_SENSOR_MANAGER
 #define ICSL_SENSOR_MANAGER
+
+#ifdef ICSL_OBSERVER_SIMULATION
+#include <memory>
+#include <Data.h>
+namespace ICSL{
+namespace Quadrotor{
+//using namespace std;
+class SensorManagerListener
+{
+	public:
+	virtual void onNewSensorUpdate(shared_ptr<IData> const &data)=0;
+};
+
+}}
+
+#else // ICSL_OBSERVER_SIMULATION
+
 #include <sched.h>
 #include <thread>
 #include <mutex>
@@ -20,9 +37,7 @@
 #include "Common.h"
 #include "QuadLogger.h"
 #include "Time.h"
-#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
-#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -32,7 +47,7 @@
 
 namespace ICSL{
 namespace Quadrotor{
-using namespace std;
+//using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
 class SensorManagerListener
@@ -109,4 +124,5 @@ class SensorManager : public Observer_AngularListener
 
 } // namespace Quadrotor
 } // namespace ICSL
+#endif // ICSL_OBSERVER_SIMULATION
 #endif

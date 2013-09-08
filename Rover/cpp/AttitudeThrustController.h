@@ -4,20 +4,19 @@
 #include <thread>
 #include <mutex>
 
-#include "toadlet/egg.h"
-
 #include "TNT/tnt.h"
 
+#include "QuadLogger.h"
 #include "Time.h"
 #include "CommManager.h"
-#include "QuadLogger.h"
 #include "TranslationController.h"
 #include "Observer_Angular.h"
 #include "MotorInterface.h"
 
+#include "toadlet/egg.h"
+
 namespace ICSL {
 namespace Quadrotor{
-using namespace toadlet::egg;
 
 class AttitudeThrustControllerListener;
 //class AttitudeThrustControllerListener

@@ -2,9 +2,8 @@
 
 namespace ICSL {
 namespace Quadrotor{
-using namespace toadlet;
-using namespace TNT;
-using namespace ICSL::Constants;
+//using namespace TNT;
+//using namespace ICSL::Constants;
 
 FeatureFinder::FeatureFinder()
 {
@@ -165,7 +164,7 @@ void FeatureFinder::run()
 				mMutex_logger.unlock();
 
 				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
-				logString = logString+points.size();
+				logString = logString+(int)points.size();
 				mMutex_logger.lock();
 				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
@@ -228,7 +227,7 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(cv::Mat const &image,
 	}
 
 	// Now pick the strongest keyPoints 
-	// Right now, for reduced computation, it is using a minDistance x minDistance box for exclusion rather
+	// Right now, for reduced computation, it is //using a minDistance x minDistance box for exclusion rather
 	// than a minDistance radius circle
 	vector<bool> isActive(gridId.size(), true);
 	vector<cv::KeyPoint> keyPoints;

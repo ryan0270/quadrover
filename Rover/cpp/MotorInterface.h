@@ -10,6 +10,7 @@
 
 namespace ICSL {
 namespace Quadrotor{
+using namespace std;
 
 enum{ 
 	MIN_MOTOR_CMD = 0, 

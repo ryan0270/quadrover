@@ -9,11 +9,10 @@
 #ifndef ICSL_SYSTEMMODEL_LINEAR
 #define ICSL_SYSTEMMODEL_LINEAR
 
-using namespace std;
-using namespace TNT;
-
 namespace ICSL
 {
+using namespace std;
+using namespace TNT;
 	class SystemModelLinear : public ISystemModelAffine
 	{
 		public:

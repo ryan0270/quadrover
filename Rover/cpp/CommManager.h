@@ -12,6 +12,7 @@
 
 namespace ICSL{
 namespace Quadrotor{
+using namespace std;
 class CommManagerListener
 {
 	public:

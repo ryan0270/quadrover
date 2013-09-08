@@ -3,8 +3,9 @@
 #include <memory>
 #include "Data.h"
 #include "TNT/tnt.h"
-namespace ICSL{ namespace Quadrotor{
-using namespace std;
+namespace ICSL{
+namespace Quadrotor{
+//using namespace std;
 class Observer_AngularListener
 {
 	public:
@@ -24,8 +25,7 @@ class Observer_AngularListener
 #include <thread>
 #include <mutex>
 
-#include <toadlet/egg.h>
-
+#include "Data.h"
 #include "constants.h"
 #include "TNT/tnt.h"
 #include "QuadLogger.h"
@@ -33,9 +33,8 @@ class Observer_AngularListener
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
-#include "Data.h"
 
-//using toadlet::uint64;
+#include <toadlet/egg.h>
 
 namespace ICSL{
 namespace Quadrotor{

@@ -7,20 +7,22 @@
 #include <thread>
 #include <mutex>
 
-#include "mxml.h"
-
-#include <cmath>
-#include <toadlet/egg.h>
-#include "Common.h"
-#include "Time.h"
-#include "Data.h"
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+#include "mxml.h"
+
+#include <cmath>
+
+#include "Data.h"
+#include "Common.h"
+#include "Time.h"
+
+#include <toadlet/egg.h>
+
 namespace ICSL {
 namespace Quadrotor {
-using namespace std;
+//using namespace std;
 
 enum LogIDs
 {
