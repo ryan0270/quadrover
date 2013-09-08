@@ -98,7 +98,7 @@ class Packet
 	/*!
 	 * \param serial Object to store the serialized packet information in
 	 */
-	void serialize(Collection<tbyte> &serial)
+	void serialize(toadlet::egg::Collection<toadlet::tbyte> &serial)
 	{
 		size = sizeof(toadlet::int32); // size
 		size += sizeof(toadlet::int32); // type
@@ -110,7 +110,7 @@ class Packet
 		size += sizeof(toadlet::int32); // number of bools
 		size += dataBool.size()*sizeof(bool); // bools
 		serial.resize(size);
-		tbyte *p = &serial.front();
+		toadlet::tbyte *p = &serial.front();
 
 		memcpy(p, &size, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
 		memcpy(p, &type, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
@@ -134,9 +134,9 @@ class Packet
 //		}
 	}
 
-	void deserialize(Collection<tbyte> const &serial)
+	void deserialize(toadlet::egg::Collection<toadlet::tbyte> const &serial)
 	{
-		const tbyte *p = &serial.front();
+		const toadlet::tbyte *p = &serial.front();
 		memcpy(&size, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
 		memcpy(&type, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
 		memcpy(&time, p, sizeof(toadlet::uint64)); p += sizeof(toadlet::uint64);

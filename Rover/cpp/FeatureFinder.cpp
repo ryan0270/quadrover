@@ -4,6 +4,7 @@ namespace ICSL {
 namespace Quadrotor{
 //using namespace TNT;
 //using namespace ICSL::Constants;
+using namespace toadlet::egg;
 
 FeatureFinder::FeatureFinder()
 {

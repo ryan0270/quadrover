@@ -13,6 +13,8 @@
 namespace ICSL{
 namespace Quadrotor{
 using namespace std;
+using namespace toadlet;
+using namespace toadlet;
 class CommManagerListener
 {
 	public:
@@ -28,7 +30,7 @@ class CommManagerListener
 	virtual void onNewCommTimeSync(int time){};
 	virtual void onNewCommLogTransfer(){};
 //	virtual void onNewCommControlSystemGains(Collection<float> const &gains){};
-	virtual void onNewCommSendControlSystem(Collection<tbyte> const &buff){};
+	virtual void onNewCommSendControlSystem(toadlet::egg::Collection<tbyte> const &buff){};
 	virtual void onNewCommLogMask(uint32 mask){};
 	virtual void onNewCommLogClear(){};
 	virtual void onNewCommStateVicon(toadlet::egg::Collection<float> const &data){};
@@ -80,13 +82,13 @@ class CommManager
 	protected:
 	bool mConnected;
 	std::mutex mMutex_socketTCP, mMutex_socketUDP;
-	Socket::ptr mServerSocketTCP, mSocketTCP, mSocketUDP;
+	toadlet::egg::Socket::ptr mServerSocketTCP, mSocketTCP, mSocketUDP;
 	Time mLastPacketTime, mLastCmdRcvTime;
 	uint32 mAddrPC;
 	int mPortPC;
 	bool mRun, mDone;
 
-	Collection<CommManagerListener*> mListeners;
+	toadlet::egg::Collection<CommManagerListener*> mListeners;
 
 	void pollUDP();
 	void pollTCP();

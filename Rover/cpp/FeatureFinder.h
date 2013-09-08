@@ -99,7 +99,7 @@ class FeatureFinder : public CommManagerListener,
 		std::mutex mMutex_logger;
 		std::mutex mMutex_params;
 
-		Collection<FeatureFinderListener*> mListeners;
+		toadlet::egg::Collection<FeatureFinderListener*> mListeners;
 
 		float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
 		int mSepDist, mPointCntTarget;
