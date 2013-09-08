@@ -1,11 +1,8 @@
 #include "CommManager.h"
-#include "errno.h"
-#include "android/log.h"
-
-using namespace toadlet;
 
 namespace ICSL{
 namespace Quadrotor{
+//using namespace std;
 CommManager::CommManager()
 {
 	mLastCmdRcvTime.clear();

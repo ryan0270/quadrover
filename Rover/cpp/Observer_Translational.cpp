@@ -4,8 +4,8 @@
 
 namespace ICSL{
 namespace Quadrotor{
-using namespace toadlet::egg;
 using namespace ICSL::Constants;
+using namespace TNT;
 	Observer_Translational::Observer_Translational() :
 		mRotViconToPhone(3,3,0.0),
 		mMeasCov(6,6,0.0),
@@ -98,7 +98,7 @@ using namespace ICSL::Constants;
 		sched_setscheduler(0, mScheduler, &sp);
 
 		Time loopTime;
-		uint64 t;
+		toadlet::uint64 t;
 		list<shared_ptr<IData>> events;
 		float targetRate = 200; // hz
 		float targetPeriodUS = 1.0f/targetRate*1.0e6;
@@ -426,7 +426,7 @@ using namespace ICSL::Constants;
 
 	void Observer_Translational::onNewCommKalmanMeasVar(Collection<float> const &var)
 	{
-		assert(var.size() == mMeasCov);
+		assert(var.size() == mMeasCov.dim1());
 		mMutex_kfData.lock();
 		for(int i=0; i<mMeasCov.dim1(); i++)
 			mMeasCov[i][i] = var[i];

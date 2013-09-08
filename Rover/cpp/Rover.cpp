@@ -1,12 +1,12 @@
 #include "Rover.h"
 
-using namespace std;
-using namespace TNT;
-using namespace toadlet;
-using namespace ICSL::Constants;
 
 namespace ICSL {
 namespace Quadrotor {
+//using namespace std;
+//using namespace TNT;
+//using namespace ICSL::Constants;
+
 Rover::Rover() : 
 	mRotViconToQuad(3,3,0.0), 
 	mRotQuadToPhone(3,3,0.0), 

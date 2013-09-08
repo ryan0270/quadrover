@@ -2,9 +2,8 @@
 
 namespace ICSL {
 namespace Quadrotor{
-using namespace toadlet;
-using namespace TNT;
-using namespace ICSL::Constants;
+//using namespace TNT;
+//using namespace ICSL::Constants;
 
 TargetFinder::TargetFinder()
 {

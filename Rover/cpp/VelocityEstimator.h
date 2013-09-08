@@ -6,7 +6,7 @@
 
 namespace ICSL {
 namespace Quadrotor { 
-using namespace std; 
+//using namespace std; 
 class VelocityEstimatorListener
 {
 	public:
@@ -26,23 +26,28 @@ class VelocityEstimatorListener
 #include <thread>
 #include <mutex>
 
-#include "toadlet/egg.h"
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include "TNT/tnt.h"
 #include "TNT/jama_lu.h"
 #include "TNT/jama_cholesky.h"
 
+#include "Data.h"
 #include "Time.h"
 #include "QuadLogger.h"
-#include "Data.h"
 #include "Observer_Angular.h"
 #include "Observer_Translational.h"
 #include "FeatureFinder.h"
 
+#include "toadlet/egg.h"
+
 namespace ICSL {
 namespace Quadrotor {
 
-using namespace std;
+//using namespace std;
+using namespace TNT;
 
 class VelocityEstimator : public FeatureFinderListener,
 						  public CommManagerListener

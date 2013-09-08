@@ -1,7 +1,5 @@
 #include "MotorInterface.h"
 
-using namespace toadlet::egg;
-
 namespace ICSL {
 namespace Quadrotor{
 	MotorInterface::MotorInterface()

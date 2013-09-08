@@ -2,10 +2,9 @@
 
 #include "SystemModelLinear.h"
 
+namespace ICSL{
 using namespace std;
 using namespace TNT;
-
-namespace ICSL{
 	SystemModelLinear::SystemModelLinear() : mA(0,0), mB(0,0), mC(0,0), mD(0,0)
 	{
 	}

@@ -4,7 +4,7 @@
 
 namespace ICSL{
 namespace Quadrotor{
-using namespace std;
+//using namespace std;
 QuadLogger::QuadLogger()
 {
 	mDir = ".";
@@ -12,7 +12,7 @@ QuadLogger::QuadLogger()
 	mLogStream = NULL;
 	mTypeMask = 0;
 	mTypeMask = LOG_FLAG_PC_UPDATES ;
-	mTypeMask |= LOG_FLAG_STATE;
+//	mTypeMask |= LOG_FLAG_STATE;
 //	mTypeMask |= LOG_FLAG_STATE_DES;
 //	mTypeMask |= LOG_FLAG_MOTORS;
 //	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
@@ -116,12 +116,6 @@ void QuadLogger::addLine(String const &str, LogFlags type)
 	mMutex_addLine.unlock();
 }
 
-//void QuadLogger::close()
-//{
-//	mRunning = false;
-//	this->join();
-//}
-
 void QuadLogger::saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
 								 list<shared_ptr<ImageMatchData> > const &matchDataBuffer)
 {
@@ -204,67 +198,67 @@ void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > cons
 										list<TNT::Array2D<double> > const &attPrevBuffer,
 										list<TNT::Array2D<double> > const &attCurBuffer)
 {
-	list<vector<vector<cv::Point2f> > >::const_iterator iter = matchBuffer.begin();
-	list<Time>::const_iterator timeIter = timeBuffer.begin();
-	list<double>::const_iterator dtIter = dtBuffer.begin();
-	list<TNT::Array2D<double> >::const_iterator attPrevIter = attPrevBuffer.begin();
-	list<TNT::Array2D<double> >::const_iterator attCurIter = attCurBuffer.begin();
-	int id = 0;
-	mxml_node_t *xml = mxmlNewXML("1.0");
-	mxml_node_t *root = mxmlNewElement(xml,"root");
-	mxmlNewInteger(mxmlNewElement(root,"NumData"),matchBuffer.size());
-	while(iter != matchBuffer.end())
-	{
-		stringstream ss; ss << "match_" << id;
-		vector<vector<cv::Point2f> > const *matchData = &(*iter);
-		mxml_node_t *matchNode = mxmlNewElement(root,ss.str().c_str());
-			mxmlNewInteger(mxmlNewElement(matchNode,"Time"), Time::calcDiffMS(mStartTime, *timeIter));
-			mxmlNewReal(mxmlNewElement(matchNode,"dt"), *dtIter);
-			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
-			if((*matchData)[0].size() == 0)
-				mxmlNewInteger(numPtsNode, 0);
-			else
-			{
-				mxmlNewInteger(numPtsNode, (*matchData)[0].size());
-				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
-				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
-				cv::Point2f pt0, pt1;
-				for(int i=0; i<(*matchData)[0].size(); i++)
-				{
-					pt0 = (*matchData)[0][i];
-					pt1 = (*matchData)[1][i];
-	
-					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
-					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");
-					// the data are floats but at this point everything is actually
-					// integer on the OpenCV side
-					mxmlNewInteger(mxmlNewElement(p0Node,"x"),(int)(pt0.x+0.5));
-					mxmlNewInteger(mxmlNewElement(p0Node,"y"),(int)(pt0.y+0.5));
-					mxmlNewInteger(mxmlNewElement(p1Node,"x"),(int)(pt1.x+0.5));
-					mxmlNewInteger(mxmlNewElement(p1Node,"y"),(int)(pt1.y+0.5));
-				}
-			}
-			mxml_node_t *attPrevNode = mxmlNewElement(matchNode,"AttPrev");
-				mxmlNewReal(mxmlNewElement(attPrevNode,"roll"), (*attPrevIter)[0][0]);
-				mxmlNewReal(mxmlNewElement(attPrevNode,"pitch"), (*attPrevIter)[1][0]);
-				mxmlNewReal(mxmlNewElement(attPrevNode,"yaw"), (*attPrevIter)[2][0]);
-			mxml_node_t *attCurNode = mxmlNewElement(matchNode,"AttCur");
-				mxmlNewReal(mxmlNewElement(attCurNode,"roll"), (*attCurIter)[0][0]);
-				mxmlNewReal(mxmlNewElement(attCurNode,"pitch"), (*attCurIter)[1][0]);
-				mxmlNewReal(mxmlNewElement(attCurNode,"yaw"), (*attCurIter)[2][0]);
-
-		id++;
-		iter++;
-		timeIter++;
-		dtIter++;
-		attPrevIter++;
-		attCurIter++;
-	}
-
-Log::alert("Saving match data to " + mDir + "/matchData.xml");
-	FILE *fp = fopen((mDir+"/matchData.xml").c_str(),"w");
-	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
-	fclose(fp);
+//	list<vector<vector<cv::Point2f> > >::const_iterator iter = matchBuffer.begin();
+//	list<Time>::const_iterator timeIter = timeBuffer.begin();
+//	list<double>::const_iterator dtIter = dtBuffer.begin();
+//	list<TNT::Array2D<double> >::const_iterator attPrevIter = attPrevBuffer.begin();
+//	list<TNT::Array2D<double> >::const_iterator attCurIter = attCurBuffer.begin();
+//	int id = 0;
+//	mxml_node_t *xml = mxmlNewXML("1.0");
+//	mxml_node_t *root = mxmlNewElement(xml,"root");
+//	mxmlNewInteger(mxmlNewElement(root,"NumData"),matchBuffer.size());
+//	while(iter != matchBuffer.end())
+//	{
+//		stringstream ss; ss << "match_" << id;
+//		vector<vector<cv::Point2f> > const *matchData = &(*iter);
+//		mxml_node_t *matchNode = mxmlNewElement(root,ss.str().c_str());
+//			mxmlNewInteger(mxmlNewElement(matchNode,"Time"), Time::calcDiffMS(mStartTime, *timeIter));
+//			mxmlNewReal(mxmlNewElement(matchNode,"dt"), *dtIter);
+//			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
+//			if((*matchData)[0].size() == 0)
+//				mxmlNewInteger(numPtsNode, 0);
+//			else
+//			{
+//				mxmlNewInteger(numPtsNode, (*matchData)[0].size());
+//				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
+//				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
+//				cv::Point2f pt0, pt1;
+//				for(int i=0; i<(*matchData)[0].size(); i++)
+//				{
+//					pt0 = (*matchData)[0][i];
+//					pt1 = (*matchData)[1][i];
+//	
+//					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
+//					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");
+//					// the data are floats but at this point everything is actually
+//					// integer on the OpenCV side
+//					mxmlNewInteger(mxmlNewElement(p0Node,"x"),(int)(pt0.x+0.5));
+//					mxmlNewInteger(mxmlNewElement(p0Node,"y"),(int)(pt0.y+0.5));
+//					mxmlNewInteger(mxmlNewElement(p1Node,"x"),(int)(pt1.x+0.5));
+//					mxmlNewInteger(mxmlNewElement(p1Node,"y"),(int)(pt1.y+0.5));
+//				}
+//			}
+//			mxml_node_t *attPrevNode = mxmlNewElement(matchNode,"AttPrev");
+//				mxmlNewReal(mxmlNewElement(attPrevNode,"roll"), (*attPrevIter)[0][0]);
+//				mxmlNewReal(mxmlNewElement(attPrevNode,"pitch"), (*attPrevIter)[1][0]);
+//				mxmlNewReal(mxmlNewElement(attPrevNode,"yaw"), (*attPrevIter)[2][0]);
+//			mxml_node_t *attCurNode = mxmlNewElement(matchNode,"AttCur");
+//				mxmlNewReal(mxmlNewElement(attCurNode,"roll"), (*attCurIter)[0][0]);
+//				mxmlNewReal(mxmlNewElement(attCurNode,"pitch"), (*attCurIter)[1][0]);
+//				mxmlNewReal(mxmlNewElement(attCurNode,"yaw"), (*attCurIter)[2][0]);
+//
+//		id++;
+//		iter++;
+//		timeIter++;
+//		dtIter++;
+//		attPrevIter++;
+//		attCurIter++;
+//	}
+//
+//Log::alert("Saving match data to " + mDir + "/matchData.xml");
+//	FILE *fp = fopen((mDir+"/matchData.xml").c_str(),"w");
+//	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
+//	fclose(fp);
 }
 
 void QuadLogger::generateMatlabHeader()

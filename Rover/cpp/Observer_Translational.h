@@ -6,23 +6,28 @@
 #include <thread>
 #include <mutex>
 
-#include "toadlet/egg.h"
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 #include "TNT/tnt.h"
 
 #include "constants.h"
 
+#include "Data.h"
 #include "Time.h"
 #include "CommManager.h"
 #include "QuadLogger.h"
 #include "Observer_Angular.h"
 #include "SensorManager.h"
-#include "Data.h"
 #define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 #include "VelocityEstimator.h"
 #undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 
 #include "TargetFinder.h"
+
+#include "toadlet/egg.h"
 
 namespace ICSL{
 namespace Quadrotor{

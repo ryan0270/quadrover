@@ -8,7 +8,8 @@
 #include <toadlet/egg.h>
 
 namespace TNT{
-using namespace toadlet::egg;
+//using namespace toadlet::egg;
+
 //	template <class T>
 //	inline void printTNTArray(Array2D<T> array) 
 //	{ 

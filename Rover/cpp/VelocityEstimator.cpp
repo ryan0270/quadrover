@@ -2,9 +2,9 @@
 
 namespace ICSL {
 namespace Quadrotor {
-using namespace std;
+//using namespace std;
 using namespace TNT;
-using namespace ICSL::Constants;
+//using namespace ICSL::Constants;
 
 VelocityEstimator::VelocityEstimator() : 
 	mRotPhoneToCam(3,3,0.0),
@@ -76,14 +76,14 @@ void VelocityEstimator::run()
 				mMutex_params.unlock();
 				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
 
-				shared_ptr<DataVector<double> > velData(new DataVector<double>());
+				shared_ptr<DataVector<double>> velData(new DataVector<double>());
 				velData->data = velEst.copy();
 				velData->type = DATA_TYPE_MAP_VEL;
 //				curImageFeatureData->lock();
 				velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
 //				curImageFeatureData->unlock();
 
-				shared_ptr<Data<double> > heightData(new Data<double>());
+				shared_ptr<Data<double>> heightData(new Data<double>());
 				heightData->data = heightEst;
 				heightData->type = DATA_TYPE_MAP_HEIGHT;
 //				curImageFeatureData->lock();
@@ -206,7 +206,7 @@ return;
 	Sn[0][0] = Sn[1][1] = visionMeasCov;
 	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
 
-	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(oldPoints.size());
+	vector<pair<Array2D<double>, Array2D<double>>> priorDistList(oldPoints.size());
 	priorDistList = calcPriorDistributions(oldPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
 	Array2D<double> C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv, probNoCorr);
 
@@ -237,7 +237,7 @@ void VelocityEstimator::onFeaturesFound(shared_ptr<ImageFeatureData> const &data
 	mNewImageDataAvailable = true;
 }
 
-vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDistributions(vector<cv::Point2f> const &points, 
+vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistributions(vector<cv::Point2f> const &points, 
 							Array2D<double> const &mv, Array2D<double> const &Sv, 
 							double const &mz, double const &varz, 
 							double const &focalLength, double const &dt, 
@@ -261,7 +261,7 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 //Log::alert(String()+"dt:\t"+dt);
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
-	vector<Array2D<double> > mDeltaList(points.size()), SDeltaList(points.size());
+	vector<Array2D<double>> mDeltaList(points.size()), SDeltaList(points.size());
 	double x, y;
 	Array2D<double> mDelta(2,1), SDelta(2,2,0.0);
 	for(int i=0; i<points.size(); i++)
@@ -326,7 +326,7 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 //Log::alert(String()+"mz2Inv: "+mz2Inv);
 
 	// calc distribution moments
-	vector<pair<Array2D<double>, Array2D<double> > > priorDistList(mDeltaList.size());
+	vector<pair<Array2D<double>, Array2D<double>>> priorDistList(mDeltaList.size());
 	Array2D<double> md(2,1), Sd(2,2,0.0), Lw(2,3);
 	for(int i=0; i<mDeltaList.size(); i++)
 	{
@@ -350,7 +350,7 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
-		priorDistList[i] = pair<Array2D<double>, Array2D<double> >(md.copy(), Sd.copy());
+		priorDistList[i] = pair<Array2D<double>, Array2D<double>>(md.copy(), Sd.copy());
 
 //if(i == 0)
 //{
@@ -362,7 +362,7 @@ vector<pair<Array2D<double>, Array2D<double> > > VelocityEstimator::calcPriorDis
 	return priorDistList;
 }
 
-Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double>, Array2D<double> > > const &priorDistList,
+Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double>, Array2D<double>>> const &priorDistList,
 													  vector<cv::Point2f> const &curPointList,
 													  Array2D<double> const &Sn,
 													  Array2D<double> const &SnInv,
@@ -375,7 +375,7 @@ Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double
 		return Array2D<double>();
 
 	// Precompute some things
-	vector<Array2D<double> > SdInvmdList(N1), SaInvList(N1), SaList(N1);
+	vector<Array2D<double>> SdInvmdList(N1), SaInvList(N1), SaList(N1);
 	vector<double> fBList(N1), coeffList(N1), xRangeList(N1), yRangeList(N1);
 	Array2D<double> eye2 = createIdentity((double)2.0);
 	double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
@@ -442,7 +442,7 @@ Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double
 	}
 
 	Array2D<double> C(N1+1, N2+1);
-	vector<pair<int, int> > chad;
+	vector<pair<int, int>> chad;
 	double x, y, fC, f;
 	for(int j=0; j<N2; j++)
 	{
@@ -586,7 +586,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 	///////////////////////////////////////////////////////////////
 	// Build up constant matrices
 	///////////////////////////////////////////////////////////////
-	vector<Array2D<double> > LvList(N1), q1HatList(N1);
+	vector<Array2D<double>> LvList(N1), q1HatList(N1);
 	Array2D<double> Lv(2,3), Lw(2,3), q1(2,1);
 	double x, y;
 	for(int i=0; i<N1; i++)
@@ -606,7 +606,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 		q1HatList[i] = q1+dt*matmult(Lw, omega);
 	}
 
-	vector<Array2D<double> > AjList(N2);
+	vector<Array2D<double>> AjList(N2);
 	Array2D<double> Aj(2,3);
 	for(int j=0; j<N2; j++)
 	{

@@ -3,18 +3,18 @@
 #include <sched.h>
 #include <thread>
 
-#include "toadlet/egg.h"
-
 #include "TNT/tnt.h"
 
 #include "constants.h"
 
+#include "QuadLogger.h"
 #include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 #include "Time.h"
 #include "CommManager.h"
-#include "QuadLogger.h"
 #include "Observer_Translational.h"
 #include "MotorInterface.h"
+
+#include "toadlet/egg.h"
 
 namespace ICSL {
 namespace Quadrotor {

@@ -7,11 +7,10 @@
 
 #include "ISystemModel.h"
 
-using namespace std;
-using namespace TNT;
-
 namespace ICSL
 {
+using namespace std;
+using namespace TNT;
 	/*!
 	 * Interface class for systems of the form
 	 * \dot{x} = f(x) + g(x) u

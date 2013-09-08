@@ -8,13 +8,12 @@
 
 #include "TNT_Utils.h"
 
-using namespace std;
-using namespace TNT;
-
 /*
  Abstract class to define objects that represent system models (standard dynamics, SVR, GPR, etc)
 */
 namespace ICSL {
+using namespace std;
+using namespace TNT;
 class ISystemModel
 {
 	public:

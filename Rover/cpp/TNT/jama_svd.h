@@ -13,11 +13,10 @@
 #include <cmath>
 // for abs() below
 
-using namespace TNT;
-using namespace std;
-
 namespace JAMA
 {
+using namespace TNT;
+using namespace std;
    /** Singular Value Decomposition.
    <P>
    For an m-by-n matrix A with m >= n, the singular value decomposition is
