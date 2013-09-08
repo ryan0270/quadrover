@@ -9,14 +9,13 @@ using namespace ICSL::Constants;
 Leash::Leash(QWidget *parent) : 
 	QMainWindow(parent),
 	ui(new Ui::Leash),
-	mAttBias(3,1,0.0),
 	mIntMemory(3,1,0.0),
 	mAttObsvDirWeights(2,0.5),
 	mAttObsvNominalMag(3,0),
 	mKalmanMeasVar(6,1),
 	mKalmanDynVar(6,0),
-	mKalmanAttBias(3,0),
-	mKalmanAttBiasAdaptRate(3,0),
+	mAccelBias(3,0),
+	mAccelBiasDynVar(3,0),
 	mState(12,1,0.0),
 	mDesState(12,1,0.0),
 	mViconState(12,1,0.0),
@@ -52,9 +51,6 @@ Leash::Leash(QWidget *parent) :
 
 //	mUseMotors = false;
 	mUseIbvs = false;
-
-	mKalmanForceGainAdaptRate = 0;
-	mBarometerZeroHeight = 76;
 
 	mMotorForceGain = 0;
 	mMotorTorqueGain = 0;
@@ -172,8 +168,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-		mTelemVicon.connect("192.168.100.108");
-//		mTelemVicon.connect("localhost");
+//		mTelemVicon.connect("192.168.100.108");
+		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -289,10 +285,10 @@ void Leash::initialize()
 
 	for(int i=0; i<3; i++)
 	{
-		ui->tblKalmanAttBias->item(0,i)->setText("-00.0000");
-		ui->tblKalmanAttBias->item(1,i)->setText("-00.0000");
+		ui->tblAccelBias->item(0,i)->setText("-00.0000");
+		ui->tblAccelBias->item(1,i)->setText("-00.0000");
 	}
-	tables.push_back(ui->tblKalmanAttBias);
+	tables.push_back(ui->tblAccelBias);
 
 	for(int i=0; i<2; i++)
 		ui->tblAttObsvGains->item(0,i)->setText("-00.0000");
@@ -811,10 +807,15 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&(mKalmanMeasVar[0]),measVarSize*sizeof(float));
 
 	code = COMM_KALMANFILTER_DYN_VAR;
-	int dynVarSize = mKalmanDynVar.size();
+	int dynVarSize = mKalmanDynVar.size()+mAccelBiasDynVar.size();
+	Collection<float> dynVar(dynVarSize);
+	for(int i=0; i<mKalmanDynVar.size(); i++)
+		dynVar[i] = mKalmanDynVar[i];
+	for(int i=0; i<mAccelBiasDynVar.size(); i++)
+		dynVar[i+mKalmanDynVar.size()] = mAccelBiasDynVar[i];
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
 	if(result) result = result && sendTCP((tbyte*)&dynVarSize,sizeof(dynVarSize));
-	if(result) result = result && sendTCP((tbyte*)&(mKalmanDynVar[0]),dynVarSize*sizeof(float));
+	if(result) result = result && sendTCP((tbyte*)&(dynVar[0]),dynVarSize*sizeof(float));
 
 	Collection<float> attGains;
 	for(int i=0; i<3; i++)
@@ -842,29 +843,12 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&transGainSize,sizeof(transGainSize));
 	if(result) result = result && sendTCP((tbyte*)&(transGains[0]),transGainSize*sizeof(float));
 
-	Collection<float> attBias(mKalmanAttBias);
-	int attBiasSize = attBias.size();
-	code = COMM_KALMAN_ATT_BIAS; 
+	Collection<float> accelBias(mAccelBias);
+	int accelBiasSize = accelBias.size();
+	code = COMM_ACCELEROMETER_BIAS;
 	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&attBiasSize,sizeof(attBiasSize));
-	if(result) result = result && sendTCP((tbyte*)&(attBias[0]),attBiasSize*sizeof(float));
-
-	Collection<float> attBiasAdaptRate(mKalmanAttBiasAdaptRate);
-	int attBiasAdaptRateSize = attBiasAdaptRate.size();
-	code = COMM_KALMAN_ATT_BIAS_ADAPT_RATE; 
-	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&attBiasAdaptRateSize,sizeof(attBiasAdaptRateSize));
-	if(result) result = result && sendTCP((tbyte*)&(attBiasAdaptRate[0]),attBiasAdaptRateSize*sizeof(float));
-
-	float forceGainAdaptRate = mKalmanForceGainAdaptRate;
-	code = COMM_KALMAN_FORCE_SCALING_ADAPT_RATE;
-	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&forceGainAdaptRate, sizeof(float));
-
-	float baromZeroHeight=  mBarometerZeroHeight;
-	code = COMM_BAROMETER_ZERO_HEIGHT;
-	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
-	if(result) result = result && sendTCP((tbyte*)&baromZeroHeight, sizeof(float));
+	if(result) result = result && sendTCP((tbyte*)&accelBiasSize,sizeof(accelBiasSize));
+	if(result) result = result && sendTCP((tbyte*)&(accelBias[0]),accelBiasSize*sizeof(float));
 
 	Collection<float> nomMag(mAttObsvNominalMag);
 	int nomMagSize = nomMag.size();
@@ -1118,37 +1102,31 @@ void Leash::loadObserverConfig(mxml_node_t *obsvRoot)
 			if(zVelNode != NULL) stringstream(zVelNode->child->value.text.string) >> mKalmanDynVar[5];
 		}
 
-		mxml_node_t *attBiasNode = mxmlFindElement(transNode, transNode, "AttBias", NULL, NULL, MXML_DESCEND);
-		if(attBiasNode != NULL)
+		mxml_node_t *accelBiasNode = mxmlFindElement(transNode, transNode, "AccelBias", NULL, NULL, MXML_DESCEND);
+		if(accelBiasNode != NULL)
 		{
-			mxml_node_t *rollNode = mxmlFindElement(attBiasNode, attBiasNode, "roll", NULL, NULL, MXML_DESCEND);
-			mxml_node_t *pitchNode = mxmlFindElement(attBiasNode, attBiasNode, "pitch", NULL, NULL, MXML_DESCEND);
-			mxml_node_t *yawNode = mxmlFindElement(attBiasNode, attBiasNode, "yaw", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *xNode = mxmlFindElement(accelBiasNode, accelBiasNode, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yNode = mxmlFindElement(accelBiasNode, accelBiasNode, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *zNode = mxmlFindElement(accelBiasNode, accelBiasNode, "z", NULL, NULL, MXML_DESCEND);
 
-			if(rollNode != NULL) stringstream(rollNode->child->value.text.string) >> mKalmanAttBias[0];
-			if(pitchNode != NULL) stringstream(pitchNode->child->value.text.string) >> mKalmanAttBias[1];
-			if(yawNode != NULL) stringstream(yawNode->child->value.text.string) >> mKalmanAttBias[2];
+			if(xNode != NULL) stringstream(xNode->child->value.text.string) >> mAccelBias[0];
+			if(yNode != NULL) stringstream(yNode->child->value.text.string) >> mAccelBias[1];
+			if(zNode != NULL) stringstream(zNode->child->value.text.string) >> mAccelBias[2];
 		}
 		else
 			cout << "Kalman att bias node not found in config file" << endl;
 
-		mxml_node_t *attBiasAdaptRateNode = mxmlFindElement(transNode, transNode, "AttBiasAdaptRate", NULL, NULL, MXML_DESCEND);
-		if(attBiasAdaptRateNode != NULL)
+		mxml_node_t *accelBiasDynVarNode = mxmlFindElement(transNode, transNode, "AccelBiasDynVar", NULL, NULL, MXML_DESCEND);
+		if(accelBiasDynVarNode != NULL)
 		{
-			mxml_node_t *rollNode = mxmlFindElement(attBiasAdaptRateNode, attBiasAdaptRateNode, "roll", NULL, NULL, MXML_DESCEND);
-			mxml_node_t *pitchNode = mxmlFindElement(attBiasAdaptRateNode, attBiasAdaptRateNode, "pitch", NULL, NULL, MXML_DESCEND);
-			mxml_node_t *yawNode = mxmlFindElement(attBiasAdaptRateNode, attBiasAdaptRateNode, "yaw", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *xNode = mxmlFindElement(accelBiasDynVarNode, accelBiasDynVarNode, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *yNode = mxmlFindElement(accelBiasDynVarNode, accelBiasDynVarNode, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *zNode = mxmlFindElement(accelBiasDynVarNode, accelBiasDynVarNode, "z", NULL, NULL, MXML_DESCEND);
 
-			if(rollNode != NULL) stringstream(rollNode->child->value.text.string) >> mKalmanAttBiasAdaptRate[0];
-			if(pitchNode != NULL) stringstream(pitchNode->child->value.text.string) >> mKalmanAttBiasAdaptRate[1];
-			if(yawNode != NULL) stringstream(yawNode->child->value.text.string) >> mKalmanAttBiasAdaptRate[2];
+			if(xNode != NULL) stringstream(xNode->child->value.text.string) >> mAccelBiasDynVar[0];
+			if(yNode != NULL) stringstream(yNode->child->value.text.string) >> mAccelBiasDynVar[1];
+			if(zNode != NULL) stringstream(zNode->child->value.text.string) >> mAccelBiasDynVar[2];
 		}
-
-		mxml_node_t *forceScalingAdaptRateNode = mxmlFindElement(transNode, transNode, "ForceGainAdaptRate", NULL, NULL, MXML_DESCEND);
-		if(forceScalingAdaptRateNode!= NULL) stringstream(forceScalingAdaptRateNode->child->value.text.string) >> mKalmanForceGainAdaptRate;
-
-		mxml_node_t *baromZeroHeightNode = mxmlFindElement(transNode, transNode, "BarometerZeroHeight", NULL, NULL, MXML_DESCEND);
-		if(baromZeroHeightNode != NULL) stringstream(baromZeroHeightNode->child->value.text.string) >> mBarometerZeroHeight;
 	}
 	else
 		cout << "Translation observer section not found in config file" << endl;
@@ -1317,7 +1295,7 @@ void Leash::saveControllerConfig(mxml_node_t *cntlRoot)
 void Leash::saveObserverConfig(mxml_node_t *obsvRoot)
 {
 	string xyzLabels[] = {"x", "y", "z", "xVel", "yVel", "zVel"};
-	string attLabels[] = {"roll", "pitch", "yaw"};
+	string accelBiasLabels[] = {"x", "y", "z"};
 	mMutex_data.lock();
 	mxml_node_t *transNode = mxmlNewElement(obsvRoot,"Translation");
 	{
@@ -1329,16 +1307,13 @@ void Leash::saveObserverConfig(mxml_node_t *obsvRoot)
 			mxmlNewReal(mxmlNewElement(dynVarNode,xyzLabels[i].c_str()), mKalmanDynVar[i]);
 		}
 
-		mxml_node_t *attBiasNode = mxmlNewElement(transNode, "AttBias");
-		mxml_node_t *attBiasAdaptRateNode = mxmlNewElement(transNode, "AttBiasAdaptRate");
+		mxml_node_t *accelBiasNode = mxmlNewElement(transNode, "AccelBias");
+		mxml_node_t *accelBiasDynVarNode = mxmlNewElement(transNode, "AccelBiasDynVar");
 		for(int i=0; i<3; i++)
 		{
-			mxmlNewReal(mxmlNewElement(attBiasNode,attLabels[i].c_str()), mKalmanAttBias[i]);
-			mxmlNewReal(mxmlNewElement(attBiasAdaptRateNode,attLabels[i].c_str()), mKalmanAttBiasAdaptRate[i]);
+			mxmlNewReal(mxmlNewElement(accelBiasNode,accelBiasLabels[i].c_str()), mAccelBias[i]);
+			mxmlNewReal(mxmlNewElement(accelBiasDynVarNode,accelBiasLabels[i].c_str()), mAccelBiasDynVar[i]);
 		}
-
-		mxmlNewReal(mxmlNewElement(transNode,"ForceGainAdaptRate"), mKalmanForceGainAdaptRate);
-		mxmlNewReal(mxmlNewElement(transNode,"BarometerZeroHeight"), mBarometerZeroHeight);
 	}
 
 	mxml_node_t *attNode = mxmlNewElement(obsvRoot, "Attitude");
@@ -1422,12 +1397,9 @@ void Leash::applyObserverConfig()
 	}
 	for(int i=0; i<3; i++)
 	{
-		mKalmanAttBias[i] = ui->tblKalmanAttBias->item(0,i)->text().toDouble();
-		mKalmanAttBiasAdaptRate[i] = ui->tblKalmanAttBias->item(1,i)->text().toDouble();
+		mAccelBias[i] = ui->tblAccelBias->item(0,i)->text().toDouble();
+		mAccelBiasDynVar[i] = ui->tblAccelBias->item(1,i)->text().toDouble();
 	}
-
-	mKalmanForceGainAdaptRate = ui->txtKalmanForceGainAdaptRate->text().toDouble();
-	mBarometerZeroHeight = ui->txtBarometerZeroHeight->text().toDouble();
 
 	mAttObsvGainP = ui->tblAttObsvGains->item(0,0)->text().toDouble();
 	mAttObsvGainI = ui->tblAttObsvGains->item(0,1)->text().toDouble();
@@ -1800,13 +1772,10 @@ void Leash::populateObserverUI()
 
 	for(int i=0; i<3; i++)
 	{
-		ui->tblKalmanAttBias->item(0,i)->setText(QString::number(mKalmanAttBias[i]));
-		ui->tblKalmanAttBias->item(1,i)->setText(QString::number(mKalmanAttBiasAdaptRate[i]));
+		ui->tblAccelBias->item(0,i)->setText(QString::number(mAccelBias[i]));
+		ui->tblAccelBias->item(1,i)->setText(QString::number(mAccelBiasDynVar[i]));
 	}
 
-	ui->txtKalmanForceGainAdaptRate->setText(QString::number(mKalmanForceGainAdaptRate));
-	ui->txtBarometerZeroHeight->setText(QString::number(mBarometerZeroHeight));
-	
 	ui->tblAttObsvGains->item(0,0)->setText(QString::number(mAttObsvGainP));
 	ui->tblAttObsvGains->item(0,1)->setText(QString::number(mAttObsvGainI));
 
@@ -1816,12 +1785,12 @@ void Leash::populateObserverUI()
 		ui->tblAttObsvDirWeights->item(0,i)->setText(QString::number(mAttObsvDirWeights[i]));
 
 	resizeTableWidget(ui->tblKalmanVar);
-	resizeTableWidget(ui->tblKalmanAttBias);
+	resizeTableWidget(ui->tblAccelBias);
 	resizeTableWidget(ui->tblAttObsvGains);
 	resizeTableWidget(ui->tblAttObsvNomMag);
 	resizeTableWidget(ui->tblAttObsvDirWeights);
 	setVerticalTabOrder(ui->tblKalmanVar);
-	setVerticalTabOrder(ui->tblKalmanAttBias);
+	setVerticalTabOrder(ui->tblAccelBias);
 	setVerticalTabOrder(ui->tblAttObsvGains);
 	setVerticalTabOrder(ui->tblAttObsvNomMag);
 	setVerticalTabOrder(ui->tblAttObsvDirWeights);

@@ -451,7 +451,7 @@ void CommManager::pollTCP()
 							resetSocket = true;
 					}
 					break;
-				case COMM_KALMAN_ATT_BIAS:
+				case COMM_ACCELEROMETER_BIAS:
 					{
 						int size;
 						bool received = receiveTCP((tbyte*)&size,sizeof(size));
@@ -460,22 +460,7 @@ void CommManager::pollTCP()
 							Collection<float> bias(size);
 							received = receiveTCP((tbyte*)&(bias[0]), size*sizeof(float));
 							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommAttBias(bias[0], bias[1], bias[2]);
-						}
-						else
-							resetSocket = true;
-					}
-					break;
-				case COMM_KALMAN_ATT_BIAS_ADAPT_RATE:
-					{
-						int size;
-						bool received = receiveTCP((tbyte*)&size,sizeof(size));
-						if(received)
-						{
-							Collection<float> rate(size);
-							received = receiveTCP((tbyte*)&(rate[0]), size*sizeof(float));
-							for(int i=0; i<mListeners.size(); i++)
-								mListeners[i]->onNewCommAttBiasAdaptRate(rate);
+								mListeners[i]->onNewCommAccelBias(bias[0], bias[1], bias[2]);
 						}
 						else
 							resetSocket = true;

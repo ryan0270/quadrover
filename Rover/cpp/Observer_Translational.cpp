@@ -14,18 +14,12 @@ using namespace ICSL::Constants;
 		mDynCov(9,9,0.0),
 		mErrCovKF(9,9,0.0),
 		mStateKF(9,1,0.0),
-		mLastViconPos(3,1,0.0),
-		mLastCameraPos(3,1,0.0),
-		mLastViconVel(3,1,0.0),
-		mLastCameraVel(3,1,0.0),
 		mViconCameraOffset(3,1,0.0),
 		mAccelBiasReset(3,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
 
-		mLastPosReceiveTime.setTimeMS(0);
-		
 		mMeasCov[0][0] = mMeasCov[1][1] = mMeasCov[2][2] = 0.01*0.01;
 		mMeasCov[3][3] = mMeasCov[4][4] = mMeasCov[5][5] = 0.3*0.3;
 		mMeasCov[2][2] = 0.05*0.05;
@@ -39,13 +33,6 @@ using namespace ICSL::Constants;
 
 		mDoMeasUpdate = false;
 		mNewViconPosAvailable = mNewCameraPosAvailable = false;
-
-		mNewImageResultsReady = false;
-
-//		mAccelData = NULL;
-//		mNewAccelReady = false;
-
-		mImageMatchData = NULL;
 
 		mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
 								 createRotMat(0,(double)PI));
@@ -94,11 +81,6 @@ using namespace ICSL::Constants;
 		while(!mDone)
 			System::msleep(10);
 
-//		mNewAccelReady = false;
-//		mAccelData = NULL;
-
-		mImageMatchData = NULL;
-
 		Log::alert("------------------------- Observer_Translational shutdown done");
 	}
 
@@ -126,21 +108,21 @@ using namespace ICSL::Constants;
 		Time loopTime;
 		uint64 t;
 		list<shared_ptr<IData>> events;
-		float targetRate = 30; // hz
+		float targetRate = 200; // hz
 		float targetPeriodUS = 1.0f/targetRate*1.0e6;
 		String logString;
 		while(mRunning)
 		{
 			loopTime.setTime();
 
-			mMutex_meas.lock();
+			mMutex_posTime.lock();
 			if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 1000)
 			{
 				mHaveFirstCameraPos = false;
-				String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_LOST+"\t";
-				mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
+				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_LOST+"\t";
+				mQuadLogger->addLine(logString, LOG_FLAG_PC_UPDATES);
 			}
-			mMutex_meas.unlock();
+			mMutex_posTime.unlock();
 
 			if(mUseIbvs && mHaveFirstCameraPos)
 			{
@@ -153,16 +135,16 @@ using namespace ICSL::Constants;
 				mUseCameraPos = false;
 			}
 
-shared_ptr<DataVector<double>> chadData(new DataVector<double>());
-chadData->type = DATA_TYPE_VICON_POS;
-chadData->data = Array2D<double>(3,1,0.0);
-mNewEventsBuffer.push_back(chadData);
+//shared_ptr<DataVector<double>> chadData(new DataVector<double>());
+//chadData->type = DATA_TYPE_VICON_POS;
+//chadData->data = Array2D<double>(3,1,0.0);
+//mNewEventsBuffer.push_back(chadData);
 
 			// process new events
 			events.clear();
-			mMutex_meas.lock();
+			mMutex_events.lock();
 			mNewEventsBuffer.swap(events);
-			mMutex_meas.unlock();
+			mMutex_events.unlock();
 			events.sort(IData::timeSortPredicate);
 			while(events.size() > 0)
 			{
@@ -181,27 +163,22 @@ mNewEventsBuffer.push_back(chadData);
 
 			// time update since last processed event
 			dt = lastUpdateTime.getElapsedTimeUS()/1.0e6;
-			mMutex_data.lock();
+
+			mMutex_kfData.lock();
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
-			mMutex_data.unlock();
+			mMutex_kfData.unlock();
 
 			lastUpdateTime.setTime();
 
 			// buffers
-			mMutex_data.lock();
 			shared_ptr<DataVector<double>> stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
 			stateData->type = DATA_TYPE_STATE_TRAN;
-			stateData->data = mStateKF.copy();
-			mStateBuffer.push_back(stateData);
-
 			shared_ptr<DataVector<double>> errCovData = shared_ptr<DataVector<double>>(new DataVector<double>());
 			errCovData->type = DATA_TYPE_KF_ERR_COV;
-			errCovData->data = mErrCovKF.copy();
-			mErrCovKFBuffer.push_back(errCovData);
 
-			for(int i=0; i<mDataBuffers.size(); i++)
-				while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 1e3)
-					mDataBuffers[i]->pop_front();
+			mMutex_kfData.lock();
+			stateData->data = mStateKF.copy();
+			errCovData->data = mErrCovKF.copy();
 
 			for(int i=0; i<3; i++)
 				pos[i][0] = mStateKF[i][0];
@@ -213,27 +190,34 @@ mNewEventsBuffer.push_back(chadData);
 				errCov[i+3][0] = mErrCovKF[i][i+3];
 				errCov[i+6][0] = mErrCovKF[i+3][i+3];
 			}
-			mMutex_data.unlock();
+
+			mStateBuffer.push_back(stateData);
+			mErrCovKFBuffer.push_back(errCovData);
+
+			mMutex_kfData.unlock();
+
+			for(int i=0; i<mDataBuffers.size(); i++)
+				while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 1e3)
+					mDataBuffers[i]->pop_front();
+
 
 			{
 				logString = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
 				for(int i=0; i<errCov.dim1(); i++)
 					logString= logString+errCov[i][0]+"\t";
-				mMutex_logger.lock();
 				mQuadLogger->addLine(logString,LOG_FLAG_STATE);
-				mMutex_logger.unlock();
 			}
 
-{
-logString = "state: ";
-for(int i=0; i<mStateKF.dim1(); i++)
-	logString = logString+mStateKF[i][0]+"\t";
-Log::alert(logString);
-}
+//{
+//logString = "state: ";
+//for(int i=0; i<mStateKF.dim1(); i++)
+//	logString = logString+mStateKF[i][0]+"\t";
+//Log::alert(logString);
+//}
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
-	
+
 			t = loopTime.getElapsedTimeUS();
 			if(t < targetPeriodUS)
 				System::usleep(targetPeriodUS-t); // try to maintain a (roughly) constant update rate
@@ -314,9 +298,10 @@ Log::alert(logString);
 
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,3,0.0);
+		double den;
 		for(int i=0; i<3; i++)
 		{
-			double den = errCov[i+3][i+3]+measCov[i][i];
+			den = errCov[i+3][i+3]+measCov[i][i];
 			gainKF[i][i] = errCov[i][i+3]/den;
 			gainKF[i+3][i] = errCov[i+3][i+3]/den;
 			gainKF[i+6][i] = errCov[i+3][i+6]/den;
@@ -386,10 +371,10 @@ Log::alert(logString);
 		double s3 = sin(att[0][0]); double c3 = cos(att[0][0]);
 
 		// third column of orientation matrix, i.e. R*e3
-//		Array2D<double> r(3,1);
-//		r[0][0] = s1*s3+c1*c3*s2;
-//		r[1][0] = c3*s1*s2-c1*s3;
-//		r[2][0] = c2*c3;
+		//		Array2D<double> r(3,1);
+		//		r[0][0] = s1*s3+c1*c3*s2;
+		//		r[1][0] = c3*s1*s2-c1*s3;
+		//		r[2][0] = c2*c3;
 
 		// gravity vector orientation, i.e. R'*e3
 		Array2D<double> g(3,1);
@@ -402,68 +387,43 @@ Log::alert(logString);
 		dirData->timestamp = attData->timestamp;
 		dirData->data = -1.0*g.copy();
 
-		mMutex_meas.lock();
+		mMutex_events.lock();
 		mNewEventsBuffer.push_back(dirData);
-		mMutex_meas.unlock();
+		mMutex_events.unlock();
 	}
 
 	void Observer_Translational::onNewCommStateVicon(Collection<float> const &data)
 	{
 		Time now;
+		mMutex_posTime.lock();
+		mLastViconPosTime.setTime(now);
+		mMutex_posTime.unlock();
+
 		Array2D<double> pos(3,1);
 		for(int i=0; i<3; i++)
 			pos[i][0] = data[i+6];
 		pos = matmult(mRotViconToPhone, pos);
-		mMutex_meas.lock();
-		Array2D<double> vel(3,1,0.0);
-		double dt = mLastViconPosTime.getElapsedTimeUS()/1.0e6;
-		mLastViconPosTime.setTime(now);
-		if(dt < 0.2)
-		{
-			// This velocity ``measurement'' is very noisy, but it helps to correct some
-			// of the bias error that occurs when the attitude estimate is wrong
-			if(dt > 1.0e-3) // reduce the effect of noise
-				vel.inject(1.0/dt*(pos-mLastViconPos));
-			else
-				for(int i=0; i<3; i++)
-					vel[i][0] = 0;
-		}
 
 		shared_ptr<DataVector<double>> posData(new DataVector<double>() );
 		posData->type = DATA_TYPE_VICON_POS;
 		posData->timestamp.setTime(now);
 		posData->data = pos.copy();
 
-//		shared_ptr<DataVector<double>> velData(new DataVector<double>() );
-//		velData->type = DATA_TYPE_VICON_VEL;
-//		velData->timestamp.setTime(now);
-//		velData->data = vel.copy();
-
 //		shared_ptr<Data<double>> heightData = shared_ptr<Data<double>>(new Data<double>());
 //		heightData->type = DATA_TYPE_VICON_HEIGHT;
 //		heightData->timestamp.setTime(now);
 //		heightData->data = pos[2][0];
 
-		mMutex_data.lock();
-		mLastViconPos.inject(pos);
-		mLastViconVel.inject(vel);
-
+		mMutex_events.lock();
 		mNewEventsBuffer.push_back(posData);
-//		mNewEventsBuffer.push_back(velData);
 //		mHeightBuffer.push_back(heightData);
-
-		mLastPosReceiveTime.setTime(now);
-		mMutex_data.unlock();
-		mMutex_meas.unlock();
-
+		mMutex_events.unlock();
 
 		{
 			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_RECEIVE_VICON+"\t";
 			for(int i=0; i<data.size(); i++)
 				s = s+data[i]+"\t";
-			mMutex_logger.lock();
 			mQuadLogger->addLine(s, LOG_FLAG_STATE);
-			mMutex_logger.unlock();
 		}
 
 		mNewViconPosAvailable = true;
@@ -471,71 +431,102 @@ Log::alert(logString);
 
 	void Observer_Translational::onNewCommKalmanMeasVar(Collection<float> const &var)
 	{
-		mMutex_data.lock();
-		for(int i=0; i<6; i++)
+		assert(var.size() == mMeasCov);
+		mMutex_kfData.lock();
+		for(int i=0; i<mMeasCov.dim1(); i++)
 			mMeasCov[i][i] = var[i];
 		String s = "Meas var update -- diag(mMeasCov): \t";
 		for(int i=0; i<mMeasCov.dim1(); i++)
 			s = s+mMeasCov[i][i]+"\t";
 		mPosMeasCov = submat(mMeasCov,0,2,0,2);
 		mVelMeasCov = submat(mMeasCov,3,5,3,5);
-		mMutex_data.unlock();
+		mMutex_kfData.unlock();
 		Log::alert(s);
 	}
 
 	void Observer_Translational::onNewCommKalmanDynVar(Collection<float> const &var)
 	{
-		mMutex_data.lock();
-		for(int i=0; i<6; i++)
-			mDynCov[i][i] = var[i];
-		String s = "Dyn var update -- diag(mDynCov): \t";
+		assert(var.size() == mDynCov.dim1());
+
+		mMutex_kfData.lock();
 		for(int i=0; i<mDynCov.dim1(); i++)
-			s = s+mDynCov[i][i]+"\t";
-		mMutex_data.unlock();
-		Log::alert(s);
+			mDynCov[i][i] = var[i];
+		printArray("Dyn var update -- diag(mDynCov): \t", extractDiagonal(mDynCov));
+		mMutex_kfData.unlock();
+//		String s = "Dyn var update -- diag(mDynCov): \t";
+//		for(int i=0; i<mDynCov.dim1(); i++)
+//			s = s+mDynCov[i][i]+"\t";
+//		mMutex_kfData.unlock();
+//		Log::alert(s);
 	}
 
-//	void Observer_Translational::onAttitudeThrustControllerCmdsSent(double const cmds[4])
-//	{
-//		shared_ptr<DataVector<double>> data(new DataVector<double>());
-//		data->type = DATA_TYPE_MOTOR_CMDS;
-//		data->data = Array2D<double>(4,1,0.0);
-//		for(int i=0; i<4; i++)
-//			data->data[i][0] = cmds[i];
-//
-//		mMutex_cmds.lock();
-//		mMotorCmdsBuffer.push_back(data);
-//		mMutex_cmds.unlock();
-//	}
+	void Observer_Translational::onNewCommUseIbvs(bool useIbvs)
+	{
+		mUseIbvs = useIbvs;
+		String s;
+		if(useIbvs)
+			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_ENABLED+"\t";
+		else
+		{
+			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_DISABLED+"\t";
+			mHaveFirstCameraPos = false;
+		}
+		mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
+	}
+
+	void Observer_Translational::onNewCommAccelBias(float xBias, float yBias, float zBias)
+	{
+		mAccelBiasReset[0][0] = xBias;
+		mAccelBiasReset[1][0] = yBias;
+		mAccelBiasReset[2][0] = zBias;
+
+		mMutex_kfData.lock();
+		mStateKF[6][0] = mAccelBiasReset[0][0];
+		mStateKF[7][0] = mAccelBiasReset[1][0];
+		mStateKF[8][0] = mAccelBiasReset[2][0];
+
+		// also need to clear the buffers so we don't accidentally go back and use 
+		// one of the old values
+		mStateBuffer.clear();
+		mErrCovKFBuffer.clear();
+
+		shared_ptr<DataVector<double>> stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
+		stateData->type = DATA_TYPE_STATE_TRAN;
+		stateData->data = mStateKF.copy();
+		mStateBuffer.push_back(stateData);
+
+		shared_ptr<DataVector<double>> errCovData = shared_ptr<DataVector<double>>(new DataVector<double>());
+		errCovData->type = DATA_TYPE_KF_ERR_COV;
+		errCovData->data = mErrCovKF.copy();
+		mErrCovKFBuffer.push_back(errCovData);
+		mMutex_kfData.unlock();
+
+		Log::alert(String()+"accel bias updated:\t"+xBias+"\t"+yBias+"\t"+zBias);
+	}
 
 	void Observer_Translational::onNewSensorUpdate(shared_ptr<IData> const &data)
 	{
 		switch(data->type)
 		{
 			case DATA_TYPE_ACCEL:
-//				mMutex_accel.lock();
-//				mAccelData = static_pointer_cast<DataVector<double>>(data);
-//				mMutex_accel.unlock();
-//				mNewAccelReady = true;
-				
 				shared_ptr<DataVector<double>> accelData(new DataVector<double>());
 				accelData->type = DATA_TYPE_RAW_ACCEL;
 				accelData->timestamp = data->timestamp;
 				accelData->data = static_pointer_cast<DataVector<double>>(data)->dataCalibrated.copy();
 
-				mMutex_meas.lock();
+				mMutex_events.lock();
 				mNewEventsBuffer.push_back(accelData);
-				mMutex_meas.unlock();
+				mMutex_events.unlock();
 				break;
 		}
 	}
 
 	void Observer_Translational::onVelocityEstimator_newEstimate(shared_ptr<DataVector<double>> const &velData, shared_ptr<Data<double>> const &heightData)
 	{
-//		mMutex_meas.lock();
+//		mMutex_events.lock();
 //		mNewEventsBuffer.push_back(velData);
 //		mNewEventsBuffer.push_back(heightData);
-//		mMutex_meas.unlock();
+//		mMutex_events.unlock();
 	}
 
 	void Observer_Translational::onTargetFound(shared_ptr<ImageTargetFindData> const &data)
@@ -552,7 +543,9 @@ Log::alert(logString);
 			}
 			mHaveFirstCameraPos = true;
 		}
+		mMutex_posTime.lock();
 		mLastCameraPosTime.setTime();
+		mMutex_posTime.unlock();
 
 		// assuming 320x240 images
 		double f = data->imageData->focalLength;
@@ -561,9 +554,9 @@ Log::alert(logString);
 
 		// rotation compensation
 		Array2D<double> att = data->imageData->att.copy();
-//		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
+		//		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
 		Array2D<double> R = createIdentity(3.0);
-//		Array2D<double> R_T = transpose(R);
+		//		Array2D<double> R_T = transpose(R);
 
 		Array2D<double> p(3,1);
 		p[0][0] = -(data->target->meanCenter.x - cx);
@@ -577,7 +570,7 @@ Log::alert(logString);
 			avgLength += data->target->squareData[0]->lineLengths[i];
 		avgLength /= data->target->squareData[0]->lineLengths.size();
 
-		
+
 		double nomLength =  0.21;
 		Array2D<double> pos(3,1);
 		pos[2][0] = nomLength/avgLength*f;
@@ -596,40 +589,21 @@ Log::alert(logString);
 		posData->timestamp.setTime(data->imageData->timestamp);
 		posData->data = pos.copy();
 
-		mMutex_meas.lock();
+		mMutex_events.lock();
 		mNewEventsBuffer.push_back(posData);
-		mMutex_meas.unlock();
+		mMutex_events.unlock();
 
 		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ESTIMATED_POS+"\t";
 		for(int i=0; i<pos.dim1(); i++)
 			str = str+pos[i][0]+"\t";
-		mMutex_logger.lock();
 		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
-		mMutex_logger.unlock();
 	}
 
-	void Observer_Translational::onNewCommUseIbvs(bool useIbvs)
-	{
-		mUseIbvs = useIbvs;
-		String s;
-		if(useIbvs)
-			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_ENABLED+"\t";
-		else
-		{
-			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_DISABLED+"\t";
-			mHaveFirstCameraPos = false;
-		}
-		mMutex_logger.lock();
-		mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
-		mMutex_logger.unlock();
-	}
-
-	
 	Time Observer_Translational::applyData(shared_ptr<IData> const &data)
 	{
 		Time dataTime = data->timestamp;
 
-		mMutex_data.lock();
+		mMutex_kfData.lock();
 		// apply data at the correct point in time
 		mStateKF.inject( IData::interpolate(dataTime, mStateBuffer));
 		mErrCovKF.inject( IData::interpolate(dataTime, mErrCovKFBuffer));
@@ -647,7 +621,7 @@ Log::alert(logString);
 					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
 				else
 				{
-					mMutex_data.unlock();
+					mMutex_kfData.unlock();
 					return dataTime;
 				}
 				break;
@@ -657,7 +631,7 @@ Log::alert(logString);
 					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
 				else
 				{
-					mMutex_data.unlock();
+					mMutex_kfData.unlock();
 					return dataTime;
 				}
 				break;
@@ -667,7 +641,7 @@ Log::alert(logString);
 //					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
 //				else
 				{
-					mMutex_data.unlock();
+					mMutex_kfData.unlock();
 					return dataTime;
 				}
 				break;
@@ -677,7 +651,7 @@ Log::alert(logString);
 //					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
 //				else
 				{
-					mMutex_data.unlock();
+					mMutex_kfData.unlock();
 					return dataTime;
 				}
 				break;
@@ -701,13 +675,13 @@ double mHeightMeasCov = 0.1*0.1;
 				break;
 			default:
 				Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
-				mMutex_data.unlock();
+				mMutex_kfData.unlock();
 				return dataTime;
 		}
 
 		if(mRawAccelDataBuffer.size() == 0 || mGravityDirDataBuffer.size() == 0)
 		{
-			mMutex_data.unlock();
+			mMutex_kfData.unlock();
 			return dataTime;
 		}
 
@@ -750,7 +724,7 @@ double mHeightMeasCov = 0.1*0.1;
 
 		if(events.size() == 0)
 		{
-			mMutex_data.unlock();
+			mMutex_kfData.unlock();
 			return dataTime;
 		}
 
@@ -827,30 +801,30 @@ double mHeightMeasCov = 0.1*0.1;
 			eventIter++;
 		}
 
-		mMutex_data.unlock();
+		mMutex_kfData.unlock();
 
 		return lastUpdateTime;
 	}
 
 	void Observer_Translational::setStartTime(Time t)
 	{
-		mMutex_data.lock(); mMutex_att.lock(); mMutex_meas.lock(); mMutex_cmds.lock(); mMutex_phoneTempData.lock();
+		mMutex_kfData.lock(); mMutex_events.lock();
 		mStartTime.setTime(t);
-		// for now I'll be lazy and just clearn everything out, assuming 
+		// for now I'll be lazy and just clear everything out, assuming 
 		// this only happens when nothing interesting is happening anyhow
 		for(int i=0; i<mDataBuffers.size(); i++)
 			mDataBuffers[i]->clear();
 
 		mNewEventsBuffer.clear();
 
-		mMutex_data.unlock(); mMutex_att.unlock(); mMutex_meas.unlock(); mMutex_cmds.unlock(); mMutex_phoneTempData.unlock();
+		mMutex_kfData.unlock(); mMutex_events.unlock();
 	}
 
 	Array2D<double> Observer_Translational::estimateStateAtTime(Time const &t)
 	{
-		mMutex_data.lock();
+		mMutex_kfData.lock();
 		Array2D<double> state = IData::interpolate(t, mStateBuffer);
-		mMutex_data.unlock();
+		mMutex_kfData.unlock();
 
 		return state;
 	}
@@ -859,12 +833,12 @@ double mHeightMeasCov = 0.1*0.1;
 	{
 		Array2D<double> errCov;
 		if(t < mErrCovKFBuffer.front()->timestamp)
-			errCov = 10*createIdentity((double)6);
+			errCov = 10*createIdentity((double)mErrCovKF.dim1());
 		else
 		{
-			mMutex_data.lock();
+			mMutex_kfData.lock();
 			errCov = IData::interpolate(t, mErrCovKFBuffer);
-			mMutex_data.unlock();
+			mMutex_kfData.unlock();
 		}
 
 		return errCov;

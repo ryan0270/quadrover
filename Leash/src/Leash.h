@@ -148,12 +148,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 
 		bool mUseIbvs;
 
-		TNT::Array2D<float> mAttBias;
-		float mAttBiasGain;
-
-		float mKalmanForceGainAdaptRate;
-		float mBarometerZeroHeight;
-		Collection<float> mKalmanAttBias, mKalmanAttBiasAdaptRate;
+		Collection<float> mAccelBias, mAccelBiasDynVar;
 		Collection<float> mKalmanMeasVar, mKalmanDynVar;
 
 		uint32 mLogMask;
