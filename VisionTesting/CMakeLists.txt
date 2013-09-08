@@ -38,7 +38,7 @@ set (SRC ${SRC}
 	./cpp/main.cpp
 	./cpp/mapFuncs.cpp
 #	./cpp/mser.cpp
-	../../Rover/cpp/Data.cpp
+#	../../Rover/cpp/Data.cpp
 )
 
 # Headers

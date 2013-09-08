@@ -97,10 +97,10 @@ namespace Quadrotor {
 		if(data->type == DATA_TYPE_IMAGE && mMotorOn)
 		{
 			shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);
-//			if(mImageQueue.size() < 100)
-//				mImageQueue.push(imgData);
-//			else
-//				Log::alert("Chad can't get it up");
+			if(mImageQueue.size() < 100)
+				mImageQueue.push(imgData);
+			else
+				Log::alert("Chad can't get it up");
 		}
 	}
 
