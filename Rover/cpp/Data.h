@@ -19,6 +19,7 @@ namespace ICSL {
 namespace Quadrotor {
 using namespace ICSL::Constants;
 using namespace std;
+using namespace toadlet::egg;
 
 enum ImageFormat
 {

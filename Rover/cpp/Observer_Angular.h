@@ -104,8 +104,8 @@ class Observer_Angular : public CommManagerListener,
 //		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
 		shared_ptr<DataVector<double> >  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
 		TNT::Array2D<double> mAccelDirNom, mMagDirNom;
-		Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
-		Collection<double> mExtraDirsWeight;
+		toadlet::egg::Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
+		toadlet::egg::Collection<double> mExtraDirsWeight;
 
 		TNT::Array2D<double> convert_so3toCoord(TNT::Array2D<double> const &so3);
 		TNT::Array2D<double> convert_coordToso3(TNT::Array2D<double> const &SO3);
@@ -119,7 +119,7 @@ class Observer_Angular : public CommManagerListener,
 //		void inputDetected(const InputData &data);
 		static int inputDetected(int fd, int events, void *data);
 
-		Collection<Observer_AngularListener*> mListeners;
+		toadlet::egg::Collection<Observer_AngularListener*> mListeners;
 
 		QuadLogger *mQuadLogger;
 

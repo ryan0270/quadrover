@@ -23,6 +23,7 @@
 namespace ICSL {
 namespace Quadrotor {
 //using namespace std;
+using namespace toadlet;
 
 enum LogIDs
 {
@@ -82,15 +83,15 @@ class QuadLogger
 		explicit QuadLogger();
 		virtual ~QuadLogger();
 
-		String getDir(){return mDir;}
-		String getFilename(){return mFilename;}
-		String getFullPath(){return mDir+"/"+mFilename;}
+		toadlet::egg::String getDir(){return mDir;}
+		toadlet::egg::String getFilename(){return mFilename;}
+		toadlet::egg::String getFullPath(){return mDir+"/"+mFilename;}
 		uint32 getMask(){return mTypeMask;}
 
-		void setDir(String dir){mDir = dir;}
-		void setFilename(String name){mFilename = name;}
+		void setDir(toadlet::egg::String dir){mDir = dir;}
+		void setFilename(toadlet::egg::String name){mFilename = name;}
 		void setMask(uint32 mask){mTypeMask = mask;}
-		void addLine(String const &str, LogFlags type);
+		void addLine(toadlet::egg::String const &str, LogFlags type);
 
 		void pause(){mPaused = true;}
 		void resume(){mPaused = false;}
@@ -112,9 +113,9 @@ class QuadLogger
 		void setStartTime(Time time){mStartTime.setTime(time);}
 
 	protected:
-		String mDir, mFilename;
+		toadlet::egg::String mDir, mFilename;
 		uint32 mTypeMask;
-		FileStream::ptr mLogStream;
+		toadlet::egg::FileStream::ptr mLogStream;
 		std::mutex mMutex_file, mMutex_logQueue, mMutex_addLine;
 		Time mStartTime;
 
@@ -124,7 +125,7 @@ class QuadLogger
 
 		int mThreadPriority, mScheduler;
 
-		queue<String> mLogQueue;
+		queue<toadlet::egg::String> mLogQueue;
 
 		bool mRunning, mDone;
 };

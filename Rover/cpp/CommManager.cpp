@@ -3,6 +3,7 @@
 namespace ICSL{
 namespace Quadrotor{
 //using namespace std;
+using namespace toadlet::egg;
 CommManager::CommManager()
 {
 	mLastCmdRcvTime.clear();

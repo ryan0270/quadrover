@@ -2,6 +2,7 @@
 
 namespace ICSL {
 namespace Quadrotor {
+using namespace toadlet::egg;
 
 	VideoMaker::VideoMaker()
 	{

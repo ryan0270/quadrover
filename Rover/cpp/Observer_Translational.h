@@ -97,7 +97,7 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> mRotViconToPhone;
 	QuadLogger *mQuadLogger;
 
-	Collection<Observer_TranslationalListener*> mListeners;
+	toadlet::egg::Collection<Observer_TranslationalListener*> mListeners;
 
 	// for the translational Kalman Filter
 	TNT::Array2D<double> mMeasCov, mPosMeasCov, mVelMeasCov; 

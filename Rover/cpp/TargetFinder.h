@@ -94,7 +94,7 @@ class TargetFinder : public CommManagerListener,
 		std::mutex mMutex_logger;
 		std::mutex mMutex_params;
 
-		Collection<TargetFinderListener*> mListeners;
+		toadlet::egg::Collection<TargetFinderListener*> mListeners;
 
 //		float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
 //		int mSepDist, mPointCntTarget;

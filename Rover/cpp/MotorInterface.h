@@ -11,6 +11,7 @@
 namespace ICSL {
 namespace Quadrotor{
 using namespace std;
+using namespace toadlet;
 
 enum{ 
 	MIN_MOTOR_CMD = 0, 
@@ -63,7 +64,7 @@ class MotorInterface
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
 
-	Collection<MotorInterfaceListener*> mListeners;
+	toadlet::egg::Collection<MotorInterfaceListener*> mListeners;
 };
 
 } // namespace Quadrotor
