@@ -71,6 +71,7 @@ class Observer_Translational : public Observer_AngularListener,
 	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
 	void onNewCommUseIbvs(bool useIbvs);
+	void onNewCommAccelBias(float xBias, float yBias, float zBias);
 
 	// for SensorManagerListener
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
@@ -107,14 +108,11 @@ class Observer_Translational : public Observer_AngularListener,
 	// 7. y accel bias
 	// 8. z accel bias
 	TNT::Array2D<double> mStateKF;
-	TNT::Array2D<double> mLastViconPos, mLastCameraPos;
 	TNT::Array2D<double> mAccelBiasReset;
 
-	std::mutex mMutex_data, mMutex_att, mMutex_meas, mMutex_cmds, mMutex_phoneTempData;
+	std::mutex mMutex_events;
+	std::mutex mMutex_kfData;
 	std::mutex mMutex_accel, mMutex_gravDir;
-	std::mutex mMutex_adaptation;
-
-	Time mLastPosReceiveTime;
 
 	static void doTimeUpdateKF(TNT::Array2D<double> const &accel, 
 							   double const &dt,
@@ -134,15 +132,6 @@ class Observer_Translational : public Observer_AngularListener,
 										  TNT::Array2D<double> &state, 
 										  TNT::Array2D<double> &errCov);
 
-	double mZeroHeight;
-
-//	shared_ptr<DataVector<double>> mAccelData;
-//	bool mNewAccelReady;
-
-	bool mNewImageResultsReady;
-	std::mutex mMutex_imageData, mMutex_logger;
-	shared_ptr<ImageMatchData> mImageMatchData; 
-
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
 	int mThreadPriority, mScheduler;
@@ -156,7 +145,7 @@ class Observer_Translational : public Observer_AngularListener,
 
 	bool mHaveFirstCameraPos;
 	Time mLastCameraPosTime, mLastViconPosTime;
-	TNT::Array2D<double> mLastViconVel, mLastCameraVel;
+	std::mutex mMutex_posTime;
 
 	bool mUseIbvs;
 

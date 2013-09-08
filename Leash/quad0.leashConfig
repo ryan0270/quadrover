@@ -54,18 +54,16 @@
          <yVel>0.800000</yVel>
          <zVel>0.800000</zVel>
       </DynVar>
-      <AttBias>
-         <roll>0.000000</roll>
-         <pitch>0.000000</pitch>
-         <yaw>0.000000</yaw>
-      </AttBias>
-      <AttBiasAdaptRate>
-         <roll>0.005000</roll>
-         <pitch>0.005000</pitch>
-         <yaw>0.000000</yaw>
-      </AttBiasAdaptRate>
-      <ForceGainAdaptRate>0.003000</ForceGainAdaptRate>
-      <BarometerZeroHeight>76.000000</BarometerZeroHeight>
+      <AccelBias>
+         <x>0.100000</x>
+         <y>0.000000</y>
+         <z>-0.400000</z>
+      </AccelBias>
+      <AccelBiasDynVar>
+         <x>0.250000</x>
+         <y>0.250000</y>
+         <z>0.250000</z>
+      </AccelBiasDynVar>
    </Translation>
    <Attitude>
       <Gain>

@@ -53,9 +53,9 @@ set (includeDirs ${includeDirs}
 
 # Source files
 set (SRC ${SRC}
-	src/main.cpp
 	src/Leash.cpp
 	${ICSL_QUADROVER_DIR}/TelemetryVicon/src/TelemetryVicon.cpp
+	src/main.cpp
 )
 
 # Headers
