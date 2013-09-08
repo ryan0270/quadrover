@@ -12,7 +12,7 @@ QuadLogger::QuadLogger()
 	mLogStream = NULL;
 	mTypeMask = 0;
 	mTypeMask = LOG_FLAG_PC_UPDATES ;
-//	mTypeMask |= LOG_FLAG_STATE;
+	mTypeMask |= LOG_FLAG_STATE;
 //	mTypeMask |= LOG_FLAG_STATE_DES;
 //	mTypeMask |= LOG_FLAG_MOTORS;
 //	mTypeMask |= LOG_FLAG_OBSV_UPDATE;

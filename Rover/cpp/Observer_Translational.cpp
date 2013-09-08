@@ -26,9 +26,9 @@ using namespace ICSL::Constants;
 		mMeasCov[5][5] = 0.5*0.5;
 		mPosMeasCov = submat(mMeasCov,0,2,0,2);
 		mVelMeasCov = submat(mMeasCov,3,5,3,5);
-		mDynCov[0][0] = mDynCov[1][1] = mDynCov[2][2] = 0.1*0.1;
-		mDynCov[3][3] = mDynCov[4][4] = mDynCov[5][5] = 0.5*0.5;
-		mDynCov[6][6] = mDynCov[7][7] = mDynCov[8][8] = 0.5*0.5;
+		mDynCov[0][0] = mDynCov[1][1] = mDynCov[2][2] = 0.1*0.1*0;
+		mDynCov[3][3] = mDynCov[4][4] = mDynCov[5][5] = 0.5*0.5*0;
+		mDynCov[6][6] = mDynCov[7][7] = mDynCov[8][8] = 0;
 		mErrCovKF.inject(1e-4*createIdentity((double)9));
 
 		mDoMeasUpdate = false;
@@ -47,14 +47,6 @@ using namespace ICSL::Constants;
 
 		mUseIbvs = false;
 //		mUseIbvs = true;
-
-		mAccelBiasReset[0][0] = 0.1;
-		mAccelBiasReset[1][0] = 0;
-		mAccelBiasReset[2][0] = -0.4;
-
-		mStateKF[6][0] = mAccelBiasReset[0][0];
-		mStateKF[7][0] = mAccelBiasReset[1][0];
-		mStateKF[8][0] = mAccelBiasReset[2][0];
 
 		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mStateBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mErrCovKFBuffer));
@@ -99,7 +91,7 @@ using namespace ICSL::Constants;
 		Array2D<double> pos(3,1),vel(3,1);
 		double s1, s2, s3, c1, c2, c3;
 		double dt;
-		Array2D<double> errCov(12,1,0.0);
+		Array2D<double> errCov(18,1,0.0);
 
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
@@ -184,12 +176,15 @@ using namespace ICSL::Constants;
 				pos[i][0] = mStateKF[i][0];
 			for(int i=0; i<3; i++)
 				vel[i][0] = mStateKF[i+3][0];
-			for(int i=0; i<3; i++)
-			{
-				errCov[i][0] = mErrCovKF[i][i];
-				errCov[i+3][0] = mErrCovKF[i][i+3];
-				errCov[i+6][0] = mErrCovKF[i+3][i+3];
-			}
+//			for(int i=0; i<3; i++)
+//			{
+//				errCov[i][0] = mErrCovKF[i][i];
+//				errCov[i+3][0] = mErrCovKF[i][i+3];
+//				errCov[i+6][0] = mErrCovKF[i][i+6];
+//				errCov[i+9][0] = mErrCovKF[i+3][i+3];
+//				errCov[i+12][0] = mErrCovKF[i+3][i+6];
+//				errCov[i+15][0] = mErrCovKF[i+6][i+6];
+//			}
 
 			mStateBuffer.push_back(stateData);
 			mErrCovKFBuffer.push_back(errCovData);
@@ -201,12 +196,12 @@ using namespace ICSL::Constants;
 					mDataBuffers[i]->pop_front();
 
 
-			{
-				logString = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
-				for(int i=0; i<errCov.dim1(); i++)
-					logString= logString+errCov[i][0]+"\t";
-				mQuadLogger->addLine(logString,LOG_FLAG_STATE);
-			}
+//			{
+//				logString = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
+//				for(int i=0; i<errCov.dim1(); i++)
+//					logString= logString+errCov[i][0]+"\t";
+//				mQuadLogger->addLine(logString+"\n",LOG_FLAG_STATE);
+//			}
 
 //{
 //logString = "state: ";
@@ -449,6 +444,14 @@ using namespace ICSL::Constants;
 		assert(var.size() == mDynCov.dim1());
 
 		mMutex_kfData.lock();
+//		// Zero out the err cov first. Depending on the new dyn cov
+//		// it's possible that there were some off-diagonal entries
+//		// that were non-zero before but should be zero down
+//		// (i.e. if a one of the dyncov diagonals is zero)
+//		for(int i=0; i<mErrCovKF.dim1(); i++)
+//			for(int j=0; j<mErrCovKF.dim1(); j++)
+//				mErrCovKF[i][j] = 0;
+//		
 		for(int i=0; i<mDynCov.dim1(); i++)
 			mDynCov[i][i] = var[i];
 		printArray("Dyn var update -- diag(mDynCov): \t", extractDiagonal(mDynCov));
@@ -720,13 +723,15 @@ double mHeightMeasCov = 0.1*0.1;
 			events.insert(events.end(), ++gravDirIter, mGravityDirDataBuffer.end());
 		if(opticFlowVelIter != mOpticFlowVelBuffer.end())
 			events.insert(events.end(), ++opticFlowVelIter, mOpticFlowVelBuffer.end());
-		events.sort(IData::timeSortPredicate);
 
+//Log::alert(String()+"events.size(): "+events.size());
 		if(events.size() == 0)
 		{
 			mMutex_kfData.unlock();
 			return dataTime;
 		}
+
+		events.sort(IData::timeSortPredicate);
 
 		// clear out state and errcov information that we are about to replace
 		IData::truncate(dataTime, mStateBuffer);

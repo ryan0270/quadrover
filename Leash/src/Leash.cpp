@@ -168,8 +168,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -1992,8 +1992,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
 		mMutex_logBuffer.unlock();
 
-//		if(mSys.mtime() - mLastTelemSendTime > 350-5)
-		if(mSys.mtime() - mLastTelemSendTime > 100-5)
+		if(mSys.mtime() - mLastTelemSendTime > 10-5)
 		{
 			mLastTelemSendTime = mSys.mtime();
 			
@@ -2004,8 +2003,8 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 			for(int i=0; i<mViconState.dim1(); i++)
 			{
 				float noise = 0;
-				if(i >= 6 && i<9)
-					noise = 0.020*mStdGaussDist(mRandGenerator);
+//				if(i >= 6 && i<9)
+//					noise = 0.020*mStdGaussDist(mRandGenerator);
 				pState.dataFloat[i] = mViconState[i][0]+noise;
 			}
 			Collection<tbyte> buff;

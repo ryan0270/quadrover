@@ -138,6 +138,7 @@ void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &o
 										   double visionMeasCov,
 										   double probNoCorr) const
 {
+return;
 //Log::alert("=======================================================");
 //	oldFeatureData->lock();
 //	curFeatureData->lock();
