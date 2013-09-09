@@ -157,7 +157,8 @@ class Observer_Translational : public Observer_AngularListener,
 
 	TNT::Array2D<double> mViconCameraOffset;
 
-	Time applyData(shared_ptr<IData> const &data);
+//	Time applyData(shared_ptr<IData> const &data);
+	Time applyData(list<shared_ptr<IData>> &events);
 };
 
 } // namespace Quadrotor
