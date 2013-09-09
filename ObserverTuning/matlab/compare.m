@@ -66,7 +66,7 @@ for st=4:6
 % 	viconState(st,badMask) = 0;
 end
 
-[b, a] = butter(5,5/nyq);
+[b, a] = butter(5,40/nyq);
 for st=10:12
 	viconState(st,:) = [0 1/vicon_dt*diff(viconState(st-3,:))];
 	viconState(st,:) = filtfilt(b,a,viconState(st,:));
@@ -77,6 +77,8 @@ end
 %%
 angleStateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]'};
 tranStateLabels = { 'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
+
+%%
 if exist('angleState','var') && ~isempty(angleState)
   	figure(1); clf;
 % 	set(gcf,'Units','Inches');
@@ -93,4 +95,30 @@ if exist('angleState','var') && ~isempty(angleState)
 		ylabel(angleStateLabels(i));	
 	end
 % 	% legend('Vicon','Phone');
+end
+
+%%
+if exist('tranState','var') && ~isempty(tranState)
+  	figure(2); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	mask = find( (viconStateTime > tranStateTime(1)) .* (viconStateTime <= tranStateTime(end) ) );
+	for i=1:6
+		subplot(2,3,i);		
+		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
+		plot(tranStateTime, tranState(i,:)); hold all
+		hold off
+
+		xlabel('Time [s]')
+		ylabel(tranStateLabels(i));
+	end
+	
+	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime,[],'extrap')';
+	rmsErr = rms(viconStateTranInterp(7:12,:)-tranState,2);
+	fprintf('Tran state rms err:\t');
+	for i=1:6
+		fprintf('%1.3f\t',rmsErr(i));
+	end
+	fprintf('\n');
 end

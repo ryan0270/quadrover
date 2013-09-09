@@ -127,11 +127,6 @@ using namespace TNT;
 				mUseCameraPos = false;
 			}
 
-//shared_ptr<DataVector<double>> chadData(new DataVector<double>());
-//chadData->type = DATA_TYPE_VICON_POS;
-//chadData->data = Array2D<double>(3,1,0.0);
-//mNewEventsBuffer.push_back(chadData);
-
 			// process new events
 			events.clear();
 			mMutex_events.lock();
@@ -150,7 +145,7 @@ using namespace TNT;
 			if(mRawAccelDataBuffer.size() > 0)
 			{
 				mMutex_accel.lock(); accel.inject(mRawAccelDataBuffer.back()->data); mMutex_accel.unlock();
-				accel -= GRAVITY*gravityDir;
+				accel += GRAVITY*gravityDir;
 			}
 
 			// time update since last processed event
@@ -160,7 +155,19 @@ using namespace TNT;
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
 			mMutex_kfData.unlock();
 
+			// special handling if we aren't getting any position updates
+			if( (!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3)
+			{
+				mMutex_kfData.lock();
+				for(int i=0; i<mStateKF.dim1(); i++)
+					mStateKF[i][0] = 0;
+
+				mErrCovKF.inject(mDynCov);
+				mMutex_kfData.unlock();
+			}
+
 			lastUpdateTime.setTime();
+
 
 			// buffers
 			shared_ptr<DataVector<double>> stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
@@ -191,27 +198,25 @@ using namespace TNT;
 
 			mMutex_kfData.unlock();
 
+			for(int i=0; i<mListeners.size(); i++)
+				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
+
+
 			for(int i=0; i<mDataBuffers.size(); i++)
 				while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 1e3)
 					mDataBuffers[i]->pop_front();
 
+			{
+				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CUR_TRANS_STATE+"\t";
+				for(int i=0; i<mStateKF.dim1(); i++)
+					logString = logString+mStateKF[i][0]+"\t";
+				mQuadLogger->addLine(logString,LOG_FLAG_STATE);
 
-//			{
 //				logString = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
 //				for(int i=0; i<errCov.dim1(); i++)
 //					logString= logString+errCov[i][0]+"\t";
 //				mQuadLogger->addLine(logString+"\n",LOG_FLAG_STATE);
-//			}
-
-//{
-//logString = "state: ";
-//for(int i=0; i<mStateKF.dim1(); i++)
-//	logString = logString+mStateKF[i][0]+"\t";
-//Log::alert(logString);
-//}
-
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
+			}
 
 			t = loopTime.getElapsedTimeUS();
 			if(t < targetPeriodUS)
@@ -223,6 +228,13 @@ using namespace TNT;
 
 	void Observer_Translational::doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
 	{
+//printArray("accel:\t",accel);
+		if(dt > 1)
+		{
+			Log::alert(String()+"Translation observer time update large dt: " +dt);
+			return;
+		}
+
 		for(int i=0; i<3; i++)
 			state[i][0] += dt*state[i+3][0];
 		for(int i=3; i<6; i++)
@@ -748,7 +760,7 @@ double mHeightMeasCov = 0.1*0.1;
 			accelRaw.inject((*rawAccelIter)->data);
 		else
 			accelRaw.inject(mRawAccelDataBuffer.back()->data);
-		accel.inject(accelRaw - GRAVITY*gravDir);
+		accel.inject(accelRaw + GRAVITY*gravDir);
 
 		// apply events in order
 		list<shared_ptr<IData>>::const_iterator eventIter = events.begin();
@@ -758,7 +770,7 @@ double mHeightMeasCov = 0.1*0.1;
 		while(eventIter != events.end())
 		{
 			dt = Time::calcDiffNS(lastUpdateTime, (*eventIter)->timestamp)/1.0e9;
-			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+//			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
 
 			switch((*eventIter)->type)
 			{
@@ -821,6 +833,9 @@ double mHeightMeasCov = 0.1*0.1;
 			mDataBuffers[i]->clear();
 
 		mNewEventsBuffer.clear();
+
+		for(int i=0; i<6; i++)
+			mStateKF[i][0] = 0;
 
 		mMutex_kfData.unlock(); mMutex_events.unlock();
 	}
