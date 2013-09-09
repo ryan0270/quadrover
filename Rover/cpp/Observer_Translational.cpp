@@ -100,7 +100,7 @@ using namespace TNT;
 		Time loopTime;
 		toadlet::uint64 t;
 		list<shared_ptr<IData>> events;
-		float targetRate = 800; // hz
+		float targetRate = 100; // hz
 		float targetPeriodUS = 1.0f/targetRate*1.0e6;
 		String logString;
 		while(mRunning)
@@ -144,11 +144,8 @@ using namespace TNT;
 			}
 
 			// now process the events
-			while(events.size() > 0)
-			{
-				lastUpdateTime.setTime( applyData(events.front()) );
-				events.pop_front();
-			}
+			if(events.size() > 0)
+				lastUpdateTime.setTime( applyData(events) );
 
 			if(mGravityDirDataBuffer.size() >0 )
 			{ mMutex_gravDir.lock(); gravityDir.inject(mGravityDirDataBuffer.back()->data); mMutex_gravDir.unlock(); }
@@ -238,7 +235,6 @@ using namespace TNT;
 
 	void Observer_Translational::doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
 	{
-//Log::alert(String()+"dt: " + dt);
 		if(dt > 1)
 		{
 			Log::alert(String()+"Translation observer time update large dt: " +dt);
@@ -640,90 +636,62 @@ using namespace TNT;
 		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
 	}
 
-	Time Observer_Translational::applyData(shared_ptr<IData> const &data)
+//	Time Observer_Translational::applyData(shared_ptr<IData> const &data)
+	Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 	{
-		Time dataTime = data->timestamp;
+		// assume newEvents is sorted
+		newEvents.sort(IData::timeSortPredicate);
 
+		Time startTime(newEvents.front()->timestamp);
+
+		// first go through and update all the buffers
+		shared_ptr<IData> data;
 		mMutex_kfData.lock();
-		// apply data at the correct point in time
-		mStateKF.inject( IData::interpolate(dataTime, mStateBuffer));
-		mErrCovKF.inject( IData::interpolate(dataTime, mErrCovKFBuffer));
-		switch(data->type)
+		while(newEvents.size() > 0)
 		{
-			case DATA_TYPE_RAW_ACCEL:
-				mRawAccelDataBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-				break;
-			case DATA_TYPE_GRAVITY_DIR:
-				mGravityDirDataBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-				break;
-			case DATA_TYPE_VICON_POS:
-				mViconPosBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-				if(mUseViconPos)
-					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
-				else
-				{
+			data = newEvents.front();
+			switch(data->type)
+			{
+				case DATA_TYPE_RAW_ACCEL:
+					mRawAccelDataBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_GRAVITY_DIR:
+					mGravityDirDataBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_VICON_POS:
+					mViconPosBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_CAMERA_POS:
+					mCameraPosBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_VICON_VEL:
+					mViconVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_CAMERA_VEL:
+					mCameraVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_OPTIC_FLOW_VEL:
+					mOpticFlowVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_MAP_VEL:
+					mMapVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					break;
+				case DATA_TYPE_MAP_HEIGHT:
+					mMapHeightBuffer.push_back(static_pointer_cast<Data<double>>(data));
+					break;
+				default:
+					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
 					mMutex_kfData.unlock();
-					return dataTime;
-				}
-				break;
-			case DATA_TYPE_CAMERA_POS:
-				mCameraPosBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-				if(mUseCameraPos)
-					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(data)->data, mPosMeasCov, mStateKF, mErrCovKF);
-				else
-				{
-					mMutex_kfData.unlock();
-					return dataTime;
-				}
-				break;
-			case DATA_TYPE_VICON_VEL:
-				mViconVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-//				if(mUseViconPos)
-//					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
-//				else
-				{
-					mMutex_kfData.unlock();
-					return dataTime;
-				}
-				break;
-			case DATA_TYPE_CAMERA_VEL:
-				mCameraVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-//				if(mUseCameraPos)
-//					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(data)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
-//				else
-				{
-					mMutex_kfData.unlock();
-					return dataTime;
-				}
-				break;
-			case DATA_TYPE_OPTIC_FLOW_VEL:
-				mOpticFlowVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-				doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(data)->data, mVelMeasCov, mStateKF, mErrCovKF);
-				break;
-//			case DATA_TYPE_THRUST_DIR:
-//				mThrustDirBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-				break;
-			case DATA_TYPE_MAP_VEL:
-				mMapVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-				doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(data)->data, mVelMeasCov, mStateKF, mErrCovKF);
-				break;
-			case DATA_TYPE_MAP_HEIGHT:
-				{
-				mMapHeightBuffer.push_back(static_pointer_cast<Data<double>>(data));
-double mHeightMeasCov = 0.1*0.1;
-				doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(data)->data, mHeightMeasCov, mStateKF, mErrCovKF);
-				}
-				break;
-			default:
-				Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
-				mMutex_kfData.unlock();
-				return dataTime;
+					return startTime;
+			}
+
+			newEvents.pop_front();
 		}
 
 		if(mRawAccelDataBuffer.size() == 0 || mGravityDirDataBuffer.size() == 0)
 		{
 			mMutex_kfData.unlock();
-			return dataTime;
+			return startTime;
 		}
 
 		// now we have to rebuild the state and errcov history
@@ -742,12 +710,12 @@ double mHeightMeasCov = 0.1*0.1;
 		}
 		velBuffer = &mMapVelBuffer;
 
-		// These iters point to the last data point with iter->timestamp < dataTime 
-		posIter = IData::findIndexReverse(dataTime, *posBuffer);
-		velIter = IData::findIndexReverse(dataTime, *velBuffer);
-		rawAccelIter = IData::findIndexReverse(dataTime, mRawAccelDataBuffer);
-		gravDirIter = IData::findIndexReverse(dataTime, mGravityDirDataBuffer);
-		opticFlowVelIter = IData::findIndexReverse(dataTime, mOpticFlowVelBuffer); 
+		// These iters point to the last data point with iter->timestamp <startTime 
+		posIter = IData::findIndexReverse(startTime, *posBuffer);
+		velIter = IData::findIndexReverse(startTime, *velBuffer);
+		rawAccelIter = IData::findIndexReverse(startTime, mRawAccelDataBuffer);
+		gravDirIter = IData::findIndexReverse(startTime, mGravityDirDataBuffer);
+		opticFlowVelIter = IData::findIndexReverse(startTime, mOpticFlowVelBuffer); 
 		
 		// but I want the next one for these because
 		// they are not measurements
@@ -770,17 +738,24 @@ double mHeightMeasCov = 0.1*0.1;
 //Log::alert(String()+"events.size(): "+events.size());
 		if(events.size() == 0)
 		{
+			// apply data at the correct point in time
+			mStateKF.inject( IData::interpolate(startTime, mStateBuffer));
+			mErrCovKF.inject( IData::interpolate(startTime, mErrCovKFBuffer));
+
 			mMutex_kfData.unlock();
-			return dataTime;
+			return startTime;
 		}
 
+		// apply data at the correct point in time
+		mStateKF.inject( IData::interpolate(startTime, mStateBuffer));
+		mErrCovKF.inject( IData::interpolate(startTime, mErrCovKFBuffer));
 		events.sort(IData::timeSortPredicate);
 
 		// clear out state and errcov information that we are about to replace
-		IData::truncate(dataTime, mStateBuffer);
-		IData::truncate(dataTime, mErrCovKFBuffer);
+		IData::truncate(startTime, mStateBuffer);
+		IData::truncate(startTime, mErrCovKFBuffer);
 
-		// get accel vector at dataTime
+		// get accel vector at startTime 
 		Array2D<double> accel(3,1), accelRaw(3,1), gravDir(3,1);
 		if(gravDirIter != mGravityDirDataBuffer.end())
 			gravDir.inject( (*gravDirIter)->data );
@@ -795,11 +770,13 @@ double mHeightMeasCov = 0.1*0.1;
 
 		// apply events in order
 		list<shared_ptr<IData>>::const_iterator eventIter = events.begin();
-		Time lastUpdateTime(dataTime);
+		Time lastUpdateTime(startTime);
 		double dt;
 		shared_ptr<DataVector<double>> stateData, errCovData;
 		while(eventIter != events.end())
 		{
+			if((*eventIter)->timestamp < lastUpdateTime)
+				Log::alert("wtc");
 			dt = Time::calcDiffNS(lastUpdateTime, (*eventIter)->timestamp)/1.0e9;
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
 
@@ -815,20 +792,27 @@ double mHeightMeasCov = 0.1*0.1;
 					break;
 				case DATA_TYPE_CAMERA_POS:
 				case DATA_TYPE_VICON_POS:
-					if((*eventIter) != data) // don't want to apply this twice
+//					if((*eventIter) != data) // don't want to apply this twice
 						doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_VICON_VEL:
 				case DATA_TYPE_CAMERA_VEL:
-//					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
+//					if((*eventIter) != data) // don't want to apply this twice
+//						doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_MAP_VEL:
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
+					if((*eventIter) != data) // don't want to apply this twice
+						doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_MAP_HEIGHT:
+					{
+double mHeightMeasCov = 0.1*0.1;
+					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(data)->data, mHeightMeasCov, mStateKF, mErrCovKF);
+					}
 					break;
 				case DATA_TYPE_OPTIC_FLOW_VEL:
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
+					if((*eventIter) != data) // don't want to apply this twice
+						doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
 					break;
 				default:
 					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
