@@ -588,7 +588,7 @@ namespace Quadrotor{
 
 		if(mQuadLogger != NULL)
 		{
-			String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMAGE + "\t" + data->id;
+			String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMAGE + "\t" + data->imageId;
 			mMutex_logger.lock();
 			mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
 			mMutex_logger.unlock();

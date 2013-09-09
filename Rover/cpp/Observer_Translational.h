@@ -92,6 +92,7 @@ class Observer_Translational : public Observer_AngularListener,
 	bool mDoMeasUpdate;
 	bool mNewViconPosAvailable, mNewCameraPosAvailable;
 	bool mUseViconPos, mUseCameraPos;
+	bool mHaveFirstVicon;
 	Time mStartTime;
 
 	TNT::Array2D<double> mRotViconToPhone;

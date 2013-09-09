@@ -60,6 +60,8 @@ using namespace TNT;
 		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mMapVelBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mRawAccelDataBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mGravityDirDataBuffer));
+		
+		mHaveFirstVicon = false;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -86,12 +88,10 @@ using namespace TNT;
 		mRunning = true;
 
 		Time lastUpdateTime;
-		Array2D<double> measTemp(6,1);
 		Array2D<double> accel(3,1,0.0), gravityDir(3,1,0.0);
 		Array2D<double> pos(3,1),vel(3,1);
-		double s1, s2, s3, c1, c2, c3;
-		double dt;
 		Array2D<double> errCov(18,1,0.0);
+		double dt;
 
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
@@ -100,7 +100,7 @@ using namespace TNT;
 		Time loopTime;
 		toadlet::uint64 t;
 		list<shared_ptr<IData>> events;
-		float targetRate = 200; // hz
+		float targetRate = 800; // hz
 		float targetPeriodUS = 1.0f/targetRate*1.0e6;
 		String logString;
 		while(mRunning)
@@ -132,7 +132,18 @@ using namespace TNT;
 			mMutex_events.lock();
 			mNewEventsBuffer.swap(events);
 			mMutex_events.unlock();
+
 			events.sort(IData::timeSortPredicate);
+			if(events.size() > 0 && events.front()->timestamp > lastUpdateTime)
+			{
+				// need to advance time to the first event
+				dt = Time::calcDiffNS(lastUpdateTime, events.front()->timestamp)/1.0e9;
+				mMutex_kfData.lock();
+				doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+				mMutex_kfData.unlock();
+			}
+
+			// now process the events
 			while(events.size() > 0)
 			{
 				lastUpdateTime.setTime( applyData(events.front()) );
@@ -149,8 +160,8 @@ using namespace TNT;
 			}
 
 			// time update since last processed event
-			dt = lastUpdateTime.getElapsedTimeUS()/1.0e6;
-
+			dt = lastUpdateTime.getElapsedTimeNS()/1.0e9;
+			lastUpdateTime.setTime();
 			mMutex_kfData.lock();
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
 			mMutex_kfData.unlock();
@@ -166,18 +177,20 @@ using namespace TNT;
 				mMutex_kfData.unlock();
 			}
 
-			lastUpdateTime.setTime();
-
-
 			// buffers
 			shared_ptr<DataVector<double>> stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
 			stateData->type = DATA_TYPE_STATE_TRAN;
+			stateData->timestamp.setTime(lastUpdateTime);
 			shared_ptr<DataVector<double>> errCovData = shared_ptr<DataVector<double>>(new DataVector<double>());
 			errCovData->type = DATA_TYPE_KF_ERR_COV;
+			errCovData->timestamp.setTime(lastUpdateTime);
 
 			mMutex_kfData.lock();
 			stateData->data = mStateKF.copy();
+			mStateBuffer.push_back(stateData);
+
 			errCovData->data = mErrCovKF.copy();
+			mErrCovKFBuffer.push_back(errCovData);
 
 			for(int i=0; i<3; i++)
 				pos[i][0] = mStateKF[i][0];
@@ -192,9 +205,6 @@ using namespace TNT;
 //				errCov[i+12][0] = mErrCovKF[i+3][i+6];
 //				errCov[i+15][0] = mErrCovKF[i+6][i+6];
 //			}
-
-			mStateBuffer.push_back(stateData);
-			mErrCovKFBuffer.push_back(errCovData);
 
 			mMutex_kfData.unlock();
 
@@ -228,12 +238,15 @@ using namespace TNT;
 
 	void Observer_Translational::doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
 	{
-//printArray("accel:\t",accel);
+//Log::alert(String()+"dt: " + dt);
 		if(dt > 1)
 		{
 			Log::alert(String()+"Translation observer time update large dt: " +dt);
 			return;
 		}
+
+		if(dt == 0)
+			return;
 
 		for(int i=0; i<3; i++)
 			state[i][0] += dt*state[i+3][0];
@@ -245,17 +258,17 @@ using namespace TNT;
 		double dtSq = dt*dt;
 		for(int i=0; i<3; i++)
 		{
-			errCov[i][i] += 2*errCov[i][i+3]*dt+(errCov[i+3][i+3]+dynCov[i][i])*dtSq;
+			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dtSq+dynCov[i][i]*dt;
 			errCov[i][i+3] += (errCov[i+3][i+3]-errCov[i][i+6])*dt-errCov[i+3][i+6]*dtSq;
 			errCov[i][i+6] += errCov[i+3][i+6]*dt;
 			errCov[i+3][i] = errCov[i][i+3];
 			errCov[i+6][i] = errCov[i][i+6];
 
-			errCov[i+3][i+3] += -2*errCov[i+3][i+6]*dt+(errCov[i+6][i+6]+dynCov[i+3][i+3])*dtSq;
+			errCov[i+3][i+3] += -2*errCov[i+3][i+6]*dt+errCov[i+6][i+6]*dtSq+dynCov[i+3][i+3]*dt;
 			errCov[i+3][i+6] -= errCov[i+6][i+6]*dt;
 			errCov[i+6][i+3] = errCov[i+3][i+6];
 
-			errCov[i+6][i+6] += dynCov[i+6][i+6]*dtSq;
+			errCov[i+6][i+6] += dynCov[i+6][i+6]*dt;
 		}
 	}
 
@@ -410,6 +423,19 @@ using namespace TNT;
 		for(int i=0; i<3; i++)
 			pos[i][0] = data[i+6];
 		pos = matmult(mRotViconToPhone, pos);
+
+		if(!mHaveFirstVicon)
+		{
+			mMutex_kfData.lock();
+			mStateKF[0][0] = pos[0][0];
+			mStateKF[1][0] = pos[1][0];
+			mStateKF[2][0] = pos[2][0];
+
+			mStateBuffer.clear();
+			mErrCovKFBuffer.clear();
+			mMutex_kfData.unlock();
+		}
+		mHaveFirstVicon = true;
 
 		shared_ptr<DataVector<double>> posData(new DataVector<double>() );
 		posData->type = DATA_TYPE_VICON_POS;
@@ -723,6 +749,11 @@ double mHeightMeasCov = 0.1*0.1;
 		gravDirIter = IData::findIndexReverse(dataTime, mGravityDirDataBuffer);
 		opticFlowVelIter = IData::findIndexReverse(dataTime, mOpticFlowVelBuffer); 
 		
+		// but I want the next one for these because
+		// they are not measurements
+		if(rawAccelIter != mRawAccelDataBuffer.end()) rawAccelIter++;
+		if(gravDirIter != mGravityDirDataBuffer.end()) gravDirIter++;
+		
 		// construct a sorted list of all events
 		list<shared_ptr<IData>> events;
 		if(posIter != posBuffer->end()) 
@@ -770,7 +801,7 @@ double mHeightMeasCov = 0.1*0.1;
 		while(eventIter != events.end())
 		{
 			dt = Time::calcDiffNS(lastUpdateTime, (*eventIter)->timestamp)/1.0e9;
-//			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
 
 			switch((*eventIter)->type)
 			{
@@ -784,7 +815,8 @@ double mHeightMeasCov = 0.1*0.1;
 					break;
 				case DATA_TYPE_CAMERA_POS:
 				case DATA_TYPE_VICON_POS:
-					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
+					if((*eventIter) != data) // don't want to apply this twice
+						doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_VICON_VEL:
 				case DATA_TYPE_CAMERA_VEL:

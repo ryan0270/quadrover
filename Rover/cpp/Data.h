@@ -63,10 +63,13 @@ template<class T> class DataVector;
 class IData
 {
 	public:
+	IData(){ dataID = sNextDataID()++; }
+	
 	virtual void lock(){mMutex.lock();}
 	virtual void unlock(){mMutex.unlock();}
 	Time timestamp;
 	DataType type;
+	unsigned long dataID;
 
 	template <class T1, class T2>
 	static T1 interpolate(Time const &t, Data<T1> const &d1, Data<T2> const &d2);
@@ -97,14 +100,15 @@ class IData
 
 	protected:
 	std::mutex mMutex;
+	static inline unsigned long &sNextDataID(){ static unsigned long data = 0; return data;}
 };
 
 template<class Tclass>
 class Data : public IData
 {
 	public:
-	Data(){type = DATA_TYPE_UNDEFINED;}
-	Data(Tclass d, DataType t){data = d; type = t;}
+	Data() : IData() {type = DATA_TYPE_UNDEFINED;}
+	Data(Tclass d, DataType t) : IData() {data = d; type = t;}
 
 	virtual void copyTo(Data &d) {
 		if(&d == this)
@@ -125,7 +129,7 @@ template <class Tclass>
 class DataVector : public IData
 {
 	public:
-	DataVector(){type = DATA_TYPE_UNDEFINED;};
+	DataVector() : IData() {type = DATA_TYPE_UNDEFINED;};
 //	DataVector(TNT::Array2D<double> const &d, DataType t){data = d.copy(); type = t;}
 
 	void copyTo(DataVector &d) {
@@ -146,7 +150,7 @@ class DataVector : public IData
 class DataImage : public IData
 {
 	public:
-	DataImage() : att(3,1,0.0), angularVel(3,1,0.) 
+	DataImage() : IData(), att(3,1,0.0), angularVel(3,1,0.) 
 	{
 		type = DATA_TYPE_IMAGE; 
 		imageFormat = IMG_FORMAT_BGR; 
@@ -154,10 +158,10 @@ class DataImage : public IData
 		cap = NULL;
 		centerX = centerY = 0;
 		focalLength = 0;
-		id = sNextID()++;
+		imageId= sNextImageID()++;
 	}
 	
-	unsigned int id;
+	unsigned int imageId;
 	shared_ptr<cv::Mat> image;
 	shared_ptr<cv::Mat> imageGray;
 	TNT::Array2D<double> att;
@@ -170,13 +174,13 @@ class DataImage : public IData
 	shared_ptr<cv::Mat> distCoeffs;
 
 	private:
-	static inline unsigned int &sNextID(){ static unsigned int data = 0; return data;}
+	static inline unsigned int &sNextImageID(){ static unsigned int data = 0; return data;}
 }; 
 
 class DataAnnotatedImage : public IData
 {
 	public:
-	DataAnnotatedImage(){ };
+	DataAnnotatedImage() : IData() { };
 
 	shared_ptr<cv::Mat> imageAnnotated;
 	shared_ptr<DataImage> imageDataSource;
@@ -189,7 +193,7 @@ template <class T>
 class DataPhoneTemp : public Data<T>
 {
 	public:
-	DataPhoneTemp() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
+	DataPhoneTemp() : IData() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
 
 	T battTemp, secTemp, fgTemp;//, tmuTemp;
 };
@@ -197,6 +201,7 @@ class DataPhoneTemp : public Data<T>
 class ImageMatchData : public IData
 {
 	public:
+	ImageMatchData() : IData(){};
 	vector<vector<cv::Point2f>> featurePoints;
 	shared_ptr<DataImage> imageData0, imageData1;
 	shared_ptr<DataAnnotatedImage> imageAnnotated;
@@ -208,6 +213,7 @@ class ImageMatchData : public IData
 class ImageFeatureData : public IData
 {
 	public:
+	ImageFeatureData() : IData() {};
 	vector<cv::Point2f> featurePoints;
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotated;
@@ -296,6 +302,7 @@ class RectGroup
 class ImageTargetFindData : public IData
 {
 	public:
+	ImageTargetFindData() : IData() {};
 	shared_ptr<RectGroup> target;
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotatedData;

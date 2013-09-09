@@ -57,7 +57,7 @@ using namespace toadlet::egg;
 //				shared_ptr<ImageMatchData> data = mImageQueue.front();
 				shared_ptr<DataImage> data = mImageQueue.front();
 
-				id = data->id;
+				id = data->imageId;
 				String filename = String()+"/sdcard/RoverService/video/image_"+id+".bmp";
 				cv::Mat image = *(data->image);
 				mImageQueue.pop();
