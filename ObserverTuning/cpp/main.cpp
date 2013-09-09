@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <random>
 
 #include <opencv2/core/core.hpp>
 //#include <opencv2/highgui/highgui.hpp>
@@ -202,29 +203,29 @@ int main(int argv, char* argc[])
 	}
 
 	Collection<float> measVar;
-	measVar.push_back(0.000001);
-	measVar.push_back(0.000001);
-	measVar.push_back(0.000001);
-	measVar.push_back(0.100000);
-	measVar.push_back(0.100000);
-	measVar.push_back(0.100000);
+	measVar.push_back(0.0001);
+	measVar.push_back(0.0001);
+	measVar.push_back(0.0001);
+	measVar.push_back(0.1);
+	measVar.push_back(0.1);
+	measVar.push_back(0.1);
 	mObsvTranslational.onNewCommKalmanMeasVar(measVar);
 
 	Collection<float> dynVar;
-	dynVar.push_back(0.0004);
-	dynVar.push_back(0.0004);
-	dynVar.push_back(0.000001);
-	dynVar.push_back(1*1);
-	dynVar.push_back(1*1);
-	dynVar.push_back(1*1);
+	dynVar.push_back(0.0001);
+	dynVar.push_back(0.0001);
+	dynVar.push_back(0.0001);
+	dynVar.push_back(0.5);
+	dynVar.push_back(0.5);
+	dynVar.push_back(0.5);
 	dynVar.push_back(0.001); // accel bias
 	dynVar.push_back(0.001);
 	dynVar.push_back(0.001);
 	mObsvTranslational.onNewCommKalmanDynVar(dynVar);
 
-	float xBias =  0.000199;
-	float yBias = -0.000537;
-	float zBias = -0.005536;
+	float xBias = -0.1;
+	float yBias = -0.1;
+	float zBias = -0.3;
 	mObsvTranslational.onNewCommAccelBias(xBias, yBias, zBias);
 
 	mQuadLogger.setMask(logMask);
@@ -263,9 +264,17 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
 	int endTimeDelta = 100e3;
-	float viconUpdateRate = 10; // Hz
+	float viconUpdateRate = 5; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	Time lastViconUpdateTime;
+
+//	srand(1);
+	default_random_engine randGenerator;
+	normal_distribution<double> stdGaussDist(0,1);
+	Array2D<double> noiseStd(12,1,0.0);
+	noiseStd[6][0] = 0.010;
+	noiseStd[7][0] = 0.010;
+	noiseStd[8][0] = 0.010;
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";
@@ -319,7 +328,7 @@ int main(int argv, char* argc[])
 			{
 				toadlet::egg::Collection<float> state;
 				for(int i=0; i<curViconState.dim1(); i++)
-					state.push_back(curViconState[i][0]);
+					state.push_back(curViconState[i][0] + noiseStd[i][0]*stdGaussDist(randGenerator) );
 				for(int i=0; i<sensorManagerListeners.size(); i++)
 					commManagerListeners[i]->onNewCommStateVicon(state);
 				lastViconUpdateTime.setTime();
