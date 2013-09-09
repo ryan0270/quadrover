@@ -34,8 +34,11 @@
 #include <opencv2/features2d/features2d.hpp>
 
 // yeah, I'm too lazy to avoid making this global at the moment
-Collection<ICSL::Quadrotor::SensorManagerListener *> mListeners;
-void addListener(ICSL::Quadrotor::SensorManagerListener *l){mListeners.push_back(l);}
+Collection<ICSL::Quadrotor::CommManagerListener *> commManagerListeners;
+Collection<ICSL::Quadrotor::SensorManagerListener *> sensorManagerListeners;
+void addSensorManagerListener(ICSL::Quadrotor::SensorManagerListener *l){sensorManagerListeners.push_back(l);}
+void addCommManagerListener(ICSL::Quadrotor::CommManagerListener *l){commManagerListeners.push_back(l);}
+
 
 int main(int argv, char* argc[])
 {
@@ -103,18 +106,21 @@ int main(int argv, char* argc[])
 	mTranslationController.setStartTime(startTime);
 	mTranslationController.setQuadLogger(&mQuadLogger);
 	mTranslationController.initialize();
+	addCommManagerListener(&mTranslationController);
 
 	mAttitudeThrustController.setStartTime(startTime);
 	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
 	mAttitudeThrustController.setMotorInterface(&mMotorInterface);
 	mAttitudeThrustController.initialize();
 	mTranslationController.addListener(&mAttitudeThrustController);
+	addCommManagerListener(&mAttitudeThrustController);
 
 	mObsvAngular.initialize();
 	mObsvAngular.setStartTime(startTime);
 	mObsvAngular.setQuadLogger(&mQuadLogger);
 	mObsvAngular.addListener(&mAttitudeThrustController);
 	mObsvAngular.start();
+	addCommManagerListener(&mObsvAngular);
 
 	mObsvTranslational.setQuadLogger(&mQuadLogger);
 	mObsvTranslational.setStartTime(startTime);
@@ -122,17 +128,21 @@ int main(int argv, char* argc[])
 	mObsvTranslational.initialize();
 	mObsvTranslational.addListener(&mTranslationController);
 	mObsvAngular.addListener(&mObsvTranslational);
+//	mObsvTranslational.start();
+	addCommManagerListener(&mObsvTranslational);
 
 	mFeatureFinder.initialize();
 	mFeatureFinder.setStartTime(startTime);
 	mFeatureFinder.setQuadLogger(&mQuadLogger);
-	addListener(&mFeatureFinder);
+	addSensorManagerListener(&mFeatureFinder);
+	addCommManagerListener(&mFeatureFinder);
 
 	mTargetFinder.initialize();
 	mTargetFinder.setStartTime(startTime);
 	mTargetFinder.setQuadLogger(&mQuadLogger);
-	addListener(&mTargetFinder);
+	addSensorManagerListener(&mTargetFinder);
 	mTargetFinder.addListener(&mObsvTranslational);
+	addCommManagerListener(&mTargetFinder);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(startTime);
@@ -141,9 +151,10 @@ int main(int argv, char* argc[])
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
 	mVelocityEstimator.addListener(&mObsvTranslational);
 	mFeatureFinder.addListener(&mVelocityEstimator);
+	addCommManagerListener(&mVelocityEstimator);
 
-	addListener(&mObsvAngular);
-	addListener(&mObsvTranslational);
+	addSensorManagerListener(&mObsvAngular);
+	addSensorManagerListener(&mObsvTranslational);
 
 	uint32 logMask = 0;
 	logMask = LOG_FLAG_PC_UPDATES ;
@@ -190,6 +201,33 @@ int main(int argv, char* argc[])
 		System::usleep(700);
 	}
 
+	Collection<float> measVar;
+	measVar.push_back(0.000001);
+	measVar.push_back(0.000001);
+	measVar.push_back(0.000001);
+	measVar.push_back(0.100000);
+	measVar.push_back(0.100000);
+	measVar.push_back(0.100000);
+	mObsvTranslational.onNewCommKalmanMeasVar(measVar);
+
+	Collection<float> dynVar;
+	dynVar.push_back(0.0004);
+	dynVar.push_back(0.0004);
+	dynVar.push_back(0.000001);
+	dynVar.push_back(1*1);
+	dynVar.push_back(1*1);
+	dynVar.push_back(1*1);
+	dynVar.push_back(0.1); // accel bias
+	dynVar.push_back(0.1);
+	dynVar.push_back(0.1);
+	mObsvTranslational.onNewCommKalmanDynVar(dynVar);
+
+	float xBias = 0;
+	float yBias = 0;
+	float zBias = 0;
+	mObsvTranslational.onNewCommAccelBias(xBias, yBias, zBias);
+
+
 	mQuadLogger.setMask(logMask);
 	mQuadLogger.setDir(dataDir.c_str());
 	mQuadLogger.setFilename("obsvLog.txt");
@@ -206,7 +244,7 @@ int main(int argv, char* argc[])
 	double accelCal2Y = -0.16;
 	double accelCal2Z = -10.10;
 
-	double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
+	double accelScaleZ = 1;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
 	// don't have information on these so assume they are the same
 	double accelScaleX = accelScaleZ;
 	double accelScaleY = accelScaleZ;
@@ -216,11 +254,20 @@ int main(int argv, char* argc[])
 	double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
 
 	int firstTime = -1;
-	int endTimeDelta = 15e3;
 
 	sched_param sp;
 	sp.sched_priority = sched_get_priority_max(SCHED_NORMAL);
 	sched_setscheduler(0, SCHED_NORMAL, &sp);
+
+	Array2D<double> curViconState(12,1);;
+	bool haveFirstVicon = false;
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Run settings
+	int endTimeDelta = 10e3;
+	float viconUpdateRate = 10; // Hz
+	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
+	Time lastViconUpdateTime;
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";
@@ -255,6 +302,7 @@ int main(int argv, char* argc[])
 				mVelocityEstimator.setStartTime(startTime);
 				mQuadLogger.setStartTime(startTime);
 
+				mObsvTranslational.start();
 				mQuadLogger.start();
 				cout << "Time: " << time << endl;
 			}
@@ -268,6 +316,18 @@ int main(int argv, char* argc[])
 				lastDispTimeMS = time;
 			}
 
+			// Vicon updates
+			if(lastViconUpdateTime.getElapsedTimeMS() > viconUpdatePeriodMS && haveFirstVicon)
+			{
+				toadlet::egg::Collection<float> state;
+				for(int i=0; i<curViconState.dim1(); i++)
+					state.push_back(curViconState[i][0]);
+				for(int i=0; i<sensorManagerListeners.size(); i++)
+					commManagerListeners[i]->onNewCommStateVicon(state);
+				lastViconUpdateTime.setTime();
+			}
+
+			// Sensor updates
 			shared_ptr<IData> data = NULL;
 			switch(type)
 			{
@@ -284,9 +344,9 @@ int main(int argv, char* argc[])
 						static_pointer_cast<DataVector<double> >(data)->data = accel;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = accelCal;
 
-						data->timestamp.setTimeMS(time);
-						for(int i=0; i<mListeners.size(); i++)
-							mListeners[i]->onNewSensorUpdate(data);
+						data->timestamp.setTimeMS(startTime.getMS()+time);
+						for(int i=0; i<sensorManagerListeners.size(); i++)
+							sensorManagerListeners[i]->onNewSensorUpdate(data);
 					}
 					break;
 				case LOG_ID_GYRO:
@@ -299,9 +359,9 @@ int main(int argv, char* argc[])
 						static_pointer_cast<DataVector<double> >(data)->data = gyro;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = gyro;
 
-						data->timestamp.setTimeMS(time);
-						for(int i=0; i<mListeners.size(); i++)
-							mListeners[i]->onNewSensorUpdate(data);
+						data->timestamp.setTimeMS(startTime.getMS()+time);
+						for(int i=0; i<sensorManagerListeners.size(); i++)
+							sensorManagerListeners[i]->onNewSensorUpdate(data);
 					}
 					break;
 				case LOG_ID_MAGNOMETER:
@@ -314,9 +374,9 @@ int main(int argv, char* argc[])
 						static_pointer_cast<DataVector<double> >(data)->data = mag;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = mag;
 
-						data->timestamp.setTimeMS(time);
-						for(int i=0; i<mListeners.size(); i++)
-							mListeners[i]->onNewSensorUpdate(data);
+						data->timestamp.setTimeMS(startTime.getMS()+time);
+						for(int i=0; i<sensorManagerListeners.size(); i++)
+							sensorManagerListeners[i]->onNewSensorUpdate(data);
 					}
 					break;
 				case LOG_ID_PRESSURE:
@@ -326,6 +386,14 @@ int main(int argv, char* argc[])
 				case LOG_ID_MOTOR_CMDS:
 					break;
 				case LOG_ID_PHONE_TEMP:
+					break;
+				case LOG_ID_RECEIVE_VICON:
+					// Ideally I'd pull this directly from the Leash log file, but that's work :)
+					{
+						for(int i=0; i<12; i++)
+							ss >> curViconState[i][0];
+						haveFirstVicon = true;
+					}
 					break;
 			}
 		}

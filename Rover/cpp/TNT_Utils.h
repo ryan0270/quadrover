@@ -313,7 +313,7 @@ using namespace toadlet::egg;
 					str = str+"\n";
 			}
 		}
-		Log::alert(str);
+		Log::alert(str.substr(0, str.length()-1));
 	}
 
 	template <class T1, class T2>

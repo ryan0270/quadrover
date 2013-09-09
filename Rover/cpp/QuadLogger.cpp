@@ -74,6 +74,9 @@ void QuadLogger::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
+	while(mLogQueue.size() > 0)
+		mLogQueue.pop();
+
 	String line;
 	while(mRunning)
 	{
@@ -106,7 +109,7 @@ void QuadLogger::run()
 void QuadLogger::addLine(String const &str, LogFlags type)
 {
 	mMutex_addLine.lock();
-	if(mTypeMask & type)
+	if( (mTypeMask & type) && mRunning)
 	{
 		mMutex_logQueue.lock();
 		mLogQueue.push(str);
