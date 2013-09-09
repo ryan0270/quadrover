@@ -79,23 +79,23 @@ angleStateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' '
 tranStateLabels = { 'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
 
 %%
-if exist('angleState','var') && ~isempty(angleState)
-  	figure(1); clf;
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
-	for i=1:6
-		subplot(2,3,i);		
-		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(angleStateTime, angleState(i,:)); hold all
-		hold off
-
-		xlabel('Time [s]')
-		ylabel(angleStateLabels(i));	
-	end
-% 	% legend('Vicon','Phone');
-end
+% if exist('angleState','var') && ~isempty(angleState)
+%   	figure(1); clf;
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
+% 	for i=1:6
+% 		subplot(2,3,i);		
+% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
+% 		plot(angleStateTime, angleState(i,:)); hold all
+% 		hold off
+% 
+% 		xlabel('Time [s]')
+% 		ylabel(angleStateLabels(i));	
+% 	end
+% % 	% legend('Vicon','Phone');
+% end
 
 %%
 if exist('tranState','var') && ~isempty(tranState)

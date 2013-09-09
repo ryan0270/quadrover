@@ -217,16 +217,15 @@ int main(int argv, char* argc[])
 	dynVar.push_back(1*1);
 	dynVar.push_back(1*1);
 	dynVar.push_back(1*1);
-	dynVar.push_back(0.1); // accel bias
-	dynVar.push_back(0.1);
-	dynVar.push_back(0.1);
+	dynVar.push_back(0.001); // accel bias
+	dynVar.push_back(0.001);
+	dynVar.push_back(0.001);
 	mObsvTranslational.onNewCommKalmanDynVar(dynVar);
 
-	float xBias = 0;
-	float yBias = 0;
-	float zBias = 0;
+	float xBias =  0.000199;
+	float yBias = -0.000537;
+	float zBias = -0.005536;
 	mObsvTranslational.onNewCommAccelBias(xBias, yBias, zBias);
-
 
 	mQuadLogger.setMask(logMask);
 	mQuadLogger.setDir(dataDir.c_str());
@@ -244,10 +243,9 @@ int main(int argv, char* argc[])
 	double accelCal2Y = -0.16;
 	double accelCal2Z = -10.10;
 
-	double accelScaleZ = 1;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
-	// don't have information on these so assume they are the same
-	double accelScaleX = accelScaleZ;
-	double accelScaleY = accelScaleZ;
+	double accelScaleZ = 1.009;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
+	double accelScaleX = 1.0;
+	double accelScaleY = 1.0;
 
 	double accelOffX = 0.5*(accelCal1X+accelCal2X);
 	double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
