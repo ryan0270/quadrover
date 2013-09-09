@@ -109,19 +109,6 @@ void Observer_Angular::run()
 	bool accelProcessed = true; // "processed" means used to calculate the innovation term
 	bool magProcessed = true;
 	bool gyroProcessed = true;
-//	double calMinX = -9.7;
-//	double calMaxX = 9.65;
-//	double calMinY = -10.2;
-//	double calMaxY = 10.05;
-//	double calMinZ = -10.05;
-//	double calMaxZ = 9.5;
-//
-//	double offsetX = 0.5*(calMaxX+calMinX);
-//	double offsetY = 0.5*(calMaxY+calMinY);
-//	double offsetZ = 0.5*(calMaxZ+calMinZ);
-//	double scaleX = 0.5*(calMaxX-calMinX)/GRAVITY;
-//	double scaleY = 0.5*(calMaxY-calMinY)/GRAVITY;
-//	double scaleZ = 0.5*(calMaxZ-calMinZ)/GRAVITY;
 
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
@@ -140,7 +127,12 @@ void Observer_Angular::run()
 			mMutex_data.lock();
 			if(mDoingBurnIn && mBurnCount < 2000)
 			{
-				if(gyroData != NULL) {gyroData->lock(); gyroSum += gyroData->dataCalibrated; gyroData->unlock();}
+				if(gyroData != NULL)
+				{
+					gyroData->lock();
+					gyroSum += gyroData->dataCalibrated;
+					gyroData->unlock();
+				}
 				if(magData != NULL) {magData->lock(); magSum += magData->dataCalibrated; magData->unlock();}
 				if(accelData != NULL) {accelData->lock(); accelSum += accelData->dataCalibrated; accelData->unlock();}
 //				if(gyroData != NULL) {gyroData->lock(); gyroSum += gyroData->data; gyroData->unlock();}
@@ -311,6 +303,12 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double> > c
 
 	for(int i=0; i<mListeners.size(); i++)
 		mListeners[i]->onObserver_AngularUpdated(attData, velData);
+
+	String logStr=String() +  mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_CUR_ATT +"\t";
+	for(int i=0; i<attData->data.dim1(); i++)
+		logStr = logStr+attData->data[i][0] + "\t";
+	if(mQuadLogger != NULL)
+		mQuadLogger->addLine(logStr,LOG_FLAG_STATE);
 }
 
 Array2D<double> Observer_Angular::convert_so3toCoord(Array2D<double> const &so3)
@@ -524,13 +522,13 @@ void Observer_Angular::onNewSensorUpdate(shared_ptr<IData> const &data)
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Sensor event handler
-////////////////////////////////////////////////////////////////////////////////////////////////////
-int Observer_Angular::inputDetected(int fd, int events, void *data)
-{
-	return 1;
-}
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Sensor event handler
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//int Observer_Angular::inputDetected(int fd, int events, void *data)
+//{
+//	return 1;
+//}
 
 };
 };

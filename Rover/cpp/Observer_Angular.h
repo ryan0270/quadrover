@@ -116,8 +116,7 @@ class Observer_Angular : public CommManagerListener,
 		int mBurnCount;
 		std::mutex mMutex_data, mMutex_cache;
 
-//		void inputDetected(const InputData &data);
-		static int inputDetected(int fd, int events, void *data);
+//		static int inputDetected(int fd, int events, void *data);
 
 		toadlet::egg::Collection<Observer_AngularListener*> mListeners;
 
