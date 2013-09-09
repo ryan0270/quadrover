@@ -265,12 +265,10 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 // Based on Hamel and Mahoney's nonlinear SO3 observer
 void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double> > const &gyroData)
 {
-	if(dt > 0.05)
+	if(dt > 0.1)
 		return; // too long of a period to integrate over
 
 	mMutex_data.lock();
-//	Array2D<double> gyro;
-//	mCurVel = mGyro - mGyroBias;
 	gyroData->lock();
 	mCurVel = gyroData->data - mGyroBias;
 	Time gyroTime( gyroData->timestamp);
@@ -307,6 +305,8 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double> > c
 	String logStr=String() +  mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_CUR_ATT +"\t";
 	for(int i=0; i<attData->data.dim1(); i++)
 		logStr = logStr+attData->data[i][0] + "\t";
+	for(int i=0; i<velData->data.dim1(); i++)
+		logStr = logStr+velData->data[i][0]+"\t";
 	if(mQuadLogger != NULL)
 		mQuadLogger->addLine(logStr,LOG_FLAG_STATE);
 }

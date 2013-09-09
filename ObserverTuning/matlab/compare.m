@@ -27,6 +27,8 @@ angleState = phoneData(angleStateIndices,3:8)';
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
+accelBiasTime = tranStateTime;
+accelBias = phoneData(tranStateIndices,9:11)';
 
 attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
 attBiasTime = phoneData(attBiasIndices,1)'/1000;
@@ -115,10 +117,26 @@ if exist('tranState','var') && ~isempty(tranState)
 	end
 	
 	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime,[],'extrap')';
-	rmsErr = rms(viconStateTranInterp(7:12,:)-tranState,2);
+	start = find(abs(tranState(1,:)) > 0.05);
+	rmsErr = rms(viconStateTranInterp(7:12,start:end)'-tranState(:,start:end)')';
 	fprintf('Tran state rms err:\t');
 	for i=1:6
 		fprintf('%1.3f\t',rmsErr(i));
 	end
 	fprintf('\n');
+end
+
+%%
+if exist('accelBias','var') && ~isempty(accelBias)
+  	figure(3); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	for i=1:3
+		plot(accelBiasTime, accelBias(i,:)); hold all
+	end
+	hold off
+	xlabel('Time [s]')
+	ylabel('Accel bias [m/s^2]');
+	legend('x','y','z');	
 end

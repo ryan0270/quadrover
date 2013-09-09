@@ -29,7 +29,7 @@ using namespace TNT;
 		mDynCov[0][0] = mDynCov[1][1] = mDynCov[2][2] = 0.1*0.1*0;
 		mDynCov[3][3] = mDynCov[4][4] = mDynCov[5][5] = 0.5*0.5*0;
 		mDynCov[6][6] = mDynCov[7][7] = mDynCov[8][8] = 0;
-		mErrCovKF.inject(1e-4*createIdentity((double)9));
+		mErrCovKF.inject(1e-6*createIdentity((double)9));
 
 		mDoMeasUpdate = false;
 		mNewViconPosAvailable = mNewCameraPosAvailable = false;
@@ -100,7 +100,7 @@ using namespace TNT;
 		Time loopTime;
 		toadlet::uint64 t;
 		list<shared_ptr<IData>> events;
-		float targetRate = 100; // hz
+		float targetRate = 50; // hz
 		float targetPeriodUS = 1.0f/targetRate*1.0e6;
 		String logString;
 		while(mRunning)
@@ -167,10 +167,14 @@ using namespace TNT;
 			if( (!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3)
 			{
 				mMutex_kfData.lock();
-				for(int i=0; i<mStateKF.dim1(); i++)
+				for(int i=0; i<6; i++)
 					mStateKF[i][0] = 0;
+				mStateKF[6][0] = mAccelBiasReset[0][0];
+				mStateKF[7][0] = mAccelBiasReset[1][0];
+				mStateKF[8][0] = mAccelBiasReset[2][0];
 
-				mErrCovKF.inject(mDynCov);
+//				mErrCovKF.inject(mDynCov);
+				mErrCovKF.inject(1e-6*createIdentity((double)9));
 				mMutex_kfData.unlock();
 			}
 
@@ -254,17 +258,17 @@ using namespace TNT;
 		double dtSq = dt*dt;
 		for(int i=0; i<3; i++)
 		{
-			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dtSq+dynCov[i][i]*dt;
+			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dtSq+dynCov[i][i]*dtSq;
 			errCov[i][i+3] += (errCov[i+3][i+3]-errCov[i][i+6])*dt-errCov[i+3][i+6]*dtSq;
 			errCov[i][i+6] += errCov[i+3][i+6]*dt;
 			errCov[i+3][i] = errCov[i][i+3];
 			errCov[i+6][i] = errCov[i][i+6];
 
-			errCov[i+3][i+3] += -2*errCov[i+3][i+6]*dt+errCov[i+6][i+6]*dtSq+dynCov[i+3][i+3]*dt;
+			errCov[i+3][i+3] += -2*errCov[i+3][i+6]*dt+errCov[i+6][i+6]*dtSq+dynCov[i+3][i+3]*dtSq;
 			errCov[i+3][i+6] -= errCov[i+6][i+6]*dt;
 			errCov[i+6][i+3] = errCov[i+3][i+6];
 
-			errCov[i+6][i+6] += dynCov[i+6][i+6]*dt;
+			errCov[i+6][i+6] += dynCov[i+6][i+6]*dtSq;
 		}
 	}
 
