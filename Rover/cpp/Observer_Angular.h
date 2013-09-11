@@ -3,6 +3,7 @@
 #include <memory>
 #include "Data.h"
 #include "TNT/tnt.h"
+
 namespace ICSL{
 namespace Quadrotor{
 //using namespace std;
@@ -33,6 +34,7 @@ class Observer_AngularListener
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
+#include "Rotation.h"
 
 #include <toadlet/egg.h>
 
@@ -84,6 +86,8 @@ class Observer_Angular : public CommManagerListener,
 
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
+		SO3 estimateAttAtTime(Time const &t);
+
 		// CommManagerListener functions
 		void onNewCommObserverReset();
 		void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight);
@@ -125,6 +129,9 @@ class Observer_Angular : public CommManagerListener,
 		double mYawVicon;
 
 		int mThreadPriority, mScheduler;
+
+		list<shared_ptr<SO3Data<double>>> mSO3Buffer;
+		std::mutex mMutex_SO3Buffer;
 };
 
 }

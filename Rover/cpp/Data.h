@@ -9,6 +9,7 @@
 #include "Time.h"
 #include "TNT_Utils.h"
 #include "constants.h"
+#include "Rotation.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -56,10 +57,12 @@ enum DataType
 	DATA_TYPE_MAP_HEIGHT,
 	DATA_TYPE_GRAVITY_DIR,
 	DATA_TYPE_RAW_ACCEL,
+	DATA_TYPE_SO3
 };
 
 template<class T> class Data;
 template<class T> class DataVector; 
+template<class T> class SO3Data;
 class IData
 {
 	public:
@@ -72,31 +75,37 @@ class IData
 	unsigned long dataID;
 
 	template <class T1, class T2>
-	static T1 interpolate(Time const &t, Data<T1> const &d1, Data<T2> const &d2);
+	static T1 interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2);
 	template <class T>
-	static T interpolate(Time const &t, std::list<shared_ptr<Data<T>>> const &d);
+	static T interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d);
 	template <class T1, class T2>
-	static TNT::Array2D<T1> interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2);
+	static TNT::Array2D<T1> interpolate(const Time &t, const DataVector<T1> &d1, const DataVector<T2> &d2);
 	template <class T>
-	static TNT::Array2D<T> interpolate(Time const &t, std::list<shared_ptr<DataVector<T>>> const &d);
+	static TNT::Array2D<T> interpolate(const Time &t, const std::list<shared_ptr<DataVector<T>>> &d);
+	template <class T>
+	static SO3 interpolate(const Time &t, std::list<shared_ptr<SO3Data<T>>> &d);
 
 	// ideally, the list would be passed in const here but then the returned iterator has to be const and I
 	// couldn't do some things with it (like modify the list based on the returned iterator)
 	template <class T>
-	static typename std::list<std::shared_ptr<Data<T>>>::iterator findIndex(Time const &t, std::list<std::shared_ptr<Data<T>>> &d);
+	static typename std::list<std::shared_ptr<Data<T>>>::iterator findIndex(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
 	template <class T>
-	static typename std::list<std::shared_ptr<Data<T>>>::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<Data<T>>> &d);
+	static typename std::list<std::shared_ptr<Data<T>>>::iterator findIndexReverse(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
 	template <class T>
-	static typename std::list<std::shared_ptr<DataVector<T>>>::iterator findIndex(Time const &t, std::list<std::shared_ptr<DataVector<T>>> &d);
+	static typename std::list<std::shared_ptr<DataVector<T>>>::iterator findIndex(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
 	template <class T>
-	static typename std::list<std::shared_ptr<DataVector<T>>>::iterator findIndexReverse(Time const &t, std::list<std::shared_ptr<DataVector<T>>> &d);
+	static typename std::list<std::shared_ptr<DataVector<T>>>::iterator findIndexReverse(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
+	template <class T>
+	static typename std::list<std::shared_ptr<SO3Data<T>>>::iterator findIndex(const Time &t, std::list<std::shared_ptr<SO3Data<T>>> &d);
+	template <class T>
+	static typename std::list<std::shared_ptr<SO3Data<T>>>::iterator findIndexReverse(const Time &t, std::list<std::shared_ptr<SO3Data<T>>> &d);
 
 	template<class T>
-	static typename std::list<std::shared_ptr<Data<T>>>::iterator truncate(Time const &t, std::list<std::shared_ptr<Data<T>>> &d);
+	static typename std::list<std::shared_ptr<Data<T>>>::iterator truncate(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
 	template <class T>
-	static void truncate(Time const &t, std::list<std::shared_ptr<DataVector<T>>> &d);
+	static void truncate(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
 
-	static bool timeSortPredicate(shared_ptr<IData> const &d1, shared_ptr<IData> const &d2){return d1->timestamp < d2->timestamp;}
+	static bool timeSortPredicate(const shared_ptr<IData> &d1, const shared_ptr<IData> &d2){return d1->timestamp < d2->timestamp;}
 
 	protected:
 	std::mutex mMutex;
@@ -130,7 +139,7 @@ class DataVector : public IData
 {
 	public:
 	DataVector() : IData() {type = DATA_TYPE_UNDEFINED;};
-//	DataVector(TNT::Array2D<double> const &d, DataType t){data = d.copy(); type = t;}
+//	DataVector(TNT::Array2D<doubleconst > &d, DataType t){data = d.copy(); type = t;}
 
 	void copyTo(DataVector &d) {
 		if(&d == this)
@@ -150,7 +159,7 @@ class DataVector : public IData
 class DataImage : public IData
 {
 	public:
-	DataImage() : IData(), att(3,1,0.0), angularVel(3,1,0.) 
+	DataImage() : IData(), angularVel(3,1,0.) 
 	{
 		type = DATA_TYPE_IMAGE; 
 		imageFormat = IMG_FORMAT_BGR; 
@@ -164,7 +173,7 @@ class DataImage : public IData
 	unsigned int imageId;
 	shared_ptr<cv::Mat> image;
 	shared_ptr<cv::Mat> imageGray;
-	TNT::Array2D<double> att;
+	SO3 att;
 	TNT::Array2D<double> angularVel;
 	ImageFormat imageFormat;
 	float focalLength;
@@ -193,7 +202,7 @@ template <class T>
 class DataPhoneTemp : public Data<T>
 {
 	public:
-	DataPhoneTemp() : IData() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
+	DataPhoneTemp() : Data<T>() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
 
 	T battTemp, secTemp, fgTemp;//, tmuTemp;
 };
@@ -271,8 +280,8 @@ class Rect
 	vector<double> lineLengths;
 	double angle; // of the longest line, from -PI/2 to PI/2
 
-	static double accumAreaFunc(double const &val, shared_ptr<Rect> const &data){return val+data->area;}
-	static cv::Point2f accumCenterFunc(cv::Point2f const &val, shared_ptr<Rect> const &data){return val+data->center;}
+	static double accumAreaFunc(const double &val, const shared_ptr<Rect> &data){return val+data->area;}
+	static cv::Point2f accumCenterFunc(const cv::Point2f &val, const shared_ptr<Rect> &data){return val+data->center;}
 };
 
 class RectGroup
@@ -314,10 +323,19 @@ class ImageTargetFindData : public IData
 	std::mutex mMutex;
 };
 
+template <class T>
+class SO3Data : public IData
+{
+	public:
+	SO3Data() : IData(){};
+
+	SO3 rotation;
+};
+
 //////////////////////////////////////////// Template implementations //////////////////////////////////////
 // the list is assumed to be sorted in increasing time order
 template <class T>
-TNT::Array2D<T> IData::interpolate(Time const &t, list<shared_ptr<DataVector<T>>> const &d)
+TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVector<T>>> &d)
 {
 	if(d.size() == 0)
 		return TNT::Array2D<T>();
@@ -358,11 +376,11 @@ TNT::Array2D<T> IData::interpolate(Time const &t, list<shared_ptr<DataVector<T>>
 }
 
 template <class T1, class T2>
-TNT::Array2D<T1> IData::interpolate(Time const &t, DataVector<T1> const &d1, DataVector<T2> const &d2)
+TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, const DataVector<T2> &d2)
 {
 	TNT::Array2D<double> interp;
 
-	DataVector<T1> const *d1p, *d2p;
+	const DataVector<T1> *d1p, *d2p;
 	if(d1.timestamp < d2.timestamp)
 	{
 		d1p = &d1;
@@ -389,12 +407,12 @@ TNT::Array2D<T1> IData::interpolate(Time const &t, DataVector<T1> const &d1, Dat
 }
 
 template <class T1, class T2>
-T1 IData::interpolate(Time const &t, Data<T1> const &d1, Data<T2> const &d2)
+T1 IData::interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2)
 {
 	T1 interp;
 
-	Data<T1> const *d1p;
-	Data<T2> const *d2p;
+	const Data<T1> *d1p;
+	const Data<T2> *d2p;
 	if(d1.timestamp < d2.timestamp)
 	{
 		d1p = &d1;
@@ -421,7 +439,7 @@ T1 IData::interpolate(Time const &t, Data<T1> const &d1, Data<T2> const &d2)
 }
 
 template <class T>
-T IData::interpolate(Time const &t, std::list<shared_ptr<Data<T>>> const &d)
+T IData::interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d)
 {
 	if(d.size() == 0)
 		return 0;
@@ -455,7 +473,24 @@ T IData::interpolate(Time const &t, std::list<shared_ptr<Data<T>>> const &d)
 }
 
 template <class T>
-typename list<shared_ptr<DataVector<T>>>::iterator IData::findIndex(Time const &t, list<shared_ptr<DataVector<T>>> &d)
+SO3 IData::interpolate(const Time &t, std::list<shared_ptr<SO3Data<T>>> &d)
+{
+	if(d.size() == 0)
+		return SO3();
+
+	typename list<shared_ptr<SO3Data<T>>>::iterator i1, i2;
+	i1 = findIndexReverse(t, d);
+	i2 = i1;
+	i2++;
+
+	if( i2 == d.end() ||  Time::calcDiffNS((*i1)->timestamp, t) < Time::calcDiffNS(t, (*i2)->timestamp) )
+		return SO3( (*i1)->rotation);
+	else
+		return SO3( (*i2)->rotation);
+}
+
+template <class T>
+typename list<shared_ptr<DataVector<T>>>::iterator IData::findIndex(const Time &t, list<shared_ptr<DataVector<T>>> &d)
 {
 	typename list<shared_ptr<DataVector<T>>>::iterator i = d.begin();
 	while(i != d.end() && (*i)->timestamp < t)
@@ -464,7 +499,7 @@ typename list<shared_ptr<DataVector<T>>>::iterator IData::findIndex(Time const &
 }
 
 template <class T>
-typename list<shared_ptr<DataVector<T>>>::iterator IData::findIndexReverse(Time const &t, list<shared_ptr<DataVector<T>>> &d)
+typename list<shared_ptr<DataVector<T>>>::iterator IData::findIndexReverse(const Time &t, list<shared_ptr<DataVector<T>>> &d)
 {
 	typename list<shared_ptr<DataVector<T>>>::iterator i = d.end();
 	if(d.size() == 0)
@@ -477,7 +512,29 @@ typename list<shared_ptr<DataVector<T>>>::iterator IData::findIndexReverse(Time 
 }
 
 template <class T>
-void IData::truncate(Time const &t, list<shared_ptr<DataVector<T>>> &d)
+typename list<shared_ptr<SO3Data<T>>>::iterator IData::findIndex(const Time &t, list<shared_ptr<SO3Data<T>>> &d)
+{
+	typename list<shared_ptr<SO3Data<T>>>::iterator i = d.begin();
+	while(i != d.end() && (*i)->timestamp < t)
+		i++;
+	return i;
+}
+
+template <class T>
+typename list<shared_ptr<SO3Data<T>>>::iterator IData::findIndexReverse(const Time &t, list<shared_ptr<SO3Data<T>>> &d)
+{
+	typename list<shared_ptr<SO3Data<T>>>::iterator i = d.end();
+	if(d.size() == 0)
+		return i;
+
+	i--;
+	while(i != d.begin() && (*i)->timestamp >= t)
+		i--;
+	return i;
+}
+
+template <class T>
+void IData::truncate(const Time &t, list<shared_ptr<DataVector<T>>> &d)
 {
 	if(d.size() == 0)
 	{
@@ -504,7 +561,7 @@ void IData::truncate(Time const &t, list<shared_ptr<DataVector<T>>> &d)
 
 // returns first index greater than or equal to t, starting from the front
 template <class T>
-typename list<shared_ptr<Data<T>>>::iterator IData::findIndex(Time const &t, list<shared_ptr<Data<T>>> &d)
+typename list<shared_ptr<Data<T>>>::iterator IData::findIndex(const Time &t, list<shared_ptr<Data<T>>> &d)
 {
 	typename list<shared_ptr<Data<T>>>::iterator i = d.begin();
 	while(i != d.end() && (*i)->timestamp < t)
@@ -515,7 +572,7 @@ typename list<shared_ptr<Data<T>>>::iterator IData::findIndex(Time const &t, lis
 // returns first index less than or equal to t, starting from the back
 // If t < d.begin(), d.begin() is still returned
 template <class T>
-typename list<shared_ptr<Data<T>>>::iterator IData::findIndexReverse(Time const &t, list<shared_ptr<Data<T>>> &d)
+typename list<shared_ptr<Data<T>>>::iterator IData::findIndexReverse(const Time &t, list<shared_ptr<Data<T>>> &d)
 {
 	typename list<shared_ptr<Data<T>>>::iterator i = d.end();
 	if(d.size() == 0)
@@ -528,7 +585,7 @@ typename list<shared_ptr<Data<T>>>::iterator IData::findIndexReverse(Time const 
 }
 
 template <class T>
-typename list<shared_ptr<Data<T>>>::iterator IData::truncate(Time const &t, list<shared_ptr<Data<T>>> &d)
+typename list<shared_ptr<Data<T>>>::iterator IData::truncate(const Time &t, list<shared_ptr<Data<T>>> &d)
 {
 	if(d.size() == 0)
 		return d.end();
@@ -554,8 +611,6 @@ typename list<shared_ptr<Data<T>>>::iterator IData::truncate(Time const &t, list
 
 	return iter;
 }
-
-
 
 } // namespace Quadrotor
 } // namespace ICSL

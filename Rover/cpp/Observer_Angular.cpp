@@ -113,7 +113,7 @@ void Observer_Angular::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
-	shared_ptr<DataVector<double> > gyroData, accelData, magData;
+	shared_ptr<DataVector<double>> gyroData, accelData, magData;
 	gyroData = accelData = magData = NULL;
 	double gyroDT;
 	while(mRunning)
@@ -198,6 +198,11 @@ void Observer_Angular::run()
 			gyroProcessed = true;
 		}
 
+		mMutex_SO3Buffer.lock();
+		while(mSO3Buffer.size() > 0 && mSO3Buffer.front()->timestamp.getElapsedTimeMS() > 1e3)
+			mSO3Buffer.pop_front();
+		mMutex_SO3Buffer.unlock();
+
 		System::usleep(500);
 	}
 
@@ -205,7 +210,7 @@ void Observer_Angular::run()
 	Log::alert("------------------ QuadLogger runner dead --------------------");
 }
 
-void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<double> > const &accelData, shared_ptr<DataVector<double> > const &magData)
+void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<double>> const &accelData, shared_ptr<DataVector<double>> const &magData)
 {
 	accelData->lock(); Array2D<double> accel = accelData->dataCalibrated.copy(); accelData->unlock();
 	magData->lock(); Array2D<double> mag = magData->dataCalibrated.copy(); magData->unlock();
@@ -222,10 +227,10 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 	vI = 1.0/norm2(vI)*vI;
 
 	Array2D<double> transR = transpose(mCurRotMat);
-	if(norm2(accel-mAccelDirNom*GRAVITY) < 3)
-//	if( (norm2(accel)-GRAVITY) < 2)
+	if(norm2(accel-mAccelDirNom*GRAVITY) < 5)
+//	if( (norm2(accel)-GRAVITY) < 2 && accel[2][0] > 0)
 	{
-		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));
+		mInnovation.inject(mAccelWeight*cross(uB, matmult(transR, uI)));
 		mInnovation += mMagWeight*cross(vB, matmult(transR, vI));
 	}
 //	else
@@ -263,7 +268,7 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer
-void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double> > const &gyroData)
+void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double>> const &gyroData)
 {
 	if(dt > 0.1)
 		return; // too long of a period to integrate over
@@ -288,15 +293,24 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double> > c
 	mCurRotMat = matmult(mCurRotMat,A);
 	mCurAttitude = extractEulerAngles(mCurRotMat);
 
-	shared_ptr<DataVector<double> > attData(new DataVector<double> );
+	shared_ptr<DataVector<double>> attData(new DataVector<double> );
 	attData->type = DATA_TYPE_ATTITUDE;
 	attData->timestamp.setTime(gyroTime);
 	attData->data = mCurAttitude.copy();
 
-	shared_ptr<DataVector<double> > velData(new DataVector<double> );
+	shared_ptr<DataVector<double>> velData(new DataVector<double> );
 	velData->type = DATA_TYPE_ANGULAR_VEL;
 	velData->timestamp.setTime(gyroTime);
 	velData->data = mCurVel.copy();
+
+	mMutex_SO3Buffer.lock();
+	shared_ptr<SO3Data<double>> rotData(new SO3Data<double>());
+	rotData->type = DATA_TYPE_SO3;
+	rotData->timestamp.setTime(gyroTime);
+	rotData->rotation.setRotMat(mCurRotMat);
+	mSO3Buffer.push_back(rotData);
+	mMutex_SO3Buffer.unlock();
+
 	mMutex_data.unlock();
 
 	for(int i=0; i<mListeners.size(); i++)
@@ -339,6 +353,19 @@ Array2D<double> Observer_Angular::extractEulerAngles(Array2D<double> const &rotM
 	euler[2][0] = atan2(rotMat[1][0], rotMat[0][0]);
 
 	return euler;
+}
+
+SO3 Observer_Angular::estimateAttAtTime(Time const &t)
+{
+	// TODO: Better SO3 interpolation
+	mMutex_SO3Buffer.lock();
+	SO3 att;
+	if(mSO3Buffer.size() > 0)
+		att = IData::interpolate(t, mSO3Buffer);
+	// else att is the identity
+	mMutex_SO3Buffer.unlock();
+
+	return att;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -503,19 +530,19 @@ void Observer_Angular::onNewSensorUpdate(shared_ptr<IData> const &data)
 	{
 		case DATA_TYPE_ACCEL:
 			mMutex_cache.lock();
-			mAccelData = static_pointer_cast<DataVector<double> >(data);
+			mAccelData = static_pointer_cast<DataVector<double>>(data);
 			mNewAccelReady = true;
 			mMutex_cache.unlock();
 			break;
 		case DATA_TYPE_GYRO:
 			mMutex_cache.lock();
-			mGyroData = static_pointer_cast<DataVector<double> >(data);
+			mGyroData = static_pointer_cast<DataVector<double>>(data);
 			mNewGyroReady = true;
 			mMutex_cache.unlock();
 			break;
 		case DATA_TYPE_MAG:
 			mMutex_cache.lock();
-			mMagData = static_pointer_cast<DataVector<double> >(data);
+			mMagData = static_pointer_cast<DataVector<double>>(data);
 			mNewMagReady = true;
 			mMutex_cache.unlock();
 			break;

@@ -55,6 +55,7 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
+	./cpp/SensorManager.cpp
 	./cpp/Observer_Translational.cpp
 	./cpp/QuadLogger.cpp
 	./cpp/CommManager.cpp
@@ -63,7 +64,6 @@ set (SRC ${SRC}
 	./cpp/TranslationController.cpp
 	./cpp/AttitudeThrustController.cpp
 	./cpp/MotorInterface.cpp
-	./cpp/SensorManager.cpp
 	./cpp/VideoMaker.cpp
 	./cpp/Observer_Angular.cpp
 	./cpp/VelocityEstimator.cpp

@@ -131,14 +131,13 @@ void VelocityEstimator::run()
 }
 
 // See eqn 98 in the Feb 25, 2013 notes
-void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> const &oldFeatureData,
-										   shared_ptr<ImageFeatureData> const &curFeatureData,
+void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> oldFeatureData,
+										   shared_ptr<ImageFeatureData> curFeatureData,
 										   Array2D<double> &velEst, 
 										   double &heightEst,
 										   double visionMeasCov,
 										   double probNoCorr) const
 {
-return;
 //Log::alert("=======================================================");
 //	oldFeatureData->lock();
 //	curFeatureData->lock();
@@ -159,16 +158,29 @@ return;
 	// Get relevant state data
 	Array2D<double> oldState = mObsvTranslational->estimateStateAtTime(oldTime);
 //	Array2D<double> oldErrCov = mObsvTranslational->estimateErrCovAtTime(oldTime);
-	Array2D<double> eulOld = submat(oldState,0,2,0,0);
-	Array2D<double> attOld = createRotMat_ZYX( eulOld[2][0], eulOld[1][0], eulOld[0][0] );
+	SO3 attOld = oldFeatureData->imageData->att;
 
 	Array2D<double> curState = mObsvTranslational->estimateStateAtTime(curTime);
 	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
-	Array2D<double> eulCur = submat(curState,0,2,0,0);
-	Array2D<double> attCur = createRotMat_ZYX( eulCur[2][0], eulCur[1][0], eulCur[0][0] );
+	SO3 attCur = curFeatureData->imageData->att;
 
-	Array2D<double> attChange = matmult(transpose(attCur), attOld);
-	Array2D<double> omega = logSO3(attChange, dt);
+//	if(!attOld.isIdentity() || !attCur.isIdentity())
+//		Log::alert("Not identity");
+
+//	Array2D<double> attChange = matmult(transpose(attCur), attOld);
+//	Array2D<double> omega = logSO3(attChange, dt);
+	SO3 attChange = attCur.inv()*attOld;
+	Array2D<double> omega = attChange.log(dt).toVector();
+
+if(attChange.isIdentity())
+	Log::alert("We're not moving");
+
+	// Ignore this case since it means we're probably sitting on the ground
+	if(oldState[2][0] <= 0)
+		return;
+
+	curState = submat(curState,0,5,0,0);
+	curErrCov = submat(curErrCov,0,5,0,5);
 
 	// Rotate data to cam coords
 	omega.inject( matmult( mRotPhoneToCam, omega ));
@@ -195,12 +207,11 @@ return;
 
 	Array2D<double> mv = submat(curState,3,5,0,0);
 	Array2D<double> Sv = submat(curErrCov,3,5,3,5);
-	double mz = -curState[2][0];
+	double mz = max(-curState[2][0], 0.130);
 	double sz = sqrt(curErrCov[2][2]);
 
 	double camOffset = 0.087;
 	mz -= camOffset;
-	mz = max(mz, 0.130);
 
 	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
 	Sn[0][0] = Sn[1][1] = visionMeasCov;
@@ -231,17 +242,17 @@ return;
 	heightEst = z;
 }
 
-void VelocityEstimator::onFeaturesFound(shared_ptr<ImageFeatureData> const &data)
+void VelocityEstimator::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 {
 	mLastImageFeatureData = data;
 	mNewImageDataAvailable = true;
 }
 
-vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistributions(vector<cv::Point2f> const &points, 
-							Array2D<double> const &mv, Array2D<double> const &Sv, 
-							double const &mz, double const &varz, 
-							double const &focalLength, double const &dt, 
-							Array2D<double> const &omega)
+vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistributions(const vector<cv::Point2f> &points, 
+							const Array2D<double> &mv, const Array2D<double> &Sv, 
+							const double &mz, const double &varz, 
+							const double &focalLength, const double &dt, 
+							const Array2D<double> &omega)
 {
 	double mvx = mv[0][0];
 	double mvy = mv[1][0];
@@ -362,11 +373,11 @@ vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistr
 	return priorDistList;
 }
 
-Array2D<double> VelocityEstimator::calcCorrespondence(vector<pair<Array2D<double>, Array2D<double>>> const &priorDistList,
-													  vector<cv::Point2f> const &curPointList,
-													  Array2D<double> const &Sn,
-													  Array2D<double> const &SnInv,
-													  float const &probNoCorr)
+Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<double>, Array2D<double>>> &priorDistList,
+													  const vector<cv::Point2f> &curPointList,
+													  const Array2D<double> &Sn,
+													  const Array2D<double> &SnInv,
+													  const float &probNoCorr)
 {
 	int N1 = priorDistList.size();
 	int N2 = curPointList.size();
@@ -554,15 +565,15 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 }
 
 void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
-						vector<cv::Point2f> const &prevPoints,
-						vector<cv::Point2f> const &curPoints, 
-						Array2D<double> const &C, // correspondence matrix
-						Array2D<double> const &mv, // velocity mean
-						Array2D<double> const &Sv, // velocity covariance
-						double const &mz, // height mean
-						double const &vz, // height variance
-						Array2D<double> const &Sn, // feature measurement covariance
-						double const &focalLength, double const &dt, Array2D<double> const &omega,
+						const vector<cv::Point2f> &prevPoints,
+						const vector<cv::Point2f> &curPoints, 
+						const Array2D<double> &C, // correspondence matrix
+						const Array2D<double> &mv, // velocity mean
+						const Array2D<double> &Sv, // velocity covariance
+						const double &mz, // height mean
+						const double &vz, // height variance
+						const Array2D<double> &Sn, // feature measurement covariance
+						const double &focalLength, const double &dt, const Array2D<double> &omega,
 						int maxPointCnt)
 {
 	int N1 = prevPoints.size();
@@ -603,7 +614,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 
 		q1[0][0] = x;
 		q1[1][0] = y;
-		q1HatList[i] = q1+dt*matmult(Lw, omega);
+		q1HatList[i] = q1+3000*dt*matmult(Lw, omega);
 	}
 
 	vector<Array2D<double>> AjList(N2);
@@ -636,8 +647,12 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 	double ds0;
 	for(int j=0; j<N2; j++)
 	{
+		// this 0.01 is arbitrary, just to avoid
+		// doing calcs that will have little impact on
+		// the final estimate
 		if( (1-C[N1][j]) > 0.01)
 		{
+			Array2D<double> q2(2,1);
 			q2[0][0] = curPoints[j].x;
 			q2[1][0] = curPoints[j].y;
 			temp1[0][0] = temp1[1][0] = 0;
@@ -658,12 +673,13 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 			temp2[0][0] = SnInv[0][0]*Aj[0][0]; temp2[0][1] = 0; 					temp2[0][2] = SnInv[0][0]*Aj[0][2];
 			temp2[1][0] = 0;					temp2[1][1] = SnInv[1][1]*Aj[1][1];	temp2[1][2] = SnInv[1][1]*Aj[1][2];
 			temp2 = (1.0-C[N1][j])*temp2;
+
 			ds0 = (1.0-C[N1][j])*(SnInv[0][0]*temp1[0][0]*temp1[0][0] + SnInv[1][1]*temp1[1][0]*temp1[1][0]); // assumes Sn diagnoal
 
-//			Array2D<double>	ds1_T = matmult(transpose(temp1), temp2);
-			ds1_T[0][0] = temp1[0][0]*temp2[0][0];
-			ds1_T[0][1] = temp1[1][0]*temp2[1][1];
-			ds1_T[0][2] = temp1[0][0]*temp2[0][2]+temp1[1][0]*temp2[1][2];
+			ds1_T.inject(matmult(transpose(temp1), temp2));
+//			ds1_T[0][0] = temp1[0][0]*temp2[0][0];
+//			ds1_T[0][1] = temp1[1][0]*temp2[1][1];
+//			ds1_T[0][2] = temp1[0][0]*temp2[0][2]+temp1[1][0]*temp2[1][2];
 			
 //			Array2D<double>	dS2   = matmult(transpose(Aj), temp2);
 			dS2[0][0] = Aj[0][0]*temp2[0][0]; 	dS2[0][1] = 0; 						dS2[0][2] = Aj[0][0]*temp2[0][2];
@@ -673,13 +689,14 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 			s0   += ds0;
 			s1_T += ds1_T;
 			S2   += dS2;
+
 		}
 	}
 
 	Array2D<double> s1 = transpose(s1_T);
 
 	// For easy evaluation of the objective function
-	auto scoreFunc = [&](Array2D<double> const &vel, double const &z){ return -0.5*(
+	auto scoreFunc = [&](const Array2D<double> &vel, const double &z){ return -0.5*(
 							s0
 							-2.0/z*matmultS(s1_T, vel)
 							+1.0/z/z*matmultS(transpose(vel), matmult(S2, vel))
@@ -688,7 +705,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 							);};
 
 	// unique solution for optimal vel, given z
-	auto solveVel =  [&](double const &z){
+	auto solveVel =  [&](const double &z){
 		if( maxPointCnt > 0)
 		{
 			s1 = ((double)min(maxPointCnt,N1))/N1*s1;
@@ -736,7 +753,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 	{
 		offset = 0.618*range;
 		z1 = zR-offset;
-		z2 = zL-offset;
+		z2 = zL+offset;
 		vel1 = solveVel(z1);
 		vel2 = solveVel(z2);
 		score1 = scoreFunc(vel1, z1);
@@ -759,7 +776,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 	heightMAP = 0.5*(zL+zR);
 }
 
-void VelocityEstimator::onNewCommVelEstMeasCov(float const &measCov)
+void VelocityEstimator::onNewCommVelEstMeasCov(const float &measCov)
 {
 	mMutex_params.lock();
 	mMeasCov = measCov;
@@ -768,7 +785,7 @@ void VelocityEstimator::onNewCommVelEstMeasCov(float const &measCov)
 	Log::alert(String()+"Vision Meas Cov set to " + measCov);
 }
 
-void VelocityEstimator::onNewCommVelEstProbNoCorr(float const &probNoCorr)
+void VelocityEstimator::onNewCommVelEstProbNoCorr(const float &probNoCorr)
 {
 	mMutex_params.lock();
 	mProbNoCorr = probNoCorr;
