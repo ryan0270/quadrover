@@ -79,13 +79,13 @@ byte MOTOR_ADDR_N = (0x53 + (3 << 1)) >> 1;
 byte motorAddr[4];
 void setup()
 { 
+  delay(1000);
+  
   if(verbosity > 0)
   {
     Serial.begin(57600);
     Serial.println("Start chadding");
   }
-  
-  delay(500);
   
   // Initialise the ADB subsystem.  
   ADB::init();
@@ -94,11 +94,8 @@ void setup()
   
   delay(1000);
   
-  
-  
-
   Wire.begin();
-  motorAddr[0] = MOTOR_ADDR_N;
+  motorAddr[0] = MOTOR_ADDR_N; 
   motorAddr[1] = MOTOR_ADDR_E;
   motorAddr[2] = MOTOR_ADDR_S;
   motorAddr[3] = MOTOR_ADDR_W;
@@ -110,7 +107,7 @@ void setup()
   }
     
 
-  doRegularMotorStart();
+//  doRegularMotorStart();
 
   phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();
@@ -119,29 +116,29 @@ void setup()
 unsigned long startTime = 0;
 void loop() 
 {
-  if((millis() - lastPhoneUpdateTimeMS) > 100)
-    phoneIsConnected = false;  
-    
-  for(int i=0; i<4; i++)
-  {
-    if(!phoneIsConnected)
-      motorCommands[i] = 0;
-      
-    sendCommand(motorAddr[i], motorCommands[i]);
-    if(verbosity >=2 )
-    {
-      Serial.print(motorCommands[i]);
-      Serial.print("\t");
-    }
-  }
-  if(verbosity >= 2)
-  {
-    if(phoneIsConnected)
-      Serial.print("***");
-    Serial.print("\n");    
-  }
+//  if((millis() - lastPhoneUpdateTimeMS) > 100)
+//    phoneIsConnected = false;  
+//    
+//  for(int i=0; i<4; i++)
+//  {
+//    if(!phoneIsConnected)
+//      motorCommands[i] = 0;
+//      
+//    sendCommand(motorAddr[i], motorCommands[i]);
+//    if(verbosity >=2 )
+//    {
+//      Serial.print(motorCommands[i]);
+//      Serial.print("\t");
+//    }
+//  }
+//  if(verbosity >= 2)
+//  {
+//    if(phoneIsConnected)
+//      Serial.print("***");
+//    Serial.print("\n");    
+//  }
   ADB::poll();
-  delay(5);
+  delay(1);
 } 
 
 void doRegularMotorStart()

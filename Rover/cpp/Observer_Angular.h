@@ -1,5 +1,6 @@
 // Separate this out to avoid some circular include problems
 #ifndef ICSL_OBSERVER_ANGULAR_LISTENER
+#define ICSL_OBSERVER_ANGULAR_LISTENER
 #include <memory>
 #include "Data.h"
 #include "TNT/tnt.h"
@@ -15,7 +16,6 @@ class Observer_AngularListener
 	virtual void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)=0;
 };
 }}
-#define ICSL_OBSERVER_ANGULAR_LISTENER
 #endif
 
 #ifndef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
@@ -33,8 +33,11 @@ class Observer_AngularListener
 #include "Common.h"
 #include "Time.h"
 #include "CommManager.h"
+#define ICSL_SENSORMANAGERLISTENER_ONLY
 #include "SensorManager.h"
+#undef ICSL_SENSORMANAGERLISTENER_ONLY
 #include "Rotation.h"
+#include "TNT_Utils.h"
 
 #include <toadlet/egg.h>
 
