@@ -25,12 +25,6 @@ TargetFinder::TargetFinder()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
-
-//	mQualityLevel = 0.05;
-//	mSepDist = 10;
-//	mFASTThreshold = 30;
-//	mPointCntTarget = 30;
-//	mFASTAdaptRate = 0.01;
 }
 
 void TargetFinder::shutdown()

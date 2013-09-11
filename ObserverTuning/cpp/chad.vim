@@ -43,7 +43,7 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
 endif
 set shortmess=aoO
 badd +1 main.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/Time.h
+badd +1 ~/Software/QuadRover/Rover/cpp/Rover.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/Observer_Angular.h
 badd +1 ~/Software/QuadRover/Rover/cpp/Observer_Angular.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/Observer_Translational.h
@@ -70,6 +70,8 @@ badd +1 ~/Software/QuadRover/Rover/cpp/QuadLogger.h
 badd +1 ~/Software/QuadRover/Rover/cpp/QuadLogger.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.h
 badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.cpp
+badd +1 ~/Software/QuadRover/Rover/cpp/Time.h
+badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.h
 args main.cpp main.cpp
 edit main.cpp
 set splitbelow splitright

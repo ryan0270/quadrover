@@ -55,26 +55,27 @@ set (SRC ${SRC}
 
 # Headers
 set (H ${H}
-		${ROVER_DIR}/cpp/Data.h
-		${ROVER_DIR}/cpp/QuadLogger.h
-		${ROVER_DIR}/cpp/Common.h
-		${ROVER_DIR}/cpp/Observer_Angular.h
-		${ROVER_DIR}/cpp/Observer_Translational.h
-		${ROVER_DIR}/cpp/Time.h
-		${ROVER_DIR}/cpp/CommManager.h
-		${ROVER_DIR}/cpp/TargetFinder.h
-		${ROVER_DIR}/cpp/FeatureFinder.h
-		${ROVER_DIR}/cpp/TranslationController.h
-		${ROVER_DIR}/cpp/AttitudeThrustController.h
-		${ROVER_DIR}/cpp/AttitudeThrustControllerListener.h
-		${ROVER_DIR}/cpp/MotorInterface.h
-#		${ROVER_DIR}/cpp/SensorManager.h
-		${ROVER_DIR}/cpp/VideoMaker.h
-		${ROVER_DIR}/cpp/constants.h
-		${ROVER_DIR}/cpp/VelocityEstimator.h
-		${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModel.h
-		${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModelAffine.h
-		${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
+	${ROVER_DIR}/cpp/Rotation.h
+	${ROVER_DIR}/cpp/Observer_Angular.h
+	${ROVER_DIR}/cpp/Data.h
+	${ROVER_DIR}/cpp/QuadLogger.h
+	${ROVER_DIR}/cpp/Common.h
+	${ROVER_DIR}/cpp/Observer_Translational.h
+	${ROVER_DIR}/cpp/Time.h
+	${ROVER_DIR}/cpp/CommManager.h
+	${ROVER_DIR}/cpp/TargetFinder.h
+	${ROVER_DIR}/cpp/FeatureFinder.h
+	${ROVER_DIR}/cpp/TranslationController.h
+	${ROVER_DIR}/cpp/AttitudeThrustController.h
+	${ROVER_DIR}/cpp/AttitudeThrustControllerListener.h
+	${ROVER_DIR}/cpp/MotorInterface.h
+#	${ROVER_DIR}/cpp/SensorManager.h
+	${ROVER_DIR}/cpp/VideoMaker.h
+	${ROVER_DIR}/cpp/constants.h
+	${ROVER_DIR}/cpp/VelocityEstimator.h
+	${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModel.h
+	${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModelAffine.h
+	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
 )
 
 

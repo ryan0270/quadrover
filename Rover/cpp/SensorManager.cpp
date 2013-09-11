@@ -3,7 +3,7 @@
 namespace ICSL{
 namespace Quadrotor{
 //using namespace std;
-//using namespace TNT;
+using namespace TNT;
 //using namespace ICSL::Constants;
 	SensorManager::SensorManager() :
 		mLastAccel(3,1,0.0),

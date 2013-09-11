@@ -5,7 +5,7 @@
 #include <random>
 
 #include <opencv2/core/core.hpp>
-//#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
 //#include <opencv2/imgproc/imgproc.hpp>
 //#include <opencv2/features2d/features2d.hpp>
 
@@ -29,6 +29,7 @@
 #include "FeatureFinder.h"
 #include "TargetFinder.h"
 #include "VelocityEstimator.h"
+#include "Rotation.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -40,9 +41,9 @@ Collection<ICSL::Quadrotor::SensorManagerListener *> sensorManagerListeners;
 void addSensorManagerListener(ICSL::Quadrotor::SensorManagerListener *l){sensorManagerListeners.push_back(l);}
 void addCommManagerListener(ICSL::Quadrotor::CommManagerListener *l){commManagerListeners.push_back(l);}
 
-
 int main(int argv, char* argc[])
 {
+	using namespace ICSL;
 	using namespace ICSL::Quadrotor;
 	using namespace ICSL::Constants;
 	using namespace TNT;
@@ -56,26 +57,55 @@ int main(int argv, char* argc[])
 
 	vector<pair<int, Time>> imgIdList;
 	// preload all images
-//	list<pair<int, cv::Mat>> imgList;
-//	int imgId = 0;
-//	imgId = 6895;
-//	int numImages;
-//	numImages = 2413;
-//	for(int i=0; i<numImages; i++)
-//	{
-////		cout << "Loading image " << i << endl;
-//		cv::Mat img;
-//		while(img.data == NULL)
-//		{
-//			stringstream ss;
-//			ss << "image_" << ++imgId << ".bmp";
-//			img = cv::imread(imgDir+"/"+ss.str());
-//		}
-//
-//		imgList.push_back(pair<int, cv::Mat>(imgId, img));
-//	}
-//
-////cout << "final image: " << imgId << endl;
+	list<pair<int, shared_ptr<cv::Mat>>> imgList;
+	int imgId = 0;
+	imgId = 6895;
+	int numImages;
+	numImages = 2413;
+	for(int i=0; i<numImages; i++)
+	{
+//		cout << "Loading image " << i << endl;
+		cv::Mat img;
+		while(img.data == NULL)
+		{
+			stringstream ss;
+			ss << "image_" << ++imgId << ".bmp";
+			img = cv::imread(imgDir+"/"+ss.str());
+		}
+
+		shared_ptr<cv::Mat> pImg(new cv::Mat);
+		img.copyTo(*pImg);
+
+		imgList.push_back(pair<int, shared_ptr<cv::Mat>>(imgId, pImg));
+	}
+
+	// Camera calibration
+	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
+	cv::FileStorage fs;
+	string filename = dataDir + "/s3Calib_640x480.yml";
+	fs.open(filename.c_str(), cv::FileStorage::READ);
+	if( fs.isOpened() )
+	{
+		mCameraMatrix_640x480 = shared_ptr<cv::Mat>(new cv::Mat());
+		mCameraDistortionCoeffs = shared_ptr<cv::Mat>(new cv::Mat());
+
+		String str = String()+"Camera calib loaded from " + filename.c_str();
+		fs["camera_matrix"] >> *mCameraMatrix_640x480;
+		fs["distortion_coefficients"] >> *mCameraDistortionCoeffs;
+		str = str+"\n\t"+"Focal length: " + mCameraMatrix_640x480->at<double>(0,0);
+		str = str+"\n\t"+"centerX: " + mCameraMatrix_640x480->at<double>(0,2);
+		str = str+"\n\t"+"centerY: " + mCameraMatrix_640x480->at<double>(1,2);
+		Log::alert(str);
+
+		mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
+		mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
+		(*mCameraMatrix_320x240) = (*mCameraMatrix_320x240)*0.5;
+	}
+	else
+	{
+		Log::alert(("Failed to open " + filename).c_str());
+	}
+	fs.release();
 
 	//
 	Array2D<double> mRotViconToQuad = createRotMat(0, (double)PI);
@@ -137,6 +167,7 @@ int main(int argv, char* argc[])
 	mFeatureFinder.setQuadLogger(&mQuadLogger);
 	addSensorManagerListener(&mFeatureFinder);
 	addCommManagerListener(&mFeatureFinder);
+	mFeatureFinder.start();
 
 	mTargetFinder.initialize();
 	mTargetFinder.setStartTime(startTime);
@@ -144,6 +175,7 @@ int main(int argv, char* argc[])
 	addSensorManagerListener(&mTargetFinder);
 	mTargetFinder.addListener(&mObsvTranslational);
 	addCommManagerListener(&mTargetFinder);
+	mTargetFinder.start();
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(startTime);
@@ -153,6 +185,7 @@ int main(int argv, char* argc[])
 	mVelocityEstimator.addListener(&mObsvTranslational);
 	mFeatureFinder.addListener(&mVelocityEstimator);
 	addCommManagerListener(&mVelocityEstimator);
+	mVelocityEstimator.start();
 
 	addSensorManagerListener(&mObsvAngular);
 	addSensorManagerListener(&mObsvTranslational);
@@ -174,11 +207,29 @@ int main(int argv, char* argc[])
 	mQuadLogger.setStartTime(startTime);
 	
 	mMotorInterface.addListener(&mTranslationController);
+//	mMotorInterface.start();
+
+
+	////////////////////////////////////////////////////////////////////////////////////
+	// Add some vision event listeners so I can display the images
+
+//	cv::namedWindow("dispFeatureFind",1);
+//	cv::namedWindow("dispTargetFind",1);
+//	cv::moveWindow("dispFeatureFind",0,0);
+//	cv::moveWindow("dispTargetFind",321,0);
+
+	class MyFeatureFinderListener : public FeatureFinderListener
+	{
+		public:
+		void onFeaturesFound(shared_ptr<ImageFeatureData> const &data)
+		{ /*imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);*/}
+	} myFeatureFinderListener;
+	mFeatureFinder.addListener(&myFeatureFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
-	double gainP = 4;
-	double gainI = 0.004;
+	double gainP = 1;//4;
+	double gainI = 0.0004;//0.004;
 	double accelWeight = 1;
 	double magWeight = 0;
 	Collection<float> nomMag;
@@ -196,6 +247,7 @@ int main(int argv, char* argc[])
 	gyroBiasData->type = DATA_TYPE_GYRO;
 	static_pointer_cast<DataVector<double> >(gyroBiasData)->data = gyroBias.copy();
 	static_pointer_cast<DataVector<double> >(gyroBiasData)->dataCalibrated = gyroBias.copy();
+	// this is gyro bias burn-in
 	for(int i=0; i<2000; i++)
 	{
 		mObsvAngular.onNewSensorUpdate(gyroBiasData);
@@ -203,21 +255,21 @@ int main(int argv, char* argc[])
 	}
 
 	Collection<float> measVar;
-	measVar.push_back(0.0001);
-	measVar.push_back(0.0001);
-	measVar.push_back(0.0001);
-	measVar.push_back(0.1);
-	measVar.push_back(0.1);
-	measVar.push_back(0.1);
+	measVar.push_back(0.0004);
+	measVar.push_back(0.0004);
+	measVar.push_back(0.0004);
+	measVar.push_back(0.05*4);
+	measVar.push_back(0.05*4);
+	measVar.push_back(0.05);
 	mObsvTranslational.onNewCommKalmanMeasVar(measVar);
 
 	Collection<float> dynVar;
-	dynVar.push_back(0.0001);
-	dynVar.push_back(0.0001);
-	dynVar.push_back(0.0001);
-	dynVar.push_back(0.5);
-	dynVar.push_back(0.5);
-	dynVar.push_back(0.5);
+	dynVar.push_back(0.01);
+	dynVar.push_back(0.01);
+	dynVar.push_back(0.01);
+	dynVar.push_back(10);
+	dynVar.push_back(10);
+	dynVar.push_back(10);
 	dynVar.push_back(0.001); // accel bias
 	dynVar.push_back(0.001);
 	dynVar.push_back(0.001);
@@ -225,8 +277,17 @@ int main(int argv, char* argc[])
 
 	float xBias = -0.1;
 	float yBias = -0.1;
-	float zBias = -0.3;
+	float zBias = -0.2;
 	mObsvTranslational.onNewCommAccelBias(xBias, yBias, zBias);
+
+	mFeatureFinder.onNewCommVisionFeatureFindQualityLevel(0.01);
+	mFeatureFinder.onNewCommVisionFeatureFindSeparationDistance(10);
+	mFeatureFinder.onNewCommVisionFeatureFindFASTThreshold(20);
+	mFeatureFinder.onNewCommVisionFeatureFindPointCntTarget(100);
+	mFeatureFinder.onNewCommVisionFeatureFindFASTAdaptRate(0.05);
+
+	mVelocityEstimator.onNewCommVelEstMeasCov(15);
+	mVelocityEstimator.onNewCommVelEstProbNoCorr(0.0005);
 
 	mQuadLogger.setMask(logMask);
 	mQuadLogger.setDir(dataDir.c_str());
@@ -263,18 +324,18 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 100e3;
+	int endTimeDelta = 30e3;
 	float viconUpdateRate = 5; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	Time lastViconUpdateTime;
 
-//	srand(1);
+	srand(1);
 	default_random_engine randGenerator;
 	normal_distribution<double> stdGaussDist(0,1);
 	Array2D<double> noiseStd(12,1,0.0);
-	noiseStd[6][0] = 0.010;
-	noiseStd[7][0] = 0.010;
-	noiseStd[8][0] = 0.010;
+	noiseStd[6][0] = 0.020;
+	noiseStd[7][0] = 0.020;
+	noiseStd[8][0] = 0.020;
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";
@@ -284,6 +345,10 @@ int main(int argv, char* argc[])
 		getline(file, line); // first line is a throw-away
 		getline(file, line); // second line is also a throw-away
 
+		for(int i=0; i<commManagerListeners.size(); i++)
+			commManagerListeners[i]->onNewCommMotorOn();
+
+		list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imageIter = imgList.begin();
 		toadlet::uint64 lastDispTimeMS;
 		while(file.good() && startTime.getElapsedTimeMS()< firstTime+endTimeDelta)
 		{
@@ -329,7 +394,7 @@ int main(int argv, char* argc[])
 				toadlet::egg::Collection<float> state;
 				for(int i=0; i<curViconState.dim1(); i++)
 					state.push_back(curViconState[i][0] + noiseStd[i][0]*stdGaussDist(randGenerator) );
-				for(int i=0; i<sensorManagerListeners.size(); i++)
+				for(int i=0; i<commManagerListeners.size(); i++)
 					commManagerListeners[i]->onNewCommStateVicon(state);
 				lastViconUpdateTime.setTime();
 			}
@@ -388,8 +453,6 @@ int main(int argv, char* argc[])
 					break;
 				case LOG_ID_PRESSURE:
 					break;
-				case LOG_ID_IMAGE:
-					break;
 				case LOG_ID_MOTOR_CMDS:
 					break;
 				case LOG_ID_PHONE_TEMP:
@@ -400,6 +463,51 @@ int main(int argv, char* argc[])
 						for(int i=0; i<12; i++)
 							ss >> curViconState[i][0];
 						haveFirstVicon = true;
+					}
+					break;
+				case LOG_ID_IMAGE:
+					{
+						int imgId;
+						ss >> imgId;
+						imageIter = imgList.begin();
+						if(imageIter != imgList.end() && imageIter->first > imgId)
+						{
+							// This happens because the images occurred before the motors were
+							// turn on, which is the cue to start saving images to file
+//							cout << "We've got some image chad going on here.\t";
+//							cout << "imageIter->firt = " << imageIter->first << "\t";
+//							cout << "imgId = " << imgId << endl;
+							continue;
+						}
+						while(imageIter != imgList.end() && imageIter->first < imgId)
+							imageIter++;
+						if(imageIter != imgList.end())
+						{
+							shared_ptr<DataImage> data(new DataImage());
+							data->type = DATA_TYPE_IMAGE;
+							data->timestamp.setTimeMS(startTime.getMS()+time);
+							data->image = imageIter->second;
+
+							SO3 att = mObsvAngular.estimateAttAtTime( data->timestamp );
+							data->att = SO3( mRotCamToPhone )*att;
+
+							shared_ptr<cv::Mat> gray(new cv::Mat());
+							cv::cvtColor(*(data->image), *gray, CV_BGR2GRAY);
+							data->imageGray = gray;
+							data->imageFormat = IMG_FORMAT_BGR;
+							data->cap = NULL;
+							if(data->image->rows = 240)
+								data->cameraMatrix = mCameraMatrix_320x240;
+							else
+								data->cameraMatrix = mCameraMatrix_640x480;
+							data->focalLength = data->cameraMatrix->at<double>(0,0);
+							data->centerX = data->cameraMatrix->at<double>(0,2);
+							data->centerY = data->cameraMatrix->at<double>(1,2);
+							data->distCoeffs = mCameraDistortionCoeffs;
+
+							for(int i=0; i<sensorManagerListeners.size(); i++)
+								sensorManagerListeners[i]->onNewSensorUpdate(static_pointer_cast<IData>(data));
+						}
 					}
 					break;
 			}
