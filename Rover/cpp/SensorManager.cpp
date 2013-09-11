@@ -2,18 +2,17 @@
 
 namespace ICSL{
 namespace Quadrotor{
-//using namespace std;
-using namespace TNT;
-//using namespace ICSL::Constants;
+	using namespace std;
+	using namespace TNT;
+	using namespace ICSL::Constants;
+
 	SensorManager::SensorManager() :
 		mLastAccel(3,1,0.0),
 		mLastGyro(3,1,0.0),
 		mLastMag(3,1,0.0),
 		mLastPressure(0),
 		mCurAtt(3,1,0.0),
-		mCurAngularVel(3,1,0.0),
-		mAttAccum(3,1,0.0),
-		mAngularVelAccum(3,1,0.0)
+		mCurAngularVel(3,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -31,11 +30,10 @@ using namespace TNT;
 		mImageCnt = 0;
 		mLastImageTime.setTimeMS(0);
 
-		mAttAccumCnt = 0;
-		mAngularVelAccum = 0;
-
 		mCameraMatrix_640x480 = mCameraMatrix_320x240 = NULL;
 		mCameraDistortionCoeffs = NULL;
+
+		mObsvAngular = NULL;
 	}
 
 	SensorManager::~SensorManager()
@@ -508,13 +506,6 @@ using namespace TNT;
 		mCurAtt.inject(attData->data);
 		mCurAngularVel.inject(angularVelData->data);
 		mMutex_attData.unlock();
-
-		mMutex_accum.lock();
-		mAttAccum += attData->data;
-		mAttAccumCnt++;
-		mAngularVelAccum += angularVelData->data;
-		mAngularVelAccumCnt++;
-		mMutex_accum.unlock();
 	}
 
 	void SensorManager::passNewImage(cv::Mat const *imageYUV, int64 const &timestampNS)
@@ -535,32 +526,11 @@ using namespace TNT;
 		data->type = DATA_TYPE_IMAGE;
 		data->timestamp.setTimeNS(timestampNS);
 
-		Array2D<double> att, angVel;
-		mMutex_accum.lock();
-		if(mAttAccumCnt == 0)
-			att = Array2D<double>(3,1,0.0);
-		else
-			att = 1.0/mAttAccumCnt*mAttAccum;
-		if(mAngularVelAccumCnt == 0)
-			angVel = Array2D<double>(3,1,0.0);
-		else
-			angVel = 1.0/mAngularVelAccumCnt*mAngularVelAccum;
-
-		for(int i=0; i<3; i++)
+		if(mObsvAngular != NULL)
 		{
-			mAttAccum[i][0] = 0;
-			mAngularVelAccum[i][0] = 0;
+			SO3 att = mObsvAngular->estimateAttAtTime( data->timestamp );
+			data->att = SO3( mRotCamToPhone )*att;
 		}
-		mAttAccumCnt = 0;
-		mAngularVelAccumCnt = 0;
-		mMutex_accum.unlock();
-
-		Array2D<double> attCam(3,1);
-		attCam[0][0] = matmultS(submat(mRotPhoneToCam,0,0,0,2), att);
-		attCam[1][0] = matmultS(submat(mRotPhoneToCam,1,1,0,2), att);
-		attCam[2][0] = matmultS(submat(mRotPhoneToCam,2,2,0,2), att);
-		data->att.inject(attCam);
-		data->angularVel.inject(matmult(mRotPhoneToCam, angVel));
 
 		data->image = imageBGR;
 		shared_ptr<cv::Mat> gray(new cv::Mat());

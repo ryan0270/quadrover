@@ -1,7 +1,7 @@
-#ifndef ICSL_SENSOR_MANAGER
-#define ICSL_SENSOR_MANAGER
+#ifndef ICSL_SENSORMANAGERLISTENER
+#define ICSL_SENSORMANAGERLISTENER
 
-#ifdef ICSL_OBSERVER_SIMULATION
+//#if defined ICSL_OBSERVER_SIMULATION || defined ICSL_SENSORMANAGERLISTENER_ONLY
 #include <memory>
 #include <Data.h>
 namespace ICSL{
@@ -15,7 +15,11 @@ class SensorManagerListener
 
 }}
 
-#else // ICSL_OBSERVER_SIMULATION
+#endif
+
+#if !defined ICSL_OBSERVER_SIMULATION && !defined ICSL_SENSORMANAGERLISTENER_ONLY
+#ifndef ICSL_SENSOR_MANAGER
+#define ICSL_SENSOR_MANAGER
 
 #include <sched.h>
 #include <thread>
@@ -37,9 +41,9 @@ class SensorManagerListener
 #include "Common.h"
 #include "QuadLogger.h"
 #include "Time.h"
-#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+//#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
-#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+//#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -51,12 +55,6 @@ namespace ICSL{
 namespace Quadrotor{
 //using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
-
-class SensorManagerListener
-{
-	public:
-	virtual void onNewSensorUpdate(shared_ptr<IData> const &data)=0;
-};
 
 class SensorManager : public Observer_AngularListener
 {
@@ -77,6 +75,8 @@ class SensorManager : public Observer_AngularListener
 
 	// used to pass images in from Java
 	void passNewImage(cv::Mat const *image, int64 const &timestampNS);
+
+	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
 
 	// for Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
@@ -107,9 +107,6 @@ class SensorManager : public Observer_AngularListener
 	shared_ptr<cv::VideoCapture> initCamera();
 //	void runImageAcq(shared_ptr<cv::VideoCapture> cap);
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
-	TNT::Array2D<double> mAttAccum, mAngularVelAccum; // accumulators so I can get the average during image acq interval
-	int mAttAccumCnt, mAngularVelAccumCnt;
-	std::mutex mMutex_accum;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
@@ -121,6 +118,8 @@ class SensorManager : public Observer_AngularListener
 	int mImageCnt;
 
 	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
+
+	Observer_Angular *mObsvAngular;
 };
 
 

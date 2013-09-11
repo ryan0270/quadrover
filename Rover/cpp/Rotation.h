@@ -58,6 +58,8 @@ class SO3
 		euler[0][0] = atan2(mRotMat[2][1], mRotMat[2][2]); // roll ... @TODO: this should be range checked
 		euler[1][0] = atan2(-mRotMat[2][0], sqrt(mRotMat[0][0]*mRotMat[0][0] + mRotMat[1][0]*mRotMat[1][0])); // pitch 
 		euler[2][0] = atan2(mRotMat[1][0], mRotMat[0][0]);
+
+		return euler;
 	}
 
 	SO3_LieAlgebra log(double theta) const
