@@ -50,7 +50,22 @@ int main(int argv, char* argc[])
 	using namespace std;
 	cout << "start chadding" << endl;
 
-	string dataDir = "../dataSets/Sep8";
+	string dataDir;
+	int dataSet = 1;
+	int startImg=0, endImg=0;
+	switch(dataSet)
+	{
+		case 0:
+			dataDir = "../dataSets/Sep8";
+			startImg = 6895;
+			endImg = 9307;
+			break;
+		case 1:
+			dataDir = "../dataSets/Sep12";
+			startImg = 3702;
+			endImg = 5713;
+			break;
+	}
 
 	string imgDir;
 	imgDir = dataDir + "/video";
@@ -58,13 +73,12 @@ int main(int argv, char* argc[])
 	vector<pair<int, Time>> imgIdList;
 	// preload all images
 	list<pair<int, shared_ptr<cv::Mat>>> imgList;
-	int imgId = 0;
-	imgId = 6895;
+	int imgId = startImg;
 	int numImages;
-	numImages = 2413;
+	numImages = endImg-startImg;;
 	for(int i=0; i<numImages; i++)
 	{
-//		cout << "Loading image " << i << endl;
+//		cout << "Loading image " << i << ": " << imgId << endl;
 		cv::Mat img;
 		while(img.data == NULL)
 		{
@@ -270,14 +284,25 @@ int main(int argv, char* argc[])
 	dynVar.push_back(10);
 	dynVar.push_back(10);
 	dynVar.push_back(10);
-	dynVar.push_back(0.001); // accel bias
-	dynVar.push_back(0.001);
-	dynVar.push_back(0.001);
+	dynVar.push_back(0.01); // accel bias
+	dynVar.push_back(0.01);
+	dynVar.push_back(0.01);
 	mObsvTranslational.onNewCommKalmanDynVar(dynVar);
 
-	float xBias = -0.1;
-	float yBias = -0.1;
-	float zBias = -0.2;
+	float xBias, yBias, zBias;
+	switch(dataSet)
+	{
+		case 0: // Sep8
+			xBias = -0.1;
+			yBias = -0.2;
+			zBias = -0.2;
+			break;
+		case 1: // Sep12
+			xBias = -0.1;
+			yBias = -0.2;
+			zBias = -0.8;
+			break;
+	}
 	mObsvTranslational.onNewCommAccelBias(xBias, yBias, zBias);
 
 	mFeatureFinder.onNewCommVisionFeatureFindQualityLevel(0.01);
@@ -325,7 +350,7 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
 	int endTimeDelta = 30e3;
-	float viconUpdateRate = 5; // Hz
+	float viconUpdateRate = 100; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	Time lastViconUpdateTime;
 
@@ -333,9 +358,9 @@ int main(int argv, char* argc[])
 	default_random_engine randGenerator;
 	normal_distribution<double> stdGaussDist(0,1);
 	Array2D<double> noiseStd(12,1,0.0);
-	noiseStd[6][0] = 0.020;
-	noiseStd[7][0] = 0.020;
-	noiseStd[8][0] = 0.020;
+	noiseStd[6][0] = 0.000;
+	noiseStd[7][0] = 0.000;
+	noiseStd[8][0] = 0.000;
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";
@@ -405,6 +430,12 @@ int main(int argv, char* argc[])
 			{
 				case LOG_ID_ACCEL:
 					{
+						int dataTime;
+						if(dataSet == 0)
+							dataTime = time;
+						else
+							ss >> dataTime;
+
 						Array2D<double> accel(3,1), accelCal(3,1);
 						ss >> accel[0][0] >> accel[1][0] >> accel[2][0];
 						accelCal[0][0] = (accel[0][0]-accelOffX)/accelScaleX;
@@ -416,13 +447,19 @@ int main(int argv, char* argc[])
 						static_pointer_cast<DataVector<double> >(data)->data = accel;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = accelCal;
 
-						data->timestamp.setTimeMS(startTime.getMS()+time);
+						data->timestamp.setTimeMS(startTime.getMS()+dataTime);
 						for(int i=0; i<sensorManagerListeners.size(); i++)
 							sensorManagerListeners[i]->onNewSensorUpdate(data);
 					}
 					break;
 				case LOG_ID_GYRO:
 					{
+						int dataTime;
+						if(dataSet == 0)
+							dataTime = time;
+						else
+							ss >> dataTime;
+
 						Array2D<double> gyro(3,1);
 						ss >> gyro[0][0] >> gyro[1][0] >> gyro[2][0];
 
@@ -431,13 +468,19 @@ int main(int argv, char* argc[])
 						static_pointer_cast<DataVector<double> >(data)->data = gyro;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = gyro;
 
-						data->timestamp.setTimeMS(startTime.getMS()+time);
+						data->timestamp.setTimeMS(startTime.getMS()+dataTime);
 						for(int i=0; i<sensorManagerListeners.size(); i++)
 							sensorManagerListeners[i]->onNewSensorUpdate(data);
 					}
 					break;
 				case LOG_ID_MAGNOMETER:
 					{
+						int dataTime;
+						if(dataSet == 0)
+							dataTime = time;
+						else
+							ss >> dataTime;
+
 						Array2D<double> mag(3,1);
 						ss >> mag[0][0] >> mag[1][0] >> mag[2][0];
 
@@ -446,7 +489,7 @@ int main(int argv, char* argc[])
 						static_pointer_cast<DataVector<double> >(data)->data = mag;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = mag;
 
-						data->timestamp.setTimeMS(startTime.getMS()+time);
+						data->timestamp.setTimeMS(startTime.getMS()+dataTime);
 						for(int i=0; i<sensorManagerListeners.size(); i++)
 							sensorManagerListeners[i]->onNewSensorUpdate(data);
 					}
@@ -467,6 +510,12 @@ int main(int argv, char* argc[])
 					break;
 				case LOG_ID_IMAGE:
 					{
+						int dataTime;
+						if(dataSet == 0)
+							dataTime = time;
+						else
+							ss >> dataTime;
+
 						int imgId;
 						ss >> imgId;
 						imageIter = imgList.begin();
@@ -485,7 +534,7 @@ int main(int argv, char* argc[])
 						{
 							shared_ptr<DataImage> data(new DataImage());
 							data->type = DATA_TYPE_IMAGE;
-							data->timestamp.setTimeMS(startTime.getMS()+time);
+							data->timestamp.setTimeMS(startTime.getMS()+dataTime);
 							data->image = imageIter->second;
 
 							SO3 att = mObsvAngular.estimateAttAtTime( data->timestamp );

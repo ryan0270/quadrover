@@ -5,7 +5,7 @@ disp('start chadding')
 log_ids
 
 %%
-dataDir = '../dataSets/Sep8';
+dataDir = '../dataSets/Sep12';
 viconFile = [dataDir '/pcData.txt'];
 viconData = importdata(viconFile,'\t',0);
 
@@ -22,7 +22,7 @@ syncIndex = find(phoneData(:,2) == -500,1,'last');
 
 angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
 angleStateTime = phoneData(angleStateIndices,1)'/1000;
-angleState = phoneData(angleStateIndices,3:8)';
+angleState = phoneData(angleStateIndices,4:9)';
 
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
