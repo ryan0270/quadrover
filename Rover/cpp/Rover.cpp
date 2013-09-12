@@ -69,6 +69,10 @@ void Rover::initialize()
 	mCommManager.addListener(this);
 	mCommManager.start();
 
+	mMotorInterface.initialize();
+	mMotorInterface.enableMotors(false);
+	mMotorInterface.start();
+	
 	mMutex_cntl.lock();
 	mTranslationController.setRotViconToPhone(mRotViconToPhone);
 	mTranslationController.setStartTime(mStartTime);

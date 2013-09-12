@@ -167,10 +167,11 @@ void QuadLogger::addEntry(Time const &t, LogID const &id, toadlet::egg::String c
 
 		// Insert such that we maintain a sorted list
 		mMutex_logQueue.lock();
-		list<shared_ptr<LogEntry>>::reverse_iterator insertIter;
-		insertIter = lower_bound(mLogQueue.rbegin(), mLogQueue.rend(), entry,
-				[&](shared_ptr<LogEntry> const &e1, shared_ptr<LogEntry> const &e2){return e1->timestamp >= e2->timestamp;});
-		mLogQueue.insert(insertIter.base(), entry);
+//		list<shared_ptr<LogEntry>>::reverse_iterator insertIter;
+//		insertIter = lower_bound(mLogQueue.rbegin(), mLogQueue.rend(), entry,
+//				[&](shared_ptr<LogEntry> const &e1, shared_ptr<LogEntry> const &e2){return e1->timestamp >= e2->timestamp;});
+//		mLogQueue.insert(insertIter.base(), entry);
+		mLogQueue.push_back(entry);
 		mMutex_logQueue.unlock();
 	}
 

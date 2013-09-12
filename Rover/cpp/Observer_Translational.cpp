@@ -212,14 +212,14 @@ using namespace TNT;
 			for(int i=0; i<mDataBuffers.size(); i++)
 				while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 0.5e3)
 				{
-					if(mDataBuffers[i]->front()->type == DATA_TYPE_STATE_TRAN)
-					{
-						Array2D<double> v = static_pointer_cast<DataVector<double>>(mDataBuffers[i]->front())->data.copy();
-						logString = String();
-						for(int i=0; i<mStateKF.dim1(); i++)
-							logString = logString+v[i][0]+"\t";
-						mQuadLogger->addEntry(mDataBuffers[i]->front()->timestamp, LOG_ID_CUR_TRANS_STATE, logString,LOG_FLAG_STATE);
-					}
+//					if(mDataBuffers[i]->front()->type == DATA_TYPE_STATE_TRAN)
+//					{
+//						Array2D<double> v = static_pointer_cast<DataVector<double>>(mDataBuffers[i]->front())->data.copy();
+//						logString = String();
+//						for(int i=0; i<mStateKF.dim1(); i++)
+//							logString = logString+v[i][0]+"\t";
+//						mQuadLogger->addEntry(mDataBuffers[i]->front()->timestamp, LOG_ID_CUR_TRANS_STATE, logString,LOG_FLAG_STATE);
+//					}
 
 //					logString = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
 //					for(int i=0; i<errCov.dim1(); i++)
@@ -227,6 +227,14 @@ using namespace TNT;
 //					mQuadLogger->addEntry(logString+"\n",LOG_FLAG_STATE);
 				mDataBuffers[i]->pop_front();
 				}
+
+			{
+				logString = String();
+				for(int i=0; i<mStateKF.dim1(); i++)
+					logString = logString+mStateKF[i][0]+"\t";
+				mQuadLogger->addEntry(Time(),LOG_ID_CUR_TRANS_STATE, logString,LOG_FLAG_STATE);
+			}
+
 			mMutex_kfData.unlock();
 
 			for(int i=0; i<mListeners.size(); i++)
