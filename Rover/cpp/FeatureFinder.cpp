@@ -159,21 +159,21 @@ void FeatureFinder::run()
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
 			if(mQuadLogger != NULL)
 			{
-				logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_FEATURE_FIND_TIME + "\t" + (mImageProcTimeUS/1.0e6);
+				logString = String()+(mImageProcTimeUS/1.0e6);
 				mMutex_logger.lock();
-				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_FEATURE_FIND_TIME,logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
-				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_NUM_FEATURE_POINTS+"\t";
+				logString = String();
 				logString = logString+(int)points.size();
 				mMutex_logger.lock();
-				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS,logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
-				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_FAST_THRESHOLD+"\t";
+				logString = String();
 				logString = logString+fastThresh;
 				mMutex_logger.lock();
-				mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_FAST_THRESHOLD,logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 			}
 		}
@@ -395,7 +395,7 @@ void FeatureFinder::drawPoints(vector<cv::Point2f> const &points, cv::Mat &image
 //		Log::alert("Turning IBVS on");
 //		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
 //		mMutex_logger.lock();
-//		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
 //		mMutex_logger.unlock();
 //		mFirstImageProcessed = false;
 //	}
@@ -404,7 +404,7 @@ void FeatureFinder::drawPoints(vector<cv::Point2f> const &points, cv::Mat &image
 //		Log::alert("Turning IBVS off");
 //		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
 //		mMutex_logger.lock();
-//		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
 //		mMutex_logger.unlock();
 //		mFirstImageProcessed = false;
 //	}

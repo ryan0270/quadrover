@@ -1,7 +1,6 @@
 #ifndef QUADLOGGER
 #define QUADLOGGER
 #include <list>
-#include <queue>
 #include <sstream>
 #include <memory>
 #include <thread>
@@ -25,8 +24,9 @@ namespace Quadrotor {
 //using namespace std;
 using namespace toadlet;
 
-enum LogIDs
+enum LogID
 {
+	LOG_ID_UNKNOWN=0,
 	LOG_ID_ACCEL = 1,
 	LOG_ID_GYRO = 2,
 	LOG_ID_MAGNOMETER = 3,
@@ -77,6 +77,14 @@ enum LogIDs
 	LOG_ID_TARGET_ESTIMATED_POS=6010,
 };
 
+class LogEntry
+{
+	public:
+	String str;
+	Time timestamp;
+	LogID id;
+};
+
 class QuadLogger
 {
 	public:
@@ -91,7 +99,9 @@ class QuadLogger
 		void setDir(toadlet::egg::String dir){mDir = dir;}
 		void setFilename(toadlet::egg::String name){mFilename = name;}
 		void setMask(uint32 mask){mTypeMask = mask;}
-		void addLine(toadlet::egg::String const &str, LogFlags type);
+//		void addLine(toadlet::egg::String const &str, LogFlags type);
+		void addEntry(Time const &t, LogID const &id, toadlet::egg::String const &str, LogFlags type);
+		void addEntry(LogID const &id, toadlet::egg::String const &str, LogFlags type);
 
 		void pause(){mPaused = true;}
 		void resume(){mPaused = false;}
@@ -102,14 +112,6 @@ class QuadLogger
 		void shutdown();
 		void clearLog(){shutdown(); start();}
 
-		void saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
-							 list<shared_ptr<ImageMatchData> > const &matchDataBuffer);
-
-		void saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &matchBuffer, 
-									list<Time> const &timeBuffer,
-									list<double> const &dtBuffer,
-									list<TNT::Array2D<double> > const &attPrevBuffer,
-									list<TNT::Array2D<double> > const &attCurBuffer);
 		void setStartTime(Time time){mStartTime.setTime(time);}
 
 	protected:
@@ -125,7 +127,7 @@ class QuadLogger
 
 		int mThreadPriority, mScheduler;
 
-		queue<toadlet::egg::String> mLogQueue;
+		list<shared_ptr<LogEntry>> mLogQueue;
 
 		bool mRunning, mDone;
 };

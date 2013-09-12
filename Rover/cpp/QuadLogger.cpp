@@ -12,7 +12,7 @@ QuadLogger::QuadLogger()
 	mLogStream = NULL;
 	mTypeMask = 0;
 	mTypeMask = LOG_FLAG_PC_UPDATES ;
-//	mTypeMask |= LOG_FLAG_STATE;
+	mTypeMask |= LOG_FLAG_STATE;
 //	mTypeMask |= LOG_FLAG_STATE_DES;
 //	mTypeMask |= LOG_FLAG_MOTORS;
 //	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
@@ -59,7 +59,6 @@ void QuadLogger::run()
 
 	mLogStream = FileStream::ptr(new FileStream(mDir+"/"+mFilename, FileStream::Open_BIT_WRITE));
 
-//	String str = "1\t2\t3\t4\t5\t6\t7\t8\t9\t10\n";
 	String str = "";
 	for(int i=0; i<20; i++)
 		str = str+i+"\t";
@@ -75,28 +74,72 @@ void QuadLogger::run()
 	sched_setscheduler(0, mScheduler, &sp);
 
 	while(mLogQueue.size() > 0)
-		mLogQueue.pop();
+		mLogQueue.pop_front();
 
 	String line;
+	shared_ptr<LogEntry> entry;
 	while(mRunning)
 	{
-		mMutex_logQueue.lock(); int size = mLogQueue.size(); mMutex_logQueue.unlock();
-		while(size > 0 && !mPaused)
+		Time t;
+		mMutex_logQueue.lock();
+		int size = mLogQueue.size();
+		if(size > 0)
+			t.setTime(mLogQueue.front()->timestamp);
+		mMutex_logQueue.unlock();
+		while(size > 0 && !mPaused && t.getElapsedTimeMS() > 1.0e3)
 		{
 			mMutex_logQueue.lock();
-			line = mLogQueue.front();
-			mLogQueue.pop();
-			size = mLogQueue.size();
+			entry  = mLogQueue.front();
+			mLogQueue.pop_front();
 			mMutex_logQueue.unlock();
+
+			if(mStartTime < entry->timestamp)
+				line = String()+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
+			else
+				line = String()+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
+			line = line+entry->id+"\t";
+			line = line+entry->str;
 
 			line = line+"\n";
 			if(mLogStream != NULL)
 				mLogStream->write((tbyte*)line.c_str(), line.length());
+
+			mMutex_logQueue.lock();
+			size = mLogQueue.size();
+			if(size > 0)
+				t.setTime(mLogQueue.front()->timestamp);
+			mMutex_logQueue.unlock();
 		}
 
-		System::msleep(1);
+		System::msleep(100);
 	}
 
+
+	// Clear the remainder of the queue
+	mMutex_logQueue.lock(); int size = mLogQueue.size(); mMutex_logQueue.unlock();
+	while(size > 0)
+	{
+		mMutex_logQueue.lock();
+		entry  = mLogQueue.front();
+		mLogQueue.pop_front();
+		mMutex_logQueue.unlock();
+
+		if(mStartTime < entry->timestamp)
+			line = String()+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
+		else
+			line = String()+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
+		line = line+entry->id+"\t";
+		line = line+entry->str;
+
+		line = line+"\n";
+		if(mLogStream != NULL)
+			mLogStream->write((tbyte*)line.c_str(), line.length());
+
+		mMutex_logQueue.lock();
+		size = mLogQueue.size();
+		mMutex_logQueue.unlock();
+	}
+	
 	if(mLogStream != NULL)
 	{
 		mLogStream->close();
@@ -106,162 +149,32 @@ void QuadLogger::run()
 	mDone = true;
 }
 
-void QuadLogger::addLine(String const &str, LogFlags type)
+//void QuadLogger::addLine(String const &str, LogFlags type)
+void QuadLogger::addEntry(LogID const &id, toadlet::egg::String const &str, LogFlags type)
+{
+	addEntry(Time(), id, str, type);
+}
+
+void QuadLogger::addEntry(Time const &t, LogID const &id, toadlet::egg::String const &str, LogFlags type)
 {
 	mMutex_addLine.lock();
 	if( (mTypeMask & type) && mRunning)
 	{
+		shared_ptr<LogEntry> entry(new LogEntry());
+		entry->timestamp.setTime(t);
+		entry->id = id;
+		entry->str = str;
+
+		// Insert such that we maintain a sorted list
 		mMutex_logQueue.lock();
-		mLogQueue.push(str);
+		list<shared_ptr<LogEntry>>::reverse_iterator insertIter;
+		insertIter = lower_bound(mLogQueue.rbegin(), mLogQueue.rend(), entry,
+				[&](shared_ptr<LogEntry> const &e1, shared_ptr<LogEntry> const &e2){return e1->timestamp >= e2->timestamp;});
+		mLogQueue.insert(insertIter.base(), entry);
 		mMutex_logQueue.unlock();
 	}
 
 	mMutex_addLine.unlock();
-}
-
-void QuadLogger::saveImageBuffer(list<shared_ptr<DataImage> > const &dataBuffer,
-								 list<shared_ptr<ImageMatchData> > const &matchDataBuffer)
-{
-//	list<shared_ptr<DataImage> >::const_iterator dataIter = dataBuffer.begin();
-//	int id = 0;
-//	mxml_node_t *xml = mxmlNewXML("1.0");
-//	mxml_node_t *root = mxmlNewElement(xml,"root");
-//	mxml_node_t *imgDataNode = mxmlNewElement(root,"ImgData");
-//	while(dataIter != dataBuffer.end())
-//	{
-//		shared_ptr<DataImage> data = static_pointer_cast<DataImage>(*dataIter);
-//		data->lock();
-//		shared_ptr<cv::Mat> mat = data->img; 
-//		String filename = mDir+"/images/img_"+id+".bmp";
-//		cv::imwrite(filename.c_str(), *mat);
-//
-//		stringstream ss; ss << "img_" << id;
-//		mxml_node_t *imgNode = mxmlNewElement(imgDataNode,ss.str().c_str());
-//			mxmlNewInteger(mxmlNewElement(imgNode,"time"),Time::calcDiffMS(mStartTime, data->timestamp));
-//			mxml_node_t *attNode = mxmlNewElement(imgNode,"att");
-//				mxmlNewReal(mxmlNewElement(attNode,"roll"),data->att[0][0]);
-//				mxmlNewReal(mxmlNewElement(attNode,"pitch"),data->att[1][0]);
-//				mxmlNewReal(mxmlNewElement(attNode,"yaw"),data->att[2][0]);
-//			mxml_node_t *angularVelNode = mxmlNewElement(imgNode,"angularVel");
-//				mxmlNewReal(mxmlNewElement(angularVelNode,"x"),data->angularVel[0][0]);
-//				mxmlNewReal(mxmlNewElement(angularVelNode,"y"),data->angularVel[1][0]);
-//				mxmlNewReal(mxmlNewElement(angularVelNode,"z"),data->angularVel[2][0]);
-//		data->unlock();
-//
-//		id++;
-//		dataIter++;
-//	}
-//	mxmlNewInteger(mxmlNewElement(imgDataNode,"NumImages"),id);
-//
-//	list<shared_ptr<ImageMatchData> >::const_iterator matchDataIter = matchDataBuffer.begin();
-//	mxml_node_t *matchDataNode = mxmlNewElement(root,"MatchData");
-//	id = 0;
-//	while(matchDataIter != matchDataBuffer.end())
-//	{
-//		stringstream ss; ss << "match_" << id;
-//		shared_ptr<ImageMatchData> matchData = static_pointer_cast<ImageMatchData>(*matchDataIter);
-//		matchData->lock();
-//		mxml_node_t *matchNode = mxmlNewElement(matchDataNode,ss.str().c_str());
-//			mxmlNewReal(mxmlNewElement(matchNode, "dt"), matchData->dt);
-//			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
-//			if(matchData->featurePoints.size() == 0 || matchData->featurePoints[0].size() == 0)
-//				mxmlNewInteger(numPtsNode, 0);
-//			else
-//			{
-//				mxmlNewInteger(numPtsNode, matchData->featurePoints[0].size());
-//				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
-//				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
-//				for(int i=0; i<matchData->featurePoints[0].size(); i++)
-//				{
-//					cv::Point2f pt0 = matchData->featurePoints[0][i];
-//					cv::Point2f pt1 = matchData->featurePoints[1][i];
-//	
-//					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
-//					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");
-//					mxmlNewReal(mxmlNewElement(p0Node,"x"),pt0.x);
-//					mxmlNewReal(mxmlNewElement(p0Node,"y"),pt0.y);
-//					mxmlNewReal(mxmlNewElement(p1Node,"x"),pt1.x);
-//					mxmlNewReal(mxmlNewElement(p1Node,"y"),pt1.y);
-//				}
-//			}
-//			matchData->unlock();
-//
-//		id++;
-//		matchDataIter++;
-//	}
-//
-//	FILE *fp = fopen((mDir+"/images/data.xml").c_str(),"w");
-//	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
-//	fclose(fp);
-}
-
-void QuadLogger::saveFeatureMatchBuffer(list<vector<vector<cv::Point2f> > > const &matchBuffer, 
-										list<Time> const &timeBuffer,
-										list<double> const &dtBuffer,
-										list<TNT::Array2D<double> > const &attPrevBuffer,
-										list<TNT::Array2D<double> > const &attCurBuffer)
-{
-//	list<vector<vector<cv::Point2f> > >::const_iterator iter = matchBuffer.begin();
-//	list<Time>::const_iterator timeIter = timeBuffer.begin();
-//	list<double>::const_iterator dtIter = dtBuffer.begin();
-//	list<TNT::Array2D<double> >::const_iterator attPrevIter = attPrevBuffer.begin();
-//	list<TNT::Array2D<double> >::const_iterator attCurIter = attCurBuffer.begin();
-//	int id = 0;
-//	mxml_node_t *xml = mxmlNewXML("1.0");
-//	mxml_node_t *root = mxmlNewElement(xml,"root");
-//	mxmlNewInteger(mxmlNewElement(root,"NumData"),matchBuffer.size());
-//	while(iter != matchBuffer.end())
-//	{
-//		stringstream ss; ss << "match_" << id;
-//		vector<vector<cv::Point2f> > const *matchData = &(*iter);
-//		mxml_node_t *matchNode = mxmlNewElement(root,ss.str().c_str());
-//			mxmlNewInteger(mxmlNewElement(matchNode,"Time"), Time::calcDiffMS(mStartTime, *timeIter));
-//			mxmlNewReal(mxmlNewElement(matchNode,"dt"), *dtIter);
-//			mxml_node_t *numPtsNode = mxmlNewElement(matchNode,"NumMatches");
-//			if((*matchData)[0].size() == 0)
-//				mxmlNewInteger(numPtsNode, 0);
-//			else
-//			{
-//				mxmlNewInteger(numPtsNode, (*matchData)[0].size());
-//				mxml_node_t *pts0Node = mxmlNewElement(matchNode,"FeaturePoints_prev");
-//				mxml_node_t *pts1Node = mxmlNewElement(matchNode,"FeaturePoints_cur");
-//				cv::Point2f pt0, pt1;
-//				for(int i=0; i<(*matchData)[0].size(); i++)
-//				{
-//					pt0 = (*matchData)[0][i];
-//					pt1 = (*matchData)[1][i];
-//	
-//					mxml_node_t *p0Node = mxmlNewElement(pts0Node,"pt0");
-//					mxml_node_t *p1Node = mxmlNewElement(pts1Node,"pt1");
-//					// the data are floats but at this point everything is actually
-//					// integer on the OpenCV side
-//					mxmlNewInteger(mxmlNewElement(p0Node,"x"),(int)(pt0.x+0.5));
-//					mxmlNewInteger(mxmlNewElement(p0Node,"y"),(int)(pt0.y+0.5));
-//					mxmlNewInteger(mxmlNewElement(p1Node,"x"),(int)(pt1.x+0.5));
-//					mxmlNewInteger(mxmlNewElement(p1Node,"y"),(int)(pt1.y+0.5));
-//				}
-//			}
-//			mxml_node_t *attPrevNode = mxmlNewElement(matchNode,"AttPrev");
-//				mxmlNewReal(mxmlNewElement(attPrevNode,"roll"), (*attPrevIter)[0][0]);
-//				mxmlNewReal(mxmlNewElement(attPrevNode,"pitch"), (*attPrevIter)[1][0]);
-//				mxmlNewReal(mxmlNewElement(attPrevNode,"yaw"), (*attPrevIter)[2][0]);
-//			mxml_node_t *attCurNode = mxmlNewElement(matchNode,"AttCur");
-//				mxmlNewReal(mxmlNewElement(attCurNode,"roll"), (*attCurIter)[0][0]);
-//				mxmlNewReal(mxmlNewElement(attCurNode,"pitch"), (*attCurIter)[1][0]);
-//				mxmlNewReal(mxmlNewElement(attCurNode,"yaw"), (*attCurIter)[2][0]);
-//
-//		id++;
-//		iter++;
-//		timeIter++;
-//		dtIter++;
-//		attPrevIter++;
-//		attCurIter++;
-//	}
-//
-//Log::alert("Saving match data to " + mDir + "/matchData.xml");
-//	FILE *fp = fopen((mDir+"/matchData.xml").c_str(),"w");
-//	mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
-//	fclose(fp);
 }
 
 void QuadLogger::generateMatlabHeader()

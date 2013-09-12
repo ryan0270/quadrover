@@ -48,18 +48,18 @@ using namespace TNT;
 		mUseIbvs = false;
 //		mUseIbvs = true;
 
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mStateBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mErrCovKFBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mViconPosBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mViconVelBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mCameraPosBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mCameraVelBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mOpticFlowVelBuffer));
-//		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mHeightBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mMapHeightBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mMapVelBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mRawAccelDataBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<Data<double>>>*)(&mGravityDirDataBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mStateBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mErrCovKFBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mViconPosBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mViconVelBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mCameraPosBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mCameraVelBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mOpticFlowVelBuffer));
+//		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mHeightBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapHeightBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapVelBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mRawAccelDataBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mGravityDirDataBuffer));
 		
 		mHaveFirstVicon = false;
 	}
@@ -111,8 +111,8 @@ using namespace TNT;
 			if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 1000)
 			{
 				mHaveFirstCameraPos = false;
-				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_LOST+"\t";
-				mQuadLogger->addLine(logString, LOG_FLAG_PC_UPDATES);
+				logString;
+				mQuadLogger->addEntry(Time(), LOG_ID_TARGET_LOST, logString, LOG_FLAG_PC_UPDATES);
 			}
 			mMutex_posTime.unlock();
 
@@ -210,24 +210,27 @@ using namespace TNT;
 
 
 			for(int i=0; i<mDataBuffers.size(); i++)
-				while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 1e3)
-					mDataBuffers[i]->pop_front();
+				while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 0.5e3)
+				{
+					if(mDataBuffers[i]->front()->type == DATA_TYPE_STATE_TRAN)
+					{
+						Array2D<double> v = static_pointer_cast<DataVector<double>>(mDataBuffers[i]->front())->data.copy();
+						logString = String();
+						for(int i=0; i<mStateKF.dim1(); i++)
+							logString = logString+v[i][0]+"\t";
+						mQuadLogger->addEntry(mDataBuffers[i]->front()->timestamp, LOG_ID_CUR_TRANS_STATE, logString,LOG_FLAG_STATE);
+					}
+
+//					logString = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
+//					for(int i=0; i<errCov.dim1(); i++)
+//						logString= logString+errCov[i][0]+"\t";
+//					mQuadLogger->addEntry(logString+"\n",LOG_FLAG_STATE);
+				mDataBuffers[i]->pop_front();
+				}
 			mMutex_kfData.unlock();
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
-
-			{
-				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CUR_TRANS_STATE+"\t";
-				for(int i=0; i<mStateKF.dim1(); i++)
-					logString = logString+mStateKF[i][0]+"\t";
-				mQuadLogger->addLine(logString,LOG_FLAG_STATE);
-
-//				logString = String()+mStartTime.getElapsedTimeMS() + "\t"+LOG_ID_KALMAN_ERR_COV+"\t";
-//				for(int i=0; i<errCov.dim1(); i++)
-//					logString= logString+errCov[i][0]+"\t";
-//				mQuadLogger->addLine(logString+"\n",LOG_FLAG_STATE);
-			}
 
 			t = loopTime.getElapsedTimeUS();
 			if(t < targetPeriodUS)
@@ -453,10 +456,10 @@ using namespace TNT;
 		mMutex_events.unlock();
 
 		{
-			String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_RECEIVE_VICON+"\t";
+			String s = String();
 			for(int i=0; i<data.size(); i++)
 				s = s+data[i]+"\t";
-			mQuadLogger->addLine(s, LOG_FLAG_STATE);
+			mQuadLogger->addEntry(Time(), LOG_ID_RECEIVE_VICON, s, LOG_FLAG_STATE);
 		}
 
 		mNewViconPosAvailable = true;
@@ -506,13 +509,12 @@ using namespace TNT;
 		mUseIbvs = useIbvs;
 		String s;
 		if(useIbvs)
-			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_ENABLED+"\t";
+			mQuadLogger->addEntry(Time(), LOG_ID_IBVS_ENABLED, String(), LOG_FLAG_PC_UPDATES);
 		else
 		{
-			s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_IBVS_DISABLED+"\t";
+			mQuadLogger->addEntry(Time(), LOG_ID_IBVS_DISABLED, String(), LOG_FLAG_PC_UPDATES);
 			mHaveFirstCameraPos = false;
 		}
-		mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
 	}
 
 	void Observer_Translational::onNewCommAccelBias(float xBias, float yBias, float zBias)
@@ -578,10 +580,7 @@ using namespace TNT;
 		if(mUseIbvs)
 		{
 			if(!mHaveFirstCameraPos)
-			{
-				String s = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ACQUIRED+"\t";
-				mQuadLogger->addLine(s, LOG_FLAG_PC_UPDATES);
-			}
+				mQuadLogger->addEntry(Time(), LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
 			mHaveFirstCameraPos = true;
 		}
 		mMutex_posTime.lock();
@@ -637,7 +636,7 @@ using namespace TNT;
 //		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ESTIMATED_POS+"\t";
 //		for(int i=0; i<pos.dim1(); i++)
 //			str = str+pos[i][0]+"\t";
-//		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
+//		mQuadLogger->addEntry(str, LOG_FLAG_CAM_RESULTS);
 	}
 
 	Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
