@@ -226,10 +226,10 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 	vI = 1.0/norm2(vI)*vI;
 
 	Array2D<double> transR = transpose(mCurRotMat);
-	if(norm2(accel-mAccelDirNom*GRAVITY) < 5)
+	if(norm2(accel-mAccelDirNom*GRAVITY) < 3)
 //	if( (norm2(accel)-GRAVITY) < 2 && accel[2][0] > 0)
 	{
-		mInnovation.inject(mAccelWeight*cross(uB, matmult(transR, uI)));
+		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));
 		mInnovation += mMagWeight*cross(vB, matmult(transR, vI));
 	}
 //	else
@@ -313,13 +313,13 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double>> co
 	for(int i=0; i<mListeners.size(); i++)
 		mListeners[i]->onObserver_AngularUpdated(attData, velData);
 
-	String logStr=String() +  mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_CUR_ATT +"\t";
+	String logStr=String()+Time::calcDiffMS(mStartTime,attData->timestamp)+"\t";
 	for(int i=0; i<attData->data.dim1(); i++)
 		logStr = logStr+attData->data[i][0] + "\t";
 	for(int i=0; i<velData->data.dim1(); i++)
 		logStr = logStr+velData->data[i][0]+"\t";
 	if(mQuadLogger != NULL)
-		mQuadLogger->addEntry(Time(), LOG_ID_CUR_ATT, logStr,LOG_FLAG_STATE);
+		mQuadLogger->addEntry(LOG_ID_CUR_ATT, logStr,LOG_FLAG_STATE);
 }
 
 Array2D<double> Observer_Angular::convert_so3toCoord(Array2D<double> const &so3)

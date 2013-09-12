@@ -44,9 +44,9 @@ class LogItem
 {
 	public:
 		LogItem(){toadlet::egg::System sys; time = sys.mtime(); line = ""; type = LOG_TYPE_UNKNOWN;}
-		LogItem(uint64 time, toadlet::egg::String s, LogType t){this->time = time; line = s; type = t;}
+		LogItem(toadlet::uint64 time, toadlet::egg::String s, LogType t){this->time = time; line = s; type = t;}
 
-		uint64 time;
+		toadlet::uint64 time;
 		String line;
 		LogType type;
 };
@@ -130,7 +130,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		Collection<float> mAttObsvNominalMag;
 		TNT::Array2D<float> mIntMemory;
 		int mMotorValues[4];
-		uint64 mTimeMS;
+		toadlet::uint64 mTimeMS;
 		int mMotorTrim[4];
 
 		System mSys;
@@ -213,7 +213,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		TNT::Array2D<float> mRotQuadToPhone, mRotPhoneToQuad;
 		TNT::Array2D<float> mRotViconToPhone, mRotPhoneToVicon;
 
-		uint64 mLastTelemSendTime;
+		toadlet::uint64 mLastTelemSendTime;
 
 		default_random_engine mRandGenerator;
 		normal_distribution<float> mStdGaussDist;
