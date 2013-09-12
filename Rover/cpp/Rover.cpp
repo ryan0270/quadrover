@@ -248,9 +248,10 @@ void Rover::run()
 					usage.push_back(used/total);
 				}
 			}
-			String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CPU_USAGE+"\t";
+
 			if(cpuUsageCur[0][0] != 0 && cpuUsagePrev[0][0] != 0)
 			{
+				String str;
 				// overall total has to be handled separately since it only counts cpus that were turned on
 				// Assume that the total avaible was 4*maxTotal
 				double used = 0;
@@ -261,7 +262,7 @@ void Rover::run()
 				// finish making log string
 				for(int i=0; i<usage.size(); i++)
 					str = str+usage[i]+"\t";
-				mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);
+				mQuadLogger.addEntry(Time(), LOG_ID_CPU_USAGE, str,LOG_FLAG_PC_UPDATES);
 			}
 			cpuUsagePrev.inject(cpuUsageCur);
 		}
@@ -585,8 +586,8 @@ void Rover::onNewCommTimeSync(int time)
 	mTargetFinder.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_TIME_SYNC + "\t" + delta;
-	mQuadLogger.addLine(str,LOG_FLAG_PC_UPDATES);
+	String str = String()+delta;
+	mQuadLogger.addEntry(Time(), LOG_ID_TIME_SYNC, str,LOG_FLAG_PC_UPDATES);
 }
 
 void Rover::onNewCommLogTransfer()

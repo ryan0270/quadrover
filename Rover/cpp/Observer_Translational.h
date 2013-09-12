@@ -142,7 +142,7 @@ class Observer_Translational : public Observer_AngularListener,
 
 	int mThreadPriority, mScheduler;
 
-	vector<list<shared_ptr<Data<double>>> *> mDataBuffers;
+	vector<list<shared_ptr<IData>> *> mDataBuffers;
 	list<shared_ptr<DataVector<double>>> mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
 	list<shared_ptr<DataVector<double>>> mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer, mMapVelBuffer;
 	list<shared_ptr<Data<double>>> /*mHeightDataBuffer,*/ mMapHeightBuffer;

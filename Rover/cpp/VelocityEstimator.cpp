@@ -105,19 +105,19 @@ void VelocityEstimator::run()
 
 				if(mQuadLogger != NULL)
 				{
-					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_VEL+ "\t";
+					logString = String();
 					for(int i=0; i<velEst.dim1(); i++)
 						logString = logString + velEst[i][0] + "\t";
-					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+					mQuadLogger->addEntry(LOG_ID_MAP_VEL,logString,LOG_FLAG_CAM_RESULTS);
 
-					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_HEIGHT + "\t" + heightEst;
-					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+					logString = String() + heightEst;
+					mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT,logString,LOG_FLAG_CAM_RESULTS);
 
-					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MAP_VEL_CALC_TIME + "\t"+procTime;
-					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+					logString = String()+procTime;
+					mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME,logString,LOG_FLAG_CAM_RESULTS);
 
-					logString = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OPTIC_FLOW_VELOCITY_DELAY + "\t"+ delayTime;
-					mQuadLogger->addLine(logString,LOG_FLAG_CAM_RESULTS);
+					logString = String()+ delayTime;
+					mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
 				}
 			}
 //			else if(oldImageFeatureData != NULL && curImageFeatureData != NULL)
@@ -226,8 +226,8 @@ if(attChange.isIdentity())
 		for(int j=0; j<C.dim2()-1; j++)
 			numMatches += C[i][j];
 	{
-		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_MAP_NUM_MATCHES+"\t"+numMatches;
-		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
+		String str = String()+numMatches;
+		mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES,str, LOG_FLAG_CAM_RESULTS);
 	}
 	
 	Array2D<double> vel(3,1), covVel(3,3);
@@ -499,7 +499,7 @@ Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<
 
 //	{
 //		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_MAP_PEAK_PSD_VALUE+"\t"+peakCoeff;
-//		mQuadLogger->addLine(str, LOG_FLAG_CAM_RESULTS);
+//		mQuadLogger->addEntry(str, LOG_FLAG_CAM_RESULTS);
 //	}
 //	double thresh = probNoCorr*peakCoeff;
 	for(int j=0; j<N2; j++)

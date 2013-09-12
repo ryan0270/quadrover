@@ -125,18 +125,18 @@ void TargetFinder::run()
 
 			if(target != NULL)
 			{
-				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_CENTERS+"\t";
+				logString = String();
 				for(int i=0; i<target->squareData.size(); i++)
 					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
-				mQuadLogger->addLine(logString, LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_CENTERS, logString, LOG_FLAG_CAM_RESULTS);
 
-				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_AREAS+"\t";
+				logString = String();
 				for(int i=0; i<target->squareData.size(); i++)
 					logString = logString+target->squareData[i]->area+"\t";
-				mQuadLogger->addLine(logString, LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_AREAS,logString, LOG_FLAG_CAM_RESULTS);
 
-				logString = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_FIND_PROC_TIME+"\t"+procTime;
-				mQuadLogger->addLine(logString, LOG_FLAG_CAM_RESULTS);
+				logString = String()+procTime;
+				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
 			}
 		}
 
@@ -394,7 +394,7 @@ void TargetFinder::drawTarget(cv::Mat &image, shared_ptr<RectGroup> const &targe
 //		Log::alert("Turning IBVS on");
 //		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
 //		mMutex_logger.lock();
-//		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
 //		mMutex_logger.unlock();
 //		mFirstImageProcessed = false;
 //	}
@@ -403,7 +403,7 @@ void TargetFinder::drawTarget(cv::Mat &image, shared_ptr<RectGroup> const &targe
 //		Log::alert("Turning IBVS off");
 //		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
 //		mMutex_logger.lock();
-//		mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
 //		mMutex_logger.unlock();
 //		mFirstImageProcessed = false;
 //	}

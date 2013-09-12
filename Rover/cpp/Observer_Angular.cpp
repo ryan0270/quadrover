@@ -252,18 +252,16 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 		for(int i=0; i<mGyroBias.dim1(); i++)
 			mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
 
-	String s1=String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_GYRO_BIAS +"\t";
+	String logString;
 	for(int i=0; i<mGyroBias.dim1(); i++)
-		s1 = s1+mGyroBias[i][0] + "\t";
-	mMutex_data.unlock();
+		logString = logString+mGyroBias[i][0] + "\t";
+	mQuadLogger->addEntry(Time(), LOG_ID_GYRO_BIAS, logString, LOG_FLAG_OBSV_BIAS);
 
-	String s2=String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OBSV_ANG_INNOVATION +"\t";
+	logString = String();
 	for(int i=0; i<mInnovation.dim1(); i++)
-		s2 = s2+mInnovation[i][0] + "\t";
+		logString = logString+mInnovation[i][0] + "\t";
 	mMutex_data.unlock();
-
-	mQuadLogger->addLine(s1,LOG_FLAG_OBSV_BIAS);
-	mQuadLogger->addLine(s2,LOG_FLAG_OBSV_BIAS);
+	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_INNOVATION, logString, LOG_FLAG_OBSV_BIAS);
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer
@@ -321,7 +319,7 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double>> co
 	for(int i=0; i<velData->data.dim1(); i++)
 		logStr = logStr+velData->data[i][0]+"\t";
 	if(mQuadLogger != NULL)
-		mQuadLogger->addLine(logStr,LOG_FLAG_STATE);
+		mQuadLogger->addEntry(Time(), LOG_ID_CUR_ATT, logStr,LOG_FLAG_STATE);
 }
 
 Array2D<double> Observer_Angular::convert_so3toCoord(Array2D<double> const &so3)
@@ -461,18 +459,18 @@ void Observer_Angular::setYawZero()
 	temp = mMagDirNom.copy();
 	mMutex_data.unlock();
 
-	String str1 = String()+mStartTime.getElapsedTimeMS()+"\t" + LOG_ID_SET_YAW_ZERO + "\t";
+	String str1;
 	for(int i=0; i<temp.dim1(); i++)
 		str1 = str1+temp[i][0]+"\t";
-	mQuadLogger->addLine(str1,LOG_FLAG_PC_UPDATES);
+	mQuadLogger->addEntry(Time(), LOG_ID_SET_YAW_ZERO, str1, LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommObserverReset()
 {
 	reset();
 	Log::alert("Observer reset");
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OBSV_ANG_RESET + "\t";
-	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+	String str = String();
+	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_RESET, str,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight)
@@ -489,10 +487,10 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 		s = s+magWeight+"\t";
 		Log::alert(s);
 	}
-	String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_OBSV_ANG_GAINS_UPDATED + "\t";
+	String str;
 	str = str+gainP+"\t"+gainI+"\t";
 	str = str+accelWeight+"\t"+magWeight;
-	mQuadLogger->addLine(str,LOG_FLAG_PC_UPDATES);
+	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_GAINS_UPDATED, str,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommNominalMag(Collection<float> const &nomMag)

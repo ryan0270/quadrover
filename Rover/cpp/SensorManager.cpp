@@ -191,9 +191,8 @@ namespace Quadrotor{
 			{
 				if(mTimestampOffsetNS == 0)
 					mTimestampOffsetNS = mStartTime.getNS()-event.timestamp;
-// TODO: Set the event time to match the timestamp in the ASensor struct
 				LogFlags logFlag = LOG_FLAG_OTHER;
-				int logID = -1;
+				LogID logID = LOG_ID_UNKNOWN;
 				shared_ptr<IData> data = NULL;
 				switch(event.type)
 				{
@@ -267,10 +266,11 @@ namespace Quadrotor{
 
 				if(mQuadLogger != NULL && logFlag != -1 && data != NULL)
 				{
-					String s=String()+(data->timestamp.getMS()-mStartTime.getMS())+"\t"+logID+"\t";
+					String s=String();
+					s = s+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
 					s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
 					mMutex_logger.lock();
-					mQuadLogger->addLine(s,logFlag);
+					mQuadLogger->addEntry(logID,s,logFlag);
 					mMutex_logger.unlock();
 				}
 
@@ -404,13 +404,14 @@ namespace Quadrotor{
 
 			if(mQuadLogger != NULL)
 			{
-				String s = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_PHONE_TEMP + "\t";
+				String s = String();
+				s = s+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
 				s = s+battTemp+"\t";
 				s = s+secTemp+"\t";
 				s = s+fgTemp+"\t";
 //				s = s+tmuTemp+"\t";
 				mMutex_logger.lock();
-				mQuadLogger->addLine(s,LOG_FLAG_PHONE_TEMP);
+				mQuadLogger->addEntry(LOG_ID_PHONE_TEMP,s,LOG_FLAG_PHONE_TEMP);
 				mMutex_logger.unlock();
 			}
 
@@ -519,12 +520,23 @@ namespace Quadrotor{
 //		mLastImageTime.setTime();
 //		Log::alert(String()+"dt: "+mImageDT);
 
-		shared_ptr<cv::Mat> imageBGR(new cv::Mat);
-		cv::cvtColor(*imageYUV, *imageBGR, CV_YUV420sp2BGR);
-
 		shared_ptr<DataImage> data(new DataImage());
 		data->type = DATA_TYPE_IMAGE;
 		data->timestamp.setTimeNS(timestampNS);
+
+		// do this now just so the log time is a bit closer to real
+		if(mQuadLogger != NULL)
+		{
+			String str = String();
+			str = str+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
+			str = str+data->imageId;
+			mMutex_logger.lock();
+			mQuadLogger->addEntry(LOG_ID_IMAGE,str,LOG_FLAG_CAM_RESULTS);
+			mMutex_logger.unlock();
+		}
+
+		shared_ptr<cv::Mat> imageBGR(new cv::Mat);
+		cv::cvtColor(*imageYUV, *imageBGR, CV_YUV420sp2BGR);
 
 		if(mObsvAngular != NULL)
 		{
@@ -555,14 +567,6 @@ namespace Quadrotor{
 //Log::alert(String()+"image update after: " + i);
 		}
 		mMutex_listeners.unlock();
-
-		if(mQuadLogger != NULL)
-		{
-			String str = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IMAGE + "\t" + data->imageId;
-			mMutex_logger.lock();
-			mQuadLogger->addLine(str,LOG_FLAG_CAM_RESULTS);
-			mMutex_logger.unlock();
-		}
 	}
 
 } // namespace Quadrotor

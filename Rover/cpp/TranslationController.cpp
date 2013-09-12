@@ -94,15 +94,15 @@ namespace Quadrotor {
 		// Logging
 		if(mQuadLogger != NULL)
 		{
-			String s1 = String()+mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_DES_TRANS_STATE + "\t";
+			String s1 = String();
 			for(int i=0; i<desState.dim1(); i++)
 				s1 = s1+desState[i][0]+"\t";
-			mQuadLogger->addLine(s1,LOG_FLAG_STATE_DES);
+			mQuadLogger->addEntry(Time(),LOG_ID_DES_TRANS_STATE,s1,LOG_FLAG_STATE_DES);
 
 //			String s2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CUR_TRANS_STATE+"\t";
 //			for(int i=0; i<curState.dim1(); i++)
 //				s2 = s2+curState[i][0]+"\t";
-//			mQuadLogger->addLine(s2,LOG_FLAG_STATE);
+//			mQuadLogger->addEntry(s2,LOG_FLAG_STATE);
 		}
 
 		mNewMeasAvailable = false;

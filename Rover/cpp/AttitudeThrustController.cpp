@@ -140,23 +140,23 @@ namespace Quadrotor {
 		if(mQuadLogger != NULL)
 		{
 			String logStr;
-			logStr = String() +  mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_MOTOR_CMDS +"\t";
+			logStr = String();
 			for(int i=0; i<4; i++)
 				logStr= logStr+cmds[i] + "\t";
-			mQuadLogger->addLine(logStr,LOG_FLAG_MOTORS);
+			mQuadLogger->addEntry(Time(),LOG_ID_MOTOR_CMDS,logStr,LOG_FLAG_MOTORS);
 
 			mMutex_data.lock();
-			logStr =String() +  mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_DES_ATT +"\t";
+			logStr =String();
 			for(int i=0; i<mDesAtt.dim1(); i++)
 				logStr = logStr + mDesAtt[i][0] + "\t";
 			for(int i=0; i<3; i++)
 				logStr = logStr+"0\t";
-			mQuadLogger->addLine(logStr,LOG_FLAG_STATE_DES);
+			mQuadLogger->addEntry(Time(),LOG_ID_DES_ATT,logStr,LOG_FLAG_STATE_DES);
 
 //			logStr=String() +  mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_CUR_ATT +"\t";
 //			for(int i=0; i<curStateAngular.dim1(); i++)
 //				logStr = logStr+curStateAngular[i][0] + "\t";
-//			mQuadLogger->addLine(logStr,LOG_FLAG_STATE);
+//			mQuadLogger->addEntry(logStr,LOG_FLAG_STATE);
 			mMutex_data.unlock();
 
 		}
