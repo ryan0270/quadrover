@@ -17,7 +17,7 @@ angleStateRef = phoneData(angleStateRefIndices,3:8)';
 
 angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
 angleStateTime = phoneData(angleStateIndices,1)'/1000;
-angleState = phoneData(angleStateIndices,3:8)';
+angleState = phoneData(angleStateIndices,4:9)';
 
 tranStateRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_DES_TRANS_STATE);
 tranStateRefTime = phoneData(tranStateRefIndices,1)'/1000;
@@ -42,22 +42,22 @@ end
 
 gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
 gyroTime = phoneData(gyroIndices,1)'/1000;
-gyro = phoneData(gyroIndices,3:end)';
+gyro = phoneData(gyroIndices,4:end)';
 gyro_dt = mean(diff(gyroTime));
 
 magIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAGNOMETER);
 magTime = phoneData(magIndices,1)'/1000;
-mag = phoneData(magIndices,3:end)';
+mag = phoneData(magIndices,4:end)';
 mag_dt = mean(diff(magTime));
 
 accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
 accelTime = phoneData(accelIndices,1)'/1000;
-accel = phoneData(accelIndices,3:5)';
+accel = phoneData(accelIndices,4:6)';
 accel_dt = mean(diff(accelTime));
 
 pressureIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PRESSURE);
 pressureTime = phoneData(pressureIndices,1)'/1000;
-pressure = phoneData(pressureIndices,3:6)';
+pressure = phoneData(pressureIndices,4:7)';
 
 motorIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MOTOR_CMDS);
 motorTime = phoneData(motorIndices,1)'/1000;

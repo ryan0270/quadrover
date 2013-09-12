@@ -560,14 +560,21 @@ using namespace TNT;
 		switch(data->type)
 		{
 			case DATA_TYPE_ACCEL:
-				shared_ptr<DataVector<double>> accelData(new DataVector<double>());
-				accelData->type = DATA_TYPE_RAW_ACCEL;
-				accelData->timestamp = data->timestamp;
-				accelData->data = static_pointer_cast<DataVector<double>>(data)->dataCalibrated.copy();
+				{
+					Array2D<double> accel = static_pointer_cast<DataVector<double>>(data)->dataCalibrated.copy();
+					// the accelerometer is really noisy so filter out the worst offenders
+					if( abs(norm2(accel)-GRAVITY) < 7 )
+					{
+						shared_ptr<DataVector<double>> accelData(new DataVector<double>());
+						accelData->type = DATA_TYPE_RAW_ACCEL;
+						accelData->timestamp = data->timestamp;
+						accelData->data = accel;
 
-				mMutex_events.lock();
-				mNewEventsBuffer.push_back(accelData);
-				mMutex_events.unlock();
+						mMutex_events.lock();
+						mNewEventsBuffer.push_back(accelData);
+						mMutex_events.unlock();
+					}
+				}
 				break;
 		}
 	}
