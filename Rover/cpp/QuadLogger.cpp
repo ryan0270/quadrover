@@ -149,13 +149,13 @@ void QuadLogger::run()
 	mDone = true;
 }
 
-//void QuadLogger::addLine(String const &str, LogFlags type)
-void QuadLogger::addEntry(LogID const &id, toadlet::egg::String const &str, LogFlags type)
+//void QuadLogger::addLine(const String &str, LogFlags type)
+void QuadLogger::addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type)
 {
 	addEntry(Time(), id, str, type);
 }
 
-void QuadLogger::addEntry(Time const &t, LogID const &id, toadlet::egg::String const &str, LogFlags type)
+void QuadLogger::addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type)
 {
 	mMutex_addLine.lock();
 	if( (mTypeMask & type) && mRunning)
@@ -169,7 +169,7 @@ void QuadLogger::addEntry(Time const &t, LogID const &id, toadlet::egg::String c
 		mMutex_logQueue.lock();
 //		list<shared_ptr<LogEntry>>::reverse_iterator insertIter;
 //		insertIter = lower_bound(mLogQueue.rbegin(), mLogQueue.rend(), entry,
-//				[&](shared_ptr<LogEntry> const &e1, shared_ptr<LogEntry> const &e2){return e1->timestamp >= e2->timestamp;});
+//				[&](const shared_ptr<LogEntry> &e1, const shared_ptr<LogEntry> &e2){return e1->timestamp >= e2->timestamp;});
 //		mLogQueue.insert(insertIter.base(), entry);
 		mLogQueue.push_back(entry);
 		mMutex_logQueue.unlock();

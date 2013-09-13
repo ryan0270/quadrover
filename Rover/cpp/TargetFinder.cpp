@@ -147,7 +147,7 @@ void TargetFinder::run()
 }
 
 //shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
-shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, cv::Mat const &cameraMatrix, cv::Mat const &distCoeffs)
+shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs)
 {
 	vector<vector<cv::Point> > squares;
 	vector<vector<cv::Point> > contours;
@@ -249,7 +249,7 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, cv::Mat const &ca
 
 	// Sort area from largest to smallest
 	sort(groups.begin(), groups.end(), 
-				[&](shared_ptr<RectGroup> const &g1, shared_ptr<RectGroup> const &g2){return g1->meanArea  > g2->meanArea;});
+				[&](const shared_ptr<RectGroup> &g1, const shared_ptr<RectGroup> &g2){return g1->meanArea  > g2->meanArea;});
 
 	// Find groups that seem to have the correct inter-group relationship
 	vector<shared_ptr<RectGroup> > candidateSets;
@@ -364,7 +364,7 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, cv::Mat const &ca
 	return bestSet;
 }
 
-void TargetFinder::drawTarget(cv::Mat &image, shared_ptr<RectGroup> const &target)
+void TargetFinder::drawTarget(cv::Mat &image, const shared_ptr<RectGroup> &target)
 {
 	for( int i = 0; i < target->squareData.size(); i++ )
 	{
@@ -374,7 +374,7 @@ void TargetFinder::drawTarget(cv::Mat &image, shared_ptr<RectGroup> const &targe
 	}
 }
 
-//void TargetFinder::drawPoints(vector<cv::Point2f> const &points, cv::Mat &image)
+//void TargetFinder::drawPoints(const vector<cv::Point2f> &points, cv::Mat &image)
 //{
 //	if(points.size() == 0)
 //		return;
@@ -409,7 +409,7 @@ void TargetFinder::drawTarget(cv::Mat &image, shared_ptr<RectGroup> const &targe
 //	}
 //}
 
-void TargetFinder::onNewSensorUpdate(shared_ptr<IData> const &data)
+void TargetFinder::onNewSensorUpdate(const shared_ptr<IData> &data)
 {
 	if(data->type == DATA_TYPE_IMAGE)
 	{

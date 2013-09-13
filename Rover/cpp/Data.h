@@ -280,7 +280,7 @@ class Rect
 	vector<double> lineLengths;
 	double angle; // of the longest line, from -PI/2 to PI/2
 
-	static double accumAreaFunc(const double &val, const shared_ptr<Rect> &data){return val+data->area;}
+	static double accumAreaFunc(double val, const shared_ptr<Rect> &data){return val+data->area;}
 	static cv::Point2f accumCenterFunc(const cv::Point2f &val, const shared_ptr<Rect> &data){return val+data->center;}
 };
 

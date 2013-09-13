@@ -33,7 +33,7 @@ class TargetFinderListener
 	public:
 		virtual ~TargetFinderListener(){};
 
-		virtual void onTargetFound(shared_ptr<ImageTargetFindData> const &data)=0;
+		virtual void onTargetFound(const shared_ptr<ImageTargetFindData> &data)=0;
 };
 
 class TargetFinder : public CommManagerListener,
@@ -67,7 +67,7 @@ class TargetFinder : public CommManagerListener,
 		void onNewCommMotorOff(){mIsMotorOn = false;}
 		
 		// SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<IData> const &data);
+		void onNewSensorUpdate(const shared_ptr<IData> &data);
 
 	protected:
 		bool mUseIbvs;
@@ -104,8 +104,8 @@ class TargetFinder : public CommManagerListener,
 		int mThreadPriority, mScheduler;
 
 //		shared_ptr<RectGroup> findTarget(cv::Mat &image);
-		shared_ptr<RectGroup> findTarget(cv::Mat &image, cv::Mat const &cameraMatrix, cv::Mat const &distCoeffs);
-		static void drawTarget(cv::Mat &img, shared_ptr<RectGroup> const &target);
+		shared_ptr<RectGroup> findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs);
+		static void drawTarget(cv::Mat &img, const shared_ptr<RectGroup> &target);
 
 		// helper function:
 		// finds a cosine of angle between vectors

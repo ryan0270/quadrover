@@ -16,7 +16,7 @@ class Time
 
 		void clear(){mTime.tv_sec = 0; mTime.tv_nsec = 0;}
 		void setTime(){clock_gettime(CLOCK_MONOTONIC,&mTime);};
-		void setTime(Time const &t){mTime.tv_sec = t.mTime.tv_sec; mTime.tv_nsec = t.mTime.tv_nsec;}
+		void setTime(const Time &t){mTime.tv_sec = t.mTime.tv_sec; mTime.tv_nsec = t.mTime.tv_nsec;}
 		void setTimeMS(toadlet::uint64 t){mTime.tv_sec = t/1e3; mTime.tv_nsec = (t%(toadlet::uint64)1e3)*1e6;}
 		void setTimeUS(toadlet::uint64 t){mTime.tv_sec = t/1e6; mTime.tv_nsec = (t%(toadlet::uint64)1e6)*1e3;}
 		void setTimeNS(toadlet::uint64 t){mTime.tv_sec = t/1e9; mTime.tv_nsec = (t%(toadlet::uint64)1e9);}
@@ -33,11 +33,11 @@ class Time
 		static toadlet::uint64 nowUS(){Time now; return now.getUS();}
 		static toadlet::uint64 nowNS(){Time now; return now.getNS();}
 
-		static toadlet::uint64 calcDiffNS(Time const &tm1,Time const &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e9+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec); }
-		static toadlet::uint64 calcDiffUS(Time const &tm1,Time const &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e6+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec)/1.0e3; }
-		static toadlet::uint64 calcDiffMS(Time const &tm1,Time const &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e3+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec)/1.0e6; }
+		static toadlet::uint64 calcDiffNS(const Time &tm1, const Time &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e9+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec); }
+		static toadlet::uint64 calcDiffUS(const Time &tm1, const Time &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e6+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec)/1.0e3; }
+		static toadlet::uint64 calcDiffMS(const Time &tm1, const Time &tm2) { return (tm2.mTime.tv_sec-tm1.mTime.tv_sec)*1e3+(tm2.mTime.tv_nsec-tm1.mTime.tv_nsec)/1.0e6; }
 
-		bool operator > (Time const &t) const
+		bool operator > (const Time &t) const
 		{
 			if(mTime.tv_sec > t.mTime.tv_sec)
 				return true;
@@ -47,7 +47,7 @@ class Time
 				return false;
 		}
 
-		bool operator >= (Time const &t) const
+		bool operator >= (const Time &t) const
 		{
 			if(mTime.tv_sec > t.mTime.tv_sec)
 				return true;
@@ -57,7 +57,7 @@ class Time
 				return false;
 		}
 
-		bool operator < (Time const &t) const
+		bool operator < (const Time &t) const
 		{
 			if(mTime.tv_sec < t.mTime.tv_sec)
 				return true;
@@ -67,7 +67,7 @@ class Time
 				return false;
 		}
 
-		bool operator <= (Time const &t) const
+		bool operator <= (const Time &t) const
 		{
 			if(mTime.tv_sec < t.mTime.tv_sec)
 				return true;
@@ -77,7 +77,7 @@ class Time
 				return false;
 		}
 
-		bool operator == (Time const &t) const {return mTime.tv_nsec == t.mTime.tv_nsec && mTime.tv_sec == t.mTime.tv_sec;}
+		bool operator == (const Time &t) const {return mTime.tv_nsec == t.mTime.tv_nsec && mTime.tv_sec == t.mTime.tv_sec;}
 
 	protected:
 		timespec mTime;

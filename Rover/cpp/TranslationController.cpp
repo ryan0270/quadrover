@@ -108,7 +108,7 @@ namespace Quadrotor {
 		mNewMeasAvailable = false;
 	}
 
-	Array2D<double> TranslationController::calcControlPID(Array2D<double> const &error,double dt)
+	Array2D<double> TranslationController::calcControlPID(const Array2D<double> &error,double dt)
 	{
 		Array2D<double> accelCmd(3,1);
 		mMutex_data.lock();
@@ -130,7 +130,7 @@ namespace Quadrotor {
 		return accelCmd;
 	}
 
-	Array2D<double> TranslationController::calcControlSystem(Array2D<double> const &error, double dt)
+	Array2D<double> TranslationController::calcControlSystem(const Array2D<double> &error, double dt)
 	{
 		Array2D<double> accelCmd(3,1);
 		if(mCntlSys.isInitialized())
@@ -160,7 +160,7 @@ namespace Quadrotor {
 		mMutex_data.unlock();
 	}
 
-	void TranslationController::onNewCommTransGains(Collection<float> const &gains)
+	void TranslationController::onNewCommTransGains(const Collection<float> &gains)
 	{
 		mMutex_data.lock();
 		for(int i=0; i<3; i++)
@@ -185,7 +185,7 @@ namespace Quadrotor {
 		reset();
 	}
 
-	void TranslationController::onNewCommDesState(Collection<float> const &data)
+	void TranslationController::onNewCommDesState(const Collection<float> &data)
 	{
 		Array2D<double> desPos(3,1), desVel(3,1), desAcc(3,1);
 		for(int i=0; i<3; i++)
@@ -219,7 +219,7 @@ namespace Quadrotor {
 		reset();
 	}
 
-	void TranslationController::onNewCommSendControlSystem(Collection<tbyte> const &buff)
+	void TranslationController::onNewCommSendControlSystem(const Collection<tbyte> &buff)
 	{
 		mMutex_data.lock();
 		mCntlSys.deserialize(buff);
@@ -236,7 +236,7 @@ namespace Quadrotor {
 		Log::alert(str);
 	}
 
-	void TranslationController::onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel)
+	void TranslationController::onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel)
 	{
 		mMutex_state.lock();
 		for(int i=0; i<3; i++)

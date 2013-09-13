@@ -509,7 +509,7 @@ namespace Quadrotor{
 		mMutex_attData.unlock();
 	}
 
-	void SensorManager::passNewImage(cv::Mat const *imageYUV, int64 const &timestampNS)
+	void SensorManager::passNewImage(const cv::Mat *imageYUV, int64 c constonst &timestampNS)
 	{
 //		if(mLastImageTime.getMS() != 0)
 //		{

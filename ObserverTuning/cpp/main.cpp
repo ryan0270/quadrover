@@ -130,15 +130,6 @@ int main(int argv, char* argc[])
 	Array2D<double> mRotPhoneToCam = transpose(mRotCamToPhone);
 	Array2D<double> mRotViconToPhone = matmult(mRotQuadToPhone, mRotViconToQuad);
 
-//Array2D<double> r0 = createRotMat_ZYX(0.2, -0.1, 0.5);
-//SO3 s(r0);
-//Array2D<double> angles = s.getAnglesZYX();
-//Array2D<double> r1 = createRotMat_ZYX(angles[2][0], angles[1][0], angles[0]][0]);
-//printArray("angles:\t",angles);
-//printArray("r0:\n", r0);
-//printArray("r1:\n", r1);
-//return 0;
-
 	// make the same workers as I use in Rover
 	TranslationController mTranslationController;
 	AttitudeThrustController mAttitudeThrustController;
@@ -236,22 +227,31 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-//	cv::namedWindow("dispFeatureFind",1);
-//	cv::namedWindow("dispTargetFind",1);
-//	cv::moveWindow("dispFeatureFind",0,0);
-//	cv::moveWindow("dispTargetFind",321,0);
+	cv::namedWindow("dispFeatureFind",1);
+	cv::namedWindow("dispTargetFind",1);
+	cv::moveWindow("dispFeatureFind",0,0);
+	cv::moveWindow("dispTargetFind",321,0);
 
 	class MyFeatureFinderListener : public FeatureFinderListener
 	{
 		public:
-		void onFeaturesFound(shared_ptr<ImageFeatureData> const &data)
+		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 		{ /*imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);*/}
 	} myFeatureFinderListener;
 	mFeatureFinder.addListener(&myFeatureFinderListener);
 
+	class MyTargetFinderListener : public TargetFinderListener
+	{
+		public:
+		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+		{};
+
+	} myTargetFinderListener;
+	mTargetFinder.addListener(&myTargetFinderListener);
+
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
-	double gainP = 1;//4;
+	double gainP = 4;
 	double gainI = 0.0004;//0.004;
 	double accelWeight = 1;
 	double magWeight = 0;

@@ -31,7 +31,7 @@ class FeatureFinderListener
 	public:
 		virtual ~FeatureFinderListener(){};
 
-		virtual void onFeaturesFound(shared_ptr<ImageFeatureData> const &data)=0;
+		virtual void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)=0;
 };
 
 class FeatureFinder : public CommManagerListener,
@@ -48,7 +48,7 @@ class FeatureFinder : public CommManagerListener,
 
 //		bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
-		void setVisionParams(toadlet::egg::Collection<int> const &p);
+		void setVisionParams(const toadlet::egg::Collection<int> &p);
 		void setStartTime(Time t){mStartTime = t;}
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
@@ -63,16 +63,16 @@ class FeatureFinder : public CommManagerListener,
 		void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
 
 		// CommManagerListener functions
-		void onNewCommVisionFeatureFindQualityLevel(float const &qLevel);
-		void onNewCommVisionFeatureFindSeparationDistance(int const &sepDist);
-		void onNewCommVisionFeatureFindFASTThreshold(int const &thresh);
-		void onNewCommVisionFeatureFindPointCntTarget(int const &target);
-		void onNewCommVisionFeatureFindFASTAdaptRate(float const &r);
+		void onNewCommVisionFeatureFindQualityLevel(float qLevel);
+		void onNewCommVisionFeatureFindSeparationDistance(int sepDist);
+		void onNewCommVisionFeatureFindFASTThreshold(int thresh);
+		void onNewCommVisionFeatureFindPointCntTarget(int target);
+		void onNewCommVisionFeatureFindFASTAdaptRate(float r);
 		void onNewCommMotorOn(){mIsMotorOn = true;};
 		void onNewCommMotorOff(){mIsMotorOn = false;};
 		
 		// SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<IData> const &data);
+		void onNewSensorUpdate(const shared_ptr<IData> &data);
 
 	protected:
 		bool mUseIbvs;
@@ -109,12 +109,12 @@ class FeatureFinder : public CommManagerListener,
 
 		int mThreadPriority, mScheduler;
 
-		static vector<cv::Point2f> findFeaturePoints(cv::Mat const &image, 
-															 double const &qualityLevel,
-															 double const &minDistance,
-															 int const &fastThreshold);
+		static vector<cv::Point2f> findFeaturePoints(const cv::Mat &image, 
+															 double qualityLevel,
+															 double minDistance,
+															 int fastThreshold);
 		static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
-		static void drawPoints(vector<cv::Point2f> const &points, cv::Mat &img);
+		static void drawPoints(const vector<cv::Point2f> &points, cv::Mat &img);
 
 };
 

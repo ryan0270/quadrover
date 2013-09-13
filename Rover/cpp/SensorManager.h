@@ -10,7 +10,7 @@ namespace Quadrotor{
 class SensorManagerListener
 {
 	public:
-	virtual void onNewSensorUpdate(shared_ptr<IData> const &data)=0;
+	virtual void onNewSensorUpdate(const shared_ptr<IData> &data)=0;
 };
 
 }}
@@ -74,7 +74,7 @@ class SensorManager : public Observer_AngularListener
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
 	// used to pass images in from Java
-	void passNewImage(cv::Mat const *image, int64 const &timestampNS);
+	void passNewImage(const cv::Mat *image, int64 c constonst &timestampNS);
 
 	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
 

@@ -25,7 +25,7 @@ class TranslationControllerListener
 	TranslationControllerListener(){};
 	virtual ~TranslationControllerListener(){};
 
-	virtual void onTranslationControllerAccelCmdUpdated(TNT::Array2D<double> const &accelCmd)=0;
+	virtual void onTranslationControllerAccelCmdUpdated(const TNT::Array2D<double> &accelCmd)=0;
 };
 
 class TranslationController : 	public Observer_TranslationalListener,
@@ -42,31 +42,31 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void shutdown();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	TNT::Array2D<double> const getDesiredState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mDesState.copy(); mMutex_data.unlock(); return tempState;}
-	TNT::Array2D<double> const getCurState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mCurState.copy(); mMutex_data.unlock(); return tempState;}
-	TNT::Array2D<double> const getErrorMemory(){mMutex_data.lock(); TNT::Array2D<double> tempInt = mErrInt.copy(); mMutex_data.unlock(); return tempInt;}
+	const TNT::Array2D<double> getDesiredState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mDesState.copy(); mMutex_data.unlock(); return tempState;}
+	const TNT::Array2D<double> getCurState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mCurState.copy(); mMutex_data.unlock(); return tempState;}
+	const TNT::Array2D<double> getErrorMemory(){mMutex_data.lock(); TNT::Array2D<double> tempInt = mErrInt.copy(); mMutex_data.unlock(); return tempInt;}
 
 	void calcControl();
 	void reset();
 
 	void setStartTime(Time t){mStartTime = t;}
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
-	void setRotViconToPhone(TNT::Array2D<double> const &rot){mRotViconToPhone.inject(rot);}
-	void setDesPosAccel(TNT::Array2D<double> const &a);
+	void setRotViconToPhone(const TNT::Array2D<double> &rot){mRotViconToPhone.inject(rot);}
+	void setDesPosAccel(const TNT::Array2D<double> &a);
 
 	void addListener(TranslationControllerListener* listener){mListeners.push_back(listener);}
 
 	// from CommManagerListener
-	void onNewCommTransGains(toadlet::egg::Collection<float> const &gains);
+	void onNewCommTransGains(const toadlet::egg::Collection<float> &gains);
 	void onNewCommMass(float m){mMass = m;}
-	void onNewCommDesState(toadlet::egg::Collection<float> const &data);
+	void onNewCommDesState(const toadlet::egg::Collection<float> &data);
 	void onNewCommSetDesiredPos();
 	void onNewCommMotorOn(){reset();}
 	void onNewCommMotorOff(){reset();}
-	void onNewCommSendControlSystem(Collection<tbyte> const &buff);
+	void onNewCommSendControlSystem(const Collection<tbyte> &buff);
 
 	// for Observer_TranslationalListener
-	void onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel);
+	void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel);
 
 	// for MotorInterfaceListener
 	void onMotorWarmupDone(){reset();Log::alert("Tran Controller Received motor warmup done");}
@@ -91,12 +91,12 @@ class TranslationController : 	public Observer_TranslationalListener,
 	static double constrain(double val, double minVal, double maxVal)
 	{ return min(maxVal, max(minVal, val)); }
 
-	TNT::Array2D<double> calcControlPID(TNT::Array2D<double> const &error, double dt);
+	TNT::Array2D<double> calcControlPID(const TNT::Array2D<double> &error, double dt);
 
 	// for the Hinf controller
 	ICSL::SystemModelLinear mCntlSys;
 	TNT::Array2D<double> mGainCntlSys;
-	TNT::Array2D<double> calcControlSystem(TNT::Array2D<double> const &error, double dt);
+	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
 
 	int mThreadPriority, mScheduler;
 };

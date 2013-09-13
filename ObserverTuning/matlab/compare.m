@@ -135,46 +135,46 @@ end
 
 %%
 if exist('tranState','var') && ~isempty(tranState)
-%   	figure(2); clf;
-% % 	set(gcf,'Units','Inches');
-% % 	curPos = get(gcf,'Position'); figSize = [6 4];
-% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 	mask = find( (viconStateTime > tranStateTime(1)) .* (viconStateTime <= tranStateTime(end) ) );
-% 	for i=1:6
-% 		subplot(2,3,i);		
-% 		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
-% 		plot(tranStateTime, tranState(i,:)); hold all
-% 		if i == 3 && ~isempty(mapHeight)
-% 			plot(mapHeightTime, mapHeight,'.'); hold all
-% 		elseif i>3 && ~isempty(mapVel)
-% 			plot(mapVelTime, mapVel(i-3,:), '.'); hold all
-% 		end
-% 		hold off
-% 
-% 		xlabel('Time [s]')
-% 		ylabel(tranStateLabels(i));
-% 	end
-% 	
-% 	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime,[],'extrap')';
-% 	start = max([find(abs(tranState(1,:)) > 0.05,1,'first') find(tranStateTime > mapVelTime(1),1,'first')]);
-% 	rmsErr = rms(viconStateTranInterp(7:12,start:end)'-tranState(:,start:end)')';
-% 	fprintf('Tran state rms err:\t');
-% 	for i=1:6
-% 		fprintf('%1.3f\t',rmsErr(i));
-% 	end
-% 	fprintf('\n');
-% 	
-% 	if ~isempty(mapVel)
-% 		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelTime,[],'extrap')';
-% 		rmsErrHeight = rms(viconStateMAPInterp(9,:)-mapHeight);
-% 		rmsErrVel = rms(viconStateMAPInterp(10:12,:)' - mapVel')';
-% 		fprintf('MAP vel rms err:\t');
-% 		fprintf('---\t---\t%1.3f\t',rmsErrHeight);
-% 		for i=1:3
-% 			fprintf('%1.3f\t',rmsErrVel(i));
-% 		end
-% 		fprintf('\n');
-% 	end
+  	figure(2); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	mask = find( (viconStateTime > tranStateTime(1)) .* (viconStateTime <= tranStateTime(end) ) );
+	for i=1:6
+		subplot(2,3,i);		
+		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
+		plot(tranStateTime, tranState(i,:)); hold all
+		if i == 3 && ~isempty(mapHeight)
+			plot(mapHeightTime, mapHeight,'.'); hold all
+		elseif i>3 && ~isempty(mapVel)
+			plot(mapVelTime, mapVel(i-3,:), '.'); hold all
+		end
+		hold off
+
+		xlabel('Time [s]')
+		ylabel(tranStateLabels(i));
+	end
+	
+	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime,[],'extrap')';
+	start = max([find(abs(tranState(1,:)) > 0.05,1,'first') find(tranStateTime > mapVelTime(1),1,'first')]);
+	rmsErr = rms(viconStateTranInterp(7:12,start:end)'-tranState(:,start:end)')';
+	fprintf('Tran state rms err:\t');
+	for i=1:6
+		fprintf('%1.3f\t',rmsErr(i));
+	end
+	fprintf('\n');
+	
+	if ~isempty(mapVel)
+		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelTime,[],'extrap')';
+		rmsErrHeight = rms(viconStateMAPInterp(9,:)-mapHeight);
+		rmsErrVel = rms(viconStateMAPInterp(10:12,:)' - mapVel')';
+		fprintf('MAP vel rms err:\t');
+		fprintf('---\t---\t%1.3f\t',rmsErrHeight);
+		for i=1:3
+			fprintf('%1.3f\t',rmsErrVel(i));
+		end
+		fprintf('\n');
+	end
 end
 
 %%

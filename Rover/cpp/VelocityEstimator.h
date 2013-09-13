@@ -13,7 +13,7 @@ class VelocityEstimatorListener
 	VelocityEstimatorListener(){};
 	virtual ~VelocityEstimatorListener(){};
 
-	virtual void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData)=0;
+	virtual void onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double> > &velData, const shared_ptr<Data<double> > &heightData)=0;
 };
 }}
 #endif
@@ -73,8 +73,8 @@ class VelocityEstimator : public FeatureFinderListener,
 	uint32 getLastVisionDelayTimeUS(){mMutex_data.lock(); uint32 temp=mLastDelayTimeUS; mMutex_data.unlock(); return temp;};
 
 	// for CommManagerListener
-	void onNewCommVelEstMeasCov(const float &measCov);
-	void onNewCommVelEstProbNoCorr(const float &probNoCorr);
+	void onNewCommVelEstMeasCov(float measCov);
+	void onNewCommVelEstProbNoCorr(float probNoCorr);
 
 	// for FeatureFinderListener
 	void onFeaturesFound(const shared_ptr<ImageFeatureData> &data);
@@ -99,8 +99,8 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	float mMeasCov, mProbNoCorr;
 
-	void doVelocityEstimate(shared_ptr<ImageFeatureData> oldFeatureData,
-							shared_ptr<ImageFeatureData> curFeatureData,
+	void doVelocityEstimate(const shared_ptr<ImageFeatureData> oldFeatureData,
+							const shared_ptr<ImageFeatureData> curFeatureData,
 							TNT::Array2D<double> &velEstOUT,
 							double &heightEstOUT,
 							double visionMeasCov,
@@ -109,14 +109,14 @@ class VelocityEstimator : public FeatureFinderListener,
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
 	static vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(const vector<cv::Point2f> &points, 
 														const Array2D<double> &mv, const Array2D<double> &Sv, 
-														const double &mz, const double &varz, 
-														const double &focalLength, const double &dt,
+														double mz, double varz, 
+														double focalLength, double dt,
 														const Array2D<double> &omega);
 	static Array2D<double> calcCorrespondence(const vector<pair<Array2D<double>, Array2D<double> > > &priorDistList, 
 										const vector<cv::Point2f> &curPointList, 
 										const Array2D<double> &Sn, 
 										const Array2D<double> &SnInv,
-										const float &probNoCorr);
+										float probNoCorr);
 	
 	static void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 							const vector<cv::Point2f> &prevPoints,
@@ -124,10 +124,10 @@ class VelocityEstimator : public FeatureFinderListener,
 							const Array2D<double> &C, // correspondence matrix
 							const Array2D<double> &mv, // velocity mean
 							const Array2D<double> &Sv, // velocity covariance
-							const double &mz, // height mean
-							const double &vz, // height variance
+							double mz, // height mean
+							double vz, // height variance
 							const Array2D<double> &Sn, // feature measurement covariance
-							const double &focalLength, const double &dt, const Array2D<double> &omega);
+							double focalLength, double dt, const Array2D<double> &omega);
 	
 	static void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 							const vector<cv::Point2f> &prevPoints,
@@ -135,10 +135,10 @@ class VelocityEstimator : public FeatureFinderListener,
 							const Array2D<double> &C, // correspondence matrix
 							const Array2D<double> &mv, // velocity mean
 							const Array2D<double> &Sv, // velocity covariance
-							const double &mz, // height mean
-							const double &vz, // height variance
+							double mz, // height mean
+							double vz, // height variance
 							const Array2D<double> &Sn, // feature measurement covariance
-							const double &focalLength, const double &dt, const Array2D<double> &omega,
+							double focalLength, double dt, const Array2D<double> &omega,
 							int maxPointCnt);
 	
 };

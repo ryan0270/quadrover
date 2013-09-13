@@ -31,7 +31,7 @@ class VideoMaker : 	public SensorManagerListener,
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 		// for SensorManagerListener
-		void onNewSensorUpdate(shared_ptr<IData> const &data);
+		void onNewSensorUpdate(const shared_ptr<IData> &data);
 
 		// from CommManagerListener
 		void onNewCommMotorOn(){mMotorOn = true;}

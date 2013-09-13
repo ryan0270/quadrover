@@ -615,7 +615,7 @@ void Rover::onNewCommLogClear()
 	Log::alert(String()+"Log cleared");
 }
 
-void Rover::onNewSensorUpdate(shared_ptr<IData> const &data)
+void Rover::onNewSensorUpdate(const shared_ptr<IData> &data)
 {
 	switch(data->type)
 	{
@@ -628,19 +628,19 @@ void Rover::onNewSensorUpdate(shared_ptr<IData> const &data)
 	}
 }
 
-//void Rover::onImageProcessed(shared_ptr<ImageMatchData> const &data)
+//void Rover::onImageProcessed(const shared_ptr<ImageMatchData> &data)
 //{
 //	mMutex_vision.lock();
 //	mImageMatchData = data;
 //	mMutex_vision.unlock();
 //}
 
-void Rover::onFeaturesFound(shared_ptr<ImageFeatureData> const &data)
+void Rover::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 {
 	mFeatureData = data;
 }
 
-void Rover::onTargetFound(shared_ptr<ImageTargetFindData> const &data)
+void Rover::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 {
 	mTargetData = data;
 }
