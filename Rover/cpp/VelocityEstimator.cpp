@@ -65,11 +65,8 @@ void VelocityEstimator::run()
 			curImageFeatureData = mLastImageFeatureData;
 			mNewImageDataAvailable = false;
 			
-//			if(oldImageFeatureData != NULL && curImageFeatureData != NULL)
-//			{ oldImageFeatureData->lock(); curImageFeatureData->lock();}
 			if(oldImageFeatureData != NULL && oldImageFeatureData->featurePoints.size() > 5 && curImageFeatureData->featurePoints.size() > 5)
 			{
-//				curImageFeatureData->unlock(); oldImageFeatureData->unlock();
 				mMutex_params.lock();
 				measCov = mMeasCov;
 				probNoCorr = mProbNoCorr;
@@ -79,26 +76,18 @@ void VelocityEstimator::run()
 				shared_ptr<DataVector<double>> velData(new DataVector<double>());
 				velData->data = velEst.copy();
 				velData->type = DATA_TYPE_MAP_VEL;
-//				curImageFeatureData->lock();
 				velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
-//				curImageFeatureData->unlock();
 
 				shared_ptr<Data<double>> heightData(new Data<double>());
 				heightData->data = heightEst;
 				heightData->type = DATA_TYPE_MAP_HEIGHT;
-//				curImageFeatureData->lock();
 				heightData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
-//				curImageFeatureData->unlock();
 
 				for(int i=0; i<mListeners.size(); i++)
-				{
 					mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
-				}
 
 				procTime = procTimer.getElapsedTimeNS()/1.0e9;
-//				curImageFeatureData->lock();
 				delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
-//				curImageFeatureData->unlock();
 				mMutex_data.lock();
 				mLastDelayTimeUS = delayTime*1.0e6;
 				mMutex_data.unlock();
@@ -120,8 +109,6 @@ void VelocityEstimator::run()
 					mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
 				}
 			}
-//			else if(oldImageFeatureData != NULL && curImageFeatureData != NULL)
-//			{curImageFeatureData->unlock(); oldImageFeatureData->unlock();}
 		}
 
 		System::msleep(1);
@@ -130,8 +117,8 @@ void VelocityEstimator::run()
 	mDone = true;
 }
 
-// See eqn 98 in the Feb 25, 2013 notes
-void VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> oldFeatureData,
+// See eqn 98 in the Feb 25, 2013 notes and Bayesian velocity paper
+bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> oldFeatureData,
 										   const shared_ptr<ImageFeatureData> curFeatureData,
 										   Array2D<double> &velEst, 
 										   double &heightEst,
@@ -145,39 +132,25 @@ void VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	Time curTime = curFeatureData->imageData->timestamp;
 	double dt = Time::calcDiffNS(oldTime, curTime)/1.0e9;
 
-//	float scale = 1.0; // for a 640x480 image
-//	if(curFeatureData->imageData->image->cols == 320)
-//		scale = 0.5;
 	cv::Point2f center;
 	center.x = curFeatureData->imageData->centerX;
 	center.y = curFeatureData->imageData->centerY;
 	float focalLength = curFeatureData->imageData->focalLength;
-//	oldFeatureData->unlock();
-//	curFeatureData->unlock();
 
 	// Get relevant state data
 	Array2D<double> oldState = mObsvTranslational->estimateStateAtTime(oldTime);
-//	Array2D<double> oldErrCov = mObsvTranslational->estimateErrCovAtTime(oldTime);
 	SO3 attOld = oldFeatureData->imageData->att;
 
 	Array2D<double> curState = mObsvTranslational->estimateStateAtTime(curTime);
 	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
 	SO3 attCur = curFeatureData->imageData->att;
 
-//	if(!attOld.isIdentity() || !attCur.isIdentity())
-//		Log::alert("Not identity");
-
-//	Array2D<double> attChange = matmult(transpose(attCur), attOld);
-//	Array2D<double> omega = logSO3(attChange, dt);
 	SO3 attChange = attCur.inv()*attOld;
 	Array2D<double> omega = attChange.log(dt).toVector();
 
-if(attChange.isIdentity())
-	Log::alert("We're not moving");
-
 	// Ignore this case since it means we're probably sitting on the ground
 	if(oldState[2][0] <= 0)
-		return;
+		return false;
 
 	curState = submat(curState,0,5,0,0);
 	curErrCov = submat(curErrCov,0,5,0,5);

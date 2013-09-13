@@ -204,13 +204,16 @@ int main(int argv, char* argc[])
 	addSensorManagerListener(&mObsvAngular);
 	addSensorManagerListener(&mObsvTranslational);
 
+	mMotorInterface.addListener(&mTranslationController);
+//	mMotorInterface.start();
+
 	uint32 logMask = 0;
 	logMask = LOG_FLAG_PC_UPDATES ;
 	logMask |= LOG_FLAG_STATE;
 //	logMask |= LOG_FLAG_STATE_DES;
 //	logMask |= LOG_FLAG_MOTORS;
 	logMask |= LOG_FLAG_OBSV_UPDATE;
-	logMask |= LOG_FLAG_OBSV_BIAS;
+//	logMask |= LOG_FLAG_OBSV_BIAS;
 //	logMask |= LOG_FLAG_MAGNOMETER;
 //	logMask |= LOG_FLAG_ACCEL;
 //	logMask |= LOG_FLAG_GYRO;
@@ -220,34 +223,30 @@ int main(int argv, char* argc[])
 //	logMask |= LOG_FLAG_PHONE_TEMP;
 	mQuadLogger.setStartTime(startTime);
 	
-	mMotorInterface.addListener(&mTranslationController);
-//	mMotorInterface.start();
-
-
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-	cv::namedWindow("dispFeatureFind",1);
-	cv::namedWindow("dispTargetFind",1);
-	cv::moveWindow("dispFeatureFind",0,0);
-	cv::moveWindow("dispTargetFind",321,0);
-
-	class MyFeatureFinderListener : public FeatureFinderListener
-	{
-		public:
-		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-		{ /*imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);*/}
-	} myFeatureFinderListener;
-	mFeatureFinder.addListener(&myFeatureFinderListener);
-
-	class MyTargetFinderListener : public TargetFinderListener
-	{
-		public:
-		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-		{};
-
-	} myTargetFinderListener;
-	mTargetFinder.addListener(&myTargetFinderListener);
+//	cv::namedWindow("dispFeatureFind",1);
+//	cv::namedWindow("dispTargetFind",1);
+//	cv::moveWindow("dispFeatureFind",0,0);
+//	cv::moveWindow("dispTargetFind",321,0);
+//
+//	class MyFeatureFinderListener : public FeatureFinderListener
+//	{
+//		public:
+//		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
+//		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
+//	} myFeatureFinderListener;
+//	mFeatureFinder.addListener(&myFeatureFinderListener);
+//
+//	class MyTargetFinderListener : public TargetFinderListener
+//	{
+//		public:
+//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
+//
+//	} myTargetFinderListener;
+//	mTargetFinder.addListener(&myTargetFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -278,11 +277,11 @@ int main(int argv, char* argc[])
 	}
 
 	Collection<float> measVar;
-	measVar.push_back(0.0004);
-	measVar.push_back(0.0004);
-	measVar.push_back(0.0004);
-	measVar.push_back(0.05*4);
-	measVar.push_back(0.05*4);
+	measVar.push_back(0.0001);
+	measVar.push_back(0.0001);
+	measVar.push_back(0.0001);
+	measVar.push_back(0.2);
+	measVar.push_back(0.2);
 	measVar.push_back(0.05);
 	mObsvTranslational.onNewCommKalmanMeasVar(measVar);
 
@@ -297,6 +296,11 @@ int main(int argv, char* argc[])
 	dynVar.push_back(0.01);
 	dynVar.push_back(0.01);
 	mObsvTranslational.onNewCommKalmanDynVar(dynVar);
+
+	// TODO: Need to add Leash dialogs to send this over wifi
+	mObsvTranslational.onNewCommViconCameraOffset(0, 0.035, 0.087);
+	mObsvTranslational.onNewCommTargetNominalLength(0.210);
+	mObsvTranslational.onNewCommMAPHeightMeasCov(0.1*0.1);
 
 	float xBias, yBias, zBias;
 	switch(dataSet)
@@ -367,9 +371,12 @@ int main(int argv, char* argc[])
 	default_random_engine randGenerator;
 	normal_distribution<double> stdGaussDist(0,1);
 	Array2D<double> noiseStd(12,1,0.0);
-	noiseStd[6][0] = 0.000;
-	noiseStd[7][0] = 0.000;
-	noiseStd[8][0] = 0.000;
+	noiseStd[6][0] = 0.010;
+	noiseStd[7][0] = 0.010;
+	noiseStd[8][0] = 0.010;
+
+	for(int i=0; i<commManagerListeners.size(); i++)
+		commManagerListeners[i]->onNewCommUseIbvs(true);
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";

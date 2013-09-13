@@ -99,7 +99,7 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	float mMeasCov, mProbNoCorr;
 
-	void doVelocityEstimate(const shared_ptr<ImageFeatureData> oldFeatureData,
+	bool doVelocityEstimate(const shared_ptr<ImageFeatureData> oldFeatureData,
 							const shared_ptr<ImageFeatureData> curFeatureData,
 							TNT::Array2D<double> &velEstOUT,
 							double &heightEstOUT,

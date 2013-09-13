@@ -4,8 +4,8 @@
 namespace ICSL {
 namespace Quadrotor {
 //using namespace std;
-//using namespace TNT;
-//using namespace ICSL::Constants;
+using namespace TNT;
+using namespace ICSL::Constants;
 
 Rover::Rover() : 
 	mRotViconToQuad(3,3,0.0), 
@@ -627,13 +627,6 @@ void Rover::onNewSensorUpdate(const shared_ptr<IData> &data)
 			break;
 	}
 }
-
-//void Rover::onImageProcessed(const shared_ptr<ImageMatchData> &data)
-//{
-//	mMutex_vision.lock();
-//	mImageMatchData = data;
-//	mMutex_vision.unlock();
-//}
 
 void Rover::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 {
