@@ -37,6 +37,7 @@ set (LIBS
 # Source files
 set (SRC ${SRC}
 	./cpp/main.cpp
+	${ROVER_DIR}/cpp/Rotation.cpp
 	${ROVER_DIR}/cpp/CommManager.cpp
 	${ROVER_DIR}/cpp/FeatureFinder.cpp
 	${ROVER_DIR}/cpp/MotorInterface.cpp

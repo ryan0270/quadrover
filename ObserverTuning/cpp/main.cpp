@@ -130,6 +130,15 @@ int main(int argv, char* argc[])
 	Array2D<double> mRotPhoneToCam = transpose(mRotCamToPhone);
 	Array2D<double> mRotViconToPhone = matmult(mRotQuadToPhone, mRotViconToQuad);
 
+//Array2D<double> r0 = createRotMat_ZYX(0.2, -0.1, 0.5);
+//SO3 s(r0);
+//Array2D<double> angles = s.getAnglesZYX();
+//Array2D<double> r1 = createRotMat_ZYX(angles[2][0], angles[1][0], angles[0]][0]);
+//printArray("angles:\t",angles);
+//printArray("r0:\n", r0);
+//printArray("r1:\n", r1);
+//return 0;
+
 	// make the same workers as I use in Rover
 	TranslationController mTranslationController;
 	AttitudeThrustController mAttitudeThrustController;

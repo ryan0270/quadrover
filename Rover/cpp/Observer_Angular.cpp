@@ -15,8 +15,6 @@ Observer_Angular::Observer_Angular() :
 //	mMagnometer(3,1,0.0),
 	mAccelDirNom(3,1,0.0),
 	mMagDirNom(3,1,0.0),
-	mCurAttitude(3,1,0.0),
-	mCurRotMat(3,3,0.0),
 	mCurVel(3,1,0.0)
 {
 	mNewAccelReady = mNewGyroReady = mNewMagReady = false;
@@ -82,8 +80,7 @@ void Observer_Angular::shutdown()
 void Observer_Angular::reset()
 {
 	mMutex_data.lock();
-	mCurRotMat.inject(createIdentity((double)3));
-	mCurAttitude = extractEulerAngles(mCurRotMat);
+	mCurAttitude.reset();
 	mCurVel.inject(Array2D<double>(3,1,0.0));
 
 //	mGyroBias = Array2D<double>(3,1,0.0);
@@ -209,7 +206,7 @@ void Observer_Angular::run()
 	Log::alert("------------------ QuadLogger runner dead --------------------");
 }
 
-void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<double>> const &accelData, shared_ptr<DataVector<double>> const &magData)
+void Observer_Angular::doInnovationUpdate(double dt, const shared_ptr<DataVector<double>> &accelData, const shared_ptr<DataVector<double>> &magData)
 {
 	accelData->lock(); Array2D<double> accel = accelData->dataCalibrated.copy(); accelData->unlock();
 	magData->lock(); Array2D<double> mag = magData->dataCalibrated.copy(); magData->unlock();
@@ -225,12 +222,12 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 	Array2D<double> vI = cross(-1.0*uI, mMagDirNom);
 	vI = 1.0/norm2(vI)*vI;
 
-	Array2D<double> transR = transpose(mCurRotMat);
+	SO3 transR = mCurAttitude.inv();
 	if(norm2(accel-mAccelDirNom*GRAVITY) < 3)
 //	if( abs(norm2(accel)-GRAVITY) < 2 && accel[2][0] > 0)
 	{
-		mInnovation = mAccelWeight*cross(uB, matmult(transR, uI));
-		mInnovation += mMagWeight*cross(vB, matmult(transR, vI));
+		mInnovation = mAccelWeight*cross(uB, transR*uI);
+		mInnovation += mMagWeight*cross(vB, transR*vI);
 	}
 //	else
 //		mInnovation = mMagWeight*cross(vB, matmult(transR, vI));
@@ -241,7 +238,7 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 		double k = mExtraDirsWeight.back();
 		Array2D<double> dMeas = mExtraDirsMeasured.back();
 		Array2D<double> dInertial = mExtraDirsInertial.back();
-		mInnovation += k*cross(dMeas, matmult(transR, dInertial));
+		mInnovation += k*cross(dMeas, transR*dInertial);
 
 		mExtraDirsWeight.pop_back();
 		mExtraDirsMeasured.pop_back();
@@ -265,7 +262,7 @@ void Observer_Angular::doInnovationUpdate(double dt, shared_ptr<DataVector<doubl
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer
-void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double>> const &gyroData)
+void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<double>> &gyroData)
 {
 	if(dt > 0.1)
 		return; // too long of a period to integrate over
@@ -287,13 +284,12 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double>> co
 	if( velMag > 1e-10 )
 		A = createIdentity((double)3)+ s/velMag*gyro_x + (1-c)/velMag/velMag*gyro_x_sq;
 
-	mCurRotMat = matmult(mCurRotMat,A);
-	mCurAttitude = extractEulerAngles(mCurRotMat);
+	mCurAttitude = mCurAttitude*SO3(A);
 
 	shared_ptr<DataVector<double>> attData(new DataVector<double> );
 	attData->type = DATA_TYPE_ATTITUDE;
 	attData->timestamp.setTime(gyroTime);
-	attData->data = mCurAttitude.copy();
+	attData->data = mCurAttitude.getAnglesZYX();
 
 	shared_ptr<DataVector<double>> velData(new DataVector<double> );
 	velData->type = DATA_TYPE_ANGULAR_VEL;
@@ -304,7 +300,7 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double>> co
 	shared_ptr<SO3Data<double>> rotData(new SO3Data<double>());
 	rotData->type = DATA_TYPE_SO3;
 	rotData->timestamp.setTime(gyroTime);
-	rotData->rotation.setRotMat(mCurRotMat);
+	rotData->rotation = mCurAttitude;
 	mSO3Buffer.push_back(rotData);
 	mMutex_SO3Buffer.unlock();
 
@@ -322,7 +318,7 @@ void Observer_Angular::doGyroUpdate(double dt, shared_ptr<DataVector<double>> co
 		mQuadLogger->addEntry(LOG_ID_CUR_ATT, logStr,LOG_FLAG_STATE);
 }
 
-Array2D<double> Observer_Angular::convert_so3toCoord(Array2D<double> const &so3)
+Array2D<double> Observer_Angular::convert_so3toCoord(const Array2D<double> &so3)
 {
 	Array2D<double> SO3(3,1);
 	SO3[0][0] = so3[2][1];
@@ -332,7 +328,7 @@ Array2D<double> Observer_Angular::convert_so3toCoord(Array2D<double> const &so3)
 	return SO3;
 }
 
-Array2D<double> Observer_Angular::convert_coordToso3(Array2D<double> const &SO3)
+Array2D<double> Observer_Angular::convert_coordToso3(const Array2D<double> &SO3)
 {
 	Array2D<double> so3(3,3,0.0);
 	so3[1][2] = -(so3[2][1] = SO3[0][0]);
@@ -342,7 +338,7 @@ Array2D<double> Observer_Angular::convert_coordToso3(Array2D<double> const &SO3)
 	return so3;
 }
 
-Array2D<double> Observer_Angular::extractEulerAngles(Array2D<double> const &rotMat)
+Array2D<double> Observer_Angular::extractEulerAngles(const Array2D<double> &rotMat)
 {
 	Array2D<double> euler(3,1);
 	euler[0][0] = atan2(rotMat[2][1], rotMat[2][2]); // roll ... @TODO: this should be range checked
@@ -352,7 +348,7 @@ Array2D<double> Observer_Angular::extractEulerAngles(Array2D<double> const &rotM
 	return euler;
 }
 
-SO3 Observer_Angular::estimateAttAtTime(Time const &t)
+SO3 Observer_Angular::estimateAttAtTime(const Time &t)
 {
 	// TODO: Better SO3 interpolation
 	mMutex_SO3Buffer.lock();
@@ -368,11 +364,11 @@ SO3 Observer_Angular::estimateAttAtTime(Time const &t)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Thread safe data accessors
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-Array2D<double> Observer_Angular::getCurAttitude()
+SO3 Observer_Angular::getCurAttitude()
 {
-	Array2D<double> att;
+	SO3 att;
 	mMutex_data.lock();
-	att = mCurAttitude.copy();
+	att = mCurAttitude;
 	mMutex_data.unlock();
 
 	return att;
@@ -438,7 +434,7 @@ void Observer_Angular::setWeights(double accelWeight, double magWeight)
 	mMutex_data.unlock();
 }
 
-void Observer_Angular::addDirectionMeasurement(Array2D<double> const &dirMeas, Array2D<double> const &dirInertial, double weight)
+void Observer_Angular::addDirectionMeasurement(const Array2D<double> &dirMeas, const Array2D<double> &dirInertial, double weight)
 {
 	mMutex_data.lock();
 	mExtraDirsMeasured.push_back(dirMeas.copy());
@@ -451,8 +447,11 @@ void Observer_Angular::setYawZero()
 {
 	Array2D<double> temp;
 	mMutex_data.lock();
-	Array2D<double> rot = createRotMat(2, -mCurAttitude[2][0]);
-	mCurRotMat = matmult(rot, mCurRotMat);
+	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
+	double curYaw = curAngles[2][0];
+	SO3 rot( createRotMat(2, -curYaw) );
+//	mCurAttitude= rot*mCurAttitude;
+	mCurAttitude *= rot;
 	mMagData->lock(); Array2D<double> mag = mMagData->dataCalibrated; mMagData->unlock();
 //	mMagData->lock(); Array2D<double> mag = mMagData->data; mMagData->unlock();
 	mMagDirNom.inject(1.0/norm2(mag)*mag);
@@ -493,7 +492,7 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_GAINS_UPDATED, str,LOG_FLAG_PC_UPDATES);
 }
 
-void Observer_Angular::onNewCommNominalMag(Collection<float> const &nomMag)
+void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
 {
 	mMutex_data.lock();
 	for(int i=0; i<3; i++)
@@ -509,19 +508,21 @@ void Observer_Angular::onNewCommNominalMag(Collection<float> const &nomMag)
 	}
 }
 
-void Observer_Angular::onNewCommStateVicon(Collection<float> const &data)
+void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 {
 	mMutex_data.lock();
 	mYawVicon = -data[2];
 
-	Array2D<double> R1 = createRotMat(2,-mCurAttitude[2][0]);
-	Array2D<double> R2 = createRotMat(2,mYawVicon);
-	mCurRotMat = matmult(R2, matmult(R1, mCurRotMat));
-	mCurAttitude = extractEulerAngles(mCurRotMat);
+	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
+	double curYaw = curAngles[2][0];
+	SO3 R1(createRotMat(2,-curYaw));
+	SO3 R2(createRotMat(2,mYawVicon));
+//	mCurAttitude = R2*R1*mCurAttitude;
+	mCurAttitude *= R2*R1;
 	mMutex_data.unlock();
 }
 
-void Observer_Angular::onNewSensorUpdate(shared_ptr<IData> const &data)
+void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 {
 	switch(data->type)
 	{
