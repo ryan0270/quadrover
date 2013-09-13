@@ -706,7 +706,6 @@ Array2D<double> Rover::getAttitude()
 {
 	Array2D<double> att;
 	mMutex_observer.lock();
-// 	att = mObsvAngular.getCurAttitude();
 	att = mCurAtt.copy();
 	mMutex_observer.unlock();
 

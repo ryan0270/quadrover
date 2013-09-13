@@ -13,7 +13,7 @@ class Observer_AngularListener
 	public:
 	virtual ~Observer_AngularListener(){};
 
-	virtual void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)=0;
+	virtual void onObserver_AngularUpdated(shared_ptr<DataVector<double>> attData, shared_ptr<DataVector<double>> angularVelData)=0;
 };
 }}
 #endif
@@ -52,13 +52,13 @@ class Observer_Angular : public CommManagerListener,
 		Observer_Angular();
 		virtual ~Observer_Angular();
 
-		void doInnovationUpdate(double dt, shared_ptr<DataVector<double> > const &accelData, shared_ptr<DataVector<double> > const &magData);
-		void doGyroUpdate(double dt, shared_ptr<DataVector<double> > const &gyroData);
+		void doInnovationUpdate(double dt, const shared_ptr<DataVector<double>> &accelData, const shared_ptr<DataVector<double>> &magData);
+		void doGyroUpdate(double dt, const shared_ptr<DataVector<double>> &gyroData);
 
 		/*
 		 * @return current attitude in [roll pitch yaw]^T column vector format
 		 */
-		TNT::Array2D<double> getCurAttitude();
+		SO3 getCurAttitude();
 		TNT::Array2D<double> getCurVel();
 		TNT::Array2D<double> getBias();
 		TNT::Array2D<double> getLastGyro();
@@ -80,7 +80,7 @@ class Observer_Angular : public CommManagerListener,
 
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
-		void addDirectionMeasurement(TNT::Array2D<double> const &dirMeas, TNT::Array2D<double> const &dirInertial, double weight);
+		void addDirectionMeasurement(const TNT::Array2D<double> &dirMeas, const TNT::Array2D<double> &dirInertial, double weight);
 
 		void initialize();
 		void start(){ thread th(&Observer_Angular::run, this); th.detach(); }
@@ -89,13 +89,13 @@ class Observer_Angular : public CommManagerListener,
 
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-		SO3 estimateAttAtTime(Time const &t);
+		SO3 estimateAttAtTime(const Time &t);
 
 		// CommManagerListener functions
 		void onNewCommObserverReset();
 		void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight);
-		void onNewCommNominalMag(toadlet::egg::Collection<float> const &nomMag);
-		void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
+		void onNewCommNominalMag(const toadlet::egg::Collection<float> &nomMag);
+		void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
 		
 		// for SensorManagerListener
 		void onNewSensorUpdate(shared_ptr<IData> const &data);
@@ -107,11 +107,12 @@ class Observer_Angular : public CommManagerListener,
 		double mGainP, mGainI, mGainB, mIntSat;
 		double mAccelWeight, mMagWeight;
 		TNT::Array2D<double> mGyroBias, mInnovation;
-		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
-//		TNT::Array2D<double> mAccel, mGyro, mMagnometer;
-		shared_ptr<DataVector<double> >  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
+//		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
+		TNT::Array2D<double> mCurVel;
+		SO3 mCurAttitude;
+		shared_ptr<DataVector<double>>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
 		TNT::Array2D<double> mAccelDirNom, mMagDirNom;
-		toadlet::egg::Collection<TNT::Array2D<double> > mExtraDirsMeasured, mExtraDirsInertial;
+		toadlet::egg::Collection<TNT::Array2D<double>> mExtraDirsMeasured, mExtraDirsInertial;
 		toadlet::egg::Collection<double> mExtraDirsWeight;
 
 		TNT::Array2D<double> convert_so3toCoord(TNT::Array2D<double> const &so3);

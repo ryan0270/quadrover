@@ -72,6 +72,7 @@ badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.h
 badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/Time.h
 badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.h
+badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.cpp
 args main.cpp main.cpp
 edit main.cpp
 set splitbelow splitright
