@@ -77,6 +77,9 @@ class Observer_Translational : public Observer_AngularListener,
 	void onNewCommKalmanDynVar(const toadlet::egg::Collection<float> &var);
 	void onNewCommUseIbvs(bool useIbvs);
 	void onNewCommAccelBias(float xBias, float yBias, float zBias);
+	void onNewCommViconCameraOffset(float x, float y, float z);
+	void onNewCommTargetNominalLength(float length);
+	void onNewCommMAPHeightMeasCov(float cov);
 
 	// for SensorManagerListener
 	void onNewSensorUpdate(const shared_ptr<IData> &data);
@@ -95,6 +98,10 @@ class Observer_Translational : public Observer_AngularListener,
 	bool mUseViconPos, mUseCameraPos;
 	bool mHaveFirstVicon;
 	Time mStartTime;
+
+	double mMAPHeightMeasCov;
+	double mTargetNominalLength;
+	TNT::Array2D<double> mViconCameraOffset;
 
 	TNT::Array2D<double> mRotViconToPhone;
 	QuadLogger *mQuadLogger;
@@ -139,13 +146,13 @@ class Observer_Translational : public Observer_AngularListener,
 											    TNT::Array2D<double> &state, 
 											    TNT::Array2D<double> &errCov);
 
-	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
+	SO3 mRotCamToPhone, mRotPhoneToCam;
 
 	int mThreadPriority, mScheduler;
 
 	vector<list<shared_ptr<IData>> *> mDataBuffers;
 	list<shared_ptr<DataVector<double>>> mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
-	list<shared_ptr<DataVector<double>>> mViconVelBuffer, mCameraVelBuffer, mOpticFlowVelBuffer, mMapVelBuffer;
+	list<shared_ptr<DataVector<double>>> mViconVelBuffer, mCameraVelBuffer, /*mOpticFlowVelBuffer,*/ mMapVelBuffer;
 	list<shared_ptr<Data<double>>> /*mHeightDataBuffer,*/ mMapHeightBuffer;
 	list<shared_ptr<DataVector<double>>> mRawAccelDataBuffer, mGravityDirDataBuffer;
 	list<shared_ptr<IData>> mNewEventsBuffer;
@@ -156,9 +163,6 @@ class Observer_Translational : public Observer_AngularListener,
 
 	bool mUseIbvs;
 
-	TNT::Array2D<double> mViconCameraOffset;
-
-//	Time applyData(const shared_ptr<IData> &data);
 	Time applyData(list<shared_ptr<IData>> &events);
 };
 

@@ -59,6 +59,9 @@ class CommManagerListener
 	virtual void onNewCommVelEstMeasCov(float measCov){};
 	virtual void onNewCommVelEstProbNoCorr(float probNoCorr){};
 	virtual void onNewCommSetDesiredPos(){};
+	virtual void onNewCommViconCameraOffset(float x, float y, float z){};
+	virtual void onNewCommTargetNominalLength(float length){};
+	virtual void onNewCommMAPHeightMeasCov(float cov){};
 }; // class CommManagerListener
 
 class CommManager 

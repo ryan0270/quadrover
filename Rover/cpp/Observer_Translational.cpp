@@ -34,9 +34,9 @@ using namespace TNT;
 		mDoMeasUpdate = false;
 		mNewViconPosAvailable = mNewCameraPosAvailable = false;
 
-		mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
-								 createRotMat(0,(double)PI));
-		mRotPhoneToCam = transpose(mRotCamToPhone);
+		mRotCamToPhone = SO3( matmult(createRotMat(2,-0.5*(double)PI),
+								      createRotMat(0,(double)PI)) );
+		mRotPhoneToCam = mRotCamToPhone.inv();
 
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -54,7 +54,7 @@ using namespace TNT;
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mViconVelBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mCameraPosBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mCameraVelBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mOpticFlowVelBuffer));
+//		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mOpticFlowVelBuffer));
 //		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mHeightBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapHeightBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapVelBuffer));
@@ -62,6 +62,13 @@ using namespace TNT;
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mGravityDirDataBuffer));
 		
 		mHaveFirstVicon = false;
+
+		mMAPHeightMeasCov = 0.01*0.01;
+
+		mTargetNominalLength = 0.210;
+		mViconCameraOffset[0][0] = 0;
+		mViconCameraOffset[1][0] = 0;
+		mViconCameraOffset[2][0] = 0;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -558,6 +565,26 @@ using namespace TNT;
 		Log::alert(String()+"accel bias updated:\t"+xBias+"\t"+yBias+"\t"+zBias);
 	}
 
+	void Observer_Translational::onNewCommViconCameraOffset(float x, float y, float z)
+	{
+		mViconCameraOffset[0][0] = x;
+		mViconCameraOffset[1][0] = y;
+		mViconCameraOffset[2][0] = z;
+		Log::alert(String()+"Vicon--Camera offset updated:\t"+x+"\t"+y+"\t"+z);
+	}
+
+	void Observer_Translational::onNewCommTargetNominalLength(float length)
+	{
+		mTargetNominalLength = length;
+		Log::alert(String()+"Target nominal length updated:\t"+length);
+	}
+
+	void Observer_Translational::onNewCommMAPHeightMeasCov(float cov)
+	{
+		mMAPHeightMeasCov = cov;
+		Log::alert(String()+"MAP Height meas cov updated:\t"+cov);
+	}
+
 	void Observer_Translational::onNewSensorUpdate(const shared_ptr<IData> &data)
 	{
 		switch(data->type)
@@ -582,11 +609,12 @@ using namespace TNT;
 		}
 	}
 
-	void Observer_Translational::onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double>> &velData, const shared_ptr<Data<double>> &heightData)
+	void Observer_Translational::onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double>> &velData,
+																 const shared_ptr<Data<double>> &heightData)
 	{
 		mMutex_events.lock();
 		mNewEventsBuffer.push_back(velData);
-		mNewEventsBuffer.push_back(heightData);
+//		mNewEventsBuffer.push_back(heightData);
 		mMutex_events.unlock();
 	}
 
@@ -605,56 +633,47 @@ using namespace TNT;
 		mLastCameraPosTime.setTime();
 		mMutex_posTime.unlock();
 
-		// assuming 320x240 images
 		double f = data->imageData->focalLength;
 		double cx = data->imageData->centerX;
 		double cy = data->imageData->centerY;
 
 		// rotation compensation
-//		Array2D<double> att = data->imageData->att.copy();
-//		//		Array2D<double> R = createRotMat_ZYX(att[2][0], att[1][0], att[0][0]);
-//		Array2D<double> R = createIdentity(3.0);
-//		//		Array2D<double> R_T = transpose(R);
-//
-//		Array2D<double> p(3,1);
-//		p[0][0] = -(data->target->meanCenter.x - cx);
-//		p[1][0] = -(data->target->meanCenter.y - cy);
-//		p[2][0] = -f;
-//		p = matmult(R, matmult(mRotCamToPhone, p));
-//
-//		// Now estimate the pos
-//		double avgLength = 0;
-//		for(int i=0; i<data->target->squareData[0]->lineLengths.size(); i++)
-//			avgLength += data->target->squareData[0]->lineLengths[i];
-//		avgLength /= data->target->squareData[0]->lineLengths.size();
-//
-//
-//		double nomLength =  0.21;
-//		Array2D<double> pos(3,1);
-//		pos[2][0] = nomLength/avgLength*f;
-//		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
-//		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
-//
-//		Array2D<double> viconOffset(3,1);
-//		viconOffset[0][0] = 0.750;
-//		viconOffset[1][0] = 0.691;
-//		viconOffset[2][0] = 0.087;
-//
-//		pos = pos+viconOffset;
-//
-//		shared_ptr<DataVector<double>> posData(new DataVector<double>());
-//		posData->type = DATA_TYPE_CAMERA_POS;
-//		posData->timestamp.setTime(data->imageData->timestamp);
-//		posData->data = pos.copy();
-//
-//		mMutex_events.lock();
-//		mNewEventsBuffer.push_back(posData);
-//		mMutex_events.unlock();
-//
-//		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_TARGET_ESTIMATED_POS+"\t";
-//		for(int i=0; i<pos.dim1(); i++)
-//			str = str+pos[i][0]+"\t";
-//		mQuadLogger->addEntry(str, LOG_FLAG_CAM_RESULTS);
+		SO3 att = data->imageData->att;
+		SO3 attChange = att*mRotCamToPhone;
+
+		Array2D<double> p(3,1);
+		p[0][0] = -(data->target->meanCenter.x - cx);
+		p[1][0] = -(data->target->meanCenter.y - cy);
+		p[2][0] = -f;
+		p = attChange*mRotCamToPhone*p;
+
+		// Now estimate the pos
+		double avgLength = 0;
+		for(int i=0; i<data->target->squareData[0]->lineLengths.size(); i++)
+			avgLength += data->target->squareData[0]->lineLengths[i];
+		avgLength /= data->target->squareData[0]->lineLengths.size();
+
+		double nomLength =  0.21;
+		Array2D<double> pos(3,1);
+		pos[2][0] = mTargetNominalLength/avgLength*f;
+		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
+		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
+
+		pos = pos+mViconCameraOffset;
+//printArray("att:\t",att.getRotMat());
+		shared_ptr<DataVector<double>> posData(new DataVector<double>());
+		posData->type = DATA_TYPE_CAMERA_POS;
+		posData->timestamp.setTime(data->imageData->timestamp);
+		posData->data = pos.copy();
+
+		mMutex_events.lock();
+		mNewEventsBuffer.push_back(posData);
+		mMutex_events.unlock();
+
+		String str = String();
+		for(int i=0; i<pos.dim1(); i++)
+			str = str+pos[i][0]+"\t";
+		mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, str, LOG_FLAG_CAM_RESULTS);
 	}
 
 	Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
@@ -684,15 +703,6 @@ using namespace TNT;
 				case DATA_TYPE_CAMERA_POS:
 					mCameraPosBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
 					break;
-				case DATA_TYPE_VICON_VEL:
-					mViconVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-					break;
-				case DATA_TYPE_CAMERA_VEL:
-					mCameraVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-					break;
-				case DATA_TYPE_OPTIC_FLOW_VEL:
-					mOpticFlowVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
-					break;
 				case DATA_TYPE_MAP_VEL:
 					mMapVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
 					break;
@@ -715,8 +725,9 @@ using namespace TNT;
 		}
 
 		// now we have to rebuild the state and errcov history
-		list<shared_ptr<DataVector<double>>>::iterator posIter, velIter, opticFlowVelIter;
+		list<shared_ptr<DataVector<double>>>::iterator posIter, velIter;
 		list<shared_ptr<DataVector<double>>>::iterator rawAccelIter, gravDirIter;
+		list<shared_ptr<Data<double>>>::iterator mapHeightIter;
 		list<shared_ptr<DataVector<double>>> *posBuffer, *velBuffer;
 		if(mUseViconPos)
 		{
@@ -735,7 +746,7 @@ using namespace TNT;
 		velIter = IData::findIndexReverse(startTime, *velBuffer);
 		rawAccelIter = IData::findIndexReverse(startTime, mRawAccelDataBuffer);
 		gravDirIter = IData::findIndexReverse(startTime, mGravityDirDataBuffer);
-		opticFlowVelIter = IData::findIndexReverse(startTime, mOpticFlowVelBuffer); 
+		mapHeightIter = IData::findIndexReverse(startTime, mMapHeightBuffer); 
 		
 		// but I want the next one for these because
 		// they are not measurements
@@ -752,8 +763,8 @@ using namespace TNT;
 			events.insert(events.end(), ++rawAccelIter, mRawAccelDataBuffer.end());
 		if(gravDirIter != mGravityDirDataBuffer.end())
 			events.insert(events.end(), ++gravDirIter, mGravityDirDataBuffer.end());
-		if(opticFlowVelIter != mOpticFlowVelBuffer.end())
-			events.insert(events.end(), ++opticFlowVelIter, mOpticFlowVelBuffer.end());
+		if(mapHeightIter != mMapHeightBuffer.end())
+			events.insert(events.end(), ++mapHeightIter, mMapHeightBuffer.end());
 
 		if(events.size() == 0)
 		{
@@ -813,22 +824,11 @@ using namespace TNT;
 				case DATA_TYPE_VICON_POS:
 					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
 					break;
-				case DATA_TYPE_VICON_VEL:
-				case DATA_TYPE_CAMERA_VEL:
-//					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, 100*mVelMeasCov, mStateKF, mErrCovKF);
-					break;
 				case DATA_TYPE_MAP_VEL:
 					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_MAP_HEIGHT:
-					{
-double mHeightMeasCov = 0.01*0.01;
-					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(data)->data, mHeightMeasCov, mStateKF, mErrCovKF);
-					}
-					break;
-				case DATA_TYPE_OPTIC_FLOW_VEL:
-					Log::alert("Why do I have optic flow data?");
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
+					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(data)->data, mMAPHeightMeasCov, mStateKF, mErrCovKF);
 					break;
 				default:
 					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
