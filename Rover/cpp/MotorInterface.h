@@ -34,10 +34,9 @@ class MotorInterface
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	//TODO: Need to make this function const
 	bool isConnected() const;
 
-	void sendCommand(toadlet::egg::Collection<uint16> const &cmds);
+	void sendCommand(const toadlet::egg::Collection<uint16> &cmds);
 
 	void enableMotors(bool on);
 	bool isMotorsEnabled() const {return mMotorsEnabled;}
@@ -57,7 +56,7 @@ class MotorInterface
 	std::mutex mMutex_data, mMutex_socket;
 
 	// skips enabled/disabled checks
-	void sendCommandForced(toadlet::egg::Collection<uint16> const &cmds);
+	void sendCommandForced(const toadlet::egg::Collection<uint16> &cmds);
 
 	int mThreadPriority, mScheduler;
 

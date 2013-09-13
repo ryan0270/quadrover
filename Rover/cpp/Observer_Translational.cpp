@@ -248,7 +248,7 @@ using namespace TNT;
 		mDone = true;
 	}
 
-	void Observer_Translational::doTimeUpdateKF(Array2D<double> const &accel, double const &dt, Array2D<double> &state, Array2D<double> &errCov, Array2D<double> const &dynCov)
+	void Observer_Translational::doTimeUpdateKF(const Array2D<double> &accel, double dt, Array2D<double> &state, Array2D<double> &errCov, const Array2D<double> &dynCov)
 	{
 		if(dt > 1)
 		{
@@ -283,7 +283,7 @@ using namespace TNT;
 		}
 	}
 
-	void Observer_Translational::doMeasUpdateKF_posOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	void Observer_Translational::doMeasUpdateKF_posOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,3,0.0);
@@ -322,7 +322,7 @@ using namespace TNT;
 		}
 	}
 
-	void Observer_Translational::doMeasUpdateKF_velOnly(Array2D<double> const &meas, Array2D<double> const &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	void Observer_Translational::doMeasUpdateKF_velOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
 		if(norm2(meas) > 10)
 			return; // screwy measuremnt
@@ -365,7 +365,10 @@ using namespace TNT;
 
 	}
 
-	void Observer_Translational::doMeasUpdateKF_heightOnly(double const &meas, double const &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	void Observer_Translational::doMeasUpdateKF_heightOnly(double meas,
+														   double measCov,
+														   Array2D<double> &state,
+														   Array2D<double> &errCov)
 	{
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,1,0.0);
@@ -423,7 +426,7 @@ using namespace TNT;
 		mMutex_events.unlock();
 	}
 
-	void Observer_Translational::onNewCommStateVicon(Collection<float> const &data)
+	void Observer_Translational::onNewCommStateVicon(const Collection<float> &data)
 	{
 		Time now;
 		mMutex_posTime.lock();
@@ -473,7 +476,7 @@ using namespace TNT;
 		mNewViconPosAvailable = true;
 	}
 
-	void Observer_Translational::onNewCommKalmanMeasVar(Collection<float> const &var)
+	void Observer_Translational::onNewCommKalmanMeasVar(const Collection<float> &var)
 	{
 		assert(var.size() == mMeasCov.dim1());
 		mMutex_kfData.lock();
@@ -488,7 +491,7 @@ using namespace TNT;
 		Log::alert(s);
 	}
 
-	void Observer_Translational::onNewCommKalmanDynVar(Collection<float> const &var)
+	void Observer_Translational::onNewCommKalmanDynVar(const Collection<float> &var)
 	{
 		assert(var.size() == mDynCov.dim1());
 
@@ -555,7 +558,7 @@ using namespace TNT;
 		Log::alert(String()+"accel bias updated:\t"+xBias+"\t"+yBias+"\t"+zBias);
 	}
 
-	void Observer_Translational::onNewSensorUpdate(shared_ptr<IData> const &data)
+	void Observer_Translational::onNewSensorUpdate(const shared_ptr<IData> &data)
 	{
 		switch(data->type)
 		{
@@ -579,7 +582,7 @@ using namespace TNT;
 		}
 	}
 
-	void Observer_Translational::onVelocityEstimator_newEstimate(shared_ptr<DataVector<double>> const &velData, shared_ptr<Data<double>> const &heightData)
+	void Observer_Translational::onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double>> &velData, const shared_ptr<Data<double>> &heightData)
 	{
 		mMutex_events.lock();
 		mNewEventsBuffer.push_back(velData);
@@ -587,7 +590,7 @@ using namespace TNT;
 		mMutex_events.unlock();
 	}
 
-	void Observer_Translational::onTargetFound(shared_ptr<ImageTargetFindData> const &data)
+	void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 	{
 		if(data->target == NULL)
 			return;
@@ -869,7 +872,7 @@ double mHeightMeasCov = 0.01*0.01;
 		mMutex_kfData.unlock(); mMutex_events.unlock();
 	}
 
-	Array2D<double> Observer_Translational::estimateStateAtTime(Time const &t)
+	Array2D<double> Observer_Translational::estimateStateAtTime(const Time &t)
 	{
 		mMutex_kfData.lock();
 		Array2D<double> state = IData::interpolate(t, mStateBuffer);
@@ -878,7 +881,7 @@ double mHeightMeasCov = 0.01*0.01;
 		return state;
 	}
 
-	Array2D<double> Observer_Translational::estimateErrCovAtTime(Time const &t)
+	Array2D<double> Observer_Translational::estimateErrCovAtTime(const Time &t)
 	{
 		Array2D<double> errCov;
 		mMutex_kfData.lock();

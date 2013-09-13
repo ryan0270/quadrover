@@ -13,9 +13,9 @@ class Quaternion
 	Quaternion(const Quaternion &q);
 	Quaternion(Quaternion &&q) = default;
 	Quaternion(const TNT::Array2D<double> &m);
-	Quaternion(const double &w, const double &x, const double &y, const double &z);
+	Quaternion(double w, double x, double y, double z);
 
-	void set(const double &w, const double &x, const double &y, const double &z);
+	void set(double w, double x, double y, double z);
 	void set(const Quaternion &q);
 	void setFromRotMat(const TNT::Array2D<double> &m);
 	TNT::Array2D<double> toRotMat() const;
@@ -35,8 +35,8 @@ class Quaternion
 
 	// NOTE: lhs will LEFT-multiply the current rotation 
 	Quaternion& operator*=(const Quaternion &q);
-	Quaternion& operator*=(const double &s);
-	Quaternion& operator/=(const double &s);
+	Quaternion& operator*=(double s);
+	Quaternion& operator/=(double s);
 	Quaternion& operator+=(const Quaternion &q);
 	Quaternion& operator-=(const Quaternion &q);
 
@@ -51,19 +51,19 @@ inline Quaternion operator*(const Quaternion &lhs, Quaternion rhs)
 	return rhs;
 }
 
-inline Quaternion operator*(Quaternion q, const double &s)
+inline Quaternion operator*(Quaternion q, double s)
 {
 	q *= s;
 	return q;
 }
 
-inline Quaternion operator*(const double &s, Quaternion q)
+inline Quaternion operator*(double s, Quaternion q)
 {
 	q *= s;
 	return q;
 }
 
-inline Quaternion operator/(Quaternion q, const double &s)
+inline Quaternion operator/(Quaternion q, double s)
 {
 	q /= s;
 	return q;
@@ -112,7 +112,7 @@ class SO3
 	TNT::Array2D<double> getAnglesZYX() const;
 	Quaternion getQuaternion() const {return mQuaternion;}
 
-	SO3_LieAlgebra log(const double &theta) const;
+	SO3_LieAlgebra log(double theta) const;
 
 	bool isIdentity() const;
 
@@ -133,7 +133,7 @@ inline SO3 operator*(const SO3 &lhs, SO3 rhs)
 	return rhs;
 }
 
-// TODO: Probably faster doing direction quaternion multiplication
+// TODO: Probably faster to do direct quaternion multiplication
 // but I'm not sure the exact math for that yet
 template <class T>
 inline TNT::Array2D<T> operator*(const SO3 &lhs, const TNT::Array2D<T> &v)

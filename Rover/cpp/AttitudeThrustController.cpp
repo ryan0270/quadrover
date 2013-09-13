@@ -172,7 +172,7 @@ namespace Quadrotor {
 		mDoControl = true;
 	}
 	
-	void AttitudeThrustController::onTranslationControllerAccelCmdUpdated(Array2D<double> const &accelCmd)
+	void AttitudeThrustController::onTranslationControllerAccelCmdUpdated(const Array2D<double> &accelCmd)
 	{
 		double acc = norm2(accelCmd);
 		if(abs(acc) > 1e-3)
@@ -252,7 +252,7 @@ namespace Quadrotor {
 		Log::alert(String()+"Torque scaling set to "+k);
 	}
 
-	void AttitudeThrustController::onNewCommMotorTrim(int const trim[4])
+	void AttitudeThrustController::onNewCommMotorTrim(const int trim[4])
 	{
 		mPcIsConnected = true;
 		mMutex_data.lock();
@@ -276,7 +276,7 @@ namespace Quadrotor {
 		mMutex_data.unlock();
 	}
 
-	void AttitudeThrustController::onNewCommAttitudeGains(Collection<float> const &gains)
+	void AttitudeThrustController::onNewCommAttitudeGains(const Collection<float> &gains)
 	{
 		mPcIsConnected = true;
 		mMutex_data.lock();

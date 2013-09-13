@@ -184,10 +184,10 @@ void FeatureFinder::run()
 	mFinished = true;
 }
 
-vector<cv::Point2f> FeatureFinder::findFeaturePoints(cv::Mat const &image, 
-													 double const &qualityLevel,
-													 double const &minDistance,
-													 int const &fastThreshold)
+vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image, 
+													 double qualityLevel,
+													 double minDistance,
+													 int fastThreshold)
 {
 	vector<cv::KeyPoint> tempKp1;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
@@ -317,7 +317,7 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(cv::Mat const &image,
 		keyPoints.push_back(tempKp[i]);
 	}
 
-	sort(keyPoints.begin(), keyPoints.end(), [&](cv::KeyPoint const &a, cv::KeyPoint const &b){return a.response > b.response;});
+	sort(keyPoints.begin(), keyPoints.end(), [&](const cv::KeyPoint &a, const cv::KeyPoint &b){return a.response > b.response;});
 
 	vector<cv::Point2f> points;
 	cv::KeyPoint::convert(keyPoints, points);
@@ -419,7 +419,7 @@ void FeatureFinder::onNewSensorUpdate(shared_ptr<IData> const &data)
 	}
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindQualityLevel(float const &qLevel)
+void FeatureFinder::onNewCommVisionFeatureFindQualityLevel(float qLevel)
 {
 	mMutex_params.lock();
 	mQualityLevel = qLevel;
@@ -429,7 +429,7 @@ void FeatureFinder::onNewCommVisionFeatureFindQualityLevel(float const &qLevel)
 	Log::alert(String()+"Feature finder quality level set to " + qLevel);
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindSeparationDistance(int const &sepDist)
+void FeatureFinder::onNewCommVisionFeatureFindSeparationDistance(int sepDist)
 {
 	mMutex_params.lock();
 	mSepDist = sepDist;
@@ -439,7 +439,7 @@ void FeatureFinder::onNewCommVisionFeatureFindSeparationDistance(int const &sepD
 	Log::alert(String()+"Feature finder separation distance set to " + sepDist);
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindFASTThreshold(int const &thresh)
+void FeatureFinder::onNewCommVisionFeatureFindFASTThreshold(int thresh)
 {
 	mMutex_params.lock();
 	mFASTThreshold = thresh;
@@ -449,7 +449,7 @@ void FeatureFinder::onNewCommVisionFeatureFindFASTThreshold(int const &thresh)
 	Log::alert(String()+"Feature finder FAST threshold set to " + thresh);
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindPointCntTarget(int const &target)
+void FeatureFinder::onNewCommVisionFeatureFindPointCntTarget(int target)
 {
 	mMutex_params.lock();
 	mPointCntTarget = target;
@@ -459,7 +459,7 @@ void FeatureFinder::onNewCommVisionFeatureFindPointCntTarget(int const &target)
 	Log::alert(String()+"Feature finder point count target set to " + target);
 }
 
-void FeatureFinder::onNewCommVisionFeatureFindFASTAdaptRate(float const &r)
+void FeatureFinder::onNewCommVisionFeatureFindFASTAdaptRate(float r)
 {
 	mMutex_params.lock();
 	mFASTAdaptRate = r;

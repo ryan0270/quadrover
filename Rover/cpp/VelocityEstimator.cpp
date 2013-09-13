@@ -131,8 +131,8 @@ void VelocityEstimator::run()
 }
 
 // See eqn 98 in the Feb 25, 2013 notes
-void VelocityEstimator::doVelocityEstimate(shared_ptr<ImageFeatureData> oldFeatureData,
-										   shared_ptr<ImageFeatureData> curFeatureData,
+void VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> oldFeatureData,
+										   const shared_ptr<ImageFeatureData> curFeatureData,
 										   Array2D<double> &velEst, 
 										   double &heightEst,
 										   double visionMeasCov,
@@ -250,8 +250,8 @@ void VelocityEstimator::onFeaturesFound(const shared_ptr<ImageFeatureData> &data
 
 vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistributions(const vector<cv::Point2f> &points, 
 							const Array2D<double> &mv, const Array2D<double> &Sv, 
-							const double &mz, const double &varz, 
-							const double &focalLength, const double &dt, 
+							double mz, double varz, 
+							double focalLength, double dt, 
 							const Array2D<double> &omega)
 {
 	double mvx = mv[0][0];
@@ -377,7 +377,7 @@ Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<
 													  const vector<cv::Point2f> &curPointList,
 													  const Array2D<double> &Sn,
 													  const Array2D<double> &SnInv,
-													  const float &probNoCorr)
+													  float probNoCorr)
 {
 	int N1 = priorDistList.size();
 	int N2 = curPointList.size();
@@ -551,15 +551,15 @@ Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<
 }
 
 void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
-						vector<cv::Point2f> const &prevPoints,
-						vector<cv::Point2f> const &curPoints, 
-						Array2D<double> const &C, // correspondence matrix
-						Array2D<double> const &mv, // velocity mean
-						Array2D<double> const &Sv, // velocity covariance
-						double const &mz, // height mean
-						double const &vz, // height variance
-						Array2D<double> const &Sn, // feature measurement covariance
-						double const &focalLength, double const &dt, Array2D<double> const &omega)
+						const vector<cv::Point2f> &prevPoints,
+						const vector<cv::Point2f> &curPoints, 
+						const Array2D<double> &C, // correspondence matrix
+						const Array2D<double> &mv, // velocity mean
+						const Array2D<double> &Sv, // velocity covariance
+						double mz, // height mean
+						double vz, // height variance
+						const Array2D<double> &Sn, // feature measurement covariance
+						double focalLength, double dt, const Array2D<double> &omega)
 {
 	computeMAPEstimate(velMAP, covVel, heightMAP, prevPoints, curPoints, C, mv, Sv, mz, vz, Sn, focalLength, dt, omega, -1);
 }
@@ -570,10 +570,10 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 						const Array2D<double> &C, // correspondence matrix
 						const Array2D<double> &mv, // velocity mean
 						const Array2D<double> &Sv, // velocity covariance
-						const double &mz, // height mean
-						const double &vz, // height variance
+						double mz, // height mean
+						double vz, // height variance
 						const Array2D<double> &Sn, // feature measurement covariance
-						const double &focalLength, const double &dt, const Array2D<double> &omega,
+						double focalLength, double dt, const Array2D<double> &omega,
 						int maxPointCnt)
 {
 	int N1 = prevPoints.size();
@@ -583,8 +583,8 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 
 	if(N1 == 0 || N2 == 0)
 	{
-		velMAP = Array2D<double>(3,1,0.0);
-		heightMAP = 0;
+		velMAP = mv.copy();
+		heightMAP = mz;
 		return;
 	}
 
@@ -696,7 +696,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 	Array2D<double> s1 = transpose(s1_T);
 
 	// For easy evaluation of the objective function
-	auto scoreFunc = [&](const Array2D<double> &vel, const double &z){ return -0.5*(
+	auto scoreFunc = [&](const Array2D<double> &vel, double z){ return -0.5*(
 							s0
 							-2.0/z*matmultS(s1_T, vel)
 							+1.0/z/z*matmultS(transpose(vel), matmult(S2, vel))
@@ -705,7 +705,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 							);};
 
 	// unique solution for optimal vel, given z
-	auto solveVel =  [&](const double &z){
+	auto solveVel =  [&](double z){
 		if( maxPointCnt > 0)
 		{
 			s1 = ((double)min(maxPointCnt,N1))/N1*s1;
@@ -776,7 +776,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 	heightMAP = 0.5*(zL+zR);
 }
 
-void VelocityEstimator::onNewCommVelEstMeasCov(const float &measCov)
+void VelocityEstimator::onNewCommVelEstMeasCov(float measCov)
 {
 	mMutex_params.lock();
 	mMeasCov = measCov;
@@ -785,7 +785,7 @@ void VelocityEstimator::onNewCommVelEstMeasCov(const float &measCov)
 	Log::alert(String()+"Vision Meas Cov set to " + measCov);
 }
 
-void VelocityEstimator::onNewCommVelEstProbNoCorr(const float &probNoCorr)
+void VelocityEstimator::onNewCommVelEstProbNoCorr(float probNoCorr)
 {
 	mMutex_params.lock();
 	mProbNoCorr = probNoCorr;

@@ -37,7 +37,7 @@ class Observer_TranslationalListener
 	Observer_TranslationalListener(){};
 	virtual ~Observer_TranslationalListener(){};
 
-	virtual void onObserver_TranslationalUpdated(TNT::Array2D<double> const &pos, TNT::Array2D<double> const &vel)=0;
+	virtual void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel)=0;
 };
 
 class Observer_Translational : public Observer_AngularListener,
@@ -59,12 +59,12 @@ class Observer_Translational : public Observer_AngularListener,
 
 	void setStartTime(Time t);
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
-	void setRotViconToPhone(TNT::Array2D<double> const &rot){mRotViconToPhone.inject(rot);}
+	void setRotViconToPhone(const TNT::Array2D<double> &rot){mRotViconToPhone.inject(rot);}
 
 	void addListener(Observer_TranslationalListener *listener){mListeners.push_back(listener);}
 
-	TNT::Array2D<double> estimateStateAtTime(Time const &t);
-	TNT::Array2D<double> estimateErrCovAtTime(Time const &t);
+	TNT::Array2D<double> estimateStateAtTime(const Time &t);
+	TNT::Array2D<double> estimateErrCovAtTime(const Time &t);
 
 	bool isTargetFound(){return mHaveFirstCameraPos;}
 
@@ -72,20 +72,21 @@ class Observer_Translational : public Observer_AngularListener,
 	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
 
 	// from CommManagerListener
-	void onNewCommStateVicon(toadlet::egg::Collection<float> const &data);
-	void onNewCommKalmanMeasVar(toadlet::egg::Collection<float> const &var);
-	void onNewCommKalmanDynVar(toadlet::egg::Collection<float> const &var);
+	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
+	void onNewCommKalmanMeasVar(const toadlet::egg::Collection<float> &var);
+	void onNewCommKalmanDynVar(const toadlet::egg::Collection<float> &var);
 	void onNewCommUseIbvs(bool useIbvs);
 	void onNewCommAccelBias(float xBias, float yBias, float zBias);
 
 	// for SensorManagerListener
-	void onNewSensorUpdate(shared_ptr<IData> const &data);
+	void onNewSensorUpdate(const shared_ptr<IData> &data);
 
 	// for VelocityEstimatorListener
-	void onVelocityEstimator_newEstimate(shared_ptr<DataVector<double> > const &velData, shared_ptr<Data<double> > const &heightData);
+	void onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double>> &velData,
+										 const shared_ptr<Data<double>> &heightData);
 
 	// for TargetFinderListener
-	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
+	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
 
 	protected:
 	bool mRunning, mDone;
@@ -120,23 +121,23 @@ class Observer_Translational : public Observer_AngularListener,
 	std::mutex mMutex_kfData;
 	std::mutex mMutex_accel, mMutex_gravDir;
 
-	static void doTimeUpdateKF(TNT::Array2D<double> const &accel, 
-							   double const &dt,
+	static void doTimeUpdateKF(const TNT::Array2D<double> &accel, 
+							   double dt,
 							   TNT::Array2D<double> &state,
 							   TNT::Array2D<double> &errCov,
-							   TNT::Array2D<double> const &dynCov);
-	static void doMeasUpdateKF_velOnly(TNT::Array2D<double> const &meas,
-									   TNT::Array2D<double> const &measCov,
+							   const TNT::Array2D<double> &dynCov);
+	static void doMeasUpdateKF_velOnly(const TNT::Array2D<double> &meas,
+									   const TNT::Array2D<double> &measCov,
 									   TNT::Array2D<double> &state,
 									   TNT::Array2D<double> &errCov);
-	static void doMeasUpdateKF_posOnly(TNT::Array2D<double> const &meas,
-									   TNT::Array2D<double> const &measCov,
+	static void doMeasUpdateKF_posOnly(const TNT::Array2D<double> &meas,
+									   const TNT::Array2D<double> &measCov,
 									   TNT::Array2D<double> &state,
 									   TNT::Array2D<double> &errCov);
-	static void doMeasUpdateKF_heightOnly(double const &meas, 
-										  double const &measCov, 
-										  TNT::Array2D<double> &state, 
-										  TNT::Array2D<double> &errCov);
+	static void doMeasUpdateKF_heightOnly(double meas, 
+											    double measCov, 
+											    TNT::Array2D<double> &state, 
+											    TNT::Array2D<double> &errCov);
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
@@ -157,7 +158,7 @@ class Observer_Translational : public Observer_AngularListener,
 
 	TNT::Array2D<double> mViconCameraOffset;
 
-//	Time applyData(shared_ptr<IData> const &data);
+//	Time applyData(const shared_ptr<IData> &data);
 	Time applyData(list<shared_ptr<IData>> &events);
 };
 

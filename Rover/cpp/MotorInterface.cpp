@@ -105,7 +105,7 @@ using namespace toadlet::egg;
 		mShutdown = true;
 	}
 
-	void MotorInterface::sendCommand(Collection<uint16> const &cmds)
+	void MotorInterface::sendCommand(const Collection<uint16> &cmds)
 	{
 		if(!isConnected() || !mMotorsEnabled)
 			return;
@@ -127,7 +127,7 @@ using namespace toadlet::egg;
 		}
 	}
 
-	void MotorInterface::sendCommandForced(Collection<uint16> const &cmds)
+	void MotorInterface::sendCommandForced(const Collection<uint16> &cmds)
 	{
 		if(!isConnected())
 			return;
@@ -171,7 +171,6 @@ using namespace toadlet::egg;
 		}
 	}
 
-	// TODO: Need to make this function const
 	bool MotorInterface::isConnected() const
 	{
 		return (mSocket != NULL) && !mWaitingForConnection;

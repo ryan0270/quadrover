@@ -155,7 +155,7 @@ void CommManager::transmitUDP(Packet &pck)
 	}
 }
 
-void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 numChannels, uint32 type, vector<unsigned char> const &buff)
+void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 numChannels, uint32 type, const vector<unsigned char> &buff)
 {
 	if(!mConnected)
 		return;

@@ -99,9 +99,9 @@ class QuadLogger
 		void setDir(toadlet::egg::String dir){mDir = dir;}
 		void setFilename(toadlet::egg::String name){mFilename = name;}
 		void setMask(uint32 mask){mTypeMask = mask;}
-//		void addLine(toadlet::egg::String const &str, LogFlags type);
-		void addEntry(Time const &t, LogID const &id, toadlet::egg::String const &str, LogFlags type);
-		void addEntry(LogID const &id, toadlet::egg::String const &str, LogFlags type);
+//		void addLine(const toadlet::egg::String &str, LogFlags type);
+		void addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type);
+		void addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type);
 
 		void pause(){mPaused = true;}
 		void resume(){mPaused = false;}

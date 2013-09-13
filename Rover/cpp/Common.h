@@ -134,7 +134,7 @@ class Packet
 //		}
 	}
 
-	void deserialize(toadlet::egg::Collection<toadlet::tbyte> const &serial)
+	void deserialize(const toadlet::egg::Collection<toadlet::tbyte> &serial)
 	{
 		const toadlet::tbyte *p = &serial.front();
 		memcpy(&size, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);

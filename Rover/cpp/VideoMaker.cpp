@@ -73,7 +73,7 @@ using namespace toadlet::egg;
 		mDone = true;
 	}
 
-//	void VideoMaker::onImageProcessed(shared_ptr<ImageMatchData> const &data)
+//	void VideoMaker::onImageProcessed(const shared_ptr<ImageMatchData> &data)
 //	{
 ////		if( Time::calcDiffMS(mLastImageTime, data->imageData1->timestamp) > 100
 ////				&& mMotorOn
@@ -93,7 +93,7 @@ using namespace toadlet::egg;
 //		}
 //	}
 
-	void VideoMaker::onNewSensorUpdate(shared_ptr<IData> const &data)
+	void VideoMaker::onNewSensorUpdate(const shared_ptr<IData> &data)
 	{
 		if(data->type == DATA_TYPE_IMAGE && mMotorOn)
 		{

@@ -24,7 +24,7 @@ class AttitudeThrustControllerListener;
 //	AttitudeThrustControllerListener(){};
 //	virtual ~AttitudeThrustControllerListener(){};
 //
-//	virtual void onAttitudeThrustControllerCmdsSent(double const cmds[4])=0;
+//	virtual void onAttitudeThrustControllerCmdsSent(const double cmds[4])=0;
 //};
 
 class AttitudeThrustController : public CommManagerListener,
@@ -58,13 +58,13 @@ class AttitudeThrustController : public CommManagerListener,
 	void onCommConnectionLost();
 	void onNewCommMotorOn();
 	void onNewCommMotorOff();
-	void onNewCommMotorTrim(int const trim[4]);
+	void onNewCommMotorTrim(const int trim[4]);
 	void onNewCommMass(float m);
-	void onNewCommAttitudeGains(toadlet::egg::Collection<float> const &gains);
+	void onNewCommAttitudeGains(const toadlet::egg::Collection<float> &gains);
 	void onNewCommMotorArmLength(float l);
 
 	// for TranslationControllerListener
-	void onTranslationControllerAccelCmdUpdated(TNT::Array2D<double> const &accelCmd);
+	void onTranslationControllerAccelCmdUpdated(const TNT::Array2D<double> &accelCmd);
 
 	// for Observer_AngularListener
 	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
