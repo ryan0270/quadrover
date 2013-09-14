@@ -35,6 +35,12 @@ namespace Quadrotor {
 		mUseIbvs = false;
 
 		mLastTargetFindTime.setTimeMS(0);
+
+		mTargetData = NULL;
+
+		mRotCamToPhone = SO3( matmult(createRotMat(2,-0.5*(double)PI),
+								      createRotMat(0,(double)PI)) );
+		mRotPhoneToCam = mRotCamToPhone.inv();
 	}
 
 	TranslationController::~TranslationController()
@@ -89,7 +95,10 @@ namespace Quadrotor {
 
 		Array2D<double> accelCmd;
 
-		if(mUseIbvs && mLastTargetFindTime.getElapsedTimeMS() < 1.0e3)
+		mMutex_targetFindTime.lock();
+		Time lastTargetFindTime(mLastTargetFindTime);
+		mMutex_targetFindTime.unlock();
+		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 1.0e3)
 			accelCmd = calcControlIBVS(dt);
 		else
 			accelCmd = calcControlSystem(error,dt);
@@ -154,9 +163,74 @@ namespace Quadrotor {
 
 	Array2D<double> TranslationController::calcControlIBVS(double dt)
 	{
-		Array2D<double> accelCmd(3,1);
+		mMutex_target.lock();
+		shared_ptr<ImageTargetFindData> targetData = mTargetData;
+		mMutex_target.unlock();
 
-		accelCmd = Array2D<double>(3,1,0.0);
+		vector<cv::Point2f> imgPoints;
+		for(int i=0; i<targetData->target->squareData.size(); i++)
+			for(int j=0; j<targetData->target->squareData[i]->contour.size(); j++)
+				imgPoints.push_back(targetData->target->squareData[i]->contour[j]);
+
+		double f = targetData->imageData->focalLength;
+		double cx = targetData->imageData->centerX;
+		double cy = targetData->imageData->centerY;
+		vector<Array2D<double>> spherePoints;
+		Array2D<double> p(3,1), moment(3,1,0.0);
+		for(int i=0; i<imgPoints.size(); i++)
+		{
+			p[0][0] = (imgPoints[i].x - cx);
+			p[1][0] = (imgPoints[i].y - cy);
+			p[2][0] = f;
+
+			// Get it on the unit sphere
+			p.inject(1.0/norm2(p)*p);
+
+			moment += p;
+		}
+		moment = 1.0/norm2(moment)*moment;
+		moment = mRotCamToPhone*moment;
+
+		SO3 att = targetData->imageData->att;
+		Array2D<double> desDir(3,1);
+		desDir[0][0] = 0;
+		desDir[1][0] = 0;
+		desDir[2][0] = 1;
+		Array2D<double> desMoment = att.inv()*desDir;
+
+		mMutex_state.lock();
+		Array2D<double> visionErr = mCurState[2][0]*moment-mDesState[2][0]*desMoment;
+		mMutex_state.unlock();
+
+		Array2D<double> ibvsGainPos(3,1);
+		ibvsGainPos[0][0] = 1;
+		ibvsGainPos[1][0] = 1;
+		ibvsGainPos[2][0] = 1;
+		Array2D<double> desVel = ibvsGainPos*visionErr; // remember that * is element-wise
+
+		String logString;
+		for(int i=0; i<desVel.dim1(); i++)
+			logString = logString+desVel[i][0]+"\t";
+		mQuadLogger->addEntry(LOG_ID_VEL_CMD, logString, LOG_FLAG_STATE_DES);
+
+		Array2D<double> velErr(3,1);
+		velErr[0][0] = mCurState[3][0]-(mDesState[3][0]+desVel[0][0]);
+		velErr[1][0] = mCurState[4][0]-(mDesState[4][0]+desVel[1][0]);
+		velErr[2][0] = mCurState[5][0]-(mDesState[5][0]+desVel[2][0]);
+
+		Array2D<double> ibvsGainVel(3,1);
+		ibvsGainVel[0][0] = 1;
+		ibvsGainVel[1][0] = 1;
+		ibvsGainVel[2][0] = 1;
+		Array2D<double> accelCmd = ibvsGainVel*velErr;
+
+		// Decay so if we go a long time without finding the image
+		// we aren't trying to do too much
+		mMutex_targetFindTime.lock();
+		double t = mLastTargetFindTime.getElapsedTimeNS()/1.0e9;
+		mMutex_targetFindTime.unlock();
+		double decayRate = 1;
+		accelCmd = exp(-decayRate*t)*accelCmd;
 
 		accelCmd[2][0] += GRAVITY;
 		return accelCmd;
@@ -262,7 +336,16 @@ namespace Quadrotor {
 
 	void TranslationController::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 	{
-		mLastTargetFindTime.setTime();
+		if(data->target != NULL)
+		{
+			mMutex_target.lock();
+			mTargetData = data;
+			mMutex_target.unlock();
+
+			mMutex_targetFindTime.lock();
+			mLastTargetFindTime.setTime();
+			mMutex_targetFindTime.unlock();
+		}
 	}
 
 } // namespace Quadrotor

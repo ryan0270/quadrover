@@ -224,27 +224,27 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-	cv::namedWindow("dispFeatureFind",1);
-	cv::namedWindow("dispTargetFind",1);
-	cv::moveWindow("dispFeatureFind",0,0);
-	cv::moveWindow("dispTargetFind",321,0);
-
-	class MyFeatureFinderListener : public FeatureFinderListener
-	{
-		public:
-		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
-	} myFeatureFinderListener;
-	mFeatureFinder.addListener(&myFeatureFinderListener);
-
-	class MyTargetFinderListener : public TargetFinderListener
-	{
-		public:
-		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
-
-	} myTargetFinderListener;
-	mTargetFinder.addListener(&myTargetFinderListener);
+//	cv::namedWindow("dispFeatureFind",1);
+//	cv::namedWindow("dispTargetFind",1);
+//	cv::moveWindow("dispFeatureFind",0,0);
+//	cv::moveWindow("dispTargetFind",321,0);
+//
+//	class MyFeatureFinderListener : public FeatureFinderListener
+//	{
+//		public:
+//		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
+//		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
+//	} myFeatureFinderListener;
+//	mFeatureFinder.addListener(&myFeatureFinderListener);
+//
+//	class MyTargetFinderListener : public TargetFinderListener
+//	{
+//		public:
+//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
+//
+//	} myTargetFinderListener;
+//	mTargetFinder.addListener(&myTargetFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -562,7 +562,7 @@ int main(int argv, char* argc[])
 							data->image = imageIter->second;
 
 							SO3 att = mObsvAngular.estimateAttAtTime( data->timestamp );
-							data->att = SO3( mRotCamToPhone )*att;
+							data->att = att;
 
 							shared_ptr<cv::Mat> gray(new cv::Mat());
 							cv::cvtColor(*(data->image), *gray, CV_BGR2GRAY);
