@@ -278,8 +278,8 @@ int main(int argv, char* argc[])
 	measVar.push_back(0.0001);
 	measVar.push_back(0.0001);
 	measVar.push_back(0.0001);
-	measVar.push_back(0.2);
-	measVar.push_back(0.2);
+	measVar.push_back(0.0005);
+	measVar.push_back(0.0005);
 	measVar.push_back(0.05);
 	mObsvTranslational.onNewCommKalmanMeasVar(measVar);
 
