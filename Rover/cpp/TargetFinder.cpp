@@ -359,6 +359,46 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &ca
 				bestSet = candidateSets[c];
 			}
 		}
+
+		// make sure squares are sorted from largest to smallest
+
+		// Order the points for consistency
+		// This target has some symmetry so it assumes that 
+		// yaw doesn't change much
+		double targetAngle = bestSet->squareData[0]->angle;
+		for(int i=0; i<bestSet->squareData.size(); i++)
+		{
+			shared_ptr<Rect> rect = bestSet->squareData[i];
+			vector<double> angles(rect->contour.size());
+			for(int j=0; j<angles.size(); j++)
+			{
+				cv::Point2f d = rect->contour[j] - rect->center;
+				float a = atan2(d.y,d.x) - targetAngle;
+				if(a < 0) a += 2*PI;
+				angles[j] = a;
+			}
+
+			vector<int> indices(rect->contour.size());
+			for(int j=0; j<indices.size(); j++)
+				indices[j] = j;
+			sort(indices.begin(), indices.end(), [&](int i1, int i2) { return angles[i1] < angles[i2]; });
+
+			vector<double> tempAngles(angles.size());
+			vector<cv::Point> tempContourInt(indices.size());
+			vector<cv::Point2f> tempContour(indices.size());
+			vector<double> tempLengths(indices.size());
+			for(int j=0; j<indices.size(); j++)
+			{
+				tempAngles[j] = angles[indices[j]];
+				tempContourInt[j] = rect->contourInt[indices[j]];
+				tempContour[j] = rect->contour[indices[j]];
+				tempLengths[j] = rect->lineLengths[indices[j]];
+			}
+			tempAngles.swap(angles);
+			tempContourInt.swap(rect->contourInt);
+			tempContour.swap(rect->contour);
+			tempLengths.swap(rect->lineLengths);
+		}
 	}
 
 	return bestSet;
@@ -370,44 +410,14 @@ void TargetFinder::drawTarget(cv::Mat &image, const shared_ptr<RectGroup> &targe
 	{
 		const cv::Point *p = &target->squareData[i]->contourInt[0];
 		int n = (int)target->squareData[i]->contourInt.size();
-		polylines(image, &p, &n, 1, true, cv::Scalar(255,0,0), 1, CV_AA);
+		polylines(image, &p, &n, 1, true, cv::Scalar(255,0,0), 2, CV_AA);
+
+		cv::Scalar colors[] {cv::Scalar(0,0,255), cv::Scalar(0,255,0), cv::Scalar(0,255,255), cv::Scalar(255,0,255)};
+		for(int j=0; j<target->squareData[i]->contour.size(); j++)
+			circle(image, target->squareData[i]->contour[j], 4, colors[j], -1);
 	}
 }
 
-//void TargetFinder::drawPoints(const vector<cv::Point2f> &points, cv::Mat &image)
-//{
-//	if(points.size() == 0)
-//		return;
-//	cv::Point2f p1;
-//	for(int i=0; i<points.size(); i++)
-//	{
-//		p1 = points[i];
-// 		circle(image,p1,3,cv::Scalar(0,255,0),-1);
-//	}
-//}
-
-//void TargetFinder::enableIbvs(bool enable)
-//{
-//	mUseIbvs = enable;
-//	if(mUseIbvs)
-//	{
-//		Log::alert("Turning IBVS on");
-//		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
-//		mMutex_logger.lock();
-//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
-//		mMutex_logger.unlock();
-//		mFirstImageProcessed = false;
-//	}
-//	else
-//	{
-//		Log::alert("Turning IBVS off");
-//		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
-//		mMutex_logger.lock();
-//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
-//		mMutex_logger.unlock();
-//		mFirstImageProcessed = false;
-//	}
-//}
 
 void TargetFinder::onNewSensorUpdate(const shared_ptr<IData> &data)
 {

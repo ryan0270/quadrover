@@ -71,42 +71,45 @@ void VelocityEstimator::run()
 				measCov = mMeasCov;
 				probNoCorr = mProbNoCorr;
 				mMutex_params.unlock();
-				doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
+				bool success = doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
 
-				shared_ptr<DataVector<double>> velData(new DataVector<double>());
-				velData->data = velEst.copy();
-				velData->type = DATA_TYPE_MAP_VEL;
-				velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
-
-				shared_ptr<Data<double>> heightData(new Data<double>());
-				heightData->data = heightEst;
-				heightData->type = DATA_TYPE_MAP_HEIGHT;
-				heightData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
-
-				for(int i=0; i<mListeners.size(); i++)
-					mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
-
-				procTime = procTimer.getElapsedTimeNS()/1.0e9;
-				delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
-				mMutex_data.lock();
-				mLastDelayTimeUS = delayTime*1.0e6;
-				mMutex_data.unlock();
-
-				if(mQuadLogger != NULL)
+				if(success)
 				{
-					logString = String();
-					for(int i=0; i<velEst.dim1(); i++)
-						logString = logString + velEst[i][0] + "\t";
-					mQuadLogger->addEntry(LOG_ID_MAP_VEL,logString,LOG_FLAG_CAM_RESULTS);
+					shared_ptr<DataVector<double>> velData(new DataVector<double>());
+					velData->data = velEst.copy();
+					velData->type = DATA_TYPE_MAP_VEL;
+					velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
 
-					logString = String() + heightEst;
-					mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT,logString,LOG_FLAG_CAM_RESULTS);
+					shared_ptr<Data<double>> heightData(new Data<double>());
+					heightData->data = heightEst;
+					heightData->type = DATA_TYPE_MAP_HEIGHT;
+					heightData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
 
-					logString = String()+procTime;
-					mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME,logString,LOG_FLAG_CAM_RESULTS);
+					for(int i=0; i<mListeners.size(); i++)
+						mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
 
-					logString = String()+ delayTime;
-					mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
+					procTime = procTimer.getElapsedTimeNS()/1.0e9;
+					delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
+					mMutex_data.lock();
+					mLastDelayTimeUS = delayTime*1.0e6;
+					mMutex_data.unlock();
+
+					if(mQuadLogger != NULL)
+					{
+						logString = String();
+						for(int i=0; i<velEst.dim1(); i++)
+							logString = logString + velEst[i][0] + "\t";
+						mQuadLogger->addEntry(LOG_ID_MAP_VEL,logString,LOG_FLAG_CAM_RESULTS);
+
+						logString = String() + heightEst;
+						mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT,logString,LOG_FLAG_CAM_RESULTS);
+
+						logString = String()+procTime;
+						mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME,logString,LOG_FLAG_CAM_RESULTS);
+
+						logString = String()+ delayTime;
+						mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
+					}
 				}
 			}
 		}
@@ -145,7 +148,6 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
 	SO3 attCur = curFeatureData->imageData->att;
 
-//	SO3 attChange = attCur.inv()*attOld;
 	SO3 attChange = attCur*attOld.inv();
 	Array2D<double> omega = attChange.log(dt).toVector();
 
@@ -208,6 +210,8 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 
 	velEst.inject(vel);
 	heightEst = z;
+
+	return true;
 }
 
 void VelocityEstimator::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)

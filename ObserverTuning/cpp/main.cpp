@@ -171,7 +171,6 @@ int main(int argv, char* argc[])
 	mObsvTranslational.initialize();
 	mObsvTranslational.addListener(&mTranslationController);
 	mObsvAngular.addListener(&mObsvTranslational);
-//	mObsvTranslational.start();
 	addCommManagerListener(&mObsvTranslational);
 
 	mFeatureFinder.initialize();
@@ -186,6 +185,7 @@ int main(int argv, char* argc[])
 	mTargetFinder.setQuadLogger(&mQuadLogger);
 	addSensorManagerListener(&mTargetFinder);
 	mTargetFinder.addListener(&mObsvTranslational);
+	mTargetFinder.addListener(&mTranslationController);
 	addCommManagerListener(&mTargetFinder);
 	mTargetFinder.start();
 
@@ -208,7 +208,7 @@ int main(int argv, char* argc[])
 	uint32 logMask = 0;
 	logMask = LOG_FLAG_PC_UPDATES ;
 	logMask |= LOG_FLAG_STATE;
-//	logMask |= LOG_FLAG_STATE_DES;
+	logMask |= LOG_FLAG_STATE_DES;
 //	logMask |= LOG_FLAG_MOTORS;
 	logMask |= LOG_FLAG_OBSV_UPDATE;
 //	logMask |= LOG_FLAG_OBSV_BIAS;
@@ -224,27 +224,27 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-//	cv::namedWindow("dispFeatureFind",1);
-//	cv::namedWindow("dispTargetFind",1);
-//	cv::moveWindow("dispFeatureFind",0,0);
-//	cv::moveWindow("dispTargetFind",321,0);
-//
-//	class MyFeatureFinderListener : public FeatureFinderListener
-//	{
-//		public:
-//		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-//		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
-//	} myFeatureFinderListener;
-//	mFeatureFinder.addListener(&myFeatureFinderListener);
-//
-//	class MyTargetFinderListener : public TargetFinderListener
-//	{
-//		public:
-//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-//		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
-//
-//	} myTargetFinderListener;
-//	mTargetFinder.addListener(&myTargetFinderListener);
+	cv::namedWindow("dispFeatureFind",1);
+	cv::namedWindow("dispTargetFind",1);
+	cv::moveWindow("dispFeatureFind",0,0);
+	cv::moveWindow("dispTargetFind",321,0);
+
+	class MyFeatureFinderListener : public FeatureFinderListener
+	{
+		public:
+		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
+		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
+	} myFeatureFinderListener;
+	mFeatureFinder.addListener(&myFeatureFinderListener);
+
+	class MyTargetFinderListener : public TargetFinderListener
+	{
+		public:
+		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
+
+	} myTargetFinderListener;
+	mTargetFinder.addListener(&myTargetFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -324,6 +324,15 @@ int main(int argv, char* argc[])
 
 	mVelocityEstimator.onNewCommVelEstMeasCov(15);
 	mVelocityEstimator.onNewCommVelEstProbNoCorr(0.0005);
+
+	SystemModelLinear sys;
+	sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
+	vector<tbyte> buff1;
+	sys.serialize(buff1);
+	Collection<tbyte> buff(buff1.size());
+	for(int i=0; i<buff.size(); i++)
+		buff[i] = buff1[i];
+	mTranslationController.onNewCommSendControlSystem(buff);
 
 	mQuadLogger.setMask(logMask);
 	mQuadLogger.setDir(dataDir.c_str());
@@ -413,8 +422,9 @@ int main(int argv, char* argc[])
 				mVelocityEstimator.setStartTime(startTime);
 				mQuadLogger.setStartTime(startTime);
 
-				mObsvTranslational.start();
 				mQuadLogger.start();
+				mObsvTranslational.start();
+				mTranslationController.start();
 				cout << "Time: " << time << endl;
 			}
 			

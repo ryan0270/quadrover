@@ -266,9 +266,9 @@ class Rect
 		p1 = contour[maxIndex];
 		p2 = contour[(maxIndex+1)%4];
 		angle = atan2(p2.y-p1.y, p2.x-p1.x);
-		while(angle < -PI/2.0)
-			angle += PI;
-		while(angle > PI/2.0)
+		while(angle < 0)
+			angle += PI; // yes, I really do mean PI and not 2*PI
+		while(angle > PI)
 			angle -= PI;
 	}
 
