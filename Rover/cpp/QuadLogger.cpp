@@ -234,6 +234,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_TARGET_ACQUIRED="+LOG_ID_TARGET_ACQUIRED+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_TARGET_LOST="+LOG_ID_TARGET_LOST+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_ACCEL_CMD="+LOG_ID_ACCEL_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_VEL_CMD="+LOG_ID_VEL_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}

@@ -639,13 +639,13 @@ using namespace TNT;
 
 		// rotation compensation
 		SO3 att = data->imageData->att;
-		SO3 attChange = att*mRotCamToPhone;
 
 		Array2D<double> p(3,1);
-		p[0][0] = -(data->target->meanCenter.x - cx);
-		p[1][0] = -(data->target->meanCenter.y - cy);
-		p[2][0] = -f;
-		p = attChange*mRotCamToPhone*p;
+		p[0][0] = data->target->meanCenter.x - cx;
+		p[1][0] = data->target->meanCenter.y - cy;
+		p[2][0] = f;
+		p = att.inv()*mRotCamToPhone*p;
+		p = -1.0*p; // to get our current position instead of the target's
 
 		// Now estimate the pos
 		double avgLength = 0;
@@ -660,7 +660,6 @@ using namespace TNT;
 		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
 
 		pos = pos+mViconCameraOffset;
-//printArray("att:\t",att.getRotMat());
 		shared_ptr<DataVector<double>> posData(new DataVector<double>());
 		posData->type = DATA_TYPE_CAMERA_POS;
 		posData->timestamp.setTime(data->imageData->timestamp);

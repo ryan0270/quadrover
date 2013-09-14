@@ -13,6 +13,7 @@
 #include "CommManager.h"
 #include "Observer_Translational.h"
 #include "MotorInterface.h"
+#include "Rotation.h"
 
 #include "toadlet/egg.h"
 
@@ -91,7 +92,9 @@ class TranslationController : 	public Observer_TranslationalListener,
 	toadlet::egg::Mutex mMutex_data, mMutex_state;
 
 	Time mStartTime, mLastControlTime;
+
 	Time mLastTargetFindTime;
+	std::mutex mMutex_targetFindTime;
 
 	Collection<TranslationControllerListener*> mListeners;
 
@@ -108,6 +111,11 @@ class TranslationController : 	public Observer_TranslationalListener,
 	TNT::Array2D<double> calcControlIBVS(double dt);
 
 	int mThreadPriority, mScheduler;
+
+	shared_ptr<ImageTargetFindData> mTargetData;
+	std::mutex mMutex_target;
+
+	SO3 mRotPhoneToCam, mRotCamToPhone;
 };
 
 } // namespace Quadrotor

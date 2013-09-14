@@ -19,13 +19,6 @@ namespace ICSL {
 namespace Quadrotor{
 
 class AttitudeThrustControllerListener;
-//class AttitudeThrustControllerListener
-//{
-//	AttitudeThrustControllerListener(){};
-//	virtual ~AttitudeThrustControllerListener(){};
-//
-//	virtual void onAttitudeThrustControllerCmdsSent(const double cmds[4])=0;
-//};
 
 class AttitudeThrustController : public CommManagerListener,
 								public TranslationControllerListener,
