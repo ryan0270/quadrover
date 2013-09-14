@@ -31,6 +31,10 @@ namespace Quadrotor {
 
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+		mUseIbvs = false;
+
+		mLastTargetFindTime.setTimeMS(0);
 	}
 
 	TranslationController::~TranslationController()
@@ -85,7 +89,10 @@ namespace Quadrotor {
 
 		Array2D<double> accelCmd;
 
-		accelCmd = calcControlSystem(error,dt);
+		if(mUseIbvs && mLastTargetFindTime.getElapsedTimeMS() < 1.0e3)
+			accelCmd = calcControlIBVS(dt);
+		else
+			accelCmd = calcControlSystem(error,dt);
 //		accelCmd = calcControlPID(error,dt);
 
 		for(int i=0; i<mListeners.size(); i++)
@@ -94,15 +101,10 @@ namespace Quadrotor {
 		// Logging
 		if(mQuadLogger != NULL)
 		{
-			String s1 = String();
-			for(int i=0; i<desState.dim1(); i++)
-				s1 = s1+desState[i][0]+"\t";
-			mQuadLogger->addEntry(Time(),LOG_ID_DES_TRANS_STATE,s1,LOG_FLAG_STATE_DES);
-
-//			String s2 = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_CUR_TRANS_STATE+"\t";
-//			for(int i=0; i<curState.dim1(); i++)
-//				s2 = s2+curState[i][0]+"\t";
-//			mQuadLogger->addEntry(s2,LOG_FLAG_STATE);
+			String logString;
+			for(int i=0; i<accelCmd.dim1(); i++)
+				logString = logString+accelCmd[i][0]+"\t";
+			mQuadLogger->addEntry(LOG_ID_ACCEL_CMD,logString, LOG_FLAG_STATE_DES);
 		}
 
 		mNewMeasAvailable = false;
@@ -143,10 +145,20 @@ namespace Quadrotor {
 			mMutex_data.unlock();
 		}
 		else
-			accelCmd = Array2D<double>(3,1,0.0);
+		{ accelCmd[0][0] = accelCmd[1][0] = accelCmd[2][0] = 0; }
 
 		accelCmd[2][0] += GRAVITY;
 
+		return accelCmd;
+	}
+
+	Array2D<double> TranslationController::calcControlIBVS(double dt)
+	{
+		Array2D<double> accelCmd(3,1);
+
+		accelCmd = Array2D<double>(3,1,0.0);
+
+		accelCmd[2][0] += GRAVITY;
 		return accelCmd;
 	}
 
@@ -248,6 +260,10 @@ namespace Quadrotor {
 		mNewMeasAvailable = true;
 	}
 
+	void TranslationController::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+	{
+		mLastTargetFindTime.setTime();
+	}
 
 } // namespace Quadrotor
 } // namespace ICSL

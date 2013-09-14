@@ -30,7 +30,8 @@ class TranslationControllerListener
 
 class TranslationController : 	public Observer_TranslationalListener,
 								public CommManagerListener,
-								public MotorInterfaceListener
+								public MotorInterfaceListener,
+								public TargetFinderListener
 {
 	public:
 	TranslationController();
@@ -64,16 +65,21 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void onNewCommMotorOn(){reset();}
 	void onNewCommMotorOff(){reset();}
 	void onNewCommSendControlSystem(const Collection<tbyte> &buff);
+	void onNewCommUseIbvs(bool useIbvs){mUseIbvs = true;}
 
 	// for Observer_TranslationalListener
 	void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel);
 
 	// for MotorInterfaceListener
 	void onMotorWarmupDone(){reset();Log::alert("Tran Controller Received motor warmup done");}
+	
+	// for TargetFinderListener
+	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
 
 	protected:
 	bool mRunning, mDone;
 	bool mNewMeasAvailable;
+	bool mUseIbvs;
 	QuadLogger *mQuadLogger;
 	TNT::Array2D<double> mCurState, mDesState, mDesPosAccel;
 	TNT::Array2D<double> mGainP, mGainD, mGainI;
@@ -85,6 +91,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	toadlet::egg::Mutex mMutex_data, mMutex_state;
 
 	Time mStartTime, mLastControlTime;
+	Time mLastTargetFindTime;
 
 	Collection<TranslationControllerListener*> mListeners;
 
@@ -97,6 +104,8 @@ class TranslationController : 	public Observer_TranslationalListener,
 	ICSL::SystemModelLinear mCntlSys;
 	TNT::Array2D<double> mGainCntlSys;
 	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
+
+	TNT::Array2D<double> calcControlIBVS(double dt);
 
 	int mThreadPriority, mScheduler;
 };
