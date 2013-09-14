@@ -6,8 +6,6 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-//#include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/features2d/features2d.hpp>
 
 #include "toadlet/egg.h"
 
@@ -321,7 +319,7 @@ int main(int argv, char* argc[])
 	mFeatureFinder.onNewCommVisionFeatureFindQualityLevel(0.01);
 	mFeatureFinder.onNewCommVisionFeatureFindSeparationDistance(10);
 	mFeatureFinder.onNewCommVisionFeatureFindFASTThreshold(20);
-	mFeatureFinder.onNewCommVisionFeatureFindPointCntTarget(100);
+	mFeatureFinder.onNewCommVisionFeatureFindPointCntTarget(50);
 	mFeatureFinder.onNewCommVisionFeatureFindFASTAdaptRate(0.05);
 
 	mVelocityEstimator.onNewCommVelEstMeasCov(15);
@@ -363,7 +361,7 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
 	int endTimeDelta = 30e3;
-	float viconUpdateRate = 100; // Hz
+	float viconUpdateRate = 10; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	Time lastViconUpdateTime;
 

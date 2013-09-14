@@ -145,13 +145,13 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
 	SO3 attCur = curFeatureData->imageData->att;
 
-	SO3 attChange = attCur.inv()*attOld;
+//	SO3 attChange = attCur.inv()*attOld;
+	SO3 attChange = attCur*attOld.inv();
 	Array2D<double> omega = attChange.log(dt).toVector();
 
 	// Ignore this case since it means we're probably sitting on the ground
 	if(oldState[2][0] <= 0)
-		return false;
-
+		return false; 
 	curState = submat(curState,0,5,0,0);
 	curErrCov = submat(curErrCov,0,5,0,5);
 
@@ -163,21 +163,13 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	curErrCov = matmult( mRotPhoneToCam2, matmult(curErrCov, mRotCamToPhone2));
 
 	// get prior distributions
-//	oldFeatureData->lock();
 	vector<cv::Point2f> oldPoints(oldFeatureData->featurePoints.size());
 	for(int i=0; i<oldPoints.size(); i++)
 		oldPoints[i] = oldFeatureData->featurePoints[i]-center;
-//	oldFeatureData->unlock();
 
-//	curFeatureData->lock();
 	vector<cv::Point2f> curPoints(curFeatureData->featurePoints.size());
 	for(int i=0; i<curPoints.size(); i++)
 		curPoints[i] = curFeatureData->featurePoints[i]-center;
-//	curFeatureData->unlock();
-
-//while(curPoints.size() > 10)
-//	curPoints.pop_back();
-
 	Array2D<double> mv = submat(curState,3,5,0,0);
 	Array2D<double> Sv = submat(curErrCov,3,5,3,5);
 	double mz = max(-curState[2][0], 0.130);
@@ -192,6 +184,8 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 
 	vector<pair<Array2D<double>, Array2D<double>>> priorDistList(oldPoints.size());
 	priorDistList = calcPriorDistributions(oldPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
+
+	// Make soft point correspondences
 	Array2D<double> C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv, probNoCorr);
 
 	double numMatches = 0;
@@ -203,6 +197,7 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 		mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES,str, LOG_FLAG_CAM_RESULTS);
 	}
 	
+	// Find map vel
 	Array2D<double> vel(3,1), covVel(3,3);
 	double z;
 	computeMAPEstimate(vel, covVel, z, oldPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
@@ -587,7 +582,7 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 
 		q1[0][0] = x;
 		q1[1][0] = y;
-		q1HatList[i] = q1+3000*dt*matmult(Lw, omega);
+		q1HatList[i] = q1+dt*matmult(Lw, omega);
 	}
 
 	vector<Array2D<double>> AjList(N2);
@@ -747,6 +742,21 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 
 	velMAP = 0.5*(velL+velR);
 	heightMAP = 0.5*(zL+zR);
+
+	// Compute distribution
+	Array2D<double> covTemp = 1.0/heightMAP/heightMAP*min(1,N1)/N1*S2+SvInv;
+	JAMA::Cholesky<double> chol_covTemp(covTemp);
+	Array2D<double> covTempInv = chol_covTemp.solve(createIdentity((double)3.0));
+	covVel = matmult(transpose(covTempInv), matmult(1.0/heightMAP/heightMAP*S2, covTempInv));
+
+//printArray("	mv:\t",mv);
+//printArray("velMAP:\t",velMAP);
+////printArray("Sv:\n", Sv);
+////printArray("S2:\n", S2);
+////printArray("covTemp:\n",covTemp);
+//printArray("covVel:\n", covVel);
+////printArray("velMAP:\t", velMAP);
+//int chad = 0;
 }
 
 void VelocityEstimator::onNewCommVelEstMeasCov(float measCov)
