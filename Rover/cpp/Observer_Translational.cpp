@@ -46,7 +46,6 @@ using namespace TNT;
 		mHaveFirstCameraPos = false;
 
 		mUseIbvs = false;
-//		mUseIbvs = true;
 
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mStateBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mErrCovKFBuffer));
@@ -54,8 +53,6 @@ using namespace TNT;
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mViconVelBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mCameraPosBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mCameraVelBuffer));
-//		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mOpticFlowVelBuffer));
-//		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mHeightBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapHeightBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapVelBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mRawAccelDataBuffer));
@@ -63,12 +60,12 @@ using namespace TNT;
 		
 		mHaveFirstVicon = false;
 
-		mMAPHeightMeasCov = 0.01*0.01;
+		mMAPHeightMeasCov = 0.1*0.1;
 
 		mTargetNominalLength = 0.210;
 		mViconCameraOffset[0][0] = 0;
-		mViconCameraOffset[1][0] = 0;
-		mViconCameraOffset[2][0] = 0;
+		mViconCameraOffset[1][0] = 0.035;
+		mViconCameraOffset[2][0] = 0.087;
 	}
 
 	Observer_Translational::~Observer_Translational()

@@ -48,6 +48,18 @@ int main(int argv, char* argc[])
 	using namespace std;
 	cout << "start chadding" << endl;
 
+
+//Array2D<double> R = createRotMat(0,2.0);
+//ICSL::Quaternion q1( R );
+//double angle;
+//Array2D<double> axis;
+//q1.getAngleAxis1(angle, axis);
+//Log::alert(String()+"angle:\t"+angle);
+//printArray("axis:\t",axis);
+//printArray("R:\n",R);
+//printArray("rotMat:\n",q1.toRotMat());
+//return 0;
+
 	string dataDir;
 	int dataSet = 1;
 	int startImg=0, endImg=0;

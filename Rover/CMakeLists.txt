@@ -55,6 +55,7 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
+	./cpp/Rotation.cpp
 	./cpp/SensorManager.cpp
 	./cpp/Observer_Translational.cpp
 	./cpp/QuadLogger.cpp
@@ -75,6 +76,7 @@ set (SRC ${SRC}
 
 # Headers
 set (H ${H}
+	./cpp/Rotation.h
 	./cpp/Common.h
 	./cpp/Rover.h
 	./cpp/Observer_Angular.h

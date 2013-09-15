@@ -149,7 +149,10 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	SO3 attCur = curFeatureData->imageData->att;
 
 	SO3 attChange = attCur*attOld.inv();
-	Array2D<double> omega = attChange.log(dt).toVector();
+	double theta;
+	Array2D<double> axis;
+	attChange.getAngleAxis(theta, axis);
+	Array2D<double> omega = theta/dt*axis;
 
 	// Ignore this case since it means we're probably sitting on the ground
 	if(oldState[2][0] <= 0)

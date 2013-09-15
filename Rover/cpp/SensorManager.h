@@ -74,7 +74,7 @@ class SensorManager : public Observer_AngularListener
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
 	// used to pass images in from Java
-	void passNewImage(const cv::Mat *image, int64 c constonst &timestampNS);
+	void passNewImage(const cv::Mat *image, int64 timestampNS);
 
 	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
 
@@ -90,7 +90,6 @@ class SensorManager : public Observer_AngularListener
 	static int getBatteryTemp();
 	static int getSecTemp();
 	static int getFuelgaugeTemp();
-//	static int getTmuTemp();
 	void runTemperatureMonitor();
 
 	QuadLogger *mQuadLogger;
@@ -104,8 +103,6 @@ class SensorManager : public Observer_AngularListener
 
 	Collection<SensorManagerListener *> mListeners;
 
-	shared_ptr<cv::VideoCapture> initCamera();
-//	void runImageAcq(shared_ptr<cv::VideoCapture> cap);
 	TNT::Array2D<double> mCurAtt, mCurAngularVel;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
