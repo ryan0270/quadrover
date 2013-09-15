@@ -67,6 +67,8 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void onNewCommMotorOff(){reset();}
 	void onNewCommSendControlSystem(const Collection<tbyte> &buff);
 	void onNewCommUseIbvs(bool useIbvs){mUseIbvs = true;}
+	void onNewCommIbvsGains(const toadlet::egg::Collection<float> &posGains, const toadlet::egg::Collection<float> &VELgAINS);
+	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
 
 	// for Observer_TranslationalListener
 	void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel);
@@ -109,6 +111,11 @@ class TranslationController : 	public Observer_TranslationalListener,
 	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
 
 	TNT::Array2D<double> calcControlIBVS(double dt);
+	TNT::Array2D<double> mIbvsPosGains, mIbvsVelGains;
+	std::mutex mMutex_gains;
+
+	TNT::Array2D<double> mStateVicon;
+	std::mutex mMutex_viconState;
 
 	int mThreadPriority, mScheduler;
 
@@ -116,6 +123,14 @@ class TranslationController : 	public Observer_TranslationalListener,
 	std::mutex mMutex_target;
 
 	SO3 mRotPhoneToCam, mRotCamToPhone;
+
+	enum class Controller
+	{
+		PID,
+		SYSTEM,
+		IBVS
+	};
+	Controller mLastController;
 };
 
 } // namespace Quadrotor

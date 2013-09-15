@@ -3,8 +3,8 @@
 
 namespace ICSL {
 namespace Quadrotor {
-//using namespace ICSL::Constants;
-//using namespace TNT;
+using namespace ICSL::Constants;
+using namespace TNT;
 	TranslationController::TranslationController() :
 		mCurState(6,1,0.0),
 		mDesState(6,1,0.0),
@@ -16,7 +16,10 @@ namespace Quadrotor {
 		mErrIntLimit(3,1,0.0),
 		mGainCntlSys(6,1,1.0),
 		mRotViconToPhone(3,3,0.0),
-		mDesAccel(3,1,0.0)
+		mDesAccel(3,1,0.0),
+		mIbvsPosGains(3,1,1.0),
+		mIbvsVelGains(3,1,1.0),
+		mStateVicon(12,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -101,7 +104,23 @@ namespace Quadrotor {
 		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 1.0e3)
 			accelCmd = calcControlIBVS(dt);
 		else
+		{
+			if(mLastController != Controller::SYSTEM)
+			{
+				// Set the desired position to our current position
+				// So when we switch back to vicon-based control
+				// we don't have a sudden jump
+				mMutex_viconState.lock(); mMutex_state.lock();
+				for(int i=0; i<3; i++)
+					mDesState[i][0] = mStateVicon[i+6][0];
+				for(int i=3; i<6; i++)
+					mDesState[i][0] = 0;
+				mMutex_state.unlock(); mMutex_viconState.unlock();
+
+				mCntlSys.reset();
+			}
 			accelCmd = calcControlSystem(error,dt);
+		}
 //		accelCmd = calcControlPID(error,dt);
 
 		for(int i=0; i<mListeners.size(); i++)
@@ -128,8 +147,10 @@ namespace Quadrotor {
 
 
 		Array2D<double> tempI(3,1,0.0);
+		mMutex_state.lock();
 		if(mDesState[2][0] > 0.1) // don't build up the integrator when we're sitting still
 			tempI.inject(mGainI);
+		mMutex_state.unlock();
 		for(int i=0; i<3; i++)
 			accelCmd[i][0] =	-mGainP[i][0]*error[i][0]
 								-mGainD[i][0]*error[i+3][0]
@@ -138,6 +159,7 @@ namespace Quadrotor {
 		accelCmd[2][0] += GRAVITY;
 		mMutex_data.unlock();
 
+		mLastController = Controller::PID;
 		return accelCmd;
 	}
 
@@ -158,6 +180,7 @@ namespace Quadrotor {
 
 		accelCmd[2][0] += GRAVITY;
 
+		mLastController = Controller::SYSTEM;
 		return accelCmd;
 	}
 
@@ -202,11 +225,9 @@ namespace Quadrotor {
 		Array2D<double> visionErr = mCurState[2][0]*moment-mDesState[2][0]*desMoment;
 		mMutex_state.unlock();
 
-		Array2D<double> ibvsGainPos(3,1);
-		ibvsGainPos[0][0] = 1;
-		ibvsGainPos[1][0] = 1;
-		ibvsGainPos[2][0] = 1;
-		Array2D<double> desVel = ibvsGainPos*visionErr; // remember that * is element-wise
+		mMutex_gains.lock();
+		Array2D<double> desVel = mIbvsPosGains*visionErr; // remember that * is element-wise
+		mMutex_gains.unlock();
 
 		String logString;
 		for(int i=0; i<desVel.dim1(); i++)
@@ -218,11 +239,9 @@ namespace Quadrotor {
 		velErr[1][0] = mCurState[4][0]-(mDesState[4][0]+desVel[1][0]);
 		velErr[2][0] = mCurState[5][0]-(mDesState[5][0]+desVel[2][0]);
 
-		Array2D<double> ibvsGainVel(3,1);
-		ibvsGainVel[0][0] = 1;
-		ibvsGainVel[1][0] = 1;
-		ibvsGainVel[2][0] = 1;
-		Array2D<double> accelCmd = ibvsGainVel*velErr;
+		mMutex_gains.lock();
+		Array2D<double> accelCmd = -1.0*mIbvsVelGains*velErr;
+		mMutex_gains.unlock();
 
 		// Decay so if we go a long time without finding the image
 		// we aren't trying to do too much
@@ -233,6 +252,8 @@ namespace Quadrotor {
 		accelCmd = exp(-decayRate*t)*accelCmd;
 
 		accelCmd[2][0] += GRAVITY;
+
+		mLastController = Controller::IBVS;
 		return accelCmd;
 	}
 
@@ -320,6 +341,31 @@ namespace Quadrotor {
 		String str = String()+"TranslationController -- Received controller system: ";
 		str = str +numIn+" inputs x "+numOut+" outputs x "+numState+" states";
 		Log::alert(str);
+	}
+
+	void TranslationController::onNewCommIbvsGains(const Collection<float> &posGains, const Collection<float> &velGains)
+	{
+		mMutex_gains.lock();
+		for(int i=0; i<3; i++)
+		{
+			mIbvsPosGains[i][0] = posGains[i];
+			mIbvsVelGains[i][0] = velGains[i];
+		}
+		printArray("IBVS pos gains updated:\t",mIbvsPosGains);
+		printArray("IBVS vel gains updated:\t",mIbvsVelGains);
+		mMutex_gains.unlock();
+
+	}
+
+	void TranslationController::onNewCommStateVicon(const Collection<float> &data)
+	{
+		mMutex_viconState.lock();
+		if(mStateVicon.dim1() != data.size())
+			mStateVicon = Array2D<double>(data.size(),1);
+
+		for(int i=0; i<mStateVicon.dim1(); i++)
+			mStateVicon[i][0] = data[i];
+		mMutex_viconState.unlock();
 	}
 
 	void TranslationController::onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel)
