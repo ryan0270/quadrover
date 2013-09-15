@@ -8,19 +8,6 @@
 
 namespace ICSL {
 
-class SO3_LieAlgebra
-{
-	public:
-	SO3_LieAlgebra();
-	SO3_LieAlgebra(const TNT::Array2D<double> &v);
-	
-	TNT::Array2D<double> toVector() const {return mVector.copy();}
-	TNT::Array2D<double> toMatrix() const;
-
-	protected:
-	TNT::Array2D<double> mVector;
-};
-
 class Quaternion
 {
 	public:
@@ -67,7 +54,6 @@ class Quaternion
 	double mVal[4];
 };
 
-
 inline Quaternion operator*(const Quaternion &lhs, Quaternion rhs)
 {
 	rhs *= lhs;
@@ -104,6 +90,22 @@ inline Quaternion operator-(Quaternion lhs, const Quaternion &rhs)
 	return lhs;
 }
 
+class SO3;
+class SO3_LieAlgebra
+{
+	public:
+	SO3_LieAlgebra();
+	SO3_LieAlgebra(const TNT::Array2D<double> &v);
+	
+	TNT::Array2D<double> toVector() const {return mVector.copy();}
+	TNT::Array2D<double> toMatrix() const;
+
+	SO3 integrate(double dt);
+
+	protected:
+	TNT::Array2D<double> mVector;
+};
+
 class SO3 
 {
 	public:
@@ -122,7 +124,6 @@ class SO3
 	TNT::Array2D<double> getAnglesZYX() const;
 	Quaternion getQuaternion() const {return mQuaternion;}
 
-	SO3_LieAlgebra log(double theta) const;
 	void getAngleAxis(double &angle, TNT::Array2D<double> &axis){mQuaternion.getAngleAxis1(angle, axis);}
 
 	bool isIdentity() const;
@@ -151,7 +152,10 @@ inline TNT::Array2D<T> operator*(const SO3 &lhs, const TNT::Array2D<T> &v)
 {
 	assert(v.dim1() == 3 && v.dim2() == 1);
 
-	return matmult(lhs.getQuaternion().toRotMat(), v);
+	Quaternion q0 = lhs.getQuaternion();
+	Quaternion q1(0,v[0][0],v[1][0],v[2][0]);
+
+	return (q0*q1*q0.conj()).getVectorPart();
 }
 
 }

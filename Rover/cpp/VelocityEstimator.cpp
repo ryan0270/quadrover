@@ -129,8 +129,6 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 										   double probNoCorr) const
 {
 //Log::alert("=======================================================");
-//	oldFeatureData->lock();
-//	curFeatureData->lock();
 	Time oldTime = oldFeatureData->imageData->timestamp;
 	Time curTime = curFeatureData->imageData->timestamp;
 	double dt = Time::calcDiffNS(oldTime, curTime)/1.0e9;
