@@ -4,7 +4,22 @@
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
 
+#include "constants.h"
+
 namespace ICSL {
+
+class SO3_LieAlgebra
+{
+	public:
+	SO3_LieAlgebra();
+	SO3_LieAlgebra(const TNT::Array2D<double> &v);
+	
+	TNT::Array2D<double> toVector() const {return mVector.copy();}
+	TNT::Array2D<double> toMatrix() const;
+
+	protected:
+	TNT::Array2D<double> mVector;
+};
 
 class Quaternion
 {
@@ -15,15 +30,23 @@ class Quaternion
 	Quaternion(const TNT::Array2D<double> &m);
 	Quaternion(double w, double x, double y, double z);
 
+	double getScalarPart() const {return mVal[0];}
+	TNT::Array2D<double> getVectorPart() const;
+	TNT::Array2D<double> toRotMat() const;
+
 	void set(double w, double x, double y, double z);
 	void set(const Quaternion &q);
+//	void setFromRotMat2(const TNT::Array2D<double> &m);
 	void setFromRotMat(const TNT::Array2D<double> &m);
-	TNT::Array2D<double> toRotMat() const;
 
 	Quaternion conj() const;
 	double dot(const Quaternion &q) const;
 	double norm() const;
 	Quaternion inv() const;
+
+	// These are for unit quaternions only
+	Quaternion inv1() const {return conj();}
+	void getAngleAxis1(double &angleOUT, TNT::Array2D<double> &axisOUT) const;
 
 	TNT::Array2D<double> toAnglesZYX() const;
 
@@ -81,19 +104,6 @@ inline Quaternion operator-(Quaternion lhs, const Quaternion &rhs)
 	return lhs;
 }
 
-class SO3_LieAlgebra
-{
-	public:
-	SO3_LieAlgebra();
-	SO3_LieAlgebra(const TNT::Array2D<double> &v);
-	
-	TNT::Array2D<double> toVector() const {return mVector.copy();}
-	TNT::Array2D<double> toMatrix() const;
-
-	protected:
-	TNT::Array2D<double> mVector;
-};
-
 class SO3 
 {
 	public:
@@ -113,6 +123,7 @@ class SO3
 	Quaternion getQuaternion() const {return mQuaternion;}
 
 	SO3_LieAlgebra log(double theta) const;
+	void getAngleAxis(double &angle, TNT::Array2D<double> &axis){mQuaternion.getAngleAxis1(angle, axis);}
 
 	bool isIdentity() const;
 

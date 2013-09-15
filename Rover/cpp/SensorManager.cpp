@@ -295,89 +295,6 @@ namespace Quadrotor{
 		mDone = true;
 	}
 
-	shared_ptr<cv::VideoCapture> SensorManager::initCamera()
-	{
-		shared_ptr<cv::VideoCapture> cap = shared_ptr<cv::VideoCapture>(new cv::VideoCapture());
-
-		cap->open(CV_CAP_ANDROID+0); // back camera
-		if(cap->isOpened())
-		{
-			Log::alert("Successfully opened the camera");
-			mRunning = true;
-
-			int width = 640; int height = 480;
-//			int width = 960; int height = 720;
-//			int width = 1280; int height = 720;
-			cap->set(CV_CAP_PROP_FRAME_WIDTH, width);
-			cap->set(CV_CAP_PROP_FRAME_HEIGHT, height);
-			//		cap.set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_TORCH); // for now just leave this on the whole time
-			cap->set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_CONTINUOUS_VIDEO);
-			//		cap.set(CV_CAP_PROP_ANDROID_FOCUS_MODE,CV_CAP_ANDROID_FOCUS_MODE_INFINITY);
-			cap->set(CV_CAP_PROP_EXPOSURE, -4);
-			//		cap.set(CV_CAP_PROP_AUTO_EXPOSURE, 5);
-			cap->set(CV_CAP_PROP_ANDROID_ANTIBANDING, CV_CAP_ANDROID_ANTIBANDING_OFF);
-			cap->set(CV_CAP_PROP_AUTOGRAB, 1); // any nonzero is "on"
-		}
-		else
-		{
-			Log::alert("Failed to open the camera");
-			cap = NULL;
-		}
-
-		return cap;
-	}
-
-//	void SensorManager::runImageAcq(shared_ptr<cv::VideoCapture> cap)
-//	{
-//		if(cap == NULL)
-//			return;
-//
-//		cv::Mat image;
-//		sched_param sp;
-//		sp.sched_priority = mThreadPriority-1;
-//		sched_setscheduler(0, mScheduler, &sp);
-//		while(mRunning)
-//		{
-//			shared_ptr<Data> data = shared_ptr<Data>(new DataImage());
-//			data->type = DATA_TYPE_IMAGE;
-//
-//			mMutex_attData.lock();
-//			static_pointer_cast<DataImage>(data)->startAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
-//			static_pointer_cast<DataImage>(data)->att.inject(matmult(mRotPhoneToCam,mCurAtt));
-//			mMutex_attData.unlock();
-//			cap->grab();
-//			data->timestamp.setTime();
-//			mMutex_attData.lock();
-//			static_pointer_cast<DataImage>(data)->endAngularVel = matmult(mRotPhoneToCam,mCurAngularVel.copy());
-//			mMutex_attData.unlock();
-//
-//			shared_ptr<cv::Mat> image(new cv::Mat);
-//			cap->retrieve(*image);
-//			static_pointer_cast<DataImage>(data)->image = image;
-////			image->copyTo(*static_pointer_cast<DataImage>(data)->image); // for some strange reason, when I just directly assign the ptr (the above line) it cause problems for imwrite when QuadLogger goes to save the images
-//			static_pointer_cast<DataImage>(data)->cap = cap;
-//			static_pointer_cast<DataImage>(data)->focalLength = 3.7*image->cols/5.76; // (focal length mm)*(image width px)/(ccd width mm)
-//
-//			static_pointer_cast<DataImage>(data)->imageFormat = IMG_FORMAT_BGR;
-//
-//			mMutex_listeners.lock();
-//			for(int i=0; i<mListeners.size(); i++)
-//				mListeners[i]->onNewSensorUpdate(data);
-//			mMutex_listeners.unlock();
-//
-//			data = NULL;
-//		}
-//
-//		if(cap->isOpened())
-//		{
-//			cap->set(CV_CAP_PROP_ANDROID_FLASH_MODE,CV_CAP_ANDROID_FLASH_MODE_OFF);
-//			cap->release();
-//		}
-//		cap == NULL;
-//
-////		delete cap;
-//	}
-
 	void SensorManager::runTemperatureMonitor()
 	{
 		sched_param sp;
@@ -480,27 +397,6 @@ namespace Quadrotor{
 		return temp;
 	}
 
-//	int SensorManager::getTmuTemp()
-//	{
-//		int temp = 0;
-//		// this path is for the SIII
-//		string filename = "/sys/devices/platform/s5p-tmu/curr_temp";
-//		ifstream file(filename.c_str());
-//		if(file.is_open())
-//		{
-//			string line;
-//			getline(file,line);
-//			file.close();
-//
-//			stringstream ss(line);
-//			ss >> temp;
-//		}
-//		else
-//			Log::alert("Failed to open "+String(filename.c_str()));
-//
-//		return temp;
-//	}
-
 	void SensorManager::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
 	{
 		mMutex_attData.lock();
@@ -509,17 +405,8 @@ namespace Quadrotor{
 		mMutex_attData.unlock();
 	}
 
-	void SensorManager::passNewImage(const cv::Mat *imageYUV, int64 c constonst &timestampNS)
+	void SensorManager::passNewImage(const cv::Mat *imageYUV, int64 timestampNS)
 	{
-//		if(mLastImageTime.getMS() != 0)
-//		{
-//			double dt = mLastImageTime.getElapsedTimeNS()/1.0e9;
-//			mImageDT = (mImageDT*mImageCnt + dt)/(mImageCnt+1);
-//			mImageCnt++;
-//		}
-//		mLastImageTime.setTime();
-//		Log::alert(String()+"dt: "+mImageDT);
-
 		shared_ptr<DataImage> data(new DataImage());
 		data->type = DATA_TYPE_IMAGE;
 		data->timestamp.setTimeNS(timestampNS);
@@ -539,10 +426,7 @@ namespace Quadrotor{
 		cv::cvtColor(*imageYUV, *imageBGR, CV_YUV420sp2BGR);
 
 		if(mObsvAngular != NULL)
-		{
-			SO3 att = mObsvAngular->estimateAttAtTime( data->timestamp );
-			data->att = SO3( mRotCamToPhone )*att;
-		}
+			data->att = mObsvAngular->estimateAttAtTime( data->timestamp );
 
 		data->image = imageBGR;
 		shared_ptr<cv::Mat> gray(new cv::Mat());
@@ -561,11 +445,7 @@ namespace Quadrotor{
 
 		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)
-		{
-//Log::alert(String()+"image update before: " + i);
 			mListeners[i]->onNewSensorUpdate(static_pointer_cast<IData>(data));
-//Log::alert(String()+"image update after: " + i);
-		}
 		mMutex_listeners.unlock();
 	}
 
