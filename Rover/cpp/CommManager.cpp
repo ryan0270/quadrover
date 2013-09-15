@@ -294,6 +294,27 @@ void CommManager::pollTCP()
 						}
 					}
 					break;
+				case COMM_IBVS_GAINS:
+					{
+						Collection<float> posGains, velGains;
+						int size;
+						bool received = receiveTCP((tbyte*)&size,sizeof(size));
+						if(received)
+						{
+							posGains.resize(size);
+							velGains.resize(size);
+							bool received = receiveTCP((tbyte*)&(posGains[0]),size*sizeof(float));
+							if(received) received = receiveTCP((tbyte*)&(velGains[0]),size*sizeof(float));
+							if(received)
+							{
+								for(int i=0; i<mListeners.size(); i++)
+									mListeners[i]->onNewCommIbvsGains(posGains, velGains);
+							}
+							else
+								resetSocket = true;
+						}
+					}
+					break;
 				case COMM_KALMANFILTER_MEAS_VAR:
 					{
 						int size;

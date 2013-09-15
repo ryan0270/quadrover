@@ -274,18 +274,6 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 	gyroData->unlock();
 	Array2D<double> gyro = mCurVel+mGainP*mInnovation;
 
-
-//	Array2D<double> gyro_x = convert_coordToso3(gyro);
-//	Array2D<double> A = createIdentity((double)3); // A is the amount of rotation that has occured
-//	double velMag = norm2(gyro);
-//	double s = sin(velMag*dt);
-//	double c = cos(velMag*dt);
-//	Array2D<double> gyro_x_sq = matmult(gyro_x,gyro_x);
-//	if( velMag > 1e-10 )
-//		A = createIdentity((double)3)+ s/velMag*gyro_x + (1-c)/velMag/velMag*gyro_x_sq;
-//
-//	mCurAttitude = mCurAttitude*SO3(A);
-
 	SO3_LieAlgebra gyro_so3(gyro);
 	SO3 A = gyro_so3.integrate(dt);
 	mCurAttitude = mCurAttitude*SO3(A);

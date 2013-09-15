@@ -39,7 +39,7 @@ class CommManagerListener
 	virtual void onNewCommForceGain(float k){};
 	virtual void onNewCommTorqueGain(float k){};
 	virtual void onNewCommMass(float m){};
-//	virtual void onNewCommIbvsGains(const toadlet::egg::Collection<float> &gains){};
+	virtual void onNewCommIbvsGains(const toadlet::egg::Collection<float> &posGains, const toadlet::egg::Collection<float> &velGains){};
 	virtual void onNewCommUseIbvs(bool useIbvs){};
 	virtual void onNewCommAccelBias(float xBias, float yBias, float zBias){};
 	virtual void onNewCommForceGainAdaptRate(float rate){};

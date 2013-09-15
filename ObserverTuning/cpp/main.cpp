@@ -260,91 +260,105 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
-	double gainP = 4;
-	double gainI = 0.0004;//0.004;
-	double accelWeight = 1;
-	double magWeight = 0;
-	Collection<float> nomMag;
-	nomMag.push_back(-16.2);
-	nomMag.push_back(3.7);
-	nomMag.push_back(15.9);
-	mObsvAngular.onNewCommAttObserverGain(gainP, gainI, accelWeight, magWeight);
-	mObsvAngular.onNewCommNominalMag(nomMag);
-
-	Array2D<double> gyroBias(3,1);
-	gyroBias[0][0] = -0.006;
-	gyroBias[1][0] = -0.008;
-	gyroBias[2][0] = -0.008;
-	shared_ptr<IData> gyroBiasData(new DataVector<double>());
-	gyroBiasData->type = DATA_TYPE_GYRO;
-	static_pointer_cast<DataVector<double> >(gyroBiasData)->data = gyroBias.copy();
-	static_pointer_cast<DataVector<double> >(gyroBiasData)->dataCalibrated = gyroBias.copy();
-	// this is gyro bias burn-in
-	for(int i=0; i<2000; i++)
+	for(int i=0; i<commManagerListeners.size(); i++)
 	{
-		mObsvAngular.onNewSensorUpdate(gyroBiasData);
-		System::usleep(700);
+		double gainP = 4;
+		double gainI = 0.0004;//0.004;
+		double accelWeight = 1;
+		double magWeight = 0;
+		Collection<float> nomMag;
+		nomMag.push_back(-16.2);
+		nomMag.push_back(3.7);
+		nomMag.push_back(15.9);
+		commManagerListeners[i]->onNewCommAttObserverGain(gainP, gainI, accelWeight, magWeight);
+		commManagerListeners[i]->onNewCommNominalMag(nomMag);
+
+		Array2D<double> gyroBias(3,1);
+		gyroBias[0][0] = -0.006;
+		gyroBias[1][0] = -0.008;
+		gyroBias[2][0] = -0.008;
+		shared_ptr<IData> gyroBiasData(new DataVector<double>());
+		gyroBiasData->type = DATA_TYPE_GYRO;
+		static_pointer_cast<DataVector<double> >(gyroBiasData)->data = gyroBias.copy();
+		static_pointer_cast<DataVector<double> >(gyroBiasData)->dataCalibrated = gyroBias.copy();
+		// this is gyro bias burn-in
+		for(int i=0; i<2000; i++)
+		{
+			mObsvAngular.onNewSensorUpdate(gyroBiasData);
+			System::usleep(700);
+		}
+
+		Collection<float> measVar;
+		measVar.push_back(0.0001);
+		measVar.push_back(0.0001);
+		measVar.push_back(0.0001);
+		measVar.push_back(0.0005);
+		measVar.push_back(0.0005);
+		measVar.push_back(0.05);
+		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
+
+		Collection<float> dynVar;
+		dynVar.push_back(0.01);
+		dynVar.push_back(0.01);
+		dynVar.push_back(0.01);
+		dynVar.push_back(10);
+		dynVar.push_back(10);
+		dynVar.push_back(10);
+		dynVar.push_back(0.01); // accel bias
+		dynVar.push_back(0.01);
+		dynVar.push_back(0.01);
+		commManagerListeners[i]->onNewCommKalmanDynVar(dynVar);
+
+		// TODO: Need to add Leash dialogs to send this over wifi
+		commManagerListeners[i]->onNewCommViconCameraOffset(0, 0.035, 0.087);
+		commManagerListeners[i]->onNewCommTargetNominalLength(0.210);
+		commManagerListeners[i]->onNewCommMAPHeightMeasCov(0.1*0.1);
+
+		float xBias, yBias, zBias;
+		switch(dataSet)
+		{
+			case 0: // Sep8
+				xBias = -0.1;
+				yBias = -0.2;
+				zBias = -0.2;
+				break;
+			case 1: // Sep12
+				xBias = -0.1;
+				yBias = -0.2;
+				zBias = -0.8;
+				break;
+		}
+		commManagerListeners[i]->onNewCommAccelBias(xBias, yBias, zBias);
+
+		commManagerListeners[i]->onNewCommVisionFeatureFindQualityLevel(0.01);
+		commManagerListeners[i]->onNewCommVisionFeatureFindSeparationDistance(10);
+		commManagerListeners[i]->onNewCommVisionFeatureFindFASTThreshold(20);
+		commManagerListeners[i]->onNewCommVisionFeatureFindPointCntTarget(50);
+		commManagerListeners[i]->onNewCommVisionFeatureFindFASTAdaptRate(0.05);
+
+		commManagerListeners[i]->onNewCommVelEstMeasCov(15);
+		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005);
+
+		SystemModelLinear sys;
+		sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
+		vector<tbyte> buff1;
+		sys.serialize(buff1);
+		Collection<tbyte> buff(buff1.size());
+		for(int j=0; j<buff.size(); j++)
+			buff[j] = buff1[j];
+		commManagerListeners[i]->onNewCommSendControlSystem(buff);
+
+		commManagerListeners[i]->onNewCommUseIbvs(true);
+
+		Collection<float> posGains(3), velGains(3);
+		posGains[0] = 1;
+		posGains[1] = 1;
+		posGains[2] = 1;
+		velGains[0] = 1;
+		velGains[1] = 1;
+		velGains[2] = 1;
+		commManagerListeners[i]->onNewCommIbvsGains(posGains, velGains);
 	}
-
-	Collection<float> measVar;
-	measVar.push_back(0.0001);
-	measVar.push_back(0.0001);
-	measVar.push_back(0.0001);
-	measVar.push_back(0.0005);
-	measVar.push_back(0.0005);
-	measVar.push_back(0.05);
-	mObsvTranslational.onNewCommKalmanMeasVar(measVar);
-
-	Collection<float> dynVar;
-	dynVar.push_back(0.01);
-	dynVar.push_back(0.01);
-	dynVar.push_back(0.01);
-	dynVar.push_back(10);
-	dynVar.push_back(10);
-	dynVar.push_back(10);
-	dynVar.push_back(0.01); // accel bias
-	dynVar.push_back(0.01);
-	dynVar.push_back(0.01);
-	mObsvTranslational.onNewCommKalmanDynVar(dynVar);
-
-	// TODO: Need to add Leash dialogs to send this over wifi
-	mObsvTranslational.onNewCommViconCameraOffset(0, 0.035, 0.087);
-	mObsvTranslational.onNewCommTargetNominalLength(0.210);
-	mObsvTranslational.onNewCommMAPHeightMeasCov(0.1*0.1);
-
-	float xBias, yBias, zBias;
-	switch(dataSet)
-	{
-		case 0: // Sep8
-			xBias = -0.1;
-			yBias = -0.2;
-			zBias = -0.2;
-			break;
-		case 1: // Sep12
-			xBias = -0.1;
-			yBias = -0.2;
-			zBias = -0.8;
-			break;
-	}
-	mObsvTranslational.onNewCommAccelBias(xBias, yBias, zBias);
-
-	mFeatureFinder.onNewCommVisionFeatureFindQualityLevel(0.01);
-	mFeatureFinder.onNewCommVisionFeatureFindSeparationDistance(10);
-	mFeatureFinder.onNewCommVisionFeatureFindFASTThreshold(20);
-	mFeatureFinder.onNewCommVisionFeatureFindPointCntTarget(50);
-	mFeatureFinder.onNewCommVisionFeatureFindFASTAdaptRate(0.05);
-
-	mVelocityEstimator.onNewCommVelEstMeasCov(15);
-	mVelocityEstimator.onNewCommVelEstProbNoCorr(0.0005);
-
-	SystemModelLinear sys;
-	sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
-	vector<tbyte> buff1;
-	sys.serialize(buff1);
-	Collection<tbyte> buff(buff1.size());
-	for(int i=0; i<buff.size(); i++)
-		buff[i] = buff1[i];
-	mTranslationController.onNewCommSendControlSystem(buff);
 
 	mQuadLogger.setMask(logMask);
 	mQuadLogger.setDir(dataDir.c_str());
@@ -393,9 +407,6 @@ int main(int argv, char* argc[])
 	noiseStd[6][0] = 0.010;
 	noiseStd[7][0] = 0.010;
 	noiseStd[8][0] = 0.010;
-
-	for(int i=0; i<commManagerListeners.size(); i++)
-		commManagerListeners[i]->onNewCommUseIbvs(true);
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";
