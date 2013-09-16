@@ -12,12 +12,9 @@ TargetFinder::TargetFinder()
 	mUseIbvs = false;
 	mFirstImageProcessed = false;
 	mHaveUpdatedSettings = true;
-//	mCurImageAnnotated = NULL;
 	mIsMotorOn = false;
 
 	mImageProcTimeUS = 0;
-
-//	mLastProcessTime.setTimeMS(0);
 
 	mNewImageReady = false;
 
@@ -75,7 +72,6 @@ void TargetFinder::run()
 				imageData->imageGray->copyTo(curImageGray);
 			}
 			catch(...) {Log::alert("copyTo error in TargetFinder 1");}
-//			imageData->unlock();
 			if(curImageGray.cols == 640)
 				cv::pyrDown(curImageGray, pyr1ImageGray);
 			else
@@ -96,7 +92,6 @@ void TargetFinder::run()
 			}
 
 			target = findTarget(pyr1ImageGray, *imageData->cameraMatrix, *imageData->distCoeffs);
-//			target = findTarget(curImage);
 			// TODO: Compensate for current attitdue
 			if(curImage.cols == 640)
 				Log::alert("TargetFinder doesn't handle 640x480 images at this time");
@@ -160,8 +155,6 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &ca
 		try{ image.copyTo(gray0); }
 		catch(...) {Log::alert("copyTo error in TargetFinder 2"); return NULL;}
 	}
-//	medianBlur(image, gray0, 5);
-
 
 	Canny(gray0, gray, 50, 150, 3);
 
@@ -254,7 +247,6 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &ca
 	// Find groups that seem to have the correct inter-group relationship
 	vector<shared_ptr<RectGroup> > candidateSets;
 	vector<double> candidateSetScores;
-//	float idealRatios[] = {1.411, 2.664, 38.968, 1.888, 27.621, 14.627};
 	float idealRatios[] = {3.4, 30, 9};
 	for(int i=0; i<groups.size(); i++)
 	{
@@ -294,7 +286,6 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &ca
 				}
 			}
 
-//			if(ratios[minIndex] != 0 && find(usedRatios.begin(), usedRatios.end(), minIndex) == usedRatios.end())
 			if(minErr < 0.3*idealRatios[j] &&
 				find(usedRatios.begin(), usedRatios.end(), minIndex) == usedRatios.end())
 			{

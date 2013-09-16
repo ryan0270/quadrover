@@ -10,9 +10,6 @@ using namespace ICSL::Constants;
 Observer_Angular::Observer_Angular() :
 	mGyroBias(3,1,0.0),
 	mInnovation(3,1,0.0),
-//	mGyro(3,1,0.0),
-//	mAccel(3,1,0.0),
-//	mMagnometer(3,1,0.0),
 	mAccelDirNom(3,1,0.0),
 	mMagDirNom(3,1,0.0),
 	mCurVel(3,1,0.0)
@@ -26,18 +23,11 @@ Observer_Angular::Observer_Angular() :
 	mAccelWeight = 5;
 	mMagWeight = 1;
 
-//	mGainB = 2;
-//	mIntSat = 0.005;
-	// abs(mBias) < mIntSat+mGainI/mGainB*sum(weight)
-
 	mQuadLogger = NULL;
 
 	mBurnCount = 0;
 
 	mAccelDirNom[2][0] = 1; // accel is the opposite direction as gravity
-//	mMagDirNom[0][0] = -20.5;
-//	mMagDirNom[1][0] = 7.0;
-//	mMagDirNom[2][0] = -39.0;
 	mMagDirNom[0][0] = 6;
 	mMagDirNom[1][0] = -1;
 	mMagDirNom[2][0] = -15;

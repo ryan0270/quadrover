@@ -101,7 +101,6 @@ class QuadLogger
 		void setDir(toadlet::egg::String dir){mDir = dir;}
 		void setFilename(toadlet::egg::String name){mFilename = name;}
 		void setMask(uint32 mask){mTypeMask = mask;}
-//		void addLine(const toadlet::egg::String &str, LogFlags type);
 		void addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type);
 		void addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type);
 

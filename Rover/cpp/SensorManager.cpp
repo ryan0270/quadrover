@@ -278,11 +278,8 @@ namespace Quadrotor{
 				{
 					mMutex_listeners.lock();
 					for(int i=0; i<mListeners.size(); i++)
-					{
 						mListeners[i]->onNewSensorUpdate(data);
-					}
 					mMutex_listeners.unlock();
-//					delete data;
 				}
 			}
 
@@ -305,13 +302,11 @@ namespace Quadrotor{
 			float battTemp = getBatteryTemp()/10.0;
 			float secTemp = getSecTemp()/10.0;
 			float fgTemp= getFuelgaugeTemp()/10.0;
-//			float tmuTemp = getTmuTemp()/10.0;
 
 			shared_ptr<DataPhoneTemp<double> > data = shared_ptr<DataPhoneTemp<double> >(new DataPhoneTemp<double>());
 			data->battTemp = battTemp;
 			data->secTemp = secTemp;
 			data->fgTemp = fgTemp;
-//			data->tmuTemp = tmuTemp;
 			mMutex_listeners.lock();
 			for(int i=0; i<mListeners.size(); i++)
 			{
@@ -326,7 +321,6 @@ namespace Quadrotor{
 				s = s+battTemp+"\t";
 				s = s+secTemp+"\t";
 				s = s+fgTemp+"\t";
-//				s = s+tmuTemp+"\t";
 				mMutex_logger.lock();
 				mQuadLogger->addEntry(LOG_ID_PHONE_TEMP,s,LOG_FLAG_PHONE_TEMP);
 				mMutex_logger.unlock();

@@ -76,16 +76,11 @@ class FeatureFinder : public CommManagerListener,
 
 	protected:
 		bool mUseIbvs;
-//		bool mFirstImageProcessed;
 		bool mRunning, mFinished;
 		bool mNewImageReady; //, mNewImageReady_targetFind;
-//		bool mLogImages;
 		bool mHaveUpdatedSettings;
 		bool mIsMotorOn;
-//		cv::Mat	mCurImage, mCurImageGray;
-//		shared_ptr<cv::Mat> mCurImageAnnotated;
 
-//		shared_ptr<DataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
 		shared_ptr<DataImage> mImageDataNext;
 		shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
 

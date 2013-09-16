@@ -9,7 +9,6 @@ using namespace ICSL::Constants;
 Leash::Leash(QWidget *parent) : 
 	QMainWindow(parent),
 	ui(new Ui::Leash),
-	mIntMemory(3,1,0.0),
 	mAttObsvDirWeights(2,0.5),
 	mAttObsvNominalMag(3,0),
 	mKalmanMeasVar(6,1),
@@ -36,6 +35,10 @@ Leash::Leash(QWidget *parent) :
 	mCntlGainTransD[0] = mCntlGainTransD[1] = mCntlGainTransD[2] = 0;
 	mCntlGainTransI[0] = mCntlGainTransI[1] = mCntlGainTransI[2] = 0;
 	mCntlGainTransILimit[0] = mCntlGainTransILimit[1] = mCntlGainTransILimit[2] = 0;
+
+	mCntlGainIbvsP[0] = mCntlGainIbvsP[1] = mCntlGainIbvsP[2] = 0;
+	mCntlGainIbvsD[0] = mCntlGainIbvsD[1] = mCntlGainIbvsD[2] = 0;
+
 	mCntlGainAttP[0] = mCntlGainAttP[1] = mCntlGainAttP[2] = 0;
 	mCntlGainAttD[0] = mCntlGainAttD[1] = mCntlGainAttD[2] = 0;
 	mAttObsvGainP = 1;
@@ -168,8 +171,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-		mTelemVicon.connect("192.168.100.108");
-//		mTelemVicon.connect("localhost");
+//		mTelemVicon.connect("192.168.100.108");
+		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;
@@ -338,6 +341,7 @@ void Leash::initialize()
 	resizeTable(ui->vwViconState);
 
 	setVerticalTabOrder(ui->tblTransCntl);
+	setVerticalTabOrder(ui->tblIbvsCntl);
 
 	populateUI();
 }
@@ -843,6 +847,19 @@ bool Leash::sendParams()
 	if(result) result = result && sendTCP((tbyte*)&transGainSize,sizeof(transGainSize));
 	if(result) result = result && sendTCP((tbyte*)&(transGains[0]),transGainSize*sizeof(float));
 
+	Collection<float> ibvsPosGains(3), ibvsVelGains(3);
+	for(int i=0; i<3; i++)
+	{
+		ibvsPosGains[i] = mCntlGainIbvsP[i];
+		ibvsVelGains[i] = mCntlGainIbvsD[i];
+	}
+	int ibvsGainSize = 3;
+	code = COMM_CNTL_IBVS_GAINS;
+	if(result) result = result && sendTCP((tbyte*)&code,sizeof(code));
+	if(result) result = result && sendTCP((tbyte*)&ibvsGainSize,sizeof(ibvsGainSize));
+	if(result) result = result && sendTCP((tbyte*)&(ibvsPosGains[0]),ibvsGainSize*sizeof(float));
+	if(result) result = result && sendTCP((tbyte*)&(ibvsVelGains[0]),ibvsGainSize*sizeof(float));
+
 	Collection<float> accelBias(mAccelBias);
 	int accelBiasSize = accelBias.size();
 	code = COMM_ACCELEROMETER_BIAS;
@@ -1025,6 +1042,40 @@ void Leash::loadControllerConfig(mxml_node_t *cntlRoot)
 	}
 	else
 		cout << "Translation controller section not found in config file" << endl;
+
+	mxml_node_t *ibvsCntl = mxmlFindElement(cntlRoot, cntlRoot, "IBVS", NULL, NULL, MXML_DESCEND);
+	if(ibvsCntl != NULL)
+	{
+		mxml_node_t *p = mxmlFindElement(ibvsCntl, ibvsCntl, "P", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *d = mxmlFindElement(ibvsCntl, ibvsCntl, "D", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *i = mxmlFindElement(ibvsCntl, ibvsCntl, "I", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *iLimit = mxmlFindElement(ibvsCntl, ibvsCntl, "ILimit", NULL, NULL, MXML_DESCEND);
+		mxml_node_t *cntlSysFileNode = mxmlFindElement(ibvsCntl, ibvsCntl, "ControlSysFile", NULL, NULL, MXML_DESCEND);
+
+		if(p != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(p, p, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(p, p, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(p, p, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainIbvsP[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainIbvsP[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainIbvsP[2];
+		}
+
+		if(d != NULL)
+		{
+			mxml_node_t *x = mxmlFindElement(d, d, "x", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *y = mxmlFindElement(d, d, "y", NULL, NULL, MXML_DESCEND);
+			mxml_node_t *z = mxmlFindElement(d, d, "z", NULL, NULL, MXML_DESCEND);
+
+			if(x != NULL) stringstream(x->child->value.text.string) >> mCntlGainIbvsD[0];
+			if(y != NULL) stringstream(y->child->value.text.string) >> mCntlGainIbvsD[1];
+			if(z != NULL) stringstream(z->child->value.text.string) >> mCntlGainIbvsD[2];
+		}
+	}
+	else
+		cout << "IBVS controller section not found in config file" << endl;
 
 	mxml_node_t *attCntl = mxmlFindElement(cntlRoot, cntlRoot, "Attitude", NULL, NULL, MXML_DESCEND);
 	if(attCntl != NULL)
@@ -1278,6 +1329,19 @@ void Leash::saveControllerConfig(mxml_node_t *cntlRoot)
 			mxmlNewReal(mxmlNewElement(iLimitNode,"z"), mCntlGainTransILimit[2]);
 		mxmlNewText(mxmlNewElement(transNode,"ControlSysFile"), 0, mCntlSysFile.c_str());
 	}
+
+	mxml_node_t *ibvsNode = mxmlNewElement(cntlRoot,"IBVS");
+	{
+		mxml_node_t *pNode = mxmlNewElement(ibvsNode,"P");
+			mxmlNewReal(mxmlNewElement(pNode,"x"), mCntlGainIbvsP[0]);
+			mxmlNewReal(mxmlNewElement(pNode,"y"), mCntlGainIbvsP[1]);
+			mxmlNewReal(mxmlNewElement(pNode,"z"), mCntlGainIbvsP[2]);
+		mxml_node_t *dNode = mxmlNewElement(ibvsNode,"D");
+			mxmlNewReal(mxmlNewElement(dNode,"x"), mCntlGainIbvsD[0]);
+			mxmlNewReal(mxmlNewElement(dNode,"y"), mCntlGainIbvsD[1]);
+			mxmlNewReal(mxmlNewElement(dNode,"z"), mCntlGainIbvsD[2]);
+	}
+
 	mxml_node_t *attNode = mxmlNewElement(cntlRoot,"Attitude");
 	{
 		mxml_node_t *pNode = mxmlNewElement(attNode,"P");
@@ -1381,6 +1445,10 @@ void Leash::applyControllerConfig()
 		mCntlGainTransD[i] = ui->tblTransCntl->item(i,1)->text().toDouble();
 		mCntlGainTransI[i] = ui->tblTransCntl->item(i,2)->text().toDouble();
 		mCntlGainTransILimit[i] = ui->tblTransCntl->item(i,3)->text().toDouble();
+
+		mCntlGainIbvsP[i] = ui->tblIbvsCntl->item(i,0)->text().toDouble();
+		mCntlGainIbvsD[i] = ui->tblIbvsCntl->item(i,1)->text().toDouble();
+
 		mCntlGainAttP[i] = ui->tblAttCntl->item(i,0)->text().toDouble();
 		mCntlGainAttD[i] = ui->tblAttCntl->item(i,1)->text().toDouble();
 	}
@@ -1750,6 +1818,10 @@ void Leash::populateControlUI()
 		ui->tblTransCntl->item(i,1)->setText(QString::number(mCntlGainTransD[i]));
 		ui->tblTransCntl->item(i,2)->setText(QString::number(mCntlGainTransI[i]));
 		ui->tblTransCntl->item(i,3)->setText(QString::number(mCntlGainTransILimit[i]));
+
+		ui->tblIbvsCntl->item(i,0)->setText(QString::number(mCntlGainIbvsP[i]));
+		ui->tblIbvsCntl->item(i,1)->setText(QString::number(mCntlGainIbvsD[i]));
+
 		ui->tblAttCntl->item(i,0)->setText(QString::number(mCntlGainAttP[i]));
 		ui->tblAttCntl->item(i,1)->setText(QString::number(mCntlGainAttD[i]));
 	}

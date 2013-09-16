@@ -20,7 +20,6 @@
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Observer_Angular.h"
-//#include "Observer_Translational.h"
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"
@@ -53,8 +52,6 @@ class TargetFinder : public CommManagerListener,
 		void setStartTime(Time t){mStartTime = t;}
 		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
-//		void enableIbvs(bool enable);
-
 		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
 		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
 		void getLastImage(cv::Mat *outImage);
@@ -77,10 +74,7 @@ class TargetFinder : public CommManagerListener,
 		bool mLogImages;
 		bool mHaveUpdatedSettings;
 		bool mIsMotorOn;
-//		cv::Mat	mCurImage, mCurImageGray;
-//		shared_ptr<cv::Mat> mCurImageAnnotated;
 
-//		shared_ptr<DataImage> mImageDataPrev, mImageDataCur, mImageDataNext;
 		shared_ptr<DataImage> mImageDataNext;
 		shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
 
@@ -96,14 +90,10 @@ class TargetFinder : public CommManagerListener,
 
 		toadlet::egg::Collection<TargetFinderListener*> mListeners;
 
-//		float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
-//		int mSepDist, mPointCntTarget;
-
 		void run();
 
 		int mThreadPriority, mScheduler;
 
-//		shared_ptr<RectGroup> findTarget(cv::Mat &image);
 		shared_ptr<RectGroup> findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs);
 		static void drawTarget(cv::Mat &img, const shared_ptr<RectGroup> &target);
 
