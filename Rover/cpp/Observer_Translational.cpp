@@ -169,7 +169,7 @@ using namespace TNT;
 			mMutex_kfData.unlock();
 
 			// special handling if we aren't getting any position updates
-			if( (!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3)
+			if( ((!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3) )
 			{
 				mMutex_kfData.lock();
 				for(int i=0; i<6; i++)
@@ -178,7 +178,7 @@ using namespace TNT;
 				mStateKF[7][0] = mAccelBiasReset[1][0];
 				mStateKF[8][0] = mAccelBiasReset[2][0];
 
-//				mErrCovKF.inject(mDynCov);
+				mErrCovKF.inject(0.01*mDynCov);
 				mErrCovKF.inject(1e-6*createIdentity((double)9));
 				mMutex_kfData.unlock();
 			}
@@ -726,6 +726,14 @@ using namespace TNT;
 
 		if(mRawAccelDataBuffer.size() == 0 || mGravityDirDataBuffer.size() == 0)
 		{
+			for(int i=0; i<6; i++)
+				mStateKF[i][0] = 0;
+			mStateKF[6][0] = mAccelBiasReset[0][0];
+			mStateKF[7][0] = mAccelBiasReset[1][0];
+			mStateKF[8][0] = mAccelBiasReset[2][0];
+
+			mErrCovKF.inject(0.01*mDynCov);
+			mErrCovKF.inject(1e-6*createIdentity((double)9));
 			mMutex_kfData.unlock();
 			return startTime;
 		}

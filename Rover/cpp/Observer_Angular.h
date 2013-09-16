@@ -58,9 +58,6 @@ class Observer_Angular : public CommManagerListener,
 		void doInnovationUpdate(double dt, const shared_ptr<DataVector<double>> &accelData, const shared_ptr<DataVector<double>> &magData);
 		void doGyroUpdate(double dt, const shared_ptr<DataVector<double>> &gyroData);
 
-		/*
-		 * @return current attitude in [roll pitch yaw]^T column vector format
-		 */
 		SO3 getCurAttitude();
 		TNT::Array2D<double> getCurVel();
 		TNT::Array2D<double> getBias();
