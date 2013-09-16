@@ -160,20 +160,20 @@ if exist('state','var') && ~isempty(state)
 	end
 % 	% legend('Vicon','Phone');
 	
-	figure(2); clf;
-	set(gcf,'Units','Inches');
-	curPos = get(gcf,'Position'); figSize = [8 6];
-	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	for i=10:12
-		subplot(3,1,i-9)
-		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(stateTime, state(i,:)); hold all
-		plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
-		hold off
-		xlabel('Time [s]');
-		ylabel(stateLabels{i});		
-	end
-	legend('Vicon','KF','MAP Vel')
+% 	figure(2); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [8 6];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	for i=10:12
+% 		subplot(3,1,i-9)
+% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
+% 		plot(stateTime, state(i,:)); hold all
+% 		plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
+% 		hold off
+% 		xlabel('Time [s]');
+% 		ylabel(stateLabels{i});		
+% 	end
+% 	legend('Vicon','KF','MAP Vel')
 % 	
 % 	figure(3);
 % 	plot(viconStateTime(mask), viconState(9,mask)); hold all
@@ -224,131 +224,18 @@ end
 
 %%
 if exist('cameraPos','var') && ~isempty(cameraPos)
-	figure(800); set(gcf,'Name','Camera Pos');
-	mask = find(viconStateTime <= cameraPosTime(end));
-	for i=1:3
-		subplot(3,1,i)
-		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
-		plot(cameraPosTime, cameraPos(i,:),'.'); hold all
-		hold off
-		xlabel('Time [s]');
-		ylabel(stateLabels{i+6})
-	end
+% 	figure(800); set(gcf,'Name','Camera Pos');
+% 	mask = find(viconStateTime <= cameraPosTime(end));
+% 	for i=1:3
+% 		subplot(3,1,i)
+% 		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
+% 		plot(cameraPosTime, cameraPos(i,:),'.'); hold all
+% 		hold off
+% 		xlabel('Time [s]');
+% 		ylabel(stateLabels{i+6})
+% 	end
 end
 
-%%
-idx = find(state(12,:) > 0.5, 1, 'first');
-tStart = stateTime(idx);
-idx = find(state(9,:) < 0.5, 1, 'last');
-tStop = stateTime(idx);
-maskMap = find( (mapVelEstTime > tStart+20) .* (mapVelEstTime < tStop-5) );
-maskKf = find(stateTime > tStart+20);
-viconMapInterp = interp1(viconStateTime, viconState',mapVelEstTime(maskMap),[],'extrap')';
-viconKfInterp = interp1(viconStateTime, viconState', stateTime(maskKf),[],'extrap')';
-fprintf('Map rms err: '); disp([rms(viconMapInterp(10,:)-mapVelEst(1,maskMap)) rms(viconMapInterp(11,:)-mapVelEst(2,maskMap)) rms(viconMapInterp(12,:)-mapVelEst(3,maskMap))]);
-fprintf(' KF rms err: '); disp([rms(viconKfInterp(10,:)-state(10,maskKf)) rms(viconKfInterp(11,:)-state(11,maskKf)) rms(viconKfInterp(12,:)-state(12,maskKf))]);
-fprintf(' KF std err: '); disp([std(viconKfInterp(7,:)-state(7,maskKf)) std(viconKfInterp(8,:)-state(8,maskKf)) std(viconKfInterp(9,:)-state(9,maskKf))])
-
-% try calc phase lag
-dt = 0.001;
-time = mapVelEstTime(1):dt:mapVelEstTime(end);
-viconInterp = interp1(viconStateTime, viconState',time,[],'extrap')';
-
-opts = optimoptions('fminunc');
-opts = optimoptions(opts, 'Algorithm','quasi-newton');
-% opts = optimset(opts, 'LargeScale','off');
-opts = optimoptions(opts, 'Display', 'none');
-% mask = 1+find(diff(viconReceiveTime) == 0);
-% viconReceiveTime(mask) = [];
-% viconReceive(:,mask) = [];
-% optimFuncWifi = @(lag) rms(viconInterp(7,:) - interp1(viconReceiveTime, viconReceive(7,:), time+lag,[],'extrap'));
-optimFuncMap = @(lag) rms(viconInterp(11,:) - interp1(mapVelEstTime, mapVelEst(2,:), time+lag,[],'extrap'));
-optimFuncKf = @(lag) rms(viconInterp(11,:) - interp1(stateTime, stateTime(11,:), time+lag,[],'extrap'));
-% lagWifi = fminunc(@(x) optimFuncWifi(x), 0.01, opts);
-lagMap = fminunc(@(x) optimFuncMap(x), 0.05, opts);
-lagKf = fminunc(@(x) optimFuncMap(x), 0.05, opts);
-
-% fprintf('wifi lag: %1.3f\n', lagWifi);
-fprintf('lag: %1.3f vs. %1.3f\n',lagMap, lagKf);
-
-
-%%
-% chad = interp1(viconStateTime, viconState', cameraPosTime,[],'extrap')';
-% optFunc = @(st, off) rms(chad(st+6,:)-cameraPos(st,:)-off);
-% xOpt = fminunc(@(x) optFunc(1, x), 0.7);
-% yOpt = fminunc(@(x) optFunc(2, x), 0.7);
-% zOpt = fminunc(@(x) optFunc(3, x), 0.2);
-% 
-% disp([xOpt yOpt zOpt])
-
-%%
-% targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_CENTERS);
-% targetLocTime = phoneData(targetLocIndices,1)'/1000;
-% targetLoc = phoneData(targetLocIndices,3:8)';
-% 
-% time = cameraPosTime;
-% chadAtt = interp1(viconStateTime, viconState(1:3,:)', time)';
-% chadPos = cameraPos;
-% chadTargetLoc = interp1(targetLocTime, targetLoc', time)';
-% viconInterp = interp1(viconStateTime, viconState', time)';
-% 
-% rotCamToPhone = createRotMat(3,-pi/2)*createRotMat(1,pi);
-% center = [317; 249]/2;
-% f = 524/2;
-% offset = [0.750; 0.691; 0.087];
-% k1 = 4.1533958393761790e-02;
-% k2 = -2.2180036921037907e-01;
-% k3 = 1.9638228031807242e-01;
-% p1 = -1.1113642874041813e-03;
-% p2 = 9.0520044080893297e-04;
-% nomLength = 0.21;
-% for i=1:size(chadPos,2)
-% 	R = createRotMat(3,chadAtt(3,i))*createRotMat(2,chadAtt(2,i))*createRotMat(1,chadAtt(1,i));
-% % 	R = createRotMat(1,chadAtt(1,i))*createRotMat(2,chadAtt(2,i));
-% % 	R = eye(3);
-% 	loc = [mean(chadTargetLoc([1 3 5],i)); mean(chadTargetLoc([2 4 6],i))];
-% 	p = [-(loc-center); -f];
-% 	
-% 	x = (p(1)-center(1))/f;
-% 	y = (p(2)-center(2))/f;
-% 	x0 = x;
-% 	y0 = y;
-% 	r2 = x*x+y*y;
-% 	icdist = 1/(1+((k3*r2+k2)*r2+k1)*r2);
-% 	dx = 2*p1*x*y+p2*(r2+2*x*x);
-% 	dy = p1*(r2+2*y*y)+2*p2*x*y;
-% 	p(1) = (x0-dx)*icdist*f+center(1);
-% 	p(2) = (y0-dy)*icdist*f+center(2);
-% 	
-% 	p = rotCamToPhone*p;
-% % 	u = p(1); v = p(2);
-% % 	phi = chadAtt(1,i); theta = chadAtt(2,i);
-% % 	k = f/(-u*cos(phi)*sin(theta)+v*sin(phi)+f*cos(phi)*cos(theta));
-% % 	p(1) = k*(u*cos(theta)+f*sin(theta));
-% % 	p(2) = k*(u*sin(phi)*sin(theta)+v*cos(phi)-f*sin(phi)*cos(theta));
-% 	p = R*p;
-% 	
-% 	z = chadPos(3,i)-offset(3); % viconInterp(9,i)-offset(3);
-% 	chadPos(1,i) = p(1)/f/z;
-% 	chadPos(2,i) = p(2)/f/z;
-% 	chadPos(3,i) = z;
-% 	
-% 	chadPos(:,i) = chadPos(:,i)+offset;
-% end
-% 
-% start = 100;
-% disp([	rms(chadPos(1,start:end)-viconInterp(7,start:end))...
-% 		rms(chadPos(2,start:end)-viconInterp(8,start:end))...
-% 		rms(chadPos(3,start:end)-viconInterp(9,start:end))] );
-% 
-% figure(1337); clf;
-% for i=1:3
-% 	subplot(3,1,i)
-% 	plot(viconStateTime, viconState(i+6,:)); hold all
-% 	plot(cameraPosTime, cameraPos(i,:),'.'); hold all
-% 	plot(time, chadPos(i,:),'.'); hold all
-% 	hold off
-% end
 
 
 %%

@@ -26,6 +26,8 @@ tranStateRef = phoneData(tranStateRefIndices,3:8)';
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
+accelBiasTime = tranStateTime;
+accelBias = phoneData(tranStateIndices,9:11)';
 
 if ~isempty(tranStateRef)
 	tranStateRefInterp = interp1(tranStateRefTime,tranStateRef',angleStateRefTime)';
@@ -93,21 +95,21 @@ forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV
 forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
 forceScaling = phoneData(forceScalingIndices,3)';
 
-cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
-cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
-cpuUsage = phoneData(cpuUsageIndices,3:end)';
+% cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
+% cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
+% cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
 % phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
 % phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
 % phoneTemp = phoneData(phoneTempIndices,3:6)';
 
-mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
-mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
-mapVelEst = phoneData(mapVelEstIndices,3:5)';
-
-mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
-mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
-mapHeightEst = phoneData(mapHeightEstIndices,3)';
+% mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
+% mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
+% mapVelEst = phoneData(mapVelEstIndices,3:5)';
+% 
+% mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
+% mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
+% mapHeightEst = phoneData(mapHeightEstIndices,3)';
 
 velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
 velEstTime = phoneData(velEstIndices,1)'/1000;
@@ -149,13 +151,17 @@ targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_
 targetLocTime = phoneData(targetLocIndices,1)'/1000;
 targetLoc = phoneData(targetLocIndices,3:8)';
 
-targetAreasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_AREAS);
-targetAreasTime = phoneData(targetAreasIndices,1)'/1000;
-targetAreas = phoneData(targetAreasIndices,3:6)';
+% targetAreasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_AREAS);
+% targetAreasTime = phoneData(targetAreasIndices,1)'/1000;
+% targetAreas = phoneData(targetAreasIndices,3:6)6003';
 
-cameraPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_ESTIMATED_POS);
-cameraPosTime = phoneData(cameraPosIndices,1)'/1000;
-cameraPos = phoneData(cameraPosIndices,3:5)';
+velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
+velCmdTime = phoneData(velCmdIndices,1)'/1000;
+velCmd = phoneData(velCmdIndices,3:5)';
+
+accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CMD);
+accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
+accelCmd = phoneData(accelCmdIndices,3:5)';
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
@@ -477,7 +483,7 @@ end
 if exist('targetLoc','var') && ~isempty(targetLoc)
 	figure(6001); clf; set(gcf,'Name','Target Location');
 	for i=1:3
-		plot(targetLoc(1+2*(i-1),:), targetLoc(2*i,:)); hold all
+		plot(targetLoc(1+2*(i-1),:), targetLoc(2*i,:),'.'); hold all
 	end
 	hold off
 	axis([0 320 0 240])
@@ -503,8 +509,58 @@ if exist('targetAreas','var') && ~isempty(targetAreas)
 	subplot(3,1,3);	plot(targetAreasTime, targetAreas(2,:)./targetAreas(3,:));
 	xlabel('Time [s]');
 	ylabel('Ratio 2->3');
-	
-
 end
 
 %%
+if exist('accelBias','var') && ~isempty(accelBias)
+  	figure(6500); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	for i=1:3
+		plot(accelBiasTime, accelBias(i,:)); hold all
+	end
+	hold off
+	xlabel('Time [s]')
+	ylabel('Accel bias [m/s^2]');
+	legend('x','y','z');	
+end
+
+%%
+if exist('accelCmd','var') && ~isempty(accelCmd)
+	figure(6600); clf
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	accelCmdTemp = accelCmd;
+	accelCmdTemp(3,:) = accelCmdTemp(3,:)-9.81;
+	plot(accelCmdTime, accelCmdTemp');hold all
+	ax = axis;
+	plot([ax(1) ax(2)],[0 0],'k--'); hold all
+	hold off
+	xlabel('Time [s]');
+	ylabel('Accel cmd [m/s^2]')
+	legend('x','y','z');
+end
+
+%%
+if exist('velCmd','var') && ~isempty(velCmd)
+	figure(6601); clf
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	mask = find( (tranStateTime > velCmdTime(1)) .* (tranStateTime < velCmdTime(end)) );
+	for i=1:3
+		subplot(3,1,i)
+		plot(velCmdTime, velCmd(i,:));hold all
+		plot(tranStateTime(mask), tranState(i+3,mask)); hold all
+		hold off
+		ax = axis;
+		plot([ax(1) ax(2)],[0 0],'k--'); hold all
+	end
+	xlabel('Time [s]');
+	ylabel('Vel cmd [m/s^2]')
+end
+
+%%
+disp('chad accomplished')

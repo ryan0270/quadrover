@@ -30,10 +30,10 @@ tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
 accelBiasTime = tranStateTime;
 accelBias = phoneData(tranStateIndices,9:11)';
-
-attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
-attBiasTime = phoneData(attBiasIndices,1)'/1000;
-attBias = phoneData(attBiasIndices,3:5)';
+% 
+% attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
+% attBiasTime = phoneData(attBiasIndices,1)'/1000;
+% attBias = phoneData(attBiasIndices,3:5)';
 
 mapHeightIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_HEIGHT);
 mapHeightTime = phoneData(mapHeightIndices,1)'/1000;

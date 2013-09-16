@@ -171,8 +171,8 @@ void Leash::initialize()
 	{
 		mTelemVicon.setOriginPosition(Array2D<double>(3,1,0.0));
 		mTelemVicon.initializeMonitor();
-//		mTelemVicon.connect("192.168.100.108");
-		mTelemVicon.connect("localhost");
+		mTelemVicon.connect("192.168.100.108");
+//		mTelemVicon.connect("localhost");
 	}
 	catch(const TelemetryViconException& ex)	{ cout << "Failure" << endl; throw(ex); }
 	cout << "Success" << endl;

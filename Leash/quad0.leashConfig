@@ -7,9 +7,9 @@
          <z>3.000000</z>
       </P>
       <D>
-         <x>3.000000</x>
-         <y>3.000000</y>
-         <z>3.000000</z>
+         <x>2.000000</x>
+         <y>2.000000</y>
+         <z>2.000000</z>
       </D>
       <I>
          <x>0.000000</x>
@@ -25,14 +25,14 @@
    </Translation>
    <IBVS>
       <P>
-         <x>1.000000</x>
-         <y>1.000000</y>
-         <z>1.000000</z>
+         <x>0.500000</x>
+         <y>0.500000</y>
+         <z>0.500000</z>
       </P>
       <D>
          <x>1.000000</x>
          <y>1.000000</y>
-         <z>1.000000</z>
+         <z>0.500000</z>
       </D>
    </IBVS>
    <Attitude>
@@ -53,10 +53,10 @@
       <MeasVar>
          <x>0.000100</x>
          <y>0.000100</y>
-         <z>0.000001</z>
-         <xVel>0.100000</xVel>
-         <yVel>0.100000</yVel>
-         <zVel>0.100000</zVel>
+         <z>0.000100</z>
+         <xVel>0.000500</xVel>
+         <yVel>0.000500</yVel>
+         <zVel>0.050000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.010000</x>
@@ -67,14 +67,14 @@
          <zVel>10.000000</zVel>
       </DynVar>
       <AccelBias>
-         <x>0.000000</x>
-         <y>0.000000</y>
-         <z>0.000000</z>
+         <x>-0.100000</x>
+         <y>-0.200000</y>
+         <z>-0.200000</z>
       </AccelBias>
       <AccelBiasDynVar>
-         <x>0.001000</x>
-         <y>0.001000</y>
-         <z>0.001000</z>
+         <x>0.010000</x>
+         <y>0.010000</y>
+         <z>0.010000</z>
       </AccelBiasDynVar>
    </Translation>
    <Attitude>
@@ -114,7 +114,7 @@
    <MeasurementCov>15.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
-<LogMask>537</LogMask>
+<LogMask>539</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

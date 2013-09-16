@@ -98,28 +98,27 @@ void TargetFinder::run()
 
 			double procTime = procStart.getElapsedTimeNS()/1.0e9;
 
-			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-			curImage.copyTo(*imageAnnotated);
-			if(target != NULL)
-				drawTarget(*imageAnnotated, target);
-
-			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
-			imageAnnotatedData->imageAnnotated = imageAnnotated;
-			imageAnnotatedData->imageDataSource = imageData;
-			imageAnnotatedData->timestamp.setTime(imageData->timestamp);
-			mImageAnnotatedLast = imageAnnotatedData;
-
-			shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
-			data->type = DATA_TYPE_CAMERA_POS;
-			data->target = target;
-			data->imageData = imageData;
-			data->imageAnnotatedData = imageAnnotatedData;
-			data->timestamp.setTime(imageData->timestamp);
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onTargetFound(data);
-
 			if(target != NULL)
 			{
+				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
+				curImage.copyTo(*imageAnnotated);
+				drawTarget(*imageAnnotated, target);
+
+				shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
+				imageAnnotatedData->imageAnnotated = imageAnnotated;
+				imageAnnotatedData->imageDataSource = imageData;
+				imageAnnotatedData->timestamp.setTime(imageData->timestamp);
+				mImageAnnotatedLast = imageAnnotatedData;
+
+				shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
+				data->type = DATA_TYPE_CAMERA_POS;
+				data->target = target;
+				data->imageData = imageData;
+				data->imageAnnotatedData = imageAnnotatedData;
+				data->timestamp.setTime(imageData->timestamp);
+				for(int i=0; i<mListeners.size(); i++)
+					mListeners[i]->onTargetFound(data);
+
 				logString = String();
 				for(int i=0; i<target->squareData.size(); i++)
 					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";

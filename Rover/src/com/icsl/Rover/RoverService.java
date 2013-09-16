@@ -179,6 +179,7 @@ public class RoverService extends Service {
 		return mBinder;
 	}
 
+	private Object imgLock = new Object();
 	private void openCamera()
 	{
 		try{
@@ -272,8 +273,11 @@ public class RoverService extends Service {
 //				}
   	
 				mImgProcCnt++;
-				mImgYUV.put(0,0,data);
-				passNewImage(mImgYUV.getNativeObjAddr(), timestamp);
+				synchronized(imgLock)
+				{
+					mImgYUV.put(0,0,data);
+					passNewImage(mImgYUV.getNativeObjAddr(), timestamp);
+				}
 		
 				mCamera.addCallbackBuffer(mImgBuffer);
 			}

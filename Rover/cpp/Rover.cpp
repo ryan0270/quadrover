@@ -124,6 +124,7 @@ void Rover::initialize()
 	mCommManager.addListener(&mTargetFinder);
 	mTargetFinder.addListener(this);
 	mTargetFinder.addListener(&mObsvTranslational);
+	mTargetFinder.addListener(&mTranslationController);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(mStartTime);
@@ -425,12 +426,10 @@ void Rover::transmitDataUDP()
 //	}
 	if(mFeatureData != NULL)
 	{
-//		mFeatureData->lock();
 		if(mFeatureData->featurePoints.size() > 0)
 			pNumFeatures.dataInt32.push_back(mFeatureData->featurePoints.size());
 		else
 			pNumFeatures.dataInt32.push_back(0);
-//		mFeatureData->unlock();
 	}
 	else
 		pNumFeatures.dataInt32.push_back(0);
@@ -492,21 +491,10 @@ void Rover::transmitImage()
 
 	cv::Mat img;
 	mMutex_vision.lock();
-//	mFeatureFinder.getLastImageAnnotated(&img);
 	if(mObsvTranslational.isTargetFound() && mTargetData != NULL)
-	{
-//		mTargetData->lock();
-		try{ mTargetData->imageAnnotatedData->imageAnnotated->copyTo(img); }
-		catch(...) {Log::alert("copyTo error in Rover 1"); /*mTargetData->unlock();*/}
-//		mTargetData->unlock();
-	}
+		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(img);
 	else if(mFeatureData != NULL)
-	{
-//		mFeatureData->lock();
-		try { mFeatureData->imageAnnotated->imageAnnotated->copyTo(img); }
-		catch(...) {Log::alert("copyTo error in Rover 2"); /*mTargetData->unlock();*/}
-//		mFeatureData->unlock();
-	}
+		mFeatureData->imageAnnotated->imageAnnotated->copyTo(img);
 	mMutex_vision.unlock();
 
 	if(img.rows == 0 || img.cols == 0)
@@ -630,12 +618,16 @@ void Rover::onNewSensorUpdate(const shared_ptr<IData> &data)
 
 void Rover::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 {
+	mMutex_vision.lock();
 	mFeatureData = data;
+	mMutex_vision.unlock();
 }
 
 void Rover::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 {
+	mMutex_vision.lock();
 	mTargetData = data;
+	mMutex_vision.unlock();
 }
 
 void Rover::copyImageData(cv::Mat *m)
@@ -643,20 +635,12 @@ void Rover::copyImageData(cv::Mat *m)
 	if(!mRunning) // use this as an indicator that we are shutting down
 		return;
 
-	if(/*mObsvTranslational.isTargetFound() &&*/ mTargetData != NULL)
-	{
-//		mTargetData->lock();
-		try{ mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m); }
-		catch(...) {Log::alert("copyTo error in Rover 3"); /*mTargetData->unlock();*/}
-//		mTargetData->unlock();
-	}
+	mMutex_vision.lock();
+	if( mTargetData != NULL)
+		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m);
 	else if(mFeatureData != NULL)
-	{
-//		mFeatureData->lock();
-		try{ mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m); }
-		catch(...) {Log::alert("copyTo error in Rover 4"); /*mFeatureData->unlock();*/}
-//		mFeatureData->unlock();
-	}
+		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
+	mMutex_vision.unlock();
 }
 
 Array2D<double> Rover::getGyroValue()
