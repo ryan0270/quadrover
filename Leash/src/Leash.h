@@ -124,11 +124,11 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		Socket::ptr mSocketUDP, mSocketTCP;
 		float mAttObsvGainP, mAttObsvGainI;
 		float mCntlGainTransP[3], mCntlGainTransD[3], mCntlGainTransI[3], mCntlGainTransILimit[3];
+		float mCntlGainIbvsP[3], mCntlGainIbvsD[3];
 		float mCntlGainAttP[3], mCntlGainAttD[3];
 		float mMotorForceGain, mMotorTorqueGain, mMotorArmLength, mTotalMass;
 		Collection<float> mAttObsvDirWeights;
 		Collection<float> mAttObsvNominalMag;
-		TNT::Array2D<float> mIntMemory;
 		int mMotorValues[4];
 		toadlet::uint64 mTimeMS;
 		int mMotorTrim[4];

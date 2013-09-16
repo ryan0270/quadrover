@@ -6,7 +6,7 @@
 #include <Data.h>
 namespace ICSL{
 namespace Quadrotor{
-//using namespace std;
+using namespace std;
 class SensorManagerListener
 {
 	public:
@@ -41,9 +41,7 @@ class SensorManagerListener
 #include "Common.h"
 #include "QuadLogger.h"
 #include "Time.h"
-//#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
-//#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -53,7 +51,7 @@ class SensorManagerListener
 
 namespace ICSL{
 namespace Quadrotor{
-//using namespace std;
+using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
 class SensorManager : public Observer_AngularListener

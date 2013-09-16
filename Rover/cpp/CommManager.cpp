@@ -88,7 +88,6 @@ void CommManager::run()
 		mMutex_socketTCP.unlock();
 
 		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 500)
-//		if(mConnected && mLastCmdRcvTime.getElapsedTimeMS() > 100)
 		{
 			Log::alert("Lost connection");
 			mConnected = false;
@@ -159,11 +158,6 @@ void CommManager::transmitImageBuffer(uint32 numRows, uint32 numCols, uint32 num
 {
 	if(!mConnected)
 		return;
-//	mMutex_socketTCP.lock();
-//	bool connected = mSocketTCP == NULL
-//	mMutex_socketTCP.unlock();
-//	if(connected)
-//		return;
 
 	uint32 code = COMM_IMG_DATA;
 	uint32 size = buff.size()*sizeof(unsigned char);
@@ -294,7 +288,7 @@ void CommManager::pollTCP()
 						}
 					}
 					break;
-				case COMM_IBVS_GAINS:
+				case COMM_CNTL_IBVS_GAINS:
 					{
 						Collection<float> posGains, velGains;
 						int size;

@@ -84,7 +84,7 @@ enum CommID
 	COMM_VELOCITY_ESTIMATION_PROB_NO_CORR,
 	COMM_SEND_TRANS_CNTL_SYSTEM,
 	COMM_ACCELEROMETER_BIAS,
-	COMM_IBVS_GAINS,
+	COMM_CNTL_IBVS_GAINS,
 };
 
 class Packet
@@ -128,11 +128,6 @@ class Packet
 		toadlet::int32 nBool= dataBool.size();
 		memcpy(p, &nBool, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
 		memcpy(p, &dataBool.front(), dataBool.size()*sizeof(bool)); p += dataBool.size()*sizeof(bool);
-
-//		{
-//			String s = String()+"Serialized " + size + " bytes";
-//			Logger::alert(s);
-//		}
 	}
 
 	void deserialize(const toadlet::egg::Collection<toadlet::tbyte> &serial)

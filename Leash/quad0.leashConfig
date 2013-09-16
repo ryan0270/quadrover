@@ -23,6 +23,18 @@
       </ILimit>
       <ControlSysFile>../transControllers/tranCntlSys9.xml</ControlSysFile>
    </Translation>
+   <IBVS>
+      <P>
+         <x>1.000000</x>
+         <y>1.000000</y>
+         <z>1.000000</z>
+      </P>
+      <D>
+         <x>1.000000</x>
+         <y>1.000000</y>
+         <z>1.000000</z>
+      </D>
+   </IBVS>
    <Attitude>
       <P>
          <x>0.250000</x>

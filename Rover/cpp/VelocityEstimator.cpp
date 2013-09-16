@@ -237,13 +237,6 @@ vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistr
 	double f = focalLength;
 	double fInv = 1.0/f;
 
-//printArray("mv:\t", mv);
-//printArray("Sv:\n",Sv);
-//printArray("w:\t",omega);
-//Log::alert(String()+"mz:\t"+mz);
-//Log::alert(String()+"vz:\t"+varz);
-//Log::alert(String()+"dt:\t"+dt);
-
 	// delta_x = q_x*v_z*dt-f*v_x*dt
 	vector<Array2D<double>> mDeltaList(points.size()), SDeltaList(points.size());
 	double x, y;
@@ -306,9 +299,6 @@ vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistr
 	if(mz2Inv < mz1Inv*mz1Inv)
 		Log::alert(String()+"crap, mz2Inv >= mz1Inv*mz1Inv");
 
-//Log::alert(String()+"mz1Inv: "+mz1Inv);
-//Log::alert(String()+"mz2Inv: "+mz2Inv);
-
 	// calc distribution moments
 	vector<pair<Array2D<double>, Array2D<double>>> priorDistList(mDeltaList.size());
 	Array2D<double> md(2,1), Sd(2,2,0.0), Lw(2,3);
@@ -335,12 +325,6 @@ vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistr
 		Sd[0][1] = Sd[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
 		priorDistList[i] = pair<Array2D<double>, Array2D<double>>(md.copy(), Sd.copy());
-
-//if(i == 0)
-//{
-//	printArray("md:\t", md);
-//	printArray("chad dist:\n", Sd);
-//}
 	}
 
 	return priorDistList;
@@ -470,11 +454,6 @@ Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<
 		peakCoeff = max(peakCoeff,coeffList[i]);
 	}
 
-//	{
-//		String str = String()+mStartTime.getElapsedTimeMS()+"\t"+LOG_ID_MAP_PEAK_PSD_VALUE+"\t"+peakCoeff;
-//		mQuadLogger->addEntry(str, LOG_FLAG_CAM_RESULTS);
-//	}
-//	double thresh = probNoCorr*peakCoeff;
 	for(int j=0; j<N2; j++)
 		C[N1][j] = probNoCorr;
 
@@ -649,10 +628,10 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 
 			ds0 = (1.0-C[N1][j])*(SnInv[0][0]*temp1[0][0]*temp1[0][0] + SnInv[1][1]*temp1[1][0]*temp1[1][0]); // assumes Sn diagnoal
 
-			ds1_T.inject(matmult(transpose(temp1), temp2));
-//			ds1_T[0][0] = temp1[0][0]*temp2[0][0];
-//			ds1_T[0][1] = temp1[1][0]*temp2[1][1];
-//			ds1_T[0][2] = temp1[0][0]*temp2[0][2]+temp1[1][0]*temp2[1][2];
+//			ds1_T.inject(matmult(transpose(temp1), temp2));
+			ds1_T[0][0] = temp1[0][0]*temp2[0][0];
+			ds1_T[0][1] = temp1[1][0]*temp2[1][1];
+			ds1_T[0][2] = temp1[0][0]*temp2[0][2]+temp1[1][0]*temp2[1][2];
 			
 //			Array2D<double>	dS2   = matmult(transpose(Aj), temp2);
 			dS2[0][0] = Aj[0][0]*temp2[0][0]; 	dS2[0][1] = 0; 						dS2[0][2] = Aj[0][0]*temp2[0][2];
@@ -749,19 +728,10 @@ void VelocityEstimator::computeMAPEstimate(Array2D<double> &velMAP /*out*/, Arra
 	heightMAP = 0.5*(zL+zR);
 
 	// Compute distribution
-	Array2D<double> covTemp = 1.0/heightMAP/heightMAP*min(1,N1)/N1*S2+SvInv;
-	JAMA::Cholesky<double> chol_covTemp(covTemp);
-	Array2D<double> covTempInv = chol_covTemp.solve(createIdentity((double)3.0));
-	covVel = matmult(transpose(covTempInv), matmult(1.0/heightMAP/heightMAP*S2, covTempInv));
-
-//printArray("	mv:\t",mv);
-//printArray("velMAP:\t",velMAP);
-////printArray("Sv:\n", Sv);
-////printArray("S2:\n", S2);
-////printArray("covTemp:\n",covTemp);
-//printArray("covVel:\n", covVel);
-////printArray("velMAP:\t", velMAP);
-//int chad = 0;
+//	Array2D<double> covTemp = 1.0/heightMAP/heightMAP*min(1,N1)/N1*S2+SvInv;
+//	JAMA::Cholesky<double> chol_covTemp(covTemp);
+//	Array2D<double> covTempInv = chol_covTemp.solve(createIdentity((double)3.0));
+//	covVel = matmult(transpose(covTempInv), matmult(1.0/heightMAP/heightMAP*S2, covTempInv));
 }
 
 void VelocityEstimator::onNewCommVelEstMeasCov(float measCov)

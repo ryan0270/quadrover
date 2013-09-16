@@ -11,16 +11,13 @@ FeatureFinder::FeatureFinder()
 	mRunning = false;
 	mFinished = true;
 	mUseIbvs = false;
-//	mFirstImageProcessed = false;
 	mHaveUpdatedSettings = true;
-//	mCurImageAnnotated = NULL;
 	mIsMotorOn = false;
 
 	mImageProcTimeUS = 0;
 
 	mLastProcessTime.setTimeMS(0);
 
-//	mNewImageReady = mNewImageReady_targetFind = false;
 	mNewImageReady = false;
 
 	mImageDataNext = NULL;
@@ -93,13 +90,11 @@ void FeatureFinder::run()
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
-//			imageData->lock();
 			try{
 				imageData->image->copyTo(curImage);
 				imageData->imageGray->copyTo(curImageGray);
 			}
 			catch(...) {Log::alert("copyTo error in FeatureFinder 1");}
-//			imageData->unlock();
 
 			if(mHaveUpdatedSettings)
 			{
@@ -246,7 +241,6 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 		// turn off other keyPoints in this grid
 		int gid = gridId[i];
 		bool isStrongest = true;;
-//		for(int j=0; j<grids[gid].size(); j++)
 		int j=0;
 		while(isStrongest && j < grids[gid].size() )
 		{
@@ -269,7 +263,6 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 		int xGrid = gid % nGridX;
 		int yGrid = gid / nGridX;
 
-//		for(int j=0; j<8; j++)
 		j = 0;
 		while(isStrongest && j < 8)
 		{
@@ -282,7 +275,6 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 			}
 
 			int ngid = ny*nGridX+nx;
-//			for(int k=0; k<grids[ngid].size(); k++)
 			int k=0;
 			while(isStrongest && k < grids[ngid].size() )
 			{
@@ -386,29 +378,6 @@ void FeatureFinder::drawPoints(vector<cv::Point2f> const &points, cv::Mat &image
  		circle(image,p1,3,cv::Scalar(0,255,0),-1);
 	}
 }
-
-//void FeatureFinder::enableIbvs(bool enable)
-//{
-//	mUseIbvs = enable;
-//	if(mUseIbvs)
-//	{
-//		Log::alert("Turning IBVS on");
-//		String str = String()+ mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_ENABLED + "\t";
-//		mMutex_logger.lock();
-//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
-//		mMutex_logger.unlock();
-//		mFirstImageProcessed = false;
-//	}
-//	else
-//	{
-//		Log::alert("Turning IBVS off");
-//		String str = String() + mStartTime.getElapsedTimeMS() + "\t" + LOG_ID_IBVS_DISABLED + "\t";
-//		mMutex_logger.lock();
-//		mQuadLogger->addEntry(str,LOG_FLAG_PC_UPDATES);
-//		mMutex_logger.unlock();
-//		mFirstImageProcessed = false;
-//	}
-//}
 
 void FeatureFinder::onNewSensorUpdate(shared_ptr<IData> const &data)
 {

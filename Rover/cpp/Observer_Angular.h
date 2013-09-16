@@ -7,7 +7,8 @@
 
 namespace ICSL{
 namespace Quadrotor{
-//using namespace std;
+
+using namespace std;
 class Observer_AngularListener
 {
 	public:
@@ -43,6 +44,8 @@ class Observer_AngularListener
 
 namespace ICSL{
 namespace Quadrotor{
+
+using namespace std;
 
 //class Observer_Angular : public InputDeviceListener
 class Observer_Angular : public CommManagerListener,
@@ -104,10 +107,9 @@ class Observer_Angular : public CommManagerListener,
 		bool mRunning, mDone;
 		bool mNewAccelReady, mNewGyroReady, mNewMagReady;
 		bool mDoingBurnIn;
-		double mGainP, mGainI, mGainB, mIntSat;
+		double mGainP, mGainI;
 		double mAccelWeight, mMagWeight;
 		TNT::Array2D<double> mGyroBias, mInnovation;
-//		TNT::Array2D<double> mCurAttitude, mCurRotMat, mCurVel;
 		TNT::Array2D<double> mCurVel;
 		SO3 mCurAttitude;
 		shared_ptr<DataVector<double>>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates

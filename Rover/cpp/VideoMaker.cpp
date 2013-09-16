@@ -51,10 +51,6 @@ using namespace toadlet::egg;
 			mMutex_imageQueue.lock();
 			while(!mImageQueue.empty())
 			{
-//				if(mImageQueue.size() > 1)
-//					Log::alert(String()+"Backlog: "+mImageQueue.size());
-
-//				shared_ptr<ImageMatchData> data = mImageQueue.front();
 				shared_ptr<DataImage> data = mImageQueue.front();
 
 				id = data->imageId;
