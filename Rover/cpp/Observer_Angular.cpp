@@ -213,7 +213,7 @@ void Observer_Angular::doInnovationUpdate(double dt, const shared_ptr<DataVector
 	vI = 1.0/norm2(vI)*vI;
 
 	SO3 transR = mCurAttitude.inv();
-	if(norm2(accel-mAccelDirNom*GRAVITY) < 3)
+	if(norm2(accel-mAccelDirNom*GRAVITY) < 2)
 //	if( abs(norm2(accel)-GRAVITY) < 2 && accel[2][0] > 0)
 	{
 		mInnovation = mAccelWeight*cross(uB, transR*uI);
