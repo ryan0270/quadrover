@@ -162,10 +162,10 @@ namespace Quadrotor {
 		}
 	}
 	
-	void AttitudeThrustController::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
+	void AttitudeThrustController::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)
 	{
 		mMutex_data.lock();
-		mCurAtt.inject(attData->data);
+		mCurAtt.inject(attData->rotation.getAnglesZYX());
 		mCurAngularVel.inject(angularVelData->data);
 		mMutex_data.unlock();
 	

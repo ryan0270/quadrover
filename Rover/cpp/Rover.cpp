@@ -54,6 +54,7 @@ void Rover::initialize()
 	mMotorInterface.setThreadPriority(sched,maxPriority);
 	mSensorManager.setThreadPriority(sched,maxPriority);
 	mObsvAngular.setThreadPriority(sched,maxPriority);
+	mHeightSensor.setThreadPriority(sched.maxPriority-1);
 	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
 	mVelocityEstimator.setThreadPriority(sched,maxPriority-1);
 	mFeatureFinder.setThreadPriority(sched,maxPriority-2);
@@ -536,10 +537,10 @@ void Rover::transmitImage()
 	mImageIsSending = false;
 }
 
-void Rover::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
+void Rover::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double> > &angularVelData)
 {
 	mMutex_observer.lock();
-	mCurAtt.inject(attData->data);
+	mCurAtt.inject(attData->rotation.getAnglesZYX());
 	mCurAngularVel.inject(angularVelData->data);
 	mMutex_observer.unlock();
 }

@@ -69,7 +69,7 @@ class Observer_Translational : public Observer_AngularListener,
 	bool isTargetFound(){return mHaveFirstCameraPos;}
 
 	// from Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
+	void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData);
 
 	// from CommManagerListener
 	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
@@ -154,6 +154,7 @@ class Observer_Translational : public Observer_AngularListener,
 	list<shared_ptr<DataVector<double>>> mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;
 	list<shared_ptr<DataVector<double>>> mViconVelBuffer, mCameraVelBuffer, /*mOpticFlowVelBuffer,*/ mMapVelBuffer;
 	list<shared_ptr<Data<double>>> /*mHeightDataBuffer,*/ mMapHeightBuffer;
+	list<shared_ptr<HeightData<double>>> mHeightDataBuffer;
 	list<shared_ptr<DataVector<double>>> mRawAccelDataBuffer, mGravityDirDataBuffer;
 	list<shared_ptr<IData>> mNewEventsBuffer;
 

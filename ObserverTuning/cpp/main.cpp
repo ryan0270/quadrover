@@ -391,6 +391,7 @@ int main(int argv, char* argc[])
 	sched_setscheduler(0, SCHED_NORMAL, &sp);
 
 	Array2D<double> curViconState(12,1);;
+	float curHeight = -1;
 	bool haveFirstVicon = false;
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -398,7 +399,9 @@ int main(int argv, char* argc[])
 	int endTimeDelta = 30e3;
 	float viconUpdateRate = 10; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
-	Time lastViconUpdateTime;
+	float heightUpdateRate = 20; // Hz
+	int heightUpdatePeriodMS = 1.0f/heightUpdateRate*1000+0.5;
+	Time lastViconUpdateTime, lastHeightUpdateTime;
 
 	srand(1);
 	default_random_engine randGenerator;
@@ -463,12 +466,25 @@ int main(int argv, char* argc[])
 			// Vicon updates
 			if(lastViconUpdateTime.getElapsedTimeMS() > viconUpdatePeriodMS && haveFirstVicon)
 			{
+				lastViconUpdateTime.setTime();
 				toadlet::egg::Collection<float> state;
 				for(int i=0; i<curViconState.dim1(); i++)
 					state.push_back(curViconState[i][0] + noiseStd[i][0]*stdGaussDist(randGenerator) );
 				for(int i=0; i<commManagerListeners.size(); i++)
 					commManagerListeners[i]->onNewCommStateVicon(state);
-				lastViconUpdateTime.setTime();
+			}
+
+			// Height "sensor"
+			if(lastHeightUpdateTime.getElapsedTimeMS() > heightUpdatePeriodMS && curHeight > 0)
+			{
+				lastHeightUpdateTime.setTime();
+				shared_ptr<HeightData<double>> heightData(new HeightData<double>);
+				heightData->type = DATA_TYPE_HEIGHT;
+				heightData->heightRaw = curHeight;
+				heightData->height = curHeight;
+
+				for(int i=0; i<sensorManagerListeners.size(); i++)
+					sensorManagerListeners[i]->onNewSensorUpdate(heightData);
 			}
 
 			// Sensor updates
@@ -552,6 +568,7 @@ int main(int argv, char* argc[])
 					{
 						for(int i=0; i<12; i++)
 							ss >> curViconState[i][0];
+						curHeight = curViconState[8][0];
 						haveFirstVicon = true;
 					}
 					break;

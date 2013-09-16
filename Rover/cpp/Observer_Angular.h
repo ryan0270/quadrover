@@ -14,7 +14,7 @@ class Observer_AngularListener
 	public:
 	virtual ~Observer_AngularListener(){};
 
-	virtual void onObserver_AngularUpdated(shared_ptr<DataVector<double>> attData, shared_ptr<DataVector<double>> angularVelData)=0;
+	virtual void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)=0;
 };
 }}
 #endif
