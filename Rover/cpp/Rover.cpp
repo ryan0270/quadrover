@@ -54,7 +54,6 @@ void Rover::initialize()
 	mMotorInterface.setThreadPriority(sched,maxPriority);
 	mSensorManager.setThreadPriority(sched,maxPriority);
 	mObsvAngular.setThreadPriority(sched,maxPriority);
-	mHeightSensor.setThreadPriority(sched.maxPriority-1);
 	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
 	mVelocityEstimator.setThreadPriority(sched,maxPriority-1);
 	mFeatureFinder.setThreadPriority(sched,maxPriority-2);
@@ -146,10 +145,10 @@ void Rover::initialize()
 	mSensorManager.initialize();
 	mSensorManager.setObserverAngular(&mObsvAngular);
 	mSensorManager.start();
-	mObsvAngular.addListener(&mSensorManager);
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
 	mSensorManager.addListener(this);
+	mCommManager.addListener(&mSensorManager);
 
 	mQuadLogger.setStartTime(mStartTime);
 

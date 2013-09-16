@@ -99,22 +99,6 @@ tranStateLabels = { 'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [
 
 %%
 if exist('angleState','var') && ~isempty(angleState)
-  	figure(1); clf;
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
-	timeShift = 0.1;
-	for i=1:6
-		subplot(2,3,i);		
-		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(angleStateTime, angleState(i,:)); hold all
-		hold off
-
-		xlabel('Time [s]')
-		ylabel(angleStateLabels(i));	
-	end
-
 %   	figure(1); clf;
 % % 	set(gcf,'Units','Inches');
 % % 	curPos = get(gcf,'Position'); figSize = [6 4];
@@ -122,14 +106,30 @@ if exist('angleState','var') && ~isempty(angleState)
 % 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
 % 	timeShift = 0.1;
 % 	for i=1:6
-% 		subplot(2,3,i);
-% 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask))); hold all
-% 		plot(angleStateTime, angleState(i,:)-mean(angleState(i,:))); hold all
+% 		subplot(2,3,i);		
+% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
+% 		plot(angleStateTime, angleState(i,:)); hold all
 % 		hold off
 % 
 % 		xlabel('Time [s]')
-% 		ylabel(angleStateLabels(i));
+% 		ylabel(angleStateLabels(i));	
 % 	end
+
+  	figure(1); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
+	timeShift = 0.1;
+	for i=1:6
+		subplot(2,3,i);
+		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask))); hold all
+		plot(angleStateTime, angleState(i,:)-mean(angleState(i,:))); hold all
+		hold off
+
+		xlabel('Time [s]')
+		ylabel(angleStateLabels(i));
+	end
 	
 	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
 	start = max([find(abs(angleStateTime(1,:)) > 0.05,1,'first') find(angleStateTime > mapVelTime(1),1,'first')]);

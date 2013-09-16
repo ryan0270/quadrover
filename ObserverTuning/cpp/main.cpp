@@ -263,7 +263,7 @@ int main(int argv, char* argc[])
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
 		double gainP = 4;
-		double gainI = 0.0004;//0.004;
+		double gainI = 0.004;
 		double accelWeight = 1;
 		double magWeight = 0;
 		Collection<float> nomMag;
@@ -480,8 +480,8 @@ int main(int argv, char* argc[])
 				lastHeightUpdateTime.setTime();
 				shared_ptr<HeightData<double>> heightData(new HeightData<double>);
 				heightData->type = DATA_TYPE_HEIGHT;
-				heightData->heightRaw = curHeight;
-				heightData->height = curHeight;
+				heightData->heightRaw = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
+				heightData->height = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
 
 				for(int i=0; i<sensorManagerListeners.size(); i++)
 					sensorManagerListeners[i]->onNewSensorUpdate(heightData);
