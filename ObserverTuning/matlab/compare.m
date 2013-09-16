@@ -205,34 +205,34 @@ end
 
 %%
 if exist('accelCmd','var') && ~isempty(accelCmd)
-	figure(5); clf
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	accelCmdTemp = accelCmd;
-	accelCmdTemp(3,:) = accelCmdTemp(3,:)-9.81;
-	plot(accelCmdTime, accelCmdTemp');hold all
-	ax = axis;
-	plot([ax(1) ax(2)],[0 0],'k--'); hold all
-	hold off
-	xlabel('Time [s]');
-	ylabel('Accel cmd [m/s^2]')
-	legend('x','y','z');
+% 	figure(5); clf
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	accelCmdTemp = accelCmd;
+% 	accelCmdTemp(3,:) = accelCmdTemp(3,:)-9.81;
+% 	plot(accelCmdTime, accelCmdTemp');hold all
+% 	ax = axis;
+% 	plot([ax(1) ax(2)],[0 0],'k--'); hold all
+% 	hold off
+% 	xlabel('Time [s]');
+% 	ylabel('Accel cmd [m/s^2]')
+% 	legend('x','y','z');
 end
 
 %%
 if exist('velCmd','var') && ~isempty(velCmd)
-	figure(6); clf
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	plot(velCmdTime, velCmd');hold all
-	ax = axis;
-	plot([ax(1) ax(2)],[0 0],'k--'); hold all
-	hold off
-	xlabel('Time [s]');
-	ylabel('Vel cmd [m/s^2]')
-	legend('x','y','z');
+% 	figure(6); clf
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	plot(velCmdTime, velCmd');hold all
+% 	ax = axis;
+% 	plot([ax(1) ax(2)],[0 0],'k--'); hold all
+% 	hold off
+% 	xlabel('Time [s]');
+% 	ylabel('Vel cmd [m/s^2]')
+% 	legend('x','y','z');
 end
 
 %%

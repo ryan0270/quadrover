@@ -54,7 +54,7 @@ namespace Quadrotor{
 using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
-class SensorManager : public Observer_AngularListener
+class SensorManager
 {
 	public:
 	SensorManager();
@@ -75,9 +75,6 @@ class SensorManager : public Observer_AngularListener
 	void passNewImage(const cv::Mat *image, int64 timestampNS);
 
 	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
-
-	// for Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
 
 	protected:
 	bool mRunning, mDone;
@@ -100,8 +97,6 @@ class SensorManager : public Observer_AngularListener
 	Time mStartTime;
 
 	Collection<SensorManagerListener *> mListeners;
-
-	TNT::Array2D<double> mCurAtt, mCurAngularVel;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 

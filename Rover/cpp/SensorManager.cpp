@@ -10,9 +10,7 @@ namespace Quadrotor{
 		mLastAccel(3,1,0.0),
 		mLastGyro(3,1,0.0),
 		mLastMag(3,1,0.0),
-		mLastPressure(0),
-		mCurAtt(3,1,0.0),
-		mCurAngularVel(3,1,0.0)
+		mLastPressure(0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -389,14 +387,6 @@ namespace Quadrotor{
 			(("Failed to open "+filename).c_str());
 
 		return temp;
-	}
-
-	void SensorManager::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
-	{
-		mMutex_attData.lock();
-		mCurAtt.inject(attData->data);
-		mCurAngularVel.inject(angularVelData->data);
-		mMutex_attData.unlock();
 	}
 
 	void SensorManager::passNewImage(const cv::Mat *imageYUV, int64 timestampNS)

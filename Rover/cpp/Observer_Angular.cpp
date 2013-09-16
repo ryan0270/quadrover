@@ -289,7 +289,8 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 	mMutex_data.unlock();
 
 	for(int i=0; i<mListeners.size(); i++)
-		mListeners[i]->onObserver_AngularUpdated(attData, velData);
+		mListeners[i]->onObserver_AngularUpdated(rotData, velData);
+//		mListeners[i]->onObserver_AngularUpdated(attData, velData);
 
 	String logStr=String()+Time::calcDiffMS(mStartTime,attData->timestamp)+"\t";
 	for(int i=0; i<attData->data.dim1(); i++)

@@ -36,7 +36,6 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
-	./cpp/main.cpp
 	${ROVER_DIR}/cpp/Rotation.cpp
 	${ROVER_DIR}/cpp/CommManager.cpp
 	${ROVER_DIR}/cpp/FeatureFinder.cpp
@@ -46,12 +45,12 @@ set (SRC ${SRC}
 	${ROVER_DIR}/cpp/VelocityEstimator.cpp
 	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 	${ROVER_DIR}/cpp/TargetFinder.cpp
-
 	${ROVER_DIR}/cpp/Observer_Translational.cpp
 	${ROVER_DIR}/cpp/QuadLogger.cpp
 	${ROVER_DIR}/cpp/TranslationController.cpp
 	${ROVER_DIR}/cpp/AttitudeThrustController.cpp
 	# ${ROVER_DIR}/cpp/SensorManager.cpp
+	./cpp/main.cpp
 )
 
 # Headers
