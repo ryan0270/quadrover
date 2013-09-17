@@ -287,9 +287,9 @@ using namespace toadlet::egg;
 		T c3 = cos(aX); T s3 = sin(aX);
 
 		Array2D<T> rotMat(3,3);
-		rotMat[0][0] = c1*c2; 	rotMat[1][0] = c1*s2*s3-c3*s1;	rotMat[2][0] = s1*s3+c1*c3*s2;
-		rotMat[0][1] = c2*s1;	rotMat[1][1] = c1*c3+s1*s2*s3;	rotMat[2][1] = c3*s1*s2-c1*s3;
-		rotMat[0][2] = -s2;		rotMat[1][2] = c2*s3;			rotMat[2][2] = c2*c3;
+		rotMat[0][0] = c1*c2; 	rotMat[0][1] = c1*s2*s3-c3*s1;	rotMat[0][2] = s1*s3+c1*c3*s2;
+		rotMat[1][0] = c2*s1;	rotMat[1][1] = c1*c3+s1*s2*s3;	rotMat[1][2] = c3*s1*s2-c1*s3;
+		rotMat[2][0] = -s2;		rotMat[2][1] = c2*s3;			rotMat[2][2] = c2*c3;
 
 		return rotMat;
 	}

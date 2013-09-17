@@ -12,6 +12,7 @@
 #include "TranslationController.h"
 #include "Observer_Angular.h"
 #include "MotorInterface.h"
+#include "Rotation.h"
 
 #include "toadlet/egg.h"
 
@@ -41,7 +42,7 @@ class AttitudeThrustController : public CommManagerListener,
 	void calcControl();
 
 	Collection<uint16> getLastMotorCmds(){mMutex_motorInterface.lock(); Collection<uint16> temp(mLastMotorCmds); mMutex_motorInterface.unlock(); return temp;}
-	TNT::Array2D<double> getDesAttitude(){mMutex_data.lock(); TNT::Array2D<double> temp = mDesAtt.copy(); mMutex_data.unlock(); return temp;}
+	TNT::Array2D<double> getDesAttitude();
 
 	void addListener(AttitudeThrustControllerListener* l){mListeners.push_back(l);}
 
@@ -76,7 +77,6 @@ class AttitudeThrustController : public CommManagerListener,
 
 	double mThrust, mMass, mMotorArmLength;;
 	TNT::Array2D<double> mCurAngularVel;
-	TNT::Array2D<double> mCurAtt, mDesAtt, mDesRotMat, mDesRotMat_T;
 	TNT::Array2D<double> mGainAngle, mGainRate;
 
 	Collection<AttitudeThrustControllerListener*> mListeners;
@@ -84,6 +84,10 @@ class AttitudeThrustController : public CommManagerListener,
 	std::mutex mMutex_data, mMutex_motorInterface;
 
 	int mThreadPriority, mScheduler;
+
+	Array2D<double> mDesAccel;
+
+	SO3 mCurAtt, mDesAtt;
 };
 
 } // namespace Quadrotor
