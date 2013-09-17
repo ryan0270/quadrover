@@ -36,11 +36,11 @@ else
 	tranStateRefInterp = zeros(size(angleStateRef));
 	tranStateInterp = zeros(size(angleState));
 end
-stateRefTime = angleStateRefTime;
-stateRef = [angleStateRef; tranStateRefInterp];
-stateTime = angleStateTime;
-state = [angleState; tranStateInterp];
-state_dt = mean(diff(stateTime));
+% stateRefTime = angleStateRefTime;
+% stateRef = [angleStateRef; tranStateRefInterp];
+% stateTime = angleStateTime;
+% state = [angleState; tranStateInterp];
+% state_dt = mean(diff(stateTime));
 
 gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
 gyroTime = phoneData(gyroIndices,1)'/1000;
@@ -557,9 +557,11 @@ if exist('velCmd','var') && ~isempty(velCmd)
 		hold off
 		ax = axis;
 		line([ax(1) ax(2)],[0 0],'Color','k','LineStyle','--');
-	end
-	xlabel('Time [s]');
-	ylabel('Vel cmd [m/s^2]')
+		
+		xlabel('Time [s]');
+		ylabel(stateLabels{i+9})
+	end	
+	legend('cmd','actual');
 end
 
 %%

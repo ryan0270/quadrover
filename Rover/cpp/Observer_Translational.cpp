@@ -65,7 +65,7 @@ using namespace TNT;
 
 		mTargetNominalLength = 0.210;
 		mViconCameraOffset[0][0] = 0;
-		mViconCameraOffset[1][0] = 0.035;
+		mViconCameraOffset[1][0] = 0;
 		mViconCameraOffset[2][0] = 0.087;
 	}
 
@@ -604,10 +604,9 @@ using namespace TNT;
 				}
 				break;
 			case DATA_TYPE_HEIGHT:
-Log::alert(String()+"height:\t"+static_pointer_cast<HeightData<double>>(data)->height);
-//				mMutex_events.lock();
-//				mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );
-//				mMutex_events.unlock();
+				mMutex_events.lock();
+				mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );
+				mMutex_events.unlock();
 				break;
 		}
 	}
