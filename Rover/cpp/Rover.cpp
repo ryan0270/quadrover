@@ -146,10 +146,10 @@ void Rover::initialize()
 	mSensorManager.initialize();
 	mSensorManager.setObserverAngular(&mObsvAngular);
 	mSensorManager.start();
-	mObsvAngular.addListener(&mSensorManager);
 	mSensorManager.addListener(&mObsvAngular);
 	mSensorManager.addListener(&mObsvTranslational);
 	mSensorManager.addListener(this);
+	mCommManager.addListener(&mSensorManager);
 
 	mQuadLogger.setStartTime(mStartTime);
 
@@ -524,10 +524,10 @@ void Rover::transmitImage()
 	mImageIsSending = false;
 }
 
-void Rover::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
+void Rover::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double> > &angularVelData)
 {
 	mMutex_observer.lock();
-	mCurAtt.inject(attData->data);
+	mCurAtt.inject(attData->rotation.getAnglesZYX());
 	mCurAngularVel.inject(angularVelData->data);
 	mMutex_observer.unlock();
 }

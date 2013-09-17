@@ -14,7 +14,7 @@ class Observer_AngularListener
 	public:
 	virtual ~Observer_AngularListener(){};
 
-	virtual void onObserver_AngularUpdated(shared_ptr<DataVector<double>> attData, shared_ptr<DataVector<double>> angularVelData)=0;
+	virtual void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)=0;
 };
 }}
 #endif
@@ -58,9 +58,6 @@ class Observer_Angular : public CommManagerListener,
 		void doInnovationUpdate(double dt, const shared_ptr<DataVector<double>> &accelData, const shared_ptr<DataVector<double>> &magData);
 		void doGyroUpdate(double dt, const shared_ptr<DataVector<double>> &gyroData);
 
-		/*
-		 * @return current attitude in [roll pitch yaw]^T column vector format
-		 */
 		SO3 getCurAttitude();
 		TNT::Array2D<double> getCurVel();
 		TNT::Array2D<double> getBias();

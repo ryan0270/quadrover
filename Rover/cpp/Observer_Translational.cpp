@@ -57,6 +57,7 @@ using namespace TNT;
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapVelBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mRawAccelDataBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mGravityDirDataBuffer));
+		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mHeightDataBuffer));
 		
 		mHaveFirstVicon = false;
 
@@ -168,7 +169,7 @@ using namespace TNT;
 			mMutex_kfData.unlock();
 
 			// special handling if we aren't getting any position updates
-			if( (!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3)
+			if( ((!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3) )
 			{
 				mMutex_kfData.lock();
 				for(int i=0; i<6; i++)
@@ -177,7 +178,7 @@ using namespace TNT;
 				mStateKF[7][0] = mAccelBiasReset[1][0];
 				mStateKF[8][0] = mAccelBiasReset[2][0];
 
-//				mErrCovKF.inject(mDynCov);
+				mErrCovKF.inject(0.01*mDynCov);
 				mErrCovKF.inject(1e-6*createIdentity((double)9));
 				mMutex_kfData.unlock();
 			}
@@ -401,24 +402,29 @@ using namespace TNT;
 		errCov[8][8] -= gainKF[8][0]*errCov[2][8];
 	}
 
-	void Observer_Translational::onObserver_AngularUpdated(shared_ptr<DataVector<double>> attData, shared_ptr<DataVector<double>> angularVelData)
+	void Observer_Translational::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)
 	{
-		Array2D<double> att = attData->data;
-		double s1 = sin(att[2][0]); double c1 = cos(att[2][0]);
-		double s2 = sin(att[1][0]); double c2 = cos(att[1][0]);
-		double s3 = sin(att[0][0]); double c3 = cos(att[0][0]);
+//		Array2D<double> att = attData->data;
+//		double s1 = sin(att[2][0]); double c1 = cos(att[2][0]);
+//		double s2 = sin(att[1][0]); double c2 = cos(att[1][0]);
+//		double s3 = sin(att[0][0]); double c3 = cos(att[0][0]);
+//
+//		// third column of orientation matrix, i.e. R*e3
+//		//		Array2D<double> r(3,1);
+//		//		r[0][0] = s1*s3+c1*c3*s2;
+//		//		r[1][0] = c3*s1*s2-c1*s3;
+//		//		r[2][0] = c2*c3;
+//
+//		// gravity vector orientation, i.e. R'*e3
+//		Array2D<double> g(3,1);
+//		g[0][0] = -s2;
+//		g[1][0] = c2*s3;
+//		g[2][0] = c2*c3;
 
-		// third column of orientation matrix, i.e. R*e3
-		//		Array2D<double> r(3,1);
-		//		r[0][0] = s1*s3+c1*c3*s2;
-		//		r[1][0] = c3*s1*s2-c1*s3;
-		//		r[2][0] = c2*c3;
-
-		// gravity vector orientation, i.e. R'*e3
-		Array2D<double> g(3,1);
-		g[0][0] = -s2;
-		g[1][0] = c2*s3;
-		g[2][0] = c2*c3;
+		Array2D<double> e3(3,1);
+		e3[0][0] = e3[1][0] = 0;
+		e3[2][0] = 1;
+		Array2D<double> g = attData->rotation.inv()*e3;
 
 		shared_ptr<DataVector<double>> dirData(new DataVector<double>());
 		dirData->type = DATA_TYPE_GRAVITY_DIR;
@@ -460,14 +466,8 @@ using namespace TNT;
 		posData->timestamp.setTime(now);
 		posData->data = pos.copy();
 
-//		shared_ptr<Data<double>> heightData = shared_ptr<Data<double>>(new Data<double>());
-//		heightData->type = DATA_TYPE_VICON_HEIGHT;
-//		heightData->timestamp.setTime(now);
-//		heightData->data = pos[2][0];
-
 		mMutex_events.lock();
 		mNewEventsBuffer.push_back(posData);
-//		mHeightBuffer.push_back(heightData);
 		mMutex_events.unlock();
 
 		{
@@ -603,6 +603,11 @@ using namespace TNT;
 					}
 				}
 				break;
+			case DATA_TYPE_HEIGHT:
+				mMutex_events.lock();
+				mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );
+				mMutex_events.unlock();
+				break;
 		}
 	}
 
@@ -611,7 +616,7 @@ using namespace TNT;
 	{
 		mMutex_events.lock();
 		mNewEventsBuffer.push_back(velData);
-//		mNewEventsBuffer.push_back(heightData);
+		mNewEventsBuffer.push_back(heightData);
 		mMutex_events.unlock();
 	}
 
@@ -705,6 +710,9 @@ using namespace TNT;
 				case DATA_TYPE_MAP_HEIGHT:
 					mMapHeightBuffer.push_back(static_pointer_cast<Data<double>>(data));
 					break;
+				case DATA_TYPE_HEIGHT:
+					mHeightDataBuffer.push_back(static_pointer_cast<HeightData<double>>(data));
+					break;
 				default:
 					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
 					mMutex_kfData.unlock();
@@ -713,9 +721,19 @@ using namespace TNT;
 
 			newEvents.pop_front();
 		}
+		// To avoid bugs that keep popping up
+		data = NULL;
 
 		if(mRawAccelDataBuffer.size() == 0 || mGravityDirDataBuffer.size() == 0)
 		{
+			for(int i=0; i<6; i++)
+				mStateKF[i][0] = 0;
+			mStateKF[6][0] = mAccelBiasReset[0][0];
+			mStateKF[7][0] = mAccelBiasReset[1][0];
+			mStateKF[8][0] = mAccelBiasReset[2][0];
+
+			mErrCovKF.inject(0.01*mDynCov);
+			mErrCovKF.inject(1e-6*createIdentity((double)9));
 			mMutex_kfData.unlock();
 			return startTime;
 		}
@@ -723,6 +741,7 @@ using namespace TNT;
 		// now we have to rebuild the state and errcov history
 		list<shared_ptr<DataVector<double>>>::iterator posIter, velIter;
 		list<shared_ptr<DataVector<double>>>::iterator rawAccelIter, gravDirIter;
+		list<shared_ptr<HeightData<double>>>::iterator heightIter;
 		list<shared_ptr<Data<double>>>::iterator mapHeightIter;
 		list<shared_ptr<DataVector<double>>> *posBuffer, *velBuffer;
 		if(mUseViconPos)
@@ -742,6 +761,7 @@ using namespace TNT;
 		velIter = IData::findIndexReverse(startTime, *velBuffer);
 		rawAccelIter = IData::findIndexReverse(startTime, mRawAccelDataBuffer);
 		gravDirIter = IData::findIndexReverse(startTime, mGravityDirDataBuffer);
+		heightIter = IData::findIndexReverse(startTime, mHeightDataBuffer); 
 		mapHeightIter = IData::findIndexReverse(startTime, mMapHeightBuffer); 
 		
 		// but I want the next one for these because
@@ -759,6 +779,8 @@ using namespace TNT;
 			events.insert(events.end(), ++rawAccelIter, mRawAccelDataBuffer.end());
 		if(gravDirIter != mGravityDirDataBuffer.end())
 			events.insert(events.end(), ++gravDirIter, mGravityDirDataBuffer.end());
+		if(heightIter != mHeightDataBuffer.end())
+			events.insert(events.end(), ++heightIter, mHeightDataBuffer.end());
 		if(mapHeightIter != mMapHeightBuffer.end())
 			events.insert(events.end(), ++mapHeightIter, mMapHeightBuffer.end());
 
@@ -824,7 +846,10 @@ using namespace TNT;
 					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
 					break;
 				case DATA_TYPE_MAP_HEIGHT:
-					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(data)->data, mMAPHeightMeasCov, mStateKF, mErrCovKF);
+					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(*eventIter)->data, mMAPHeightMeasCov, mStateKF, mErrCovKF);
+					break;
+				case DATA_TYPE_HEIGHT:
+					doMeasUpdateKF_heightOnly(static_pointer_cast<HeightData<double>>(*eventIter)->height, mPosMeasCov[2][2], mStateKF, mErrCovKF);
 					break;
 				default:
 					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
