@@ -137,6 +137,8 @@ void Observer_Angular::run()
 					lastGyroUpdateTime.setTime(mGyroData->timestamp);
 					mGyroData->unlock();
 					mMutex_cache.unlock();
+
+					lastInnovationUpdateTime.setTime();
 				}
 			}
 			mMutex_data.unlock();
@@ -160,10 +162,11 @@ void Observer_Angular::run()
 			magProcessed = false;
 		}
 
-		if(!mDoingBurnIn && !accelProcessed && !magProcessed)
+		if(!mDoingBurnIn && (!accelProcessed && !magProcessed) )
 		{
-			doInnovationUpdate(lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6, accelData, magData);
+			double dt = lastInnovationUpdateTime.getElapsedTimeNS()/1.0e9;
 			lastInnovationUpdateTime.setTime();
+			doInnovationUpdate(dt, accelData, magData);
 			accelProcessed = true;
 			magProcessed = true;
 		}
@@ -185,7 +188,7 @@ void Observer_Angular::run()
 		}
 
 		mMutex_SO3Buffer.lock();
-		while(mSO3Buffer.size() > 0 && mSO3Buffer.front()->timestamp.getElapsedTimeMS() > 1e3)
+		while(mSO3Buffer.size() > 0 && mSO3Buffer.front()->timestamp.getElapsedTimeMS() > 0.5e3)
 			mSO3Buffer.pop_front();
 		mMutex_SO3Buffer.unlock();
 
@@ -213,8 +216,7 @@ void Observer_Angular::doInnovationUpdate(double dt, const shared_ptr<DataVector
 	vI = 1.0/norm2(vI)*vI;
 
 	SO3 transR = mCurAttitude.inv();
-	if(norm2(accel-mAccelDirNom*GRAVITY) < 2)
-//	if( abs(norm2(accel)-GRAVITY) < 2 && accel[2][0] > 0)
+	if( abs(norm2(accel)-GRAVITY) < 5 && accel[2][0] > 0)
 	{
 		mInnovation = mAccelWeight*cross(uB, transR*uI);
 		mInnovation += mMagWeight*cross(vB, transR*vI);
@@ -235,20 +237,20 @@ void Observer_Angular::doInnovationUpdate(double dt, const shared_ptr<DataVector
 		mExtraDirsInertial.pop_back();
 	}
 
-	if(dt < 0.02)
+//	if(dt < 0.02)
 		for(int i=0; i<mGyroBias.dim1(); i++)
 			mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
 
-	String logString;
+	String logString1, logString2;
 	for(int i=0; i<mGyroBias.dim1(); i++)
-		logString = logString+mGyroBias[i][0] + "\t";
-	mQuadLogger->addEntry(Time(), LOG_ID_GYRO_BIAS, logString, LOG_FLAG_OBSV_BIAS);
+		logString1 = logString1+mGyroBias[i][0] + "\t";
 
-	logString = String();
 	for(int i=0; i<mInnovation.dim1(); i++)
-		logString = logString+mInnovation[i][0] + "\t";
+		logString2 = logString2+mInnovation[i][0] + "\t";
 	mMutex_data.unlock();
-	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_INNOVATION, logString, LOG_FLAG_OBSV_BIAS);
+
+	mQuadLogger->addEntry(Time(), LOG_ID_GYRO_BIAS, logString1, LOG_FLAG_OBSV_BIAS);
+	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_INNOVATION, logString2, LOG_FLAG_OBSV_BIAS);
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer
@@ -266,7 +268,7 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 
 	SO3_LieAlgebra gyro_so3(gyro);
 	SO3 A = gyro_so3.integrate(dt);
-	mCurAttitude = mCurAttitude*SO3(A);
+	mCurAttitude = mCurAttitude*A;
 
 	shared_ptr<DataVector<double>> attData(new DataVector<double> );
 	attData->type = DATA_TYPE_ATTITUDE;
