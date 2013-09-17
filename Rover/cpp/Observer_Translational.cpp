@@ -604,9 +604,10 @@ using namespace TNT;
 				}
 				break;
 			case DATA_TYPE_HEIGHT:
-				mMutex_events.lock();
-				mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );
-				mMutex_events.unlock();
+Log::alert(String()+"height:\t"+static_pointer_cast<HeightData<double>>(data)->height);
+//				mMutex_events.lock();
+//				mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );
+//				mMutex_events.unlock();
 				break;
 		}
 	}

@@ -36,11 +36,11 @@ else
 	tranStateRefInterp = zeros(size(angleStateRef));
 	tranStateInterp = zeros(size(angleState));
 end
-% stateRefTime = angleStateRefTime;
-% stateRef = [angleStateRef; tranStateRefInterp];
-% stateTime = angleStateTime;
-% state = [angleState; tranStateInterp];
-% state_dt = mean(diff(stateTime));
+stateRefTime = angleStateRefTime;
+stateRef = [angleStateRef; tranStateRefInterp];
+stateTime = angleStateTime;
+state = [angleState; tranStateInterp];
+state_dt = mean(diff(stateTime));
 
 gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
 gyroTime = phoneData(gyroIndices,1)'/1000;
@@ -552,7 +552,7 @@ if exist('velCmd','var') && ~isempty(velCmd)
 	mask = find( (tranStateTime > velCmdTime(1)) .* (tranStateTime < velCmdTime(end)) );
 	for i=1:3
 		subplot(3,1,i)
-		plot(velCmdTime, velCmd(i,:));hold all
+		plot(velCmdTime, velCmd(i,:),'.');hold all
 		plot(tranStateTime(mask), tranState(i+3,mask)); hold all
 		hold off
 		ax = axis;
