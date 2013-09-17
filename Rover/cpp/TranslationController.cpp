@@ -102,25 +102,17 @@ using namespace TNT;
 		Time lastTargetFindTime(mLastTargetFindTime);
 		mMutex_targetFindTime.unlock();
 		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 1.0e3)
-			accelCmd = calcControlIBVS(dt);
-		else
 		{
-			if(mLastController != Controller::SYSTEM)
-			{
-				// Set the desired position to our current position
-				// So when we switch back to vicon-based control
-				// we don't have a sudden jump
-				mMutex_viconState.lock(); mMutex_state.lock();
-				for(int i=0; i<3; i++)
-					mDesState[i][0] = mStateVicon[i+6][0];
-				for(int i=3; i<6; i++)
-					mDesState[i][0] = 0;
-				mMutex_state.unlock(); mMutex_viconState.unlock();
+			accelCmd = calcControlIBVS(dt);
 
-				mCntlSys.reset();
-			}
-			accelCmd = calcControlSystem(error,dt);
+			// fake the system controller so when we switch back to 
+			// it the integrator is still valid
+			for(int i=0; i<error.dim1(); i++)
+				error[i][0] = 0;
+			calcControlSystem(error, dt);
 		}
+		else
+			accelCmd = calcControlSystem(error,dt);
 //		accelCmd = calcControlPID(error,dt);
 
 		for(int i=0; i<mListeners.size(); i++)
@@ -227,6 +219,9 @@ using namespace TNT;
 
 		mMutex_gains.lock();
 		Array2D<double> desVel = mIbvsPosGains*visionErr; // remember that * is element-wise
+
+		// use real height for z vel
+		desVel[2][0] = -mIbvsPosGains[2][0]*(mCurState[2][0]-mDesState[2][0]);
 		mMutex_gains.unlock();
 
 		String logString;
