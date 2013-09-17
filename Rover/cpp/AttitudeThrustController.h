@@ -88,6 +88,7 @@ class AttitudeThrustController : public CommManagerListener,
 	Array2D<double> mDesAccel;
 
 	SO3 mCurAtt, mDesAtt;
+	SO3 mMotorPlaneBias;
 };
 
 } // namespace Quadrotor
