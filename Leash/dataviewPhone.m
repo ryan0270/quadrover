@@ -556,7 +556,7 @@ if exist('velCmd','var') && ~isempty(velCmd)
 		plot(tranStateTime(mask), tranState(i+3,mask)); hold all
 		hold off
 		ax = axis;
-		plot([ax(1) ax(2)],[0 0],'k--'); hold all
+		line([ax(1) ax(2)],[0 0],'Color','k','LineStyle','--');
 	end
 	xlabel('Time [s]');
 	ylabel('Vel cmd [m/s^2]')
