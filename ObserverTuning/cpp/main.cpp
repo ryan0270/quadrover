@@ -61,7 +61,7 @@ int main(int argv, char* argc[])
 //return 0;
 
 	string dataDir;
-	int dataSet = 1;
+	int dataSet = 0;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -262,8 +262,8 @@ int main(int argv, char* argc[])
 	// Now to set parameters like they would have been online
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
-		double gainP = 4;
-		double gainI = 0.0004;//0.004;
+		double gainP = 2;
+		double gainI = 0.0015;
 		double accelWeight = 1;
 		double magWeight = 0;
 		Collection<float> nomMag;
@@ -272,21 +272,6 @@ int main(int argv, char* argc[])
 		nomMag.push_back(15.9);
 		commManagerListeners[i]->onNewCommAttObserverGain(gainP, gainI, accelWeight, magWeight);
 		commManagerListeners[i]->onNewCommNominalMag(nomMag);
-
-		Array2D<double> gyroBias(3,1);
-		gyroBias[0][0] = -0.006;
-		gyroBias[1][0] = -0.008;
-		gyroBias[2][0] = -0.008;
-		shared_ptr<IData> gyroBiasData(new DataVector<double>());
-		gyroBiasData->type = DATA_TYPE_GYRO;
-		static_pointer_cast<DataVector<double> >(gyroBiasData)->data = gyroBias.copy();
-		static_pointer_cast<DataVector<double> >(gyroBiasData)->dataCalibrated = gyroBias.copy();
-		// this is gyro bias burn-in
-		for(int i=0; i<2000; i++)
-		{
-			mObsvAngular.onNewSensorUpdate(gyroBiasData);
-			System::usleep(700);
-		}
 
 		Collection<float> measVar;
 		measVar.push_back(0.0001);
@@ -391,14 +376,17 @@ int main(int argv, char* argc[])
 	sched_setscheduler(0, SCHED_NORMAL, &sp);
 
 	Array2D<double> curViconState(12,1);;
+	float curHeight = -1;
 	bool haveFirstVicon = false;
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 30e3;
+	int endTimeDelta = 100e3;
 	float viconUpdateRate = 10; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
-	Time lastViconUpdateTime;
+	float heightUpdateRate = 20; // Hz
+	int heightUpdatePeriodMS = 1.0f/heightUpdateRate*1000+0.5;
+	Time lastViconUpdateTime, lastHeightUpdateTime;
 
 	srand(1);
 	default_random_engine randGenerator;
@@ -415,6 +403,21 @@ int main(int argv, char* argc[])
 	{
 		getline(file, line); // first line is a throw-away
 		getline(file, line); // second line is also a throw-away
+
+		// gyro bias burn-in
+		Array2D<double> gyroBias(3,1);
+		gyroBias[0][0] = -0.006;
+		gyroBias[1][0] = -0.008;
+		gyroBias[2][0] = -0.008;
+		shared_ptr<IData> gyroBiasData(new DataVector<double>());
+		gyroBiasData->type = DATA_TYPE_GYRO;
+		static_pointer_cast<DataVector<double> >(gyroBiasData)->data = gyroBias.copy();
+		static_pointer_cast<DataVector<double> >(gyroBiasData)->dataCalibrated = gyroBias.copy();
+		for(int i=0; i<2000; i++)
+		{
+			mObsvAngular.onNewSensorUpdate(gyroBiasData);
+			System::usleep(700);
+		}
 
 		for(int i=0; i<commManagerListeners.size(); i++)
 			commManagerListeners[i]->onNewCommMotorOn();
@@ -463,12 +466,25 @@ int main(int argv, char* argc[])
 			// Vicon updates
 			if(lastViconUpdateTime.getElapsedTimeMS() > viconUpdatePeriodMS && haveFirstVicon)
 			{
+				lastViconUpdateTime.setTime();
 				toadlet::egg::Collection<float> state;
 				for(int i=0; i<curViconState.dim1(); i++)
 					state.push_back(curViconState[i][0] + noiseStd[i][0]*stdGaussDist(randGenerator) );
 				for(int i=0; i<commManagerListeners.size(); i++)
 					commManagerListeners[i]->onNewCommStateVicon(state);
-				lastViconUpdateTime.setTime();
+			}
+
+			// Height "sensor"
+			if(lastHeightUpdateTime.getElapsedTimeMS() > heightUpdatePeriodMS && curHeight > 0)
+			{
+				lastHeightUpdateTime.setTime();
+				shared_ptr<HeightData<double>> heightData(new HeightData<double>);
+				heightData->type = DATA_TYPE_HEIGHT;
+				heightData->heightRaw = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
+				heightData->height = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
+
+				for(int i=0; i<sensorManagerListeners.size(); i++)
+					sensorManagerListeners[i]->onNewSensorUpdate(heightData);
 			}
 
 			// Sensor updates
@@ -552,6 +568,7 @@ int main(int argv, char* argc[])
 					{
 						for(int i=0; i<12; i++)
 							ss >> curViconState[i][0];
+						curHeight = curViconState[8][0];
 						haveFirstVicon = true;
 					}
 					break;

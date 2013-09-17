@@ -10,9 +10,7 @@ namespace Quadrotor{
 		mLastAccel(3,1,0.0),
 		mLastGyro(3,1,0.0),
 		mLastMag(3,1,0.0),
-		mLastPressure(0),
-		mCurAtt(3,1,0.0),
-		mCurAngularVel(3,1,0.0)
+		mLastPressure(0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -34,6 +32,9 @@ namespace Quadrotor{
 		mCameraDistortionCoeffs = NULL;
 
 		mObsvAngular = NULL;
+
+		mLastHeight = 0;
+		mNewHeightAvailable = false;
 	}
 
 	SensorManager::~SensorManager()
@@ -161,6 +162,7 @@ namespace Quadrotor{
 	{
 		mRunning = true;
 		thread tempMonitorTh(&SensorManager::runTemperatureMonitor, this);
+		thread heightMonitorTh(&SensorManager::runHeightMonitor, this);
 
 		double accelCal1X = 0.05;
 		double accelCal1Y = 0.06;
@@ -288,6 +290,8 @@ namespace Quadrotor{
 		}
 
 		tempMonitorTh.join();
+		Log::alert("waiting on height monitor");
+		heightMonitorTh.join();
 
 		mDone = true;
 	}
@@ -309,15 +313,12 @@ namespace Quadrotor{
 			data->fgTemp = fgTemp;
 			mMutex_listeners.lock();
 			for(int i=0; i<mListeners.size(); i++)
-			{
 				mListeners[i]->onNewSensorUpdate(data);
-			}
 			mMutex_listeners.unlock();
 
 			if(mQuadLogger != NULL)
 			{
 				String s = String();
-				s = s+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
 				s = s+battTemp+"\t";
 				s = s+secTemp+"\t";
 				s = s+fgTemp+"\t";
@@ -327,6 +328,40 @@ namespace Quadrotor{
 			}
 
 			System::msleep(500);
+		}
+	}
+
+	void SensorManager::runHeightMonitor()
+	{
+		sched_param sp;
+		sp.sched_priority = mThreadPriority-1;
+		sched_setscheduler(0, mScheduler, &sp);
+		double lastHeight=0;
+		mNewHeightAvailable = false;
+		while(mRunning)
+		{
+			if(mNewHeightAvailable)
+			{
+				mMutex_vicon.lock();
+				lastHeight = mLastHeight;
+				mMutex_vicon.unlock();
+
+				shared_ptr<HeightData<double>> data(new HeightData<double>);
+				data->type = DATA_TYPE_HEIGHT;
+				data->heightRaw = lastHeight;
+				data->height = lastHeight;
+
+				mMutex_listeners.lock();
+				for(int i=0; i<mListeners.size(); i++)
+					mListeners[i]->onNewSensorUpdate(data);
+				mMutex_listeners.unlock();
+			}
+
+			// simulate a 20Hz update rate for now
+			// in the future this will be small but
+			// mNewHeightAvailable is the flag for new
+			// data
+			System::msleep(50);
 		}
 	}
 
@@ -391,14 +426,6 @@ namespace Quadrotor{
 		return temp;
 	}
 
-	void SensorManager::onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData)
-	{
-		mMutex_attData.lock();
-		mCurAtt.inject(attData->data);
-		mCurAngularVel.inject(angularVelData->data);
-		mMutex_attData.unlock();
-	}
-
 	void SensorManager::passNewImage(const cv::Mat *imageYUV, int64 timestampNS)
 	{
 		shared_ptr<DataImage> data(new DataImage());
@@ -441,6 +468,15 @@ namespace Quadrotor{
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onNewSensorUpdate(static_pointer_cast<IData>(data));
 		mMutex_listeners.unlock();
+	}
+
+	void SensorManager::onNewCommStateVicon(const Collection<float> &data)
+	{
+		mMutex_vicon.lock();
+		mLastHeight = data[8];
+		mMutex_vicon.unlock();
+
+		mNewHeightAvailable = true;
 	}
 
 } // namespace Quadrotor

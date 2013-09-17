@@ -42,6 +42,7 @@ class SensorManagerListener
 #include "QuadLogger.h"
 #include "Time.h"
 #include "Observer_Angular.h"
+#include "CommManager.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -54,7 +55,7 @@ namespace Quadrotor{
 using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
-class SensorManager : public Observer_AngularListener
+class SensorManager : public CommManagerListener
 {
 	public:
 	SensorManager();
@@ -71,13 +72,13 @@ class SensorManager : public Observer_AngularListener
 
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
 
+	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
+
 	// used to pass images in from Java
 	void passNewImage(const cv::Mat *image, int64 timestampNS);
 
-	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
-
-	// for Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
+	// for CommManagerListener
+	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
 
 	protected:
 	bool mRunning, mDone;
@@ -89,6 +90,7 @@ class SensorManager : public Observer_AngularListener
 	static int getSecTemp();
 	static int getFuelgaugeTemp();
 	void runTemperatureMonitor();
+	void runHeightMonitor();
 
 	QuadLogger *mQuadLogger;
 
@@ -100,8 +102,6 @@ class SensorManager : public Observer_AngularListener
 	Time mStartTime;
 
 	Collection<SensorManagerListener *> mListeners;
-
-	TNT::Array2D<double> mCurAtt, mCurAngularVel;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
@@ -115,6 +115,10 @@ class SensorManager : public Observer_AngularListener
 	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
 
 	Observer_Angular *mObsvAngular;
+
+	double mLastHeight;
+	bool mNewHeightAvailable;
+	std::mutex mMutex_vicon;
 };
 
 

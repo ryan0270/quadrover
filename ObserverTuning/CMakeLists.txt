@@ -36,7 +36,6 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
-	./cpp/main.cpp
 	${ROVER_DIR}/cpp/Rotation.cpp
 	${ROVER_DIR}/cpp/CommManager.cpp
 	${ROVER_DIR}/cpp/FeatureFinder.cpp
@@ -46,12 +45,12 @@ set (SRC ${SRC}
 	${ROVER_DIR}/cpp/VelocityEstimator.cpp
 	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 	${ROVER_DIR}/cpp/TargetFinder.cpp
-
 	${ROVER_DIR}/cpp/Observer_Translational.cpp
 	${ROVER_DIR}/cpp/QuadLogger.cpp
 	${ROVER_DIR}/cpp/TranslationController.cpp
 	${ROVER_DIR}/cpp/AttitudeThrustController.cpp
 	# ${ROVER_DIR}/cpp/SensorManager.cpp
+	./cpp/main.cpp
 )
 
 # Headers
@@ -81,6 +80,7 @@ set (H ${H}
 
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmessage-length=0")  # disable line-wrapping for error messages
 
 add_definitions(-DICSL_OBSERVER_SIMULATION)
 add_definitions(-DSCHED_NORMAL=0) # linux and android appear to have this defined on slightly different paths

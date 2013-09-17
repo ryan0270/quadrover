@@ -60,7 +60,7 @@ class AttitudeThrustController : public CommManagerListener,
 	void onTranslationControllerAccelCmdUpdated(const TNT::Array2D<double> &accelCmd);
 
 	// for Observer_AngularListener
-	void onObserver_AngularUpdated(shared_ptr<DataVector<double> > attData, shared_ptr<DataVector<double> > angularVelData);
+	void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData);
 
 	protected:
 	bool mRunning, mDone;
