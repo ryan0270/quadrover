@@ -38,7 +38,7 @@ namespace Quadrotor {
 
 		mDesAccel[2][0] = GRAVITY;
 
-		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.05), createRotMat(0,0.0) ) );
+		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.04), createRotMat(0,0.0) ) );
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
@@ -81,7 +81,7 @@ namespace Quadrotor {
 	{
 		mMutex_data.lock();
 		double n= norm2(mDesAccel);
-		SO3 curMotorAtt = mMotorPlaneBias*mCurAtt;
+		SO3 curMotorAtt = mCurAtt;
 		Array2D<double> curEuler = curMotorAtt.getAnglesZYX();
 		double c = cos(curEuler[2][0]); double s = sin(curEuler[2][0]);
 		double x =  mDesAccel[0][0]*c+mDesAccel[1][0]*s;
@@ -91,6 +91,7 @@ namespace Quadrotor {
 		double desYaw = 0;
 
 		mDesAtt.setRotMat(createRotMat_ZYX(desYaw,desPitch,desRoll));
+		mDesAtt *= mMotorPlaneBias;
 		mThrust = mMass*mDesAccel[2][0]/cos(curEuler[0][0])/cos(curEuler[1][0]);
 
 		SO3 attErr = mDesAtt.inv()*curMotorAtt;

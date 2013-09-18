@@ -92,6 +92,10 @@ mapHeightEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_
 mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
 mapHeightEst = phoneData(mapHeightEstIndices,3)';
 
+velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
+velCmdTime = phoneData(velCmdIndices,1)'/1000;
+velCmd = phoneData(velCmdIndices,3:5)';
+
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
 RotQuadToPhone = createRotMat(3,-pi/4)*...
@@ -236,6 +240,28 @@ if exist('cameraPos','var') && ~isempty(cameraPos)
 % 	end
 end
 
+%%
+if exist('velCmd','var') && ~isempty(velCmd)
+	figure(6601); clf
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	mask1 = find( (tranStateTime > velCmdTime(1)) .* (tranStateTime < velCmdTime(end)) );
+	mask2 = find( (viconStateTime > velCmdTime(1)) .* (viconStateTime < velCmdTime(end)) );
+	for i=1:3
+		subplot(3,1,i)
+		plot(velCmdTime, velCmd(i,:),'.');hold all
+		plot(viconStateTime(mask2), viconState(i+9,mask2)); hold all
+		plot(tranStateTime(mask1), tranState(i+3,mask1)); hold all
+		hold off
+		ax = axis;
+		line([ax(1) ax(2)],[0 0],'Color','k','LineStyle','--');
+		
+		xlabel('Time [s]');
+		ylabel(stateLabels{i+9})
+	end	
+	legend('cmd','vicon','kf');
+end
 
 
 %%

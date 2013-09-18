@@ -101,19 +101,21 @@ using namespace TNT;
 		mMutex_targetFindTime.lock();
 		Time lastTargetFindTime(mLastTargetFindTime);
 		mMutex_targetFindTime.unlock();
-		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 1.0e3)
+		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 0.5e3)
 		{
 			accelCmd = calcControlIBVS(dt);
 
 			// fake the system controller so when we switch back to 
 			// it the integrator is still valid
-			for(int i=0; i<error.dim1(); i++)
-				error[i][0] = 0;
-			calcControlSystem(error, dt);
+//			for(int i=0; i<error.dim1(); i++)
+//				error[i][0] = 0;
+//			calcControlSystem(error, dt);
 		}
 		else
-			accelCmd = calcControlSystem(error,dt);
-//		accelCmd = calcControlPID(error,dt);
+		{
+//			accelCmd = calcControlSystem(error,dt);
+			accelCmd = calcControlPID(error,dt);
+		}
 
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onTranslationControllerAccelCmdUpdated(accelCmd);
@@ -212,6 +214,7 @@ using namespace TNT;
 		desDir[1][0] = 0;
 		desDir[2][0] = 1;
 		Array2D<double> desMoment = att.inv()*desDir;
+//		Array2D<double> desMoment = desDir;
 
 		mMutex_state.lock();
 		Array2D<double> visionErr = mCurState[2][0]*moment-mDesState[2][0]*desMoment;
@@ -245,6 +248,9 @@ using namespace TNT;
 		mMutex_targetFindTime.unlock();
 		double decayRate = 1;
 		accelCmd = exp(-decayRate*t)*accelCmd;
+
+		accelCmd[0][0] = min(2.0, max(-2.0, accelCmd[0][0]));
+		accelCmd[1][0] = min(2.0, max(-2.0, accelCmd[1][0]));
 
 		accelCmd[2][0] += GRAVITY;
 
