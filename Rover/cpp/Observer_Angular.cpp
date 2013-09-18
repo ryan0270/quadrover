@@ -12,7 +12,10 @@ Observer_Angular::Observer_Angular() :
 	mInnovation(3,1,0.0),
 	mAccelDirNom(3,1,0.0),
 	mMagDirNom(3,1,0.0),
-	mCurVel(3,1,0.0)
+	mCurVel(3,1,0.0),
+	mRotCamToPhone(3,3,0.0),
+	mRotPhoneToCam(3,3,0.0),
+	mLastGoodAccel(3,1)
 {
 	mNewAccelReady = mNewGyroReady = mNewMagReady = false;
 	mRunning = false;;
@@ -28,19 +31,28 @@ Observer_Angular::Observer_Angular() :
 	mBurnCount = 0;
 
 	mAccelDirNom[2][0] = 1; // accel is the opposite direction as gravity
-	mMagDirNom[0][0] = 6;
-	mMagDirNom[1][0] = -1;
-	mMagDirNom[2][0] = -15;
+	mMagDirNom[0][0] = -21.2;
+	mMagDirNom[1][0] = 13.4;
+	mMagDirNom[2][0] = -35.3;
 	mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
 
 	mDoingBurnIn = true;
-
-	mYawVicon = 0;
 
 	mAccelData = mGyroData = mMagData = NULL;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+	mIsDoingIbvs = false;
+	mLastTargetFindTime.setTimeMS(0);
+
+	mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
+							 createRotMat(0,(double)PI));
+	mRotPhoneToCam = transpose(mRotCamToPhone);
+
+	mLastGoodAccel[0][0] = 0;
+	mLastGoodAccel[1][0] = 0;
+	mLastGoodAccel[2][0] = 1;
 }
 
 Observer_Angular::~Observer_Angular()
@@ -70,7 +82,6 @@ void Observer_Angular::shutdown()
 void Observer_Angular::reset()
 {
 	mMutex_data.lock();
-	mCurAttitude.reset();
 	mCurVel.inject(Array2D<double>(3,1,0.0));
 
 //	mGyroBias = Array2D<double>(3,1,0.0);
@@ -101,6 +112,7 @@ void Observer_Angular::run()
 	sched_setscheduler(0, mScheduler, &sp);
 	shared_ptr<DataVector<double>> gyroData, accelData, magData;
 	gyroData = accelData = magData = NULL;
+	Array2D<double> lastInnovation(3,1,0.0);
 	double gyroDT;
 	while(mRunning)
 	{
@@ -139,6 +151,9 @@ void Observer_Angular::run()
 					mMutex_cache.unlock();
 
 					lastInnovationUpdateTime.setTime();
+					mExtraDirsMeasured.clear();
+					mExtraDirsInertial.clear();
+					mExtraDirsWeight.clear();
 				}
 			}
 			mMutex_data.unlock();
@@ -162,11 +177,20 @@ void Observer_Angular::run()
 			magProcessed = false;
 		}
 
-		if(!mDoingBurnIn && (!accelProcessed && !magProcessed) )
+		bool needInnovation = false;
+		mMutex_data.lock();
+		if(!mDoingBurnIn && accelData != NULL && magData != NULL && 
+			( (!accelProcessed && !magProcessed) || mExtraDirsMeasured.size() > 0))
+			needInnovation = true;
+		mMutex_data.unlock();
+		if(needInnovation)
 		{
 			double dt = lastInnovationUpdateTime.getElapsedTimeNS()/1.0e9;
 			lastInnovationUpdateTime.setTime();
 			doInnovationUpdate(dt, accelData, magData);
+			mMutex_data.lock();
+			lastInnovation.inject(mInnovation);
+			mMutex_data.unlock();
 			accelProcessed = true;
 			magProcessed = true;
 		}
@@ -174,7 +198,7 @@ void Observer_Angular::run()
 		{
 			// this is to cover the case when we don't get an update for a long time
 			double dt = lastInnovationUpdateTime.getElapsedTimeUS()/1.0e6;
-			mInnovation = exp(-70.0*dt)*mInnovation;
+			mInnovation.inject(exp(-50.0*dt)*lastInnovation);
 		}
 
 		if(!mDoingBurnIn && !gyroProcessed)
@@ -199,49 +223,52 @@ void Observer_Angular::run()
 	Log::alert("------------------ QuadLogger runner dead --------------------");
 }
 
-void Observer_Angular::doInnovationUpdate(double dt, const shared_ptr<DataVector<double>> &accelData, const shared_ptr<DataVector<double>> &magData)
+void Observer_Angular::doInnovationUpdate(double dt,
+										  const shared_ptr<DataVector<double>> &accelData,
+										  const shared_ptr<DataVector<double>> &magData)
 {
 	accelData->lock(); Array2D<double> accel = accelData->dataCalibrated.copy(); accelData->unlock();
 	magData->lock(); Array2D<double> mag = magData->dataCalibrated.copy(); magData->unlock();
 //	accelData->lock(); Array2D<double> accel = accelData->data.copy(); accelData->unlock();
 //	magData->lock(); Array2D<double> mag = magData->data.copy(); magData->unlock();
 
+	String logString1, logString2;
+	Array2D<double> uB, uI, vB, vI, dMeas, dInertial;
 	mMutex_data.lock();
+
+	if( accel[2][0] > 0 && abs(norm2(accel)-GRAVITY) < 5 )
+		mLastGoodAccel.inject(accel);
+	else
+		accel.inject(mLastGoodAccel);
+
 	// orthogonalize the directions (see Hua et al (2011) - Nonlinear attitude estimation with measurement decoupling and anti-windpu gyro-bias compensation)
-	Array2D<double> uB = 1.0/norm2(accel)*accel;
-	Array2D<double> uI = mAccelDirNom;
-	Array2D<double> vB = cross(-1.0*mAccelDirNom, mag);
+	uB = 1.0/norm2(accel)*accel;
+	uI = mAccelDirNom;
+	vB = cross(-1.0*mAccelDirNom, mag);
 	vB = 1.0/norm2(vB)*vB;
-	Array2D<double> vI = cross(-1.0*uI, mMagDirNom);
+	vI = cross(-1.0*uI, mMagDirNom);
 	vI = 1.0/norm2(vI)*vI;
 
 	SO3 transR = mCurAttitude.inv();
-	if( abs(norm2(accel)-GRAVITY) < 5 && accel[2][0] > 0)
-	{
-		mInnovation = mAccelWeight*cross(uB, transR*uI);
-		mInnovation += mMagWeight*cross(vB, transR*vI);
-	}
-//	else
-//		mInnovation = mMagWeight*cross(vB, matmult(transR, vI));
+	mInnovation = mAccelWeight*cross(uB, transR*uI);
+	mInnovation += mMagWeight*cross(vB, transR*vI);
 
 	// add any extra measurements that may have come in
 	while(mExtraDirsMeasured.size() > 0)
 	{
 		double k = mExtraDirsWeight.back();
-		Array2D<double> dMeas = mExtraDirsMeasured.back();
-		Array2D<double> dInertial = mExtraDirsInertial.back();
+		dMeas = mExtraDirsMeasured.back();
+		dInertial = mExtraDirsInertial.back();
 		mInnovation += k*cross(dMeas, transR*dInertial);
 
 		mExtraDirsWeight.pop_back();
 		mExtraDirsMeasured.pop_back();
 		mExtraDirsInertial.pop_back();
 	}
+		
+	for(int i=0; i<mGyroBias.dim1(); i++)
+		mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
 
-//	if(dt < 0.02)
-		for(int i=0; i<mGyroBias.dim1(); i++)
-			mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
-
-	String logString1, logString2;
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		logString1 = logString1+mGyroBias[i][0] + "\t";
 
@@ -449,6 +476,79 @@ void Observer_Angular::setYawZero()
 	mQuadLogger->addEntry(Time(), LOG_ID_SET_YAW_ZERO, str1, LOG_FLAG_PC_UPDATES);
 }
 
+void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
+{
+	switch(data->type)
+	{
+		case DATA_TYPE_ACCEL:
+			mMutex_cache.lock();
+			mAccelData = static_pointer_cast<DataVector<double>>(data);
+			mNewAccelReady = true;
+			mMutex_cache.unlock();
+			break;
+		case DATA_TYPE_GYRO:
+			mMutex_cache.lock();
+			mGyroData = static_pointer_cast<DataVector<double>>(data);
+			mNewGyroReady = true;
+			mMutex_cache.unlock();
+			break;
+		case DATA_TYPE_MAG:
+			mMutex_cache.lock();
+			mMagData = static_pointer_cast<DataVector<double>>(data);
+			mNewMagReady = true;
+			mMutex_cache.unlock();
+			break;
+	}
+}
+
+void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+{
+	if(data->target == NULL)
+		return;
+
+	cv::Point2f p0 = data->target->squareData[0]->contour[0];
+	cv::Point2f p1 = data->target->squareData[0]->contour[1];
+	cv::Point2f p2 = data->target->squareData[0]->contour[2];
+
+	// long edge of target
+	Array2D<double> measDir1(3,1);
+	measDir1[0][0] = p1.x-p0.x;
+	measDir1[1][0] = p1.y-p0.y;
+	measDir1[2][0] = 0;
+	measDir1 = 1.0/norm2(measDir1)*measDir1;
+	measDir1 = matmult(mRotCamToPhone, measDir1);
+
+	Array2D<double> nomDir1(3,1);
+	nomDir1[0][0] = -1;
+	nomDir1[1][0] = 1;
+	nomDir1[2][0] = 0;
+	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
+
+	// short edge of target
+	Array2D<double> measDir2(3,1);
+	measDir2[0][0] = p2.x-p1.x;
+	measDir2[1][0] = p2.y-p1.y;
+	measDir2[2][0] = 0;
+	measDir2 = 1.0/norm2(measDir2)*measDir2;
+	measDir2 = matmult(mRotCamToPhone, measDir2);
+
+	Array2D<double> nomDir2(3,1);
+	nomDir2[0][0] = 1;
+	nomDir2[1][0] = 1;
+	nomDir2[2][0] = 0;
+	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
+
+	mMutex_data.lock();
+	mExtraDirsMeasured.push_back(measDir1.copy());
+	mExtraDirsMeasured.push_back(measDir2.copy());
+	mExtraDirsInertial.push_back(nomDir1);
+	mExtraDirsInertial.push_back(nomDir2);
+	mExtraDirsWeight.push_back(5);
+	mExtraDirsWeight.push_back(5);
+	mMutex_data.unlock();
+
+}
+
 void Observer_Angular::onNewCommObserverReset()
 {
 	reset();
@@ -495,50 +595,23 @@ void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
 
 void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 {
-	mMutex_data.lock();
-	mYawVicon = -data[2];
+	if(mIsDoingIbvs && mLastTargetFindTime.getElapsedTimeMS() < 1)
+		return;
 
-	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
-	double curYaw = curAngles[2][0];
-	SO3 R1(createRotMat(2,-curYaw));
-	SO3 R2(createRotMat(2,mYawVicon));
-//	mCurAttitude = R2*R1*mCurAttitude;
-	mCurAttitude *= R2*R1;
+	Array2D<double> nomDir(3,1);
+	nomDir[0][0] = 1;
+	nomDir[1][0] = 0;
+	nomDir[2][0] = 0;
+
+	double viconYaw = data[2];
+	Array2D<double> measDir = matmult(createRotMat(2,viconYaw),nomDir);
+
+	mMutex_data.lock();
+	mExtraDirsMeasured.push_back(measDir.copy());
+	mExtraDirsInertial.push_back(nomDir);
+	mExtraDirsWeight.push_back(10);
 	mMutex_data.unlock();
 }
-
-void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
-{
-	switch(data->type)
-	{
-		case DATA_TYPE_ACCEL:
-			mMutex_cache.lock();
-			mAccelData = static_pointer_cast<DataVector<double>>(data);
-			mNewAccelReady = true;
-			mMutex_cache.unlock();
-			break;
-		case DATA_TYPE_GYRO:
-			mMutex_cache.lock();
-			mGyroData = static_pointer_cast<DataVector<double>>(data);
-			mNewGyroReady = true;
-			mMutex_cache.unlock();
-			break;
-		case DATA_TYPE_MAG:
-			mMutex_cache.lock();
-			mMagData = static_pointer_cast<DataVector<double>>(data);
-			mNewMagReady = true;
-			mMutex_cache.unlock();
-			break;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//// Sensor event handler
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//int Observer_Angular::inputDetected(int fd, int events, void *data)
-//{
-//	return 1;
-//}
 
 };
 };

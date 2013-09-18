@@ -48,20 +48,8 @@ int main(int argv, char* argc[])
 	using namespace std;
 	cout << "start chadding" << endl;
 
-
-//Array2D<double> R = createRotMat(0,2.0);
-//ICSL::Quaternion q1( R );
-//double angle;
-//Array2D<double> axis;
-//q1.getAngleAxis1(angle, axis);
-//Log::alert(String()+"angle:\t"+angle);
-//printArray("axis:\t",axis);
-//printArray("R:\n",R);
-//printArray("rotMat:\n",q1.toRotMat());
-//return 0;
-
 	string dataDir;
-	int dataSet = 0;
+	int dataSet = 1;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -196,6 +184,7 @@ int main(int argv, char* argc[])
 	mTargetFinder.setStartTime(startTime);
 	mTargetFinder.setQuadLogger(&mQuadLogger);
 	addSensorManagerListener(&mTargetFinder);
+	mTargetFinder.addListener(&mObsvAngular);
 	mTargetFinder.addListener(&mObsvTranslational);
 	mTargetFinder.addListener(&mTranslationController);
 	addCommManagerListener(&mTargetFinder);
@@ -262,30 +251,30 @@ int main(int argv, char* argc[])
 	// Now to set parameters like they would have been online
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
-		double gainP = 2;
+		double gainP = 0.125*2*2;
 		double gainI = 0.0015;
 		double accelWeight = 1;
 		double magWeight = 0;
 		Collection<float> nomMag;
-		nomMag.push_back(-16.2);
-		nomMag.push_back(3.7);
-		nomMag.push_back(15.9);
+		nomMag.push_back(-21.2);
+		nomMag.push_back(13.4);
+		nomMag.push_back(-35.3);
 		commManagerListeners[i]->onNewCommAttObserverGain(gainP, gainI, accelWeight, magWeight);
 		commManagerListeners[i]->onNewCommNominalMag(nomMag);
 
 		Collection<float> measVar;
-		measVar.push_back(0.0001);
-		measVar.push_back(0.0001);
-		measVar.push_back(0.0001);
-		measVar.push_back(0.0005);
-		measVar.push_back(0.0005);
+		measVar.push_back(0.00001);
+		measVar.push_back(0.00001);
+		measVar.push_back(0.00001);
+		measVar.push_back(0.05);
+		measVar.push_back(0.05);
 		measVar.push_back(0.05);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
 		Collection<float> dynVar;
-		dynVar.push_back(0.01);
-		dynVar.push_back(0.01);
-		dynVar.push_back(0.01);
+		dynVar.push_back(0.0001);
+		dynVar.push_back(0.0001);
+		dynVar.push_back(0.0001);
 		dynVar.push_back(10);
 		dynVar.push_back(10);
 		dynVar.push_back(10);
@@ -361,7 +350,7 @@ int main(int argv, char* argc[])
 	double accelCal2Y = -0.16;
 	double accelCal2Z = -10.10;
 
-	double accelScaleZ = 1.009;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
+	double accelScaleZ = 1.00;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
 	double accelScaleX = 1.0;
 	double accelScaleY = 1.0;
 
@@ -381,7 +370,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 100e3;
+	int endTimeDelta = 55e3;
 	float viconUpdateRate = 10; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -404,6 +393,9 @@ int main(int argv, char* argc[])
 		getline(file, line); // first line is a throw-away
 		getline(file, line); // second line is also a throw-away
 
+		for(int i=0; i<commManagerListeners.size(); i++)
+			commManagerListeners[i]->onNewCommMotorOn();
+
 		// gyro bias burn-in
 		Array2D<double> gyroBias(3,1);
 		gyroBias[0][0] = -0.006;
@@ -418,9 +410,6 @@ int main(int argv, char* argc[])
 			mObsvAngular.onNewSensorUpdate(gyroBiasData);
 			System::usleep(700);
 		}
-
-		for(int i=0; i<commManagerListeners.size(); i++)
-			commManagerListeners[i]->onNewCommMotorOn();
 
 		list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imageIter = imgList.begin();
 		toadlet::uint64 lastDispTimeMS;
