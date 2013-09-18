@@ -123,6 +123,7 @@ void Rover::initialize()
 	mSensorManager.addListener(&mTargetFinder);
 	mCommManager.addListener(&mTargetFinder);
 	mTargetFinder.addListener(this);
+	mTargetFinder.addListener(&mObsvAngular);
 	mTargetFinder.addListener(&mObsvTranslational);
 	mTargetFinder.addListener(&mTranslationController);
 

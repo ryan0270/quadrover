@@ -5,8 +5,8 @@ disp('start chadding')
 log_ids
 
 %%
-dataDir = '../dataSets/Sep8';
-% dataDir = '../dataSets/Sep12';
+% dataDir = '../dataSets/Sep8';
+dataDir = '../dataSets/Sep12';
 viconFile = [dataDir '/pcData.txt'];
 viconData = importdata(viconFile,'\t',0);
 
@@ -104,7 +104,7 @@ if exist('angleState','var') && ~isempty(angleState)
 % % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 % 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
-% 	timeShift = 0.1;
+% 	timeShift = 0.01;
 % 	for i=1:6
 % 		subplot(2,3,i);		
 % 		plot(viconStateTime(mask), viconState(i,mask)); hold all
@@ -120,7 +120,7 @@ if exist('angleState','var') && ~isempty(angleState)
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
-	timeShift = 0.02;
+	timeShift = 0.01;
 	midPoint = round(length(angleStateTime)/2);
 	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );
 	for i=1:6
@@ -141,8 +141,9 @@ if exist('angleState','var') && ~isempty(angleState)
 	
 	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
 	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
-				 find(angleStateTime(1,:) > 0.05,1,'first');
-				 find(angleStateTime > mapVelTime(1),1,'first')]);
+				 0*find(angleStateTime(1,:) > 0.05,1,'first');
+				 0*find(angleStateTime > mapVelTime(1),1,'first')
+				 1]);
 	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
 	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
 	err = err-diag(mean(err,2))*ones(size(err));
