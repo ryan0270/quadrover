@@ -36,11 +36,11 @@ else
 	tranStateRefInterp = zeros(size(angleStateRef));
 	tranStateInterp = zeros(size(angleState));
 end
-% stateRefTime = angleStateRefTime;
-% stateRef = [angleStateRef; tranStateRefInterp];
-% stateTime = angleStateTime;
-% state = [angleState; tranStateInterp];
-% state_dt = mean(diff(stateTime));
+stateRefTime = angleStateRefTime;
+stateRef = [angleStateRef; tranStateRefInterp];
+stateTime = angleStateTime;
+state = [angleState; tranStateInterp];
+state_dt = mean(diff(stateTime));
 
 gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
 gyroTime = phoneData(gyroIndices,1)'/1000;
@@ -482,11 +482,21 @@ end
 %%
 if exist('targetLoc','var') && ~isempty(targetLoc)
 	figure(6001); clf; set(gcf,'Name','Target Location');
-	for i=1:3
-		plot(targetLoc(1+2*(i-1),:), targetLoc(2*i,:),'.'); hold all
+	for i=1:2
+% 		plot(targetLoc(1+2*(i-1),:), targetLoc(2*i,:),'.'); hold all
+		subplot(2,1,i);
+		plot(targetLocTime, targetLoc(i,:),'.');
+		ax = axis;
+		if i == 1
+			line([ax(1) ax(2)],[160 160],'Color','k','LineStyle','--');
+			axis([ax(1) ax(2) 0 320]);
+		else
+			line([ax(1) ax(2)],[120 120],'Color','k','LineStyle','--');
+			axis([ax(1) ax(2) 0 240]);
+		end
 	end
 	hold off
-	axis([0 320 0 240])
+% 	axis([0 320 0 240])
 	xlabel('Time [s]');
 	ylabel('Target Location [px]');
 end
@@ -544,25 +554,25 @@ if exist('accelCmd','var') && ~isempty(accelCmd)
 end
 
 %%
-if exist('velCmd','var') && ~isempty(velCmd)
-	figure(6601); clf
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	mask = find( (tranStateTime > velCmdTime(1)) .* (tranStateTime < velCmdTime(end)) );
-	for i=1:3
-		subplot(3,1,i)
-		plot(velCmdTime, velCmd(i,:),'.');hold all
-		plot(tranStateTime(mask), tranState(i+3,mask)); hold all
-		hold off
-		ax = axis;
-		line([ax(1) ax(2)],[0 0],'Color','k','LineStyle','--');
-		
-		xlabel('Time [s]');
-		ylabel(stateLabels{i+9})
-	end	
-	legend('cmd','actual');
-end
+% if exist('velCmd','var') && ~isempty(velCmd)
+% 	figure(6601); clf
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	mask = find( (tranStateTime > velCmdTime(1)) .* (tranStateTime < velCmdTime(end)) );
+% 	for i=1:3
+% 		subplot(3,1,i)
+% 		plot(velCmdTime, velCmd(i,:),'.');hold all
+% 		plot(tranStateTime(mask), tranState(i+3,mask)); hold all
+% 		hold off
+% 		ax = axis;
+% 		line([ax(1) ax(2)],[0 0],'Color','k','LineStyle','--');
+% 		
+% 		xlabel('Time [s]');
+% 		ylabel(stateLabels{i+9})
+% 	end	
+% 	legend('cmd','actual');
+% end
 
 %%
 disp('chad accomplished')

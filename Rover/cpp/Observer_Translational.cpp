@@ -121,12 +121,12 @@ using namespace TNT;
 			}
 			mMutex_posTime.unlock();
 
-			if(mUseIbvs && mHaveFirstCameraPos)
-			{
-				mUseViconPos = false;
-				mUseCameraPos = true;
-			}
-			else
+//			if(mUseIbvs && mHaveFirstCameraPos)
+//			{
+//				mUseViconPos = false;
+//				mUseCameraPos = true;
+//			}
+//			else
 			{
 				mUseViconPos = true;
 				mUseCameraPos = false;
