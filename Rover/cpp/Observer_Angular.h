@@ -41,7 +41,9 @@ class Observer_AngularListener
 #include "SensorManager.h"
 #undef ICSL_SENSORMANAGERLISTENER_ONLY
 #include "Rotation.h"
+#define ICSL_TARGETFINDER_LISTENER_ONLY
 #include "TargetFinder.h"
+#undef ICSL_TARGETFINDER_LISTENER_ONLY
 
 namespace ICSL{
 namespace Quadrotor{

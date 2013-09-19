@@ -19,13 +19,17 @@
 #include "Time.h"
 #include "CommManager.h"
 #include "QuadLogger.h"
+#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
+#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "SensorManager.h"
 #define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 #include "VelocityEstimator.h"
 #undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 
+#define ICSL_TARGETFINDER_LISTENER_ONLY
 #include "TargetFinder.h"
+#undef ICSL_TARGETFINDER_LISTENER_ONLY
 
 #include "toadlet/egg.h"
 

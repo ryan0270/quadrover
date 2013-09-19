@@ -265,6 +265,9 @@ void Observer_Angular::doInnovationUpdate(double dt,
 		mExtraDirsMeasured.pop_back();
 		mExtraDirsInertial.pop_back();
 	}
+
+if(dt > 0.5)
+	Log::alert("Long innovation dt");
 		
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
@@ -538,15 +541,14 @@ void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data
 	nomDir2[2][0] = 0;
 	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
 
-	mMutex_data.lock();
-	mExtraDirsMeasured.push_back(measDir1.copy());
-	mExtraDirsMeasured.push_back(measDir2.copy());
-	mExtraDirsInertial.push_back(nomDir1);
-	mExtraDirsInertial.push_back(nomDir2);
-	mExtraDirsWeight.push_back(5);
-	mExtraDirsWeight.push_back(5);
-	mMutex_data.unlock();
-
+//	mMutex_data.lock();
+//	mExtraDirsMeasured.push_back(measDir1.copy());
+//	mExtraDirsMeasured.push_back(measDir2.copy());
+//	mExtraDirsInertial.push_back(nomDir1);
+//	mExtraDirsInertial.push_back(nomDir2);
+//	mExtraDirsWeight.push_back(2);
+//	mExtraDirsWeight.push_back(2);
+//	mMutex_data.unlock();
 }
 
 void Observer_Angular::onNewCommObserverReset()

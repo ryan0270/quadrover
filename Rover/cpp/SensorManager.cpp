@@ -171,10 +171,14 @@ namespace Quadrotor{
 		double accelCal2Y = -0.16;
 		double accelCal2Z = -10.10;
 
-		double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
-		// don't have information on these so assume they are the same
-		double accelScaleX = accelScaleZ;
-		double accelScaleY = accelScaleZ;
+//		double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
+//		// don't have information on these so assume they are the same
+//		double accelScaleX = accelScaleZ;
+//		double accelScaleY = accelScaleZ;
+
+		double accelScaleZ = 1;
+		double accelScaleX = 1;
+		double accelScaleY = 1;
 
 		double accelOffX = 0.5*(accelCal1X+accelCal2X);
 		double accelOffY = 0.5*(accelCal1Y+accelCal2Y);

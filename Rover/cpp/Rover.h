@@ -18,7 +18,9 @@
 #include "constants.h"
 #include "Common.h"
 #include "Data.h"
+#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
+#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Translational.h"
 #include "QuadLogger.h"
 #include "CommManager.h"
