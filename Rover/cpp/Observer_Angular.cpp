@@ -180,7 +180,7 @@ void Observer_Angular::run()
 		bool needInnovation = false;
 		mMutex_data.lock();
 		if(!mDoingBurnIn && accelData != NULL && magData != NULL && 
-			( (!accelProcessed && !magProcessed) || mExtraDirsMeasured.size() > 0))
+			( (!accelProcessed && !magProcessed) ))// || mExtraDirsMeasured.size() > 0))
 			needInnovation = true;
 		mMutex_data.unlock();
 		if(needInnovation)
@@ -266,9 +266,6 @@ void Observer_Angular::doInnovationUpdate(double dt,
 		mExtraDirsInertial.pop_back();
 	}
 
-if(dt > 0.5)
-	Log::alert("Long innovation dt");
-		
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
 
@@ -509,38 +506,38 @@ void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data
 	if(data->target == NULL)
 		return;
 
-	cv::Point2f p0 = data->target->squareData[0]->contour[0];
-	cv::Point2f p1 = data->target->squareData[0]->contour[1];
-	cv::Point2f p2 = data->target->squareData[0]->contour[2];
-
-	// long edge of target
-	Array2D<double> measDir1(3,1);
-	measDir1[0][0] = p1.x-p0.x;
-	measDir1[1][0] = p1.y-p0.y;
-	measDir1[2][0] = 0;
-	measDir1 = 1.0/norm2(measDir1)*measDir1;
-	measDir1 = matmult(mRotCamToPhone, measDir1);
-
-	Array2D<double> nomDir1(3,1);
-	nomDir1[0][0] = -1;
-	nomDir1[1][0] = 1;
-	nomDir1[2][0] = 0;
-	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
-
-	// short edge of target
-	Array2D<double> measDir2(3,1);
-	measDir2[0][0] = p2.x-p1.x;
-	measDir2[1][0] = p2.y-p1.y;
-	measDir2[2][0] = 0;
-	measDir2 = 1.0/norm2(measDir2)*measDir2;
-	measDir2 = matmult(mRotCamToPhone, measDir2);
-
-	Array2D<double> nomDir2(3,1);
-	nomDir2[0][0] = 1;
-	nomDir2[1][0] = 1;
-	nomDir2[2][0] = 0;
-	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
-
+//	cv::Point2f p0 = data->target->squareData[0]->contour[0];
+//	cv::Point2f p1 = data->target->squareData[0]->contour[1];
+//	cv::Point2f p2 = data->target->squareData[0]->contour[2];
+//
+//	// long edge of target
+//	Array2D<double> measDir1(3,1);
+//	measDir1[0][0] = p1.x-p0.x;
+//	measDir1[1][0] = p1.y-p0.y;
+//	measDir1[2][0] = 0;
+//	measDir1 = 1.0/norm2(measDir1)*measDir1;
+//	measDir1 = matmult(mRotCamToPhone, measDir1);
+//
+//	Array2D<double> nomDir1(3,1);
+//	nomDir1[0][0] = -1;
+//	nomDir1[1][0] = 1;
+//	nomDir1[2][0] = 0;
+//	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
+//
+//	// short edge of target
+//	Array2D<double> measDir2(3,1);
+//	measDir2[0][0] = p2.x-p1.x;
+//	measDir2[1][0] = p2.y-p1.y;
+//	measDir2[2][0] = 0;
+//	measDir2 = 1.0/norm2(measDir2)*measDir2;
+//	measDir2 = matmult(mRotCamToPhone, measDir2);
+//
+//	Array2D<double> nomDir2(3,1);
+//	nomDir2[0][0] = 1;
+//	nomDir2[1][0] = 1;
+//	nomDir2[2][0] = 0;
+//	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
+//
 //	mMutex_data.lock();
 //	mExtraDirsMeasured.push_back(measDir1.copy());
 //	mExtraDirsMeasured.push_back(measDir2.copy());
@@ -597,22 +594,45 @@ void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
 
 void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 {
-	if(mIsDoingIbvs && mLastTargetFindTime.getElapsedTimeMS() < 1)
-		return;
+//	if(mIsDoingIbvs && mLastTargetFindTime.getElapsedTimeMS() < 1)
+//		return;
 
 	Array2D<double> nomDir(3,1);
 	nomDir[0][0] = 1;
 	nomDir[1][0] = 0;
 	nomDir[2][0] = 0;
+	nomDir = 1.0/norm2(nomDir)*nomDir;
 
 	double viconYaw = data[2];
-	Array2D<double> measDir = matmult(createRotMat(2,viconYaw),nomDir);
+	mMutex_data.lock();
+	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
+	mMutex_data.unlock();
+
+	// Most accurate would be to rotate nomDir by the full Vicon
+	// attitude, but that would make my roll and pitch
+	// artificially more accurate. Instead, I'm using the current 
+	// roll and pitch estimate such that they will cancel out when
+	// I go to calculated the innovation and am left with (mostly) 
+	// just yaw.
+	Array2D<double> R = createRotMat_ZYX(viconYaw, -curAngles[1][0], -curAngles[0][0]);
+	Array2D<double> measDir = matmult(R,nomDir);
 
 	mMutex_data.lock();
 	mExtraDirsMeasured.push_back(measDir.copy());
-	mExtraDirsInertial.push_back(nomDir);
+	mExtraDirsInertial.push_back(nomDir.copy());
 	mExtraDirsWeight.push_back(10);
 	mMutex_data.unlock();
+
+//	mMutex_data.lock();
+//	double yawVicon = -data[2];
+//
+//	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
+//	double curYaw = curAngles[2][0];
+//	SO3 R1(createRotMat(2,-curYaw));
+//	SO3 R2(createRotMat(2,yawVicon));
+////	mCurAttitude = R2*R1*mCurAttitude;
+//	mCurAttitude *= R2*R1;
+//	mMutex_data.unlock();
 }
 
 };

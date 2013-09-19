@@ -242,7 +242,7 @@ end
 
 %%
 if exist('velCmd','var') && ~isempty(velCmd)
-	figure(6601); clf
+	figure(6601); clf; set(gcf,'name','Velocity cmd');
 % 	set(gcf,'Units','Inches');
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
