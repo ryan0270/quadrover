@@ -1,7 +1,6 @@
 #ifndef ICSL_SENSORMANAGERLISTENER
 #define ICSL_SENSORMANAGERLISTENER
 
-//#if defined ICSL_OBSERVER_SIMULATION || defined ICSL_SENSORMANAGERLISTENER_ONLY
 #include <memory>
 #include <Data.h>
 namespace ICSL{

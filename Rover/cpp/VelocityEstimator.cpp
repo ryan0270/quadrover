@@ -61,9 +61,12 @@ void VelocityEstimator::run()
 		if(mNewImageDataAvailable)
 		{
 			procTimer.setTime();
+
+			mMutex_data.lock();
 			oldImageFeatureData = curImageFeatureData;
 			curImageFeatureData = mLastImageFeatureData;
 			mNewImageDataAvailable = false;
+			mMutex_data.unlock();
 			
 			if(oldImageFeatureData != NULL && oldImageFeatureData->featurePoints.size() > 5 && curImageFeatureData->featurePoints.size() > 5)
 			{
@@ -71,6 +74,7 @@ void VelocityEstimator::run()
 				measCov = mMeasCov;
 				probNoCorr = mProbNoCorr;
 				mMutex_params.unlock();
+
 				bool success = doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
 
 				if(success)
@@ -217,8 +221,10 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 
 void VelocityEstimator::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 {
+	mMutex_data.lock();
 	mLastImageFeatureData = data;
 	mNewImageDataAvailable = true;
+	mMutex_data.unlock();
 }
 
 vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistributions(const vector<cv::Point2f> &points, 

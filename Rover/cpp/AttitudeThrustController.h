@@ -10,7 +10,9 @@
 #include "Time.h"
 #include "CommManager.h"
 #include "TranslationController.h"
+#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
+#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "MotorInterface.h"
 #include "Rotation.h"
 

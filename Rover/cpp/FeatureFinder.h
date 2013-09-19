@@ -12,13 +12,12 @@
 
 #include <toadlet/egg.h>
 
-//#include "TNT/tnt.h"
-//#include "TNT_Utils.h"
-
 #include "constants.h"
 #include "QuadLogger.h"
 #include "Common.h"
+#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
+#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Time.h"
 #include "CommManager.h"
 #include "SensorManager.h"

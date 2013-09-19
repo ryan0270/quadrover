@@ -1,3 +1,22 @@
+#ifndef ICSL_TARGETFINDER_LISTENER_H
+#define ICSL_TARGETFINDER_LISTENER_H
+#include <memory>
+
+#include "Data.h"
+
+namespace ICSL {
+namespace Quadrotor {
+class TargetFinderListener
+{
+	public:
+		virtual ~TargetFinderListener(){};
+
+		virtual void onTargetFound(const shared_ptr<ImageTargetFindData> &data)=0;
+};
+}}
+#endif
+
+#ifndef ICSL_TARGETFINDER_LISTENER_ONLY
 #ifndef ICSL_TARGETFINDER_H
 #define ICSL_TARGETFINDER_H
 #include <memory>
@@ -23,14 +42,6 @@
 
 namespace ICSL {
 namespace Quadrotor {
-class TargetFinderListener
-{
-	public:
-		virtual ~TargetFinderListener(){};
-
-		virtual void onTargetFound(const shared_ptr<ImageTargetFindData> &data)=0;
-};
-
 class TargetFinder : public CommManagerListener,
 						public SensorManagerListener
 {
@@ -110,4 +121,4 @@ class TargetFinder : public CommManagerListener,
 } // namespace ICSL
 
 #endif
-
+#endif

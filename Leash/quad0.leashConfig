@@ -79,7 +79,7 @@
    </Translation>
    <Attitude>
       <Gain>
-         <P>2.000000</P>
+         <P>1.000000</P>
          <I>0.001500</I>
       </Gain>
       <DirWeight>
@@ -87,9 +87,9 @@
          <Mag>0.000000</Mag>
       </DirWeight>
       <NomMag>
-         <x>-16.200001</x>
-         <y>3.700000</y>
-         <z>15.900000</z>
+         <x>-21.200001</x>
+         <y>13.400000</y>
+         <z>-35.299999</z>
       </NomMag>
    </Attitude>
 </Observer>
