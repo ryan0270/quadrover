@@ -65,8 +65,8 @@ int main(int argv, char* argc[])
 			break;
 		case 2:
 			dataDir = "../dataSets/Sep19";
-			startImg = 588;
-			endImg = 1056;
+			startImg = 971;
+			endImg = 2874;
 			break;
 	}
 
@@ -375,7 +375,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 55e3;
+	int endTimeDelta = 100e3;
 	float viconUpdateRate = 10; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -622,6 +622,8 @@ int main(int argv, char* argc[])
 
 		file.close();
 	}
+	else
+		cout << "File: " << dataFilename << " not found" << endl;
 
 	mQuadLogger.shutdown();
 	mTranslationController.shutdown();
