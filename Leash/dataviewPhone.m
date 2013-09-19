@@ -53,7 +53,7 @@ mag = phoneData(magIndices,4:end)';
 mag_dt = mean(diff(magTime));
 
 accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
-accelTime = phoneData(accelIndices,1)'/1000;
+accelTime = phoneData(accelIndices,3)'/1000;
 accel = phoneData(accelIndices,4:6)';
 accel_dt = mean(diff(accelTime));
 
@@ -139,9 +139,9 @@ numFeatures = phoneData(numFeaturesIndices,3)';
 % obsvTransProcTimeTime = phoneData(obsvTransProcTimeIndices,1)'/1000;
 % obsvTransProcTime = phoneData(obsvTransProcTimeIndices,3:6)';
 
-% attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
-% attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
-% attInnovation = phoneData(attInnovationIndices,3:5)';
+attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+attInnovation = phoneData(attInnovationIndices,3:5)';
 
 targetFindProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_PROC_TIME);
 targetFindProcTimeTime = phoneData(targetFindProcTimeIndices,1)'/1000;
