@@ -231,7 +231,6 @@ Log::alert("--------------------------------------------------");
 			Lv[1][0] = 0;  Lv[1][1] = -f; Lv[1][2] = imgPoints[i].y;
 
 			delta.inject(dt/z*matmult(Lv,vel));
-printArray("delta:\t",delta);
 
 			imgPoints[i].x += delta[0][0];
 			imgPoints[i].y += delta[1][0];
