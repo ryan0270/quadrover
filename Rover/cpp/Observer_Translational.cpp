@@ -434,6 +434,96 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 }
 	}
 
+	void Observer_Translational::doMeasUpdateKF_xyOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	{
+if(std::isnan(meas[0][0]) || std::isnan(meas[1][0]))
+	Log::alert("doMeasUpdateKF_xyOnly: meas is nan");
+if(std::isnan(measCov[0][0]) || std::isnan(measCov[1][1]))
+	Log::alert("doMeasUpdateKF_xyOnly: measCov is nan");
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+	Log::alert("doMeasUpdateKF_xyOnlyKF: state pos is nan coming in");
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+	Log::alert("doMeasUpdateKF_xyOnlyKF: state vel is nan coming in");
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+	Log::alert("doMeasUpdateKF_xyOnlyKF: state accel bias is nan coming in");
+
+		Array2D<double> stateOld = state.copy();
+		Array2D<double> errCovOld = errCov.copy();
+
+		// K = S*C'*inv(C*S*C'+W)
+		Array2D<double> gainKF(9,2,0.0);
+		double den;
+		for(int i=0; i<2; i++)
+		{
+			den = errCov[i][i]+measCov[i][i];
+			gainKF[i][i] = errCov[i][i]/den;
+			gainKF[i+3][i] = errCov[i][i+3]/den;
+			gainKF[i+6][i] = errCov[i][i+6]/den;
+		}
+
+		// \hat{x} = \hat{x} + K (meas - C \hat{x})
+		Array2D<double> err= meas-submat(state,0,1,0,0);
+		for(int i=0; i<2; i++)
+		{
+			state[i][0] += gainKF[i][i]*err[i][0];
+			state[i+3][0] += gainKF[i+3][i]*err[i][0];
+			state[i+6][0] += gainKF[i+6][i]*err[i][0];
+		}
+
+		// S = (I-KC) S
+		for(int i=0; i<2; i++)
+		{
+			errCov[i][i] -= gainKF[i][i]*errCov[i][i];
+			errCov[i][i+3] -= gainKF[i][i]*errCov[i][i+3];
+			errCov[i][i+6] -= gainKF[i][i]*errCov[i][i+6];
+			errCov[i+3][i] = errCov[i][i+3];
+			errCov[i+6][i] = errCov[i][i+6];
+
+			errCov[i+3][i+3] -= gainKF[i+3][i]*errCov[i][i+3];
+			errCov[i+3][i+6] -= gainKF[i+3][i]*errCov[i][i+6];
+			errCov[i+6][i+3] = errCov[i+6][i+3];
+
+			errCov[i+6][i+6] -= gainKF[i+6][i]*errCov[i][i+6];
+		}
+
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_xyOnlyKF: state pos is nan");
+}
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_xyOnlyKF: state vel is nan");
+}
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_xyOnlyKF: state accel bias is nan");
+}
+if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_xyOnlyKF: err cov pos is nan");
+}
+if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_xyOnlyKF: err cov vel is nan");
+}
+if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_xyOnlyKF: err cov pos is nan");
+}
+	}
+
 	void Observer_Translational::doMeasUpdateKF_velOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
 if(std::isnan(meas[0][0]) || std::isnan(meas[1][0]) || std::isnan(meas[2][0]))
@@ -1115,8 +1205,6 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 		shared_ptr<DataVector<double>> stateData, errCovData;
 		while(eventIter != events.end())
 		{
-			if((*eventIter)->timestamp < lastUpdateTime)
-				Log::alert("wtc");
 			dt = Time::calcDiffNS(lastUpdateTime, (*eventIter)->timestamp)/1.0e9;
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
 
@@ -1132,7 +1220,14 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 					break;
 				case DATA_TYPE_CAMERA_POS:
 				case DATA_TYPE_VICON_POS:
-					doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
+					//doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
+					{
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
+						Array2D<double> meas(2,1);
+						meas[0][0] = d->data[0][0];
+						meas[1][0] = d->data[1][0];
+						doMeasUpdateKF_xyOnly(meas, submat(mPosMeasCov,0,1,0,1), mStateKF, mErrCovKF);
+					}
 					break;
 				case DATA_TYPE_MAP_VEL:
 					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);

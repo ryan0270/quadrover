@@ -145,6 +145,10 @@ class Observer_Translational : public Observer_AngularListener,
 									   const TNT::Array2D<double> &measCov,
 									   TNT::Array2D<double> &state,
 									   TNT::Array2D<double> &errCov);
+	static void doMeasUpdateKF_xyOnly(const TNT::Array2D<double> &meas,
+									   const TNT::Array2D<double> &measCov,
+									   TNT::Array2D<double> &state,
+									   TNT::Array2D<double> &errCov);
 	static void doMeasUpdateKF_heightOnly(double meas, 
 											    double measCov, 
 											    TNT::Array2D<double> &state, 

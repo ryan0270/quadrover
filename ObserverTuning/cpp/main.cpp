@@ -154,6 +154,7 @@ int main(int argv, char* argc[])
 	mTranslationController.setStartTime(startTime);
 	mTranslationController.setQuadLogger(&mQuadLogger);
 	mTranslationController.initialize();
+	mTranslationController.setObserverTranslational(&mObsvTranslational);
 	addCommManagerListener(&mTranslationController);
 
 	mAttitudeThrustController.setStartTime(startTime);
@@ -230,27 +231,27 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-	cv::namedWindow("dispFeatureFind",1);
-	cv::namedWindow("dispTargetFind",1);
-	cv::moveWindow("dispFeatureFind",0,0);
-	cv::moveWindow("dispTargetFind",321,0);
-
-	class MyFeatureFinderListener : public FeatureFinderListener
-	{
-		public:
-		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
-	} myFeatureFinderListener;
-	mFeatureFinder.addListener(&myFeatureFinderListener);
-
-	class MyTargetFinderListener : public TargetFinderListener
-	{
-		public:
-		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
-
-	} myTargetFinderListener;
-	mTargetFinder.addListener(&myTargetFinderListener);
+//	cv::namedWindow("dispFeatureFind",1);
+//	cv::namedWindow("dispTargetFind",1);
+//	cv::moveWindow("dispFeatureFind",0,0);
+//	cv::moveWindow("dispTargetFind",321,0);
+//
+//	class MyFeatureFinderListener : public FeatureFinderListener
+//	{
+//		public:
+//		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
+//		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
+//	} myFeatureFinderListener;
+//	mFeatureFinder.addListener(&myFeatureFinderListener);
+//
+//	class MyTargetFinderListener : public TargetFinderListener
+//	{
+//		public:
+//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
+//
+//	} myTargetFinderListener;
+//	mTargetFinder.addListener(&myTargetFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -386,9 +387,9 @@ int main(int argv, char* argc[])
 	default_random_engine randGenerator;
 	normal_distribution<double> stdGaussDist(0,1);
 	Array2D<double> noiseStd(12,1,0.0);
-	noiseStd[6][0] = 0.010;
-	noiseStd[7][0] = 0.010;
-	noiseStd[8][0] = 0.010;
+	noiseStd[6][0] = 0.000;
+	noiseStd[7][0] = 0.000;
+	noiseStd[8][0] = 0.000;
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";
@@ -471,11 +472,19 @@ int main(int argv, char* argc[])
 			// Height "sensor"
 			if(lastHeightUpdateTime.getElapsedTimeMS() > heightUpdatePeriodMS && curHeight > 0)
 			{
+				SO3 att = SO3( createRotMat_ZYX(curViconState[2][0], curViconState[1][0], curViconState[0][0]) );
+				Array2D<double> e3(3,1);
+				e3[0][0] = 0;
+				e3[1][0] = 0;
+				e3[2][0] = -1;
+				Array2D<double> g = att*e3;
+				double height2 = curHeight/dot(g, e3);
+
 				lastHeightUpdateTime.setTime();
 				shared_ptr<HeightData<double>> heightData(new HeightData<double>);
 				heightData->type = DATA_TYPE_HEIGHT;
-				heightData->heightRaw = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
-				heightData->height = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
+				heightData->heightRaw = height2 + noiseStd[8][0]*stdGaussDist(randGenerator);
+				heightData->height = height2 + noiseStd[8][0]*stdGaussDist(randGenerator);
 
 				for(int i=0; i<sensorManagerListeners.size(); i++)
 					sensorManagerListeners[i]->onNewSensorUpdate(heightData);

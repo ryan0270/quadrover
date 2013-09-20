@@ -227,6 +227,18 @@ using namespace toadlet::egg;
 		return matNew;
 	}
 
+	template <class T1, class T2>
+	inline T1 dot(TNT::Array2D<T1> const &m1, TNT::Array2D<T2> const &m2)
+	{
+		assert(m1.dim2() == 1 && m2.dim2() == 1 && m1.dim1() == m2.dim1());
+
+		double d = 0;
+		for(int i=0; i<m1.dim1(); i++)
+			d += m1[i][0]*m2[i][0];
+
+		return d;
+	}
+
 	template <class T>
 	inline Array2D<T> extractDiagonal(Array2D<T> const &mat)
 	{
@@ -333,6 +345,7 @@ using namespace toadlet::egg;
 
 		return m;
 	}
+
 
 //	template<typename T>
 //	TNT::Array2D<T> logSO3(TNT::Array2D<T> const &R, double theta)

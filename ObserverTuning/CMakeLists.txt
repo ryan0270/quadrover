@@ -73,6 +73,7 @@ set (H ${H}
 	${ROVER_DIR}/cpp/VideoMaker.h
 	${ROVER_DIR}/cpp/constants.h
 	${ROVER_DIR}/cpp/VelocityEstimator.h
+	${ROVER_DIR}/cpp/TNT_Utils.h
 	${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModel.h
 	${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModelAffine.h
 	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
