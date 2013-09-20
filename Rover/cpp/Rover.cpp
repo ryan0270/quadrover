@@ -78,6 +78,7 @@ void Rover::initialize()
 	mTranslationController.setStartTime(mStartTime);
 	mTranslationController.setQuadLogger(&mQuadLogger);
 	mTranslationController.initialize();
+	mTranslationController.setObserverTranslational(&mObsvTranslational);
 	mTranslationController.start();
 	mCommManager.addListener(&mTranslationController);
 
