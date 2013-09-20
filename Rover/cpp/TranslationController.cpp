@@ -102,7 +102,7 @@ using namespace TNT;
 		mMutex_targetFindTime.lock();
 		Time lastTargetFindTime(mLastTargetFindTime);
 		mMutex_targetFindTime.unlock();
-		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 0.5e3)
+		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 1.0e3)
 		{
 			// so when we loose the image we don't try jumping back
 			mMutex_state.lock();
