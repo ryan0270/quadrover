@@ -66,7 +66,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void onNewCommMotorOn(){reset();}
 	void onNewCommMotorOff(){reset();}
 	void onNewCommSendControlSystem(const Collection<tbyte> &buff);
-	void onNewCommUseIbvs(bool useIbvs){mUseIbvs = true;}
+	void onNewCommUseIbvs(bool useIbvs){mUseIbvs = useIbvs;}
 	void onNewCommIbvsGains(const toadlet::egg::Collection<float> &posGains, const toadlet::egg::Collection<float> &VELgAINS);
 	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
 

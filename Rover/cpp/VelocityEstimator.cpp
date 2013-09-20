@@ -18,6 +18,8 @@ VelocityEstimator::VelocityEstimator() :
 
 	mMeasCov = 2*5*5;
 	mProbNoCorr = 0.1;
+
+	mLastDelayTimeUS = 0;
 }
 
 VelocityEstimator::~VelocityEstimator()

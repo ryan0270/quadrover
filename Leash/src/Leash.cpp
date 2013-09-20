@@ -1752,7 +1752,7 @@ void Leash::onBtnQuit_clicked()
 
 void Leash::onIncreaseHeight()
 {
-	mDesState[8][0] = min(1.0, mDesState[8][0]+0.050);
+	mDesState[8][0] = min(1.5, mDesState[8][0]+0.050);
 //	mDesStateData[8]->setData(QString::number(mDesState[8][0],'f',3), Qt::DisplayRole);
 
 	sendDesiredState();
@@ -2064,7 +2064,7 @@ void Leash::onTelemetryUpdated(TelemetryViconDataRecord const &rec)
 		mLogData.push_back(LogItem(mSys.mtime()-mStartTimeUniverseMS, s, LOG_TYPE_VICON_STATE));
 		mMutex_logBuffer.unlock();
 
-		if(mSys.mtime() - mLastTelemSendTime > 10-5)
+		if(mSys.mtime() - mLastTelemSendTime > 100-5)
 		{
 			mLastTelemSendTime = mSys.mtime();
 			

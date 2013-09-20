@@ -105,7 +105,7 @@ using namespace TNT;
 		Time loopTime;
 		toadlet::uint64 t;
 		list<shared_ptr<IData>> events;
-		float targetRate = 200; // hz
+		float targetRate = 100; // hz
 		float targetPeriodUS = 1.0f/targetRate*1.0e6;
 		String logString;
 		while(mRunning)
@@ -178,7 +178,7 @@ using namespace TNT;
 				mStateKF[7][0] = mAccelBiasReset[1][0];
 				mStateKF[8][0] = mAccelBiasReset[2][0];
 
-				mErrCovKF.inject(0.01*mDynCov);
+//				mErrCovKF.inject(0.01*mDynCov);
 				mErrCovKF.inject(1e-6*createIdentity((double)9));
 				mMutex_kfData.unlock();
 			}
@@ -255,6 +255,16 @@ using namespace TNT;
 
 	void Observer_Translational::doTimeUpdateKF(const Array2D<double> &accel, double dt, Array2D<double> &state, Array2D<double> &errCov, const Array2D<double> &dynCov)
 	{
+if(std::isnan(accel[0][0]) || std::isnan(accel[1][0]) || std::isnan(accel[2][0]))
+	Log::alert("doTimeUpdateKF accel is nan");
+if(std::isnan(dt))
+	Log::alert("doTimeUpdateKF dt is nan");
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+	Log::alert("doTimeUpdateKF: state pos is nan coming in");
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+	Log::alert("doTimeUpdateKF: state vel is nan coming in");
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+	Log::alert("doTimeUpdateKF: state accel bias is nan coming in");
 		if(dt > 1)
 		{
 			Log::alert(String()+"Translation observer time update large dt: " +dt);
@@ -263,6 +273,15 @@ using namespace TNT;
 
 		if(dt == 0)
 			return;
+
+		if(dt < 0)
+		{
+			Log::alert(String()+"Why is dt < 0?  -- " + dt);
+			return;
+		}
+
+		Array2D<double> stateOld = state.copy();
+		Array2D<double> errCovOld = errCov.copy();
 
 		for(int i=0; i<3; i++)
 			state[i][0] += dt*state[i+3][0];
@@ -286,10 +305,61 @@ using namespace TNT;
 
 			errCov[i+6][i+6] += dynCov[i+6][i+6]*dtSq;
 		}
+	
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doTimeUpdateKF: state pos is nan");
+}
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doTimeUpdateKF: state vel is nan");
+}
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doTimeUpdateKF: state accel bias is nan");
+}
+if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doTimeUpdateKF: err cov pos is nan");
+}
+if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doTimeUpdateKF: err cov vel is nan");
+}
+if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doTimeUpdateKF: err cov pos is nan");
+}
 	}
 
 	void Observer_Translational::doMeasUpdateKF_posOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
+if(std::isnan(meas[0][0]) || std::isnan(meas[1][0]) || std::isnan(meas[2][0]))
+	Log::alert("doMeasUpdateKF_posOnly: meas is nan");
+if(std::isnan(measCov[0][0]) || std::isnan(measCov[1][1]) || std::isnan(measCov[2][2]))
+	Log::alert("doMeasUpdateKF_posOnly: measCov is nan");
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+	Log::alert("doMeasUpdateKF_posOnlyKF: state pos is nan coming in");
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+	Log::alert("doMeasUpdateKF_posOnlyKF: state vel is nan coming in");
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+	Log::alert("doMeasUpdateKF_posOnlyKF: state accel bias is nan coming in");
+
+		Array2D<double> stateOld = state.copy();
+		Array2D<double> errCovOld = errCov.copy();
+
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,3,0.0);
 		double den;
@@ -325,12 +395,63 @@ using namespace TNT;
 
 			errCov[i+6][i+6] -= gainKF[i+6][i]*errCov[i][i+6];
 		}
+
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_posOnlyKF: state pos is nan");
+}
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_posOnlyKF: state vel is nan");
+}
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_posOnlyKF: state accel bias is nan");
+}
+if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_posOnlyKF: err cov pos is nan");
+}
+if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_posOnlyKF: err cov vel is nan");
+}
+if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_posOnlyKF: err cov pos is nan");
+}
 	}
 
 	void Observer_Translational::doMeasUpdateKF_velOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
 	{
+if(std::isnan(meas[0][0]) || std::isnan(meas[1][0]) || std::isnan(meas[2][0]))
+	Log::alert("doMeasUpdateKF_velOnly: meas is nan");
+if(std::isnan(measCov[0][0]) || std::isnan(measCov[1][1]) || std::isnan(measCov[2][2]))
+	Log::alert("doMeasUpdateKF_velOnly: measCov is nan");
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+	Log::alert("doMeasUpdateKF_velOnlyKF: state pos is nan coming in");
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+	Log::alert("doMeasUpdateKF_velOnlyKF: state vel is nan coming in");
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+	Log::alert("doMeasUpdateKF_velOnlyKF: state accel bias is nan coming in");
+
 		if(norm2(meas) > 10)
 			return; // screwy measuremnt
+
+		Array2D<double> stateOld = state.copy();
+		Array2D<double> errCovOld = errCov.copy();
 
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,3,0.0);
@@ -368,6 +489,42 @@ using namespace TNT;
 			errCov[i+6][i+6] -= gainKF[i+6][i]*errCov[i+3][i+6];
 		}
 
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_velOnlyKF: state pos is nan");
+}
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_velOnlyKF: state vel is nan");
+}
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_velOnlyKF: state accel bias is nan");
+}
+if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_velOnlyKF: err cov pos is nan");
+}
+if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_velOnlyKF: err cov vel is nan");
+}
+if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_velOnlyKF: err cov pos is nan");
+}
 	}
 
 	void Observer_Translational::doMeasUpdateKF_heightOnly(double meas,
@@ -375,6 +532,20 @@ using namespace TNT;
 														   Array2D<double> &state,
 														   Array2D<double> &errCov)
 	{
+if(std::isnan(meas))
+	Log::alert("doMeasUpdateKF_heightOnly: meas is nan");
+if(std::isnan(measCov))
+	Log::alert("doMeasUpdateKF_heightOnly: measCov is nan");
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+	Log::alert("doMeasUpdateKF_heightOnly: state pos is nan coming in");
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+	Log::alert("doMeasUpdateKF_heightOnly: state vel is nan coming in");
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+	Log::alert("doMeasUpdateKF_heightOnly: state accel bias is nan coming in");
+
+		Array2D<double> stateOld = state.copy();
+		Array2D<double> errCovOld = errCov.copy();
+
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,1,0.0);
 		double den = errCov[2][2]+measCov;
@@ -400,6 +571,42 @@ using namespace TNT;
 		errCov[8][5] = errCov[5][8];
 
 		errCov[8][8] -= gainKF[8][0]*errCov[2][8];
+if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_heightOnlyKF: state pos is nan");
+}
+if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_heightOnlyKF: state vel is nan");
+}
+if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_heightOnlyKF: state accel bias is nan");
+}
+if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_heightOnlyKF: err cov pos is nan");
+}
+if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_heightOnlyKF: err cov vel is nan");
+}
+if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
+{
+	state = stateOld.copy();
+	errCov = errCovOld.copy();
+	Log::alert("doMeasUpdateKF_heightOnlyKF: err cov pos is nan");
+}
 	}
 
 	void Observer_Translational::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)
@@ -534,11 +741,11 @@ using namespace TNT;
 
 	void Observer_Translational::onNewCommAccelBias(float xBias, float yBias, float zBias)
 	{
+		mMutex_kfData.lock();
 		mAccelBiasReset[0][0] = xBias;
 		mAccelBiasReset[1][0] = yBias;
 		mAccelBiasReset[2][0] = zBias;
 
-		mMutex_kfData.lock();
 		mStateKF[6][0] = mAccelBiasReset[0][0];
 		mStateKF[7][0] = mAccelBiasReset[1][0];
 		mStateKF[8][0] = mAccelBiasReset[2][0];
@@ -684,6 +891,7 @@ using namespace TNT;
 
 		Time startTime(newEvents.front()->timestamp);
 
+		using std::isnan;
 		// first go through and update all the buffers
 		shared_ptr<IData> data;
 		mMutex_kfData.lock();
@@ -693,25 +901,109 @@ using namespace TNT;
 			switch(data->type)
 			{
 				case DATA_TYPE_RAW_ACCEL:
-					mRawAccelDataBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					{
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
+						bool bad = false;
+						for(int i=0; i<d->data.dim1(); i++)
+						{
+							if(isnan(d->data[i][0]))
+							{
+								printArray("accel is nan:\t",d->data);
+								bad = true;
+								break;
+							}
+						}
+						if(!bad)
+							mRawAccelDataBuffer.push_back(d);
+					}
 					break;
 				case DATA_TYPE_GRAVITY_DIR:
-					mGravityDirDataBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					{
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
+						bool bad = false;
+						for(int i=0; i<d->data.dim1(); i++)
+						{
+							if(isnan(d->data[i][0]))
+							{
+								printArray("gravity is nan:\t",d->data);
+								bad = true;
+								break;
+							}
+						}
+						if(!bad)
+							mGravityDirDataBuffer.push_back(d);
+					}
 					break;
 				case DATA_TYPE_VICON_POS:
-					mViconPosBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					{
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
+						bool bad = false;
+						for(int i=0; i<d->data.dim1(); i++)
+						{
+							if(isnan(d->data[i][0]))
+							{
+								printArray("vicon pos is nan:\t",d->data);
+								bad = true;
+								break;
+							}
+						}
+						if(!bad)
+							mViconPosBuffer.push_back(d);
+					}
 					break;
 				case DATA_TYPE_CAMERA_POS:
-					mCameraPosBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					{
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
+						bool bad = false;
+						for(int i=0; i<d->data.dim1(); i++)
+						{
+							if(isnan(d->data[i][0]))
+							{
+								printArray("camera pos is nan:\t",d->data);
+								bad = true;
+								break;
+							}
+						}
+						if(!bad)
+							mCameraPosBuffer.push_back(d);
+					}
 					break;
 				case DATA_TYPE_MAP_VEL:
-					mMapVelBuffer.push_back(static_pointer_cast<DataVector<double>>(data));
+					{
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
+						bool bad = false;
+						for(int i=0; i<d->data.dim1(); i++)
+						{
+							if(isnan(d->data[i][0]))
+							{
+								printArray("map vel is nan:\t",d->data);
+								bad = true;
+								break;
+							}
+						}
+						if(!bad)
+							mMapVelBuffer.push_back(d);
+					}
 					break;
 				case DATA_TYPE_MAP_HEIGHT:
-					mMapHeightBuffer.push_back(static_pointer_cast<Data<double>>(data));
+					{
+						shared_ptr<Data<double>> d = static_pointer_cast<Data<double>>(data);
+						bool bad = isnan(d->data);
+						if(!bad)
+							mMapHeightBuffer.push_back(d);
+						else
+							Log::alert("map height is bad");
+					}
 					break;
 				case DATA_TYPE_HEIGHT:
-					mHeightDataBuffer.push_back(static_pointer_cast<HeightData<double>>(data));
+					{
+						shared_ptr<HeightData<double>> d = static_pointer_cast<HeightData<double>>(data);
+						bool bad = isnan(d->height);
+						if(!bad)
+							mHeightDataBuffer.push_back(d);
+						else
+							Log::alert("height is bad");
+					}
 					break;
 				default:
 					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
@@ -732,7 +1024,7 @@ using namespace TNT;
 			mStateKF[7][0] = mAccelBiasReset[1][0];
 			mStateKF[8][0] = mAccelBiasReset[2][0];
 
-			mErrCovKF.inject(0.01*mDynCov);
+//			mErrCovKF.inject(0.01*mDynCov);
 			mErrCovKF.inject(1e-6*createIdentity((double)9));
 			mMutex_kfData.unlock();
 			return startTime;

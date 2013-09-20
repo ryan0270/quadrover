@@ -331,7 +331,7 @@ namespace Quadrotor{
 				mMutex_logger.unlock();
 			}
 
-			System::msleep(500);
+			System::msleep(1000);
 		}
 	}
 
