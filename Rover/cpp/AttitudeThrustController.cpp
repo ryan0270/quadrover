@@ -38,7 +38,7 @@ namespace Quadrotor {
 
 		mDesAccel[2][0] = GRAVITY;
 
-		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.04), createRotMat(0,0.0) ) );
+		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.06), createRotMat(0,0.0) ) );
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
