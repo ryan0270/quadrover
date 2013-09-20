@@ -73,7 +73,10 @@ using namespace TNT;
 		while(mRunning)
 		{
 			if(mNewMeasAvailable)
+			{
+				mNewMeasAvailable = false;
 				calcControl();
+			}
 
 			System::msleep(1);
 		}
@@ -92,8 +95,6 @@ using namespace TNT;
 
 		mMutex_state.lock();
 		Array2D<double> error = mCurState-mDesState;
-		Array2D<double> desState = mDesState.copy();
-		Array2D<double> curState = mCurState.copy();
 		mMutex_state.unlock();
 
 		Array2D<double> accelCmd;
@@ -103,6 +104,12 @@ using namespace TNT;
 		mMutex_targetFindTime.unlock();
 		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 0.5e3)
 		{
+			// so when we loose the image we don't try jumping back
+			mMutex_state.lock();
+			mDesState[0][0] = mCurState[0][0];
+			mDesState[1][0] = mCurState[1][0];
+			mMutex_state.unlock();
+
 			accelCmd = calcControlIBVS(dt);
 
 			// fake the system controller so when we switch back to 
@@ -128,8 +135,6 @@ using namespace TNT;
 				logString = logString+accelCmd[i][0]+"\t";
 			mQuadLogger->addEntry(LOG_ID_ACCEL_CMD,logString, LOG_FLAG_STATE_DES);
 		}
-
-		mNewMeasAvailable = false;
 	}
 
 	Array2D<double> TranslationController::calcControlPID(const Array2D<double> &error,double dt)
@@ -212,20 +217,26 @@ using namespace TNT;
 		Array2D<double> desDir(3,1);
 		desDir[0][0] = 0;
 		desDir[1][0] = 0;
-		desDir[2][0] = 1;
+		desDir[2][0] = -524.0/2.0;;
+		desDir = 1.0/norm2(desDir)*desDir;
 		Array2D<double> desMoment = att.inv()*desDir;
-//		Array2D<double> desMoment = desDir;
 
 		mMutex_state.lock();
-		Array2D<double> visionErr = mCurState[2][0]*moment-mDesState[2][0]*desMoment;
+		Array2D<double> curState = mCurState.copy();
+		Array2D<double> desState = mDesState.copy();
 		mMutex_state.unlock();
-
 		mMutex_gains.lock();
-		Array2D<double> desVel = mIbvsPosGains*visionErr; // remember that * is element-wise
+		Array2D<double> posGains = mIbvsPosGains;
+		Array2D<double> velGains = mIbvsVelGains;
+		mMutex_gains.unlock();
+
+//		Array2D<double> visionErr = curState[2][0]*moment-desState[2][0]*desMoment;
+		Array2D<double> visionErr = curState[2][0]*(moment-desMoment);
+
+		Array2D<double> desVel = posGains*visionErr; // remember that * is element-wise
 
 		// use real height for z vel
-		desVel[2][0] = -mIbvsPosGains[2][0]*(mCurState[2][0]-mDesState[2][0]);
-		mMutex_gains.unlock();
+		desVel[2][0] = -mIbvsPosGains[2][0]*(curState[2][0]-desState[2][0]);
 
 		String logString;
 		for(int i=0; i<desVel.dim1(); i++)
@@ -233,26 +244,38 @@ using namespace TNT;
 		mQuadLogger->addEntry(LOG_ID_VEL_CMD, logString, LOG_FLAG_STATE_DES);
 
 		Array2D<double> velErr(3,1);
-		velErr[0][0] = mCurState[3][0]-(mDesState[3][0]+desVel[0][0]);
-		velErr[1][0] = mCurState[4][0]-(mDesState[4][0]+desVel[1][0]);
-		velErr[2][0] = mCurState[5][0]-(mDesState[5][0]+desVel[2][0]);
+		velErr[0][0] = curState[3][0]-(desState[3][0]+desVel[0][0]);
+		velErr[1][0] = curState[4][0]-(desState[4][0]+desVel[1][0]);
+		velErr[2][0] = curState[5][0]-(desState[5][0]+desVel[2][0]);
 
-		mMutex_gains.lock();
-		Array2D<double> accelCmd = -1.0*mIbvsVelGains*velErr;
-		mMutex_gains.unlock();
+		Array2D<double> accelCmd = -1.0*velGains*velErr;
 
 		// Decay so if we go a long time without finding the image
 		// we aren't trying to do too much
 		mMutex_targetFindTime.lock();
 		double t = mLastTargetFindTime.getElapsedTimeNS()/1.0e9;
 		mMutex_targetFindTime.unlock();
-		double decayRate = 1;
-		accelCmd = exp(-decayRate*t)*accelCmd;
+//		double decayRate = 1;
+//		accelCmd = exp(-decayRate*t)*accelCmd;
 
 		accelCmd[0][0] = min(2.0, max(-2.0, accelCmd[0][0]));
 		accelCmd[1][0] = min(2.0, max(-2.0, accelCmd[1][0]));
 
 		accelCmd[2][0] += GRAVITY;
+
+		// Assume the PID integrated err holds the necessary
+		// acceleration offset
+		mMutex_data.lock();
+		accelCmd[2][0] -= mGainI[2][0]*mErrInt[2][0];
+		mMutex_data.unlock();
+
+//Log::alert("--------------------------------------------------");
+//Log::alert(String()+"target center:\t"+targetData->target->meanCenter.x+"\t"+targetData->target->meanCenter.y);
+//printArray("moment:\t",moment);
+//printArray("desMoment:\t",desMoment);
+//printArray("desMoment2:\t",desMoment2);
+//printArray("desVel:\t",desVel);
+//printArray("accelCmd:\t",accelCmd);
 
 		mLastController = Controller::IBVS;
 		return accelCmd;
@@ -392,6 +415,8 @@ using namespace TNT;
 			mMutex_targetFindTime.lock();
 			mLastTargetFindTime.setTime();
 			mMutex_targetFindTime.unlock();
+
+			mNewMeasAvailable = true;
 		}
 	}
 

@@ -164,28 +164,26 @@ if exist('state','var') && ~isempty(state)
 	end
 % 	% legend('Vicon','Phone');
 	
-% 	figure(2); clf;
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [8 6];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 	for i=10:12
-% 		subplot(3,1,i-9)
-% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
-% 		plot(stateTime, state(i,:)); hold all
-% 		plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
-% 		hold off
-% 		xlabel('Time [s]');
-% 		ylabel(stateLabels{i});		
-% 	end
-% 	legend('Vicon','KF','MAP Vel')
-% 	
-% 	figure(3);
-% 	plot(viconStateTime(mask), viconState(9,mask)); hold all
-% 	plot(stateTime, state(9,:),'.'); hold all
-% 	plot(mapHeightEstTime, mapHeightEst);
-% 	hold off
-% 	xlabel('Time [s]');
-% 	ylabel(stateLabels{9});
+	viconInterp = interp1(viconStateTime,viconState',tranStateTime,[],'extrap')';
+	err = tranState-viconInterp(7:end,:);
+	rmsErr = rms(err')';
+	fprintf('tran state rms err:\t');
+	for i=1:6
+		fprintf('%1.3f\t',rmsErr(i));
+	end
+	fprintf('\n');
+	
+	if ~isempty(mapVelEst)
+		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelEstTime,[],'extrap')';
+		rmsErrHeight = rms(viconStateMAPInterp(9,:)-mapHeightEst);
+		rmsErrVel = rms(viconStateMAPInterp(10:12,:)' - mapVelEst')';
+		fprintf('MAP vel rms err:\t');
+		fprintf('---\t---\t%1.3f\t',rmsErrHeight);
+		for i=1:3
+			fprintf('%1.3f\t',rmsErrVel(i));
+		end
+		fprintf('\n');
+	end
 end
 
 %%

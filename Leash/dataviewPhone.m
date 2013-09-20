@@ -95,9 +95,9 @@ forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV
 forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
 forceScaling = phoneData(forceScalingIndices,3)';
 
-% cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
-% cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
-% cpuUsage = phoneData(cpuUsageIndices,3:end)';
+cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
+cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
+cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
 % phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
 % phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
@@ -482,10 +482,13 @@ end
 %%
 if exist('targetLoc','var') && ~isempty(targetLoc)
 	figure(6001); clf; set(gcf,'Name','Target Location');
+	center = [160; 120];
+	f = 524/4;
 	for i=1:2
-% 		plot(targetLoc(1+2*(i-1),:), targetLoc(2*i,:),'.'); hold all
 		subplot(2,1,i);
-		plot(targetLocTime, targetLoc(i,:),'.');
+		plot(targetLocTime, targetLoc(i,:),'.'); hold all
+		plot(velCmdTime, -velCmd(mod(i,2)+1,:)*f/0.5+center(i)); hold all
+		hold off
 		ax = axis;
 		if i == 1
 			line([ax(1) ax(2)],[160 160],'Color','k','LineStyle','--');
