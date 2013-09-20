@@ -187,7 +187,6 @@ using namespace TNT;
 
 	Array2D<double> TranslationController::calcControlIBVS()
 	{
-Log::alert("--------------------------------------------------");
 		mMutex_target.lock();
 		shared_ptr<ImageTargetFindData> targetData = mTargetData;
 		mMutex_target.unlock();
