@@ -58,6 +58,8 @@ class TranslationController : 	public Observer_TranslationalListener,
 
 	void addListener(TranslationControllerListener* listener){mListeners.push_back(listener);}
 
+	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
+
 	// from CommManagerListener
 	void onNewCommTransGains(const toadlet::egg::Collection<float> &gains);
 	void onNewCommMass(float m){mMass = m;}
@@ -95,9 +97,6 @@ class TranslationController : 	public Observer_TranslationalListener,
 
 	Time mStartTime, mLastControlTime;
 
-	Time mLastTargetFindTime;
-	std::mutex mMutex_targetFindTime;
-
 	Collection<TranslationControllerListener*> mListeners;
 
 	static double constrain(double val, double minVal, double maxVal)
@@ -110,7 +109,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	TNT::Array2D<double> mGainCntlSys;
 	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
 
-	TNT::Array2D<double> calcControlIBVS(double dt);
+	TNT::Array2D<double> calcControlIBVS();
 	TNT::Array2D<double> mIbvsPosGains, mIbvsVelGains;
 	std::mutex mMutex_gains;
 
@@ -131,6 +130,9 @@ class TranslationController : 	public Observer_TranslationalListener,
 		IBVS
 	};
 	Controller mLastController;
+
+	Observer_Translational *mObsvTranslational;
+	std::mutex mMutex_obsvTran;
 };
 
 } // namespace Quadrotor

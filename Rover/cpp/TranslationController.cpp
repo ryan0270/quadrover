@@ -37,8 +37,6 @@ using namespace TNT;
 
 		mUseIbvs = false;
 
-		mLastTargetFindTime.setTimeMS(0);
-
 		mTargetData = NULL;
 
 		mRotCamToPhone = SO3( matmult(createRotMat(2,-0.5*(double)PI),
@@ -99,10 +97,14 @@ using namespace TNT;
 
 		Array2D<double> accelCmd;
 
-		mMutex_targetFindTime.lock();
-		Time lastTargetFindTime(mLastTargetFindTime);
-		mMutex_targetFindTime.unlock();
-		if(mUseIbvs && lastTargetFindTime.getElapsedTimeMS() < 1.0e3)
+		mMutex_target.lock();
+		int targetFindDeltaMS;
+		if(mTargetData == NULL)
+			targetFindDeltaMS = 999999;
+		else
+			targetFindDeltaMS = mTargetData->timestamp.getElapsedTimeMS();
+		mMutex_target.unlock();
+		if(mUseIbvs && targetFindDeltaMS < 1.0e3)
 		{
 			// so when we loose the image we don't try jumping back
 			mMutex_state.lock();
@@ -110,7 +112,7 @@ using namespace TNT;
 			mDesState[1][0] = mCurState[1][0];
 			mMutex_state.unlock();
 
-			accelCmd = calcControlIBVS(dt);
+			accelCmd = calcControlIBVS();
 
 			// fake the system controller so when we switch back to 
 			// it the integrator is still valid
@@ -183,26 +185,65 @@ using namespace TNT;
 		return accelCmd;
 	}
 
-	Array2D<double> TranslationController::calcControlIBVS(double dt)
+	Array2D<double> TranslationController::calcControlIBVS()
 	{
+Log::alert("--------------------------------------------------");
 		mMutex_target.lock();
 		shared_ptr<ImageTargetFindData> targetData = mTargetData;
 		mMutex_target.unlock();
-
+		
 		vector<cv::Point2f> imgPoints;
 		for(int i=0; i<targetData->target->squareData.size(); i++)
 			for(int j=0; j<targetData->target->squareData[i]->contour.size(); j++)
 				imgPoints.push_back(targetData->target->squareData[i]->contour[j]);
 
-		double f = targetData->imageData->focalLength;
+		// move center from corner to middle
 		double cx = targetData->imageData->centerX;
 		double cy = targetData->imageData->centerY;
+		cv::Point2f center(cx,cy);
+		for(int i=0; i<imgPoints.size(); i++)
+			imgPoints[i] -= center;
+
+		// Predict the target's current position based on kinematics
+		double dt = targetData->timestamp.getElapsedTimeNS()/1.0e9;
+		double f = targetData->imageData->focalLength;
+		Array2D<double> vel(3,1);
+		double z;
+		if(mObsvTranslational == NULL)
+		{
+			Log::alert("crap, TranslationController's mObsvTranslational is null");
+			vel[0][0] = vel[1][0] = vel[2][0] = 0;
+			z = 1;
+		}
+		else
+		{
+			Array2D<double> imgState = mObsvTranslational->estimateStateAtTime(targetData->timestamp);
+			z = imgState[2][0];
+			vel[0][0] = imgState[3][0];
+			vel[1][0] = imgState[4][0];
+			vel[2][0] = imgState[5][0];
+			vel.inject(mRotPhoneToCam*vel);
+		}
+		Array2D<double> Lv(2,3), delta(2,1);
+		for(int i=0; i<imgPoints.size(); i++)
+		{
+			Lv[0][0] = -f; Lv[0][1] = 0;  Lv[0][2] = imgPoints[i].x;
+			Lv[1][0] = 0;  Lv[1][1] = -f; Lv[1][2] = imgPoints[i].y;
+
+			delta.inject(dt/z*matmult(Lv,vel));
+printArray("delta:\t",delta);
+
+			imgPoints[i].x += delta[0][0];
+			imgPoints[i].y += delta[1][0];
+		}
+
+		// project onto unit sphere
 		vector<Array2D<double>> spherePoints;
 		Array2D<double> p(3,1), moment(3,1,0.0);
 		for(int i=0; i<imgPoints.size(); i++)
 		{
-			p[0][0] = (imgPoints[i].x - cx);
-			p[1][0] = (imgPoints[i].y - cy);
+			p[0][0] = imgPoints[i].x;
+			p[1][0] = imgPoints[i].y;
 			p[2][0] = f;
 
 			// Get it on the unit sphere
@@ -249,14 +290,6 @@ using namespace TNT;
 		velErr[2][0] = curState[5][0]-(desState[5][0]+desVel[2][0]);
 
 		Array2D<double> accelCmd = -1.0*velGains*velErr;
-
-		// Decay so if we go a long time without finding the image
-		// we aren't trying to do too much
-		mMutex_targetFindTime.lock();
-		double t = mLastTargetFindTime.getElapsedTimeNS()/1.0e9;
-		mMutex_targetFindTime.unlock();
-//		double decayRate = 1;
-//		accelCmd = exp(-decayRate*t)*accelCmd;
 
 		accelCmd[0][0] = min(2.0, max(-2.0, accelCmd[0][0]));
 		accelCmd[1][0] = min(2.0, max(-2.0, accelCmd[1][0]));
@@ -411,10 +444,6 @@ using namespace TNT;
 			mMutex_target.lock();
 			mTargetData = data;
 			mMutex_target.unlock();
-
-			mMutex_targetFindTime.lock();
-			mLastTargetFindTime.setTime();
-			mMutex_targetFindTime.unlock();
 
 			mNewMeasAvailable = true;
 		}

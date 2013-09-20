@@ -99,9 +99,9 @@ cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAG
 cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
 cpuUsage = phoneData(cpuUsageIndices,3:end)';
 
-% phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
-% phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
-% phoneTemp = phoneData(phoneTempIndices,3:6)';
+phoneTempIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PHONE_TEMP);
+phoneTempTime = phoneData(phoneTempIndices,1)'/1000;
+phoneTemp = phoneData(phoneTempIndices,3:6)';
 
 % mapVelEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
 % mapVelEstTime = phoneData(mapVelEstIndices,1)'/1000;
@@ -174,17 +174,17 @@ if exist('cpuUsage','var') && ~isempty(cpuUsage)
 end
 
 %%
-% if exist('phoneTemp','var') && ~isempty(phoneTemp)
-% 	figure(500); set(gcf,'Name','Batt Temp');
-% 	plot(phoneTempTime, phoneTemp(1,:)); hold all
-% 	plot(phoneTempTime, phoneTemp(2,:)); hold all
-% 	plot(phoneTempTime, phoneTemp(3,:)); hold all
-% 	plot(phoneTempTime, phoneTemp(4,:)); hold all
-% 	hold off
-% 	xlabel('Time [s]');
-% 	ylabel('Temp [degC]');
-% 	legend('Batt','SEC','Fuelgauge','TMU');
-% end
+if exist('phoneTemp','var') && ~isempty(phoneTemp)
+	figure(500); set(gcf,'Name','Batt Temp');
+	plot(phoneTempTime, phoneTemp(1,:)); hold all
+	plot(phoneTempTime, phoneTemp(2,:)); hold all
+	plot(phoneTempTime, phoneTemp(3,:)); hold all
+	plot(phoneTempTime, phoneTemp(4,:)); hold all
+	hold off
+	xlabel('Time [s]');
+	ylabel('Temp [degC]');
+	legend('Batt','SEC','Fuelgauge','TMU','location','best');
+end
 
 %%
 stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch Rate [rad/s]' 'Yaw Rate [rad/s]' ...
