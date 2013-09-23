@@ -331,20 +331,20 @@ end
 % end
 
 %%
-% if isfinite(motor_dt)
-%     labelsCntl = {'Throttle' 'Cntl Roll' 'Cntl Pitch' 'Cntl Yaw'};
-%     labelsMotor = {'Motor North' 'Motor East' 'Motor South' 'Motor West'};
-%     baseFig = 1000;
-% 
-%     figure(baseFig+2);set(gcf,'Units','Inches');
-%     % curPos = get(gcf,'Position'); figSize = [6 6];
-%     % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-%     for i=1:4
-%         subplot(2,2,i)
-%         plot(motorTime, motorCmd(i,:));
-%         title(labelsMotor(i));
-%     end
-% end
+if ~isempty(motorCmd)
+    labelsCntl = {'Throttle' 'Cntl Roll' 'Cntl Pitch' 'Cntl Yaw'};
+    labelsMotor = {'Motor North' 'Motor East' 'Motor South' 'Motor West'};
+    baseFig = 1000;
+
+    figure(baseFig+2);set(gcf,'Units','Inches');
+    % curPos = get(gcf,'Position'); figSize = [6 6];
+    % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+    for i=1:4
+        subplot(2,2,i)
+        plot(motorTime, motorCmd(i,:));
+        title(labelsMotor(i));
+    end
+end
 
 %%
 % if exist('featureFindTime','var') && ~isempty(featureFindTime)

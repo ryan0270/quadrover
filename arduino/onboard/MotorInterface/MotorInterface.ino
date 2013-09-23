@@ -14,7 +14,6 @@ Connection * connection;
 // Event handler for the shell connection. 
 void adbEventHandler(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
 {
-  Serial.println("here");
   if(event == ADB_CONNECT && verbosity > 0)
   {
     Serial.println("ADB_CONNECT");
@@ -60,12 +59,6 @@ boolean sendCommand(byte addr, short cmd)
   Wire.beginTransmission(addr);
   byte upper = floor(cmd/8.0);
   byte lower = cmd % 8;
-//  delay(70);
-//  Serial.print("upper: ");
-//  Serial.print(upper);
-//  Serial.print(" --- lower: ");
-//  Serial.print(lower);
-//  Serial.print("\n");
   Wire.write(upper);
   Wire.write( lower & 0x07 );
   byte result = Wire.endTransmission(true);
@@ -137,7 +130,8 @@ void loop()
       Serial.print("***");
     Serial.print("\n");    
   }
-  ADB::poll();
+  
+  while(ADB::poll());
   delay(1);
 } 
 
