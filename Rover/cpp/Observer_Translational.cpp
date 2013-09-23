@@ -67,7 +67,7 @@ using std::isnan;
 		mTargetNominalLength = 0.210;
 		mViconCameraOffset[0][0] = 0;
 		mViconCameraOffset[1][0] = 0;
-		mViconCameraOffset[2][0] = 0.087;
+		mViconCameraOffset[2][0] = 0.1;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -122,12 +122,12 @@ using std::isnan;
 			}
 			mMutex_posTime.unlock();
 
-//			if(mUseIbvs && mHaveFirstCameraPos)
-//			{
-//				mUseViconPos = false;
-//				mUseCameraPos = true;
-//			}
-//			else
+			if(mUseIbvs && mHaveFirstCameraPos)
+			{
+				mUseViconPos = false;
+				mUseCameraPos = true;
+			}
+			else
 			{
 				mUseViconPos = true;
 				mUseCameraPos = false;
@@ -1027,7 +1027,10 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 		double nomLength =  0.21;
 		Array2D<double> pos(3,1);
-		pos[2][0] = mTargetNominalLength/avgLength*f;
+//		pos[2][0] = mTargetNominalLength/avgLength*f;
+		mMutex_kfData.lock();
+		pos[2][0] = mStateKF[2][0]-mViconCameraOffset[2][0];
+		mMutex_kfData.unlock();
 		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
 		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
 
