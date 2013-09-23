@@ -118,8 +118,29 @@ namespace Quadrotor {
 		cmds[1] = cmdThrust-cmdRoll+cmdPitch-cmdYaw;
 		cmds[2] = cmdThrust+cmdRoll+cmdPitch+cmdYaw;
 		cmds[3] = cmdThrust+cmdRoll-cmdPitch-cmdYaw;
+
+		double maxCmd = 0;
 		for(int i=0; i<4; i++)
-			cmds[i] = min((double)(1 << 11), max(0.0, cmds[i]));
+			maxCmd = max(maxCmd, cmds[i]);
+
+		// if we try to command too much we'll sacrifice
+		// thrust in order to maintain attitude
+		double diff = max((double)0,maxCmd-(1<<11));
+		if(diff !=  0)
+			for(int i=0; i<4; i++)
+				cmds[i] -= diff;
+
+		double minCmd = 0;
+		for(int i=0; i<4; i++)
+			minCmd = min(minCmd, cmds[i]);
+
+		// I'll handle this better in the future
+		if(minCmd < 0)
+			for(int i=0; i<4; i++)
+				cmds[i] = 0;
+				
+//		for(int i=0; i<4; i++)
+//			cmds[i] = min((double)(1 << 11), max(0.0, cmds[i]));
 
 		Collection<uint16> motorCmds(4);
 		if(mPcIsConnected)

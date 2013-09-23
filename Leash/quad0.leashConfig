@@ -4,12 +4,12 @@
       <P>
          <x>4.000000</x>
          <y>4.000000</y>
-         <z>5.000000</z>
+         <z>4.000000</z>
       </P>
       <D>
          <x>3.000000</x>
          <y>3.000000</y>
-         <z>4.000000</z>
+         <z>3.000000</z>
       </D>
       <I>
          <x>0.000000</x>
@@ -37,14 +37,14 @@
    </IBVS>
    <Attitude>
       <P>
-         <x>0.350000</x>
-         <y>0.350000</y>
-         <z>2.000000</z>
+         <x>0.400000</x>
+         <y>0.400000</y>
+         <z>1.000000</z>
       </P>
       <D>
-         <x>0.200000</x>
-         <y>0.200000</y>
-         <z>2.000000</z>
+         <x>0.250000</x>
+         <y>0.250000</y>
+         <z>0.250000</z>
       </D>
    </Attitude>
 </Controller>
@@ -114,7 +114,7 @@
    <MeasurementCov>15.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
-<LogMask>4635</LogMask>
+<LogMask>4639</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

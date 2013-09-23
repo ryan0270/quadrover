@@ -126,6 +126,11 @@ using namespace TNT;
 			accelCmd = calcControlPID(error,dt);
 		}
 
+		double accelLimit = 10;
+		accelCmd[0][0] = min(accelLimit, max(-accelLimit, accelCmd[0][0]));
+		accelCmd[1][0] = min(accelLimit, max(-accelLimit, accelCmd[1][0]));
+		accelCmd[2][0] = min(GRAVITY+accelLimit, max(GRAVITY-accelLimit, accelCmd[2][0]));
+
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onTranslationControllerAccelCmdUpdated(accelCmd);
 	
