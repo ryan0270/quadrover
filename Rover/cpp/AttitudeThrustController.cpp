@@ -114,30 +114,58 @@ namespace Quadrotor {
 		mMutex_data.unlock();
 
 		double cmds[4];
-		cmds[0] = cmdThrust-cmdRoll-cmdPitch+cmdYaw;
-		cmds[1] = cmdThrust-cmdRoll+cmdPitch-cmdYaw;
-		cmds[2] = cmdThrust+cmdRoll+cmdPitch+cmdYaw;
-		cmds[3] = cmdThrust+cmdRoll-cmdPitch-cmdYaw;
+		bool sane = false;
+		int cnt = 0;
+		while(!sane && cnt < 1000)
+		{
+			cmds[0] = cmdThrust-cmdRoll-cmdPitch+cmdYaw;
+			cmds[1] = cmdThrust-cmdRoll+cmdPitch-cmdYaw;
+			cmds[2] = cmdThrust+cmdRoll+cmdPitch+cmdYaw;
+			cmds[3] = cmdThrust+cmdRoll-cmdPitch-cmdYaw;
 
-		double maxCmd = 0;
-		for(int i=0; i<4; i++)
-			maxCmd = max(maxCmd, cmds[i]);
-
-		// if we try to command too much we'll sacrifice
-		// thrust in order to maintain attitude
-		double diff = max((double)0,maxCmd-(1<<11));
-		if(diff !=  0)
+			double minCmd = 9999;
+			double maxCmd = 0;
 			for(int i=0; i<4; i++)
-				cmds[i] -= diff;
+			{
+				minCmd = min(minCmd, cmds[i]);
+				maxCmd = max(maxCmd, cmds[i]);
+			}
 
-		double minCmd = 0;
-		for(int i=0; i<4; i++)
-			minCmd = min(minCmd, cmds[i]);
+			if(minCmd >= 0 && maxCmd <= 2048)
+				sane = true;
+			else
+			{
+if(cnt > 100)
+{
+	String s = "cmds:\t";
+	for(int i=0; i<4; i++)
+		s = s+cmds[i]+"\t";
+	Log::alert(s);
+}
+				if( maxCmd-minCmd > 2048 || (cmdThrust < 1600 && cmdThrust > 400))
+				{
+					// reduce torque
+					double k = 0.9;
+					cmdRoll *= k;
+					cmdPitch *= k;
+					cmdYaw *= k;
+if(cnt > 100)
+{ Log::alert(String()+"cmdRoll: "+cmdRoll+"\tcmdPitch: "+cmdPitch+"\tcmdYaw:\t"+cmdYaw); }
+				}
+				else
+				{
+					double diff;
+					if(maxCmd > 2048)
+						diff = maxCmd-2048+10;
+					else // minCmd < 0
+						diff = minCmd-10;
+if(cnt > 100)
+{ Log::alert(String()+"maxCmd: " + maxCmd + "\tminCmd: " + minCmd + "\tcmdThrust: "+cmdThrust+"\tdiff: "+diff); cmdThrust -= diff; }
+				}
+			}
 
-		// I'll handle this better in the future
-		if(minCmd < 0)
-			for(int i=0; i<4; i++)
-				cmds[i] = 0;
+			cnt++;
+		}
 				
 //		for(int i=0; i<4; i++)
 //			cmds[i] = min((double)(1 << 11), max(0.0, cmds[i]));
