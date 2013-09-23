@@ -960,7 +960,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 				{
 					Array2D<double> accel = static_pointer_cast<DataVector<double>>(data)->dataCalibrated.copy();
 					// the accelerometer is really noisy so filter out the worst offenders
-					if( abs(norm2(accel)-GRAVITY) < 7 )
+					if( abs(norm2(accel)-GRAVITY) < 7  && abs(accel[2][0] - GRAVITY) < 5)
 					{
 						shared_ptr<DataVector<double>> accelData(new DataVector<double>());
 						accelData->type = DATA_TYPE_RAW_ACCEL;
