@@ -164,6 +164,9 @@ if exist('state','var') && ~isempty(state)
 		
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
 		plot(stateTime, state(i,:)); hold all
+		if i > 9
+			plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
+		end
 		hold off
 		ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)]);
 		ax = axis;
@@ -173,9 +176,6 @@ if exist('state','var') && ~isempty(state)
 		for j=1:length(targetLostTime)
 			line([targetLostTime(j) targetLostTime(j)],[ax(3) ax(4)],'Color','k','LineStyle','--');
 		end
-
-	%     line([ax(1) ax(2)],[max(state(i,:)) max(state(i,:))],'Color',0.5*[1 1 1],'LineStyle','--');
-	%     line([ax(1) ax(2)],[max(viconState(i,:)) max(viconState(i,:))],'Color',0.5*[1 1 1],'LineStyle','--');
 		xlabel('Time [s]')
 		ylabel(stateLabels(i));
 	
