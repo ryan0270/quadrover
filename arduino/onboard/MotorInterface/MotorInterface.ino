@@ -88,16 +88,13 @@ void setup()
   
   delay(500);
   
-//<<<<<<< local
-//=======
-//  // Initialise the ADB subsystem.  
-//  ADB::init();
-//  // Open an ADB stream to the phone's shell. Auto-reconnect
-//  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
-//  
-//  delay(1000);
-//
-//>>>>>>> other
+  // Initialise the ADB subsystem.  
+  ADB::init();
+  // Open an ADB stream to the phone's shell. Auto-reconnect
+  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
+  
+  delay(1000);
+  
   Wire.begin();
   motorAddr[0] = MOTOR_ADDR_N;
   motorAddr[1] = MOTOR_ADDR_E;
@@ -110,15 +107,7 @@ void setup()
     sendCommand(motorAddr[i], 0);
   }
     
-
   doRegularMotorStart();
-  
-    // Initialise the ADB subsystem.  
-  ADB::init();
-  // Open an ADB stream to the phone's shell. Auto-reconnect
-  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
-  
-  delay(1000);
 
   phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();
@@ -149,7 +138,7 @@ void loop()
     Serial.print("\n");    
   }
   ADB::poll();
-  delay(5);
+  delay(1);
 } 
 
 void doRegularMotorStart()

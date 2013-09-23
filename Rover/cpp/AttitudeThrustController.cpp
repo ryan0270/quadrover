@@ -106,10 +106,7 @@ namespace Quadrotor {
 		rotErr[2][0] = rotMatErr_AS[1][0];
 	
 		mMutex_data.lock();
-		// do I have an error in my controller derivation and previous implementation?
-		// The orignal form isn't giving the right torque
 		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*mCurAngularVel;
-//		Array2D<double> torque = mGainAngle*rotErr-mGainRate*mCurAngularVel;
 		double cmdRoll = torque[0][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdPitch = torque[1][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdYaw = torque[2][0]/mTorqueScaling/4.0;
