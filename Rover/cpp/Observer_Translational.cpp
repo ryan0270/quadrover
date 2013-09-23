@@ -6,6 +6,7 @@ namespace ICSL{
 namespace Quadrotor{
 using namespace ICSL::Constants;
 using namespace TNT;
+using std::isnan;
 	Observer_Translational::Observer_Translational() :
 		mRotViconToPhone(3,3,0.0),
 		mMeasCov(6,6,0.0),
@@ -144,7 +145,19 @@ using namespace TNT;
 				// need to advance time to the first event
 				dt = Time::calcDiffNS(lastUpdateTime, events.front()->timestamp)/1.0e9;
 				mMutex_kfData.lock();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 1:\t",mStateKF);
+		break;
+	}
 				doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 1:\t",mStateKF);
+		break;
+	}
 				mMutex_kfData.unlock();
 			}
 
@@ -165,13 +178,31 @@ using namespace TNT;
 			dt = lastUpdateTime.getElapsedTimeNS()/1.0e9;
 			lastUpdateTime.setTime();
 			mMutex_kfData.lock();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 2:\t",mStateKF);
+		break;
+	}
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 2:\t",mStateKF);
+		break;
+	}
 			mMutex_kfData.unlock();
 
 			// special handling if we aren't getting any position updates
 			if( ((!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3) )
 			{
 				mMutex_kfData.lock();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 2:\t",mStateKF);
+		break;
+	}
 				for(int i=0; i<6; i++)
 					mStateKF[i][0] = 0;
 				mStateKF[6][0] = mAccelBiasReset[0][0];
@@ -180,6 +211,12 @@ using namespace TNT;
 
 //				mErrCovKF.inject(0.01*mDynCov);
 				mErrCovKF.inject(1e-6*createIdentity((double)9));
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 2:\t",mStateKF);
+		break;
+	}
 				mMutex_kfData.unlock();
 			}
 
@@ -192,6 +229,12 @@ using namespace TNT;
 			errCovData->timestamp.setTime(lastUpdateTime);
 
 			mMutex_kfData.lock();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 3:\t",mStateKF);
+		break;
+	}
 			stateData->data = mStateKF.copy();
 			mStateBuffer.push_back(stateData);
 
@@ -240,6 +283,12 @@ using namespace TNT;
 				mQuadLogger->addEntry(Time(),LOG_ID_CUR_TRANS_STATE, logString,LOG_FLAG_STATE);
 			}
 
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 3:\t",mStateKF);
+		break;
+	}
 			mMutex_kfData.unlock();
 
 			for(int i=0; i<mListeners.size(); i++)
@@ -748,12 +797,24 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 		if(!mHaveFirstVicon)
 		{
 			mMutex_kfData.lock();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 4:\t",mStateKF);
+		break;
+	}
 			mStateKF[0][0] = pos[0][0];
 			mStateKF[1][0] = pos[1][0];
 			mStateKF[2][0] = pos[2][0];
 
 			mStateBuffer.clear();
 			mErrCovKFBuffer.clear();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 4:\t",mStateKF);
+		break;
+	}
 			mMutex_kfData.unlock();
 		}
 		mHaveFirstVicon = true;
@@ -832,6 +893,12 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 	void Observer_Translational::onNewCommAccelBias(float xBias, float yBias, float zBias)
 	{
 		mMutex_kfData.lock();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 5:\t",mStateKF);
+		break;
+	}
 		mAccelBiasReset[0][0] = xBias;
 		mAccelBiasReset[1][0] = yBias;
 		mAccelBiasReset[2][0] = zBias;
@@ -854,6 +921,12 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 		errCovData->type = DATA_TYPE_KF_ERR_COV;
 		errCovData->data = mErrCovKF.copy();
 		mErrCovKFBuffer.push_back(errCovData);
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 5:\t",mStateKF);
+		break;
+	}
 		mMutex_kfData.unlock();
 
 		Log::alert(String()+"accel bias updated:\t"+xBias+"\t"+yBias+"\t"+zBias);
@@ -1108,6 +1181,12 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 
 		if(mRawAccelDataBuffer.size() == 0 || mGravityDirDataBuffer.size() == 0)
 		{
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 6:\t",mStateKF);
+		break;
+	}
 			for(int i=0; i<6; i++)
 				mStateKF[i][0] = 0;
 			mStateKF[6][0] = mAccelBiasReset[0][0];
@@ -1116,6 +1195,12 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 
 //			mErrCovKF.inject(0.01*mDynCov);
 			mErrCovKF.inject(1e-6*createIdentity((double)9));
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 6:\t",mStateKF);
+		break;
+	}
 			mMutex_kfData.unlock();
 			return startTime;
 		}
@@ -1169,15 +1254,39 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 		if(events.size() == 0)
 		{
 			// apply data at the correct point in time
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 7:\t",mStateKF);
+		break;
+	}
 			mStateKF.inject( IData::interpolate(startTime, mStateBuffer));
 			mErrCovKF.inject( IData::interpolate(startTime, mErrCovKFBuffer));
 
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 7:\t",mStateKF);
+		break;
+	}
 			mMutex_kfData.unlock();
 			return startTime;
 		}
 
 		// apply data at the correct point in time
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 8:\t",mStateKF);
+		break;
+	}
 		mStateKF.inject( IData::interpolate(startTime, mStateBuffer));
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 8:\t",mStateKF);
+		break;
+	}
 		mErrCovKF.inject( IData::interpolate(startTime, mErrCovKFBuffer));
 		events.sort(IData::timeSortPredicate);
 
@@ -1205,8 +1314,20 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 		shared_ptr<DataVector<double>> stateData, errCovData;
 		while(eventIter != events.end())
 		{
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 9:\t",mStateKF);
+		break;
+	}
 			dt = Time::calcDiffNS(lastUpdateTime, (*eventIter)->timestamp)/1.0e9;
 			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 9:\t",mStateKF);
+		break;
+	}
 
 			switch((*eventIter)->type)
 			{
@@ -1273,9 +1394,21 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 			mDataBuffers[i]->clear();
 
 		mNewEventsBuffer.clear();
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan before 10:\t",mStateKF);
+		break;
+	}
 
 		for(int i=0; i<6; i++)
 			mStateKF[i][0] = 0;
+for(int st=0; st<mStateKF.dim1(); st++)
+	if(isnan(mStateKF[st][0]))
+	{
+		printArray("state is nan after 10:\t",mStateKF);
+		break;
+	}
 
 		mMutex_kfData.unlock(); mMutex_events.unlock();
 	}
