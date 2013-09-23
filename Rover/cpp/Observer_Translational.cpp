@@ -1016,7 +1016,8 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		p[0][0] = data->target->meanCenter.x - cx;
 		p[1][0] = data->target->meanCenter.y - cy;
 		p[2][0] = f;
-		p = att.inv()*mRotCamToPhone*p;
+//		p = att.inv()*mRotCamToPhone*p;
+		p = att*mRotCamToPhone*p;
 		p = -1.0*p; // to get our current position instead of the target's
 
 		// Now estimate the pos

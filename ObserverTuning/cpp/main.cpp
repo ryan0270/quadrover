@@ -269,9 +269,9 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommNominalMag(nomMag);
 
 		Collection<float> measVar;
-		measVar.push_back(0.00001);
-		measVar.push_back(0.00001);
-		measVar.push_back(0.00001);
+		measVar.push_back(0.0001);
+		measVar.push_back(0.0001);
+		measVar.push_back(0.0001);
 		measVar.push_back(0.05);
 		measVar.push_back(0.05);
 		measVar.push_back(0.05);
@@ -290,7 +290,7 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommKalmanDynVar(dynVar);
 
 		// TODO: Need to add Leash dialogs to send this over wifi
-		commManagerListeners[i]->onNewCommViconCameraOffset(0, 0.035, 0.087);
+//		commManagerListeners[i]->onNewCommViconCameraOffset(0, 0.035, 0.087);
 		commManagerListeners[i]->onNewCommTargetNominalLength(0.210);
 		commManagerListeners[i]->onNewCommMAPHeightMeasCov(0.1*0.1);
 
@@ -376,7 +376,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 100e3;
+	int endTimeDelta = 60e3;
 	float viconUpdateRate = 10; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz

@@ -140,7 +140,6 @@ void TargetFinder::run()
 	mFinished = true;
 }
 
-//shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image)
 shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs)
 {
 	vector<vector<cv::Point> > squares;
@@ -185,11 +184,11 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &ca
 			{
 				// find the maximum cosine of the angle between joint edges
 				double cosine = abs(angle(approx[j%4], approx[j-2], approx[j-1]));
-				maxCosine = MAX(maxCosine, cosine);
+				maxCosine = max(maxCosine, cosine);
 			}
 
 			// if cosines of all angles are small
-			// (all angles are ~90 degree) then write quandrange
+			// (all angles are ~90 degree) then write 
 			// vertices to resultant sequence
 			if( maxCosine < 0.3 )
 				squares.push_back(approx);

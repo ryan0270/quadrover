@@ -52,6 +52,10 @@ accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CM
 accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
 accelCmd = phoneData(accelCmdIndices,3:5)';
 
+targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_CENTERS);
+targetLocTime = phoneData(targetLocIndices,1)'/1000;
+targetLoc = phoneData(targetLocIndices,3:8)';
+
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
 RotQuadToPhone = createRotMat(3,-pi/4)*...
@@ -248,6 +252,53 @@ if exist('velCmd','var') && ~isempty(velCmd)
 % 	ylabel('Vel cmd [m/s^2]')
 % 	legend('x','y','z');
 end
+
+%%
+% chadTime = targetLocTime;
+% chadPos = zeros(2,length(chadTime));
+% 
+% f = 524.005870/2;
+% center = [317.122191; 248.851692]/2;
+% 
+% mask = [1 1+find(diff(tranStateTime) > 0)];
+% tranStateTime = tranStateTime(mask);
+% tranState = tranState(:,mask);
+% 
+% mask = [1 1+find(diff(angleStateTime) > 0)];
+% angleStateTime = angleStateTime(mask);
+% angleState = angleState(:,mask);
+% 
+% p = nan(3,1);
+% for i=1:length(chadTime)
+% 	att = interp1(angleStateTime, angleState(1:3,:)', chadTime(i))';
+% 	R = createRotMat(att(3), att(2), att(1));
+% 	p(1) = targetLoc(1,i)-center(1);
+% 	p(2) = targetLoc(2,i)-center(2);
+% 	p(3) = f;
+% 	p = -R*RotCamToPhone*p;
+% 	
+% 	z = interp1(tranStateTime, tranState(3,:), chadTime(i));
+% 	x = p(1)/f*z;
+% 	y = p(2)/f*z;
+% 	chadPos(1,i) = x;
+% 	chadPos(2,i) = y;
+% 	chadPos(3,i) = z;
+% end
+% 
+% figure(2020); clf
+% mask1 = find( (viconStateTime > chadTime(1)) .* (viconStateTime < chadTime(end)) );
+% mask2 = find( (tranStateTime > chadTime(1))  .* (tranStateTime < chadTime(end)) );
+% for i=1:3
+% 	subplot(3,1,i)
+% 	plot(viconStateTime(mask1), viconState(i+6,mask1)); hold all
+% 	plot(tranStateTime(mask2), tranState(i,mask2)); hold all
+% 	plot(chadTime, chadPos(i,:),'.'); hold all
+% 	xlabel('Time [s]');
+% 	ylabel(tranStateLabels{i});
+% 	hold off
+% end
+% legend('vicon','kf','cam');
+
 
 %%
 disp('chad accomplished')

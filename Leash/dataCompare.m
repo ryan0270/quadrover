@@ -274,10 +274,12 @@ center = [317.122191; 248.851692]/2;
 
 p = nan(3,1);
 for i=1:length(chadTime)
+	att = interp1(angleStateTime, angleState(1:3,:)', chadTime(i))';
+	R = createRotMat(att(3), att(2), att(1));
 	p(1) = targetLoc(1,i)-center(1);
 	p(2) = targetLoc(2,i)-center(2);
 	p(3) = f;
-	p = -RotCamToPhone*p;
+	p = -R*RotCamToPhone*p;
 	
 	z = interp1(tranStateTime, tranState(3,:), chadTime(i));
 	x = p(1)/f*z;
@@ -299,7 +301,7 @@ for i=1:3
 	ylabel(stateLabels{i+6});
 	hold off
 end
-legend('x','y','z');
+legend('vicon','kf','cam');
 
 %%
 disp('chad accomplished')
