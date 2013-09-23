@@ -283,7 +283,7 @@ end
 % end
 
 %%
-if ~isempty(accel)
+if exist('acce','var') && ~isempty(accel)
     labelsAccel = {'Accel x [m/s^2]' 'Accel y [m/s^2]' 'Accel z [m/s^2]'};
     baseFig = 30;
         
