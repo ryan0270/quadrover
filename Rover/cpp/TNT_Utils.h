@@ -8,8 +8,6 @@
 #include <toadlet/egg.h>
 
 namespace TNT{
-using namespace toadlet::egg;
-
 //	template <class T>
 //	inline void printTNTArray(Array2D<T> array) 
 //	{ 
@@ -30,7 +28,7 @@ using namespace toadlet::egg;
 //	} 
 
 	template <class T>
-	inline Array2D<T> transpose(Array2D<T> const &array)
+	inline Array2D<T> transpose(const Array2D<T> &array)
 	{
 		int numRow = array.dim1();
 		int numCol = array.dim2();
@@ -46,7 +44,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline T trace(Array2D<T> const &array)
+	inline T trace(const Array2D<T> &array)
 	{
 		assert(array.dim1() == array.dim2());
 
@@ -58,7 +56,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T1, class T2>
-	inline Array2D<T1> scalarMult(T2 scalar, Array2D<T1> const &mat)
+	inline Array2D<T1> scalarMult(T2 scalar, const Array2D<T1> &mat)
 	{
 		Array2D<T1> result(mat.dim1(), mat.dim2());
 
@@ -70,13 +68,13 @@ using namespace toadlet::egg;
 	}
 
 	template <class T1, class T2>
-	inline Array2D<T1> operator*(T2 scalar, Array2D<T1> const &mat)
+	inline Array2D<T1> operator*(T2 scalar, const Array2D<T1> &mat)
 	{
 		return scalarMult(scalar, mat);
 	}
 
 	template <class T1, class T2>
-	inline Array2D<T1> operator*(Array2D<T1> const &mat, T2 scalar)
+	inline Array2D<T1> operator*(const Array2D<T1> &mat, T2 scalar)
 	{
 		return scalarMult(scalar, mat);
 	}
@@ -85,7 +83,7 @@ using namespace toadlet::egg;
 	  requires a 1D vector
 	  */
 	template <class T>
-	inline T norm2(Array2D<T> const &mat)
+	inline T norm2(const Array2D<T> &mat)
 	{
 		assert(mat.dim1() == 1 || mat.dim2() == 1);
 		T result = 0;
@@ -100,7 +98,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline T matmultS(Array2D<T> const &mat1, Array2D<T> const &mat2)
+	inline T matmultS(const Array2D<T> &mat1, const Array2D<T> &mat2)
 	{
 		assert(mat1.dim1() == 1 && mat2.dim2() == 1);
 		return matmult(mat1, mat2)[0][0];
@@ -108,7 +106,7 @@ using namespace toadlet::egg;
 
 
 	template <class T>
-	inline Array2D<T> submat(Array2D<T> const &mat, int rowStart, int rowStop, int colStart, int colStop)
+	inline Array2D<T> submat(const Array2D<T> &mat, int rowStart, int rowStop, int colStart, int colStop)
 	{
 		assert(rowStart >= 0 && rowStop <= mat.dim1() &&
 				colStart >= 0 && colStop <= mat.dim2());
@@ -125,7 +123,7 @@ using namespace toadlet::egg;
 	  \param mat is modified to have its rows replaces
 	  */
 	template <class T>
-	inline void assignRows(Array2D<T> &mat, int rowStart, int rowStop, Array2D<T> const &rows)
+	inline void assignRows(Array2D<T> &mat, int rowStart, int rowStop, const Array2D<T> &rows)
 	{
 		assert(rowStart >= 0 && rowStop < mat.dim1() &&
 				rows.dim1() == rowStop-rowStart+1 && rows.dim2() == mat.dim2());
@@ -152,7 +150,7 @@ using namespace toadlet::egg;
 	  \param mat is modified to have its cols replaces
 	  */
 	template <class T>
-	inline void assignColumns(Array2D<T> &mat, int colStart, int colStop, Array2D<T> const &cols)
+	inline void assignColumns(Array2D<T> &mat, int colStart, int colStop, const Array2D<T> &cols)
 	{
 		assert(colStart >= 0 && colStop < mat.dim2() &&
 				cols.dim2() == colStop-colStart+1 && cols.dim1() == mat.dim1());
@@ -178,7 +176,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline Array2D<T> stackVertical(Array2D<T> const &matTop, Array2D<T> const &matBottom)
+	inline Array2D<T> stackVertical(const Array2D<T> &matTop, const Array2D<T> &matBottom)
 	{
 		assert(matTop.dim2() == matBottom.dim2());
 		//	if(matTop.dim2() != matBottom.dim2())
@@ -192,7 +190,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline Array2D<T> stackVertical(Array2D<T> const &matTop, T val)
+	inline Array2D<T> stackVertical(const Array2D<T> &matTop, T val)
 	{
 		assert(matTop.dim2() == 1);
 		//	if(matTop.dim2() != 1)
@@ -202,7 +200,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline Array2D<T> stackHorizontal(Array2D<T> const &matLeft, Array2D<T> const &matRight)
+	inline Array2D<T> stackHorizontal(const Array2D<T> &matLeft, const Array2D<T> &matRight)
 	{
 		assert(matLeft.dim1() == matRight.dim1());
 
@@ -214,7 +212,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline Array2D<T> cross(Array2D<T> const &matLeft, Array2D<T> const &matRight)
+	inline Array2D<T> cross(const Array2D<T> &matLeft, const Array2D<T> &matRight)
 	{
 		assert(matLeft.dim1() == 3 && matRight.dim1() == 3 && 
 				matLeft.dim2() == 1 && matRight.dim2() == 1);
@@ -228,7 +226,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T1, class T2>
-	inline T1 dot(TNT::Array2D<T1> const &m1, TNT::Array2D<T2> const &m2)
+	inline T1 dot(const TNT::Array2D<T1> &m1, const TNT::Array2D<T2> &m2)
 	{
 		assert(m1.dim2() == 1 && m2.dim2() == 1 && m1.dim1() == m2.dim1());
 
@@ -240,7 +238,7 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline Array2D<T> extractDiagonal(Array2D<T> const &mat)
+	inline Array2D<T> extractDiagonal(const Array2D<T> &mat)
 	{
 		assert(mat.dim1() == mat.dim2());
 
@@ -307,8 +305,9 @@ using namespace toadlet::egg;
 	}
 
 	template <class T>
-	inline void printArray(String str, TNT::Array2D<T> m)
+	inline void printArray(const toadlet::egg::String &prefix, const TNT::Array2D<T> &m)
 	{
+		toadlet::egg::String str(prefix);
 		if(m.dim2() == 1)
 		{
 			for(int i=0; i<m.dim1(); i++)
@@ -325,11 +324,15 @@ using namespace toadlet::egg;
 					str = str+"\n";
 			}
 		}
-		Log::alert(str.substr(0, str.length()-1));
+		toadlet::egg::Log::alert(str.substr(0, str.length()-1));
 	}
 
+	template <class T>
+	inline void printArray(const TNT::Array2D<T> &m)
+	{ printArray("",m); }
+
 	template <class T1, class T2>
-	inline TNT::Array2D<T1> blkdiag(TNT::Array2D<T1> const &m1, TNT::Array2D<T2> const &m2)
+	inline TNT::Array2D<T1> blkdiag(const TNT::Array2D<T1> &m1, const TNT::Array2D<T2> &m2)
 	{
 		Array2D<T1> m(m1.dim1()+m2.dim1(), m1.dim2()+m2.dim2());
 		for(int i=0; i<m.dim1(); i++)
@@ -348,7 +351,7 @@ using namespace toadlet::egg;
 
 
 //	template<typename T>
-//	TNT::Array2D<T> logSO3(TNT::Array2D<T> const &R, double theta)
+//	TNT::Array2D<T> logSO3(const TNT::Array2D<T> &R, double theta)
 //	{
 //		Array2D<T> w(3,1);
 //		if(abs(theta) > 0)

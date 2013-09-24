@@ -274,24 +274,24 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommNominalMag(nomMag);
 
 		Collection<float> measVar;
-		measVar.push_back(0.000001);
-		measVar.push_back(0.000001);
-		measVar.push_back(0.000001);
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
+		measVar.push_back(0.0001);
+		measVar.push_back(0.001);
+		measVar.push_back(0.001);
 		measVar.push_back(0.05);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
 		Collection<float> dynVar;
-		dynVar.push_back(0.01);
-		dynVar.push_back(0.01);
-		dynVar.push_back(0.01);
+		dynVar.push_back(1.0/2/2);
+		dynVar.push_back(1.0/2/2);
+		dynVar.push_back(1.0/2/2);
 		dynVar.push_back(10*2);
 		dynVar.push_back(10*2);
-		dynVar.push_back(10*2*2);
-		dynVar.push_back(0.01); // accel bias
-		dynVar.push_back(0.01);
-		dynVar.push_back(0.01);
+		dynVar.push_back(10*2);
+		dynVar.push_back(0.1/2/2); // accel bias
+		dynVar.push_back(0.1/2/2);
+		dynVar.push_back(0.1/2/2);
 		commManagerListeners[i]->onNewCommKalmanDynVar(dynVar);
 
 		// TODO: Need to add Leash dialogs to send this over wifi
@@ -305,8 +305,8 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommVisionFeatureFindPointCntTarget(50);
 		commManagerListeners[i]->onNewCommVisionFeatureFindFASTAdaptRate(0.05);
 
-		commManagerListeners[i]->onNewCommVelEstMeasCov(15);
-		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005);
+		commManagerListeners[i]->onNewCommVelEstMeasCov(30);
+		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005/2/2/2);
 
 		SystemModelLinear sys;
 		sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
@@ -317,7 +317,7 @@ int main(int argv, char* argc[])
 			buff[j] = buff1[j];
 		commManagerListeners[i]->onNewCommSendControlSystem(buff);
 
-//		commManagerListeners[i]->onNewCommUseIbvs(true);
+		commManagerListeners[i]->onNewCommUseIbvs(true);
 
 		Collection<float> posGains(3), velGains(3);
 		posGains[0] = 1;
@@ -353,9 +353,9 @@ int main(int argv, char* argc[])
 //	double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
 //	double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
 
-	double accelOffX = -0.65;
-	double accelOffY = -0.3;
-	double accelOffZ = 0.5;
+	double accelOffX = -0;
+	double accelOffY = -0;
+	double accelOffZ = -0;
 
 	double accelScaleX = 1;
 	double accelScaleY = 1;
@@ -374,7 +374,7 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
 	int endTimeDelta = 100e3;
-	float viconUpdateRate = 100; // Hz
+	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
 	int heightUpdatePeriodMS = 1.0f/heightUpdateRate*1000+0.5;
