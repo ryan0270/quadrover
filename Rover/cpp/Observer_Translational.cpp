@@ -7,6 +7,10 @@ namespace Quadrotor{
 using namespace ICSL::Constants;
 using namespace TNT;
 using std::isnan;
+
+Array2D<double> Observer_Translational::mAccelAccum(3,1,0.0);
+int Observer_Translational::mAccelAccumCnt = 0;
+
 	Observer_Translational::Observer_Translational() :
 		mRotViconToPhone(3,3,0.0),
 		mMeasCov(6,6,0.0),
@@ -56,7 +60,6 @@ using std::isnan;
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapHeightBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mMapVelBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mRawAccelDataBuffer));
-		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mGravityDirDataBuffer));
 		mDataBuffers.push_back( (list<shared_ptr<IData>>*)(&mHeightDataBuffer));
 		
 		mHaveFirstVicon = false;
@@ -94,6 +97,8 @@ using std::isnan;
 
 		Time lastUpdateTime;
 		Array2D<double> accel(3,1,0.0), gravityDir(3,1,0.0);
+		gravityDir[0][0] = 0;
+		gravityDir[1][0] = 0;
 		gravityDir[2][0] = -1;
 		Array2D<double> pos(3,1),vel(3,1);
 		Array2D<double> errCov(18,1,0.0);
@@ -157,6 +162,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		break;
 	}
 				doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+
 for(int st=0; st<mStateKF.dim1(); st++)
 	if(isnan(mStateKF[st][0]))
 	{
@@ -169,9 +175,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			// now process the events
 			if(events.size() > 0)
 				lastUpdateTime.setTime( applyData(events) );
-
-//			if(mGravityDirDataBuffer.size() >0 )
-//			{ mMutex_gravDir.lock(); gravityDir.inject(mGravityDirDataBuffer.back()->data); mMutex_gravDir.unlock(); }
 
 			if(mRawAccelDataBuffer.size() > 0)
 			{
@@ -776,19 +779,19 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 		mCurAtt = attData->rotation;
 		mMutex_att.unlock();
 
-		Array2D<double> e3(3,1);
-		e3[0][0] = e3[1][0] = 0;
-		e3[2][0] = 1;
-		Array2D<double> g = attData->rotation.inv()*e3;
-
-		shared_ptr<DataVector<double>> dirData(new DataVector<double>());
-		dirData->type = DATA_TYPE_GRAVITY_DIR;
-		dirData->timestamp = attData->timestamp;
-		dirData->data = -1.0*g.copy();
-
-		mMutex_events.lock();
-		mNewEventsBuffer.push_back(dirData);
-		mMutex_events.unlock();
+//		Array2D<double> e3(3,1);
+//		e3[0][0] = e3[1][0] = 0;
+//		e3[2][0] = 1;
+//		Array2D<double> g = attData->rotation.inv()*e3;
+//
+//		shared_ptr<DataVector<double>> dirData(new DataVector<double>());
+//		dirData->type = DATA_TYPE_GRAVITY_DIR;
+//		dirData->timestamp = attData->timestamp;
+//		dirData->data = -1.0*g.copy();
+//
+//		mMutex_events.lock();
+//		mNewEventsBuffer.push_back(dirData);
+//		mMutex_events.unlock();
 	}
 
 	void Observer_Translational::onNewCommStateVicon(const Collection<float> &data)
@@ -973,6 +976,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 					mMutex_att.lock();
 					accel = mCurAtt*accel;
 					mMutex_att.unlock();
+
 					// the accelerometer is really noisy so filter out the worst offenders
 //					if( abs(norm2(accel)-GRAVITY) < 7  && abs(accel[2][0] - GRAVITY) < 5)
 					if( abs(accel[2][0] - GRAVITY) < 5)
@@ -1111,23 +1115,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 							mRawAccelDataBuffer.push_back(d);
 					}
 					break;
-				case DATA_TYPE_GRAVITY_DIR:
-					{
-						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
-						bool bad = false;
-						for(int i=0; i<d->data.dim1(); i++)
-						{
-							if(isnan(d->data[i][0]))
-							{
-								printArray("gravity is nan:\t",d->data);
-								bad = true;
-								break;
-							}
-						}
-						if(!bad)
-							mGravityDirDataBuffer.push_back(d);
-					}
-					break;
 				case DATA_TYPE_VICON_POS:
 					{
 						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
@@ -1210,7 +1197,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		// To avoid bugs that keep popping up
 		data = NULL;
 
-		if(mRawAccelDataBuffer.size() == 0 || mGravityDirDataBuffer.size() == 0)
+		if(mRawAccelDataBuffer.size() == 0)
 		{
 for(int st=0; st<mStateKF.dim1(); st++)
 	if(isnan(mStateKF[st][0]))
@@ -1238,7 +1225,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 		// now we have to rebuild the state and errcov history
 		list<shared_ptr<DataVector<double>>>::iterator posIter, velIter;
-		list<shared_ptr<DataVector<double>>>::iterator rawAccelIter, gravDirIter;
+		list<shared_ptr<DataVector<double>>>::iterator rawAccelIter;//, gravDirIter;
 		list<shared_ptr<HeightData<double>>>::iterator heightIter;
 		list<shared_ptr<Data<double>>>::iterator mapHeightIter;
 		list<shared_ptr<DataVector<double>>> *posBuffer, *velBuffer;
@@ -1258,14 +1245,12 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		posIter = IData::findIndexReverse(startTime, *posBuffer);
 		velIter = IData::findIndexReverse(startTime, *velBuffer);
 		rawAccelIter = IData::findIndexReverse(startTime, mRawAccelDataBuffer);
-		gravDirIter = IData::findIndexReverse(startTime, mGravityDirDataBuffer);
 		heightIter = IData::findIndexReverse(startTime, mHeightDataBuffer); 
 		mapHeightIter = IData::findIndexReverse(startTime, mMapHeightBuffer); 
 		
 		// but I want the next one for these because
 		// they are not measurements
 		if(rawAccelIter != mRawAccelDataBuffer.end()) rawAccelIter++;
-		if(gravDirIter != mGravityDirDataBuffer.end()) gravDirIter++;
 		
 		// construct a sorted list of all events
 		list<shared_ptr<IData>> events;
@@ -1275,8 +1260,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			events.insert(events.end(), ++velIter, velBuffer->end());
 		if(rawAccelIter != mRawAccelDataBuffer.end())
 			events.insert(events.end(), ++rawAccelIter, mRawAccelDataBuffer.end());
-		if(gravDirIter != mGravityDirDataBuffer.end())
-			events.insert(events.end(), ++gravDirIter, mGravityDirDataBuffer.end());
 		if(heightIter != mHeightDataBuffer.end())
 			events.insert(events.end(), ++heightIter, mHeightDataBuffer.end());
 		if(mapHeightIter != mMapHeightBuffer.end())
@@ -1327,10 +1310,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 		// get accel vector at startTime 
 		Array2D<double> accel(3,1), accelRaw(3,1), gravDir(3,1);
-//		if(gravDirIter != mGravityDirDataBuffer.end())
-//			gravDir.inject( (*gravDirIter)->data );
-//		else
-//			gravDir.inject( mGravityDirDataBuffer.back()->data);
 		gravDir[0][0] = 0;
 		gravDir[1][0] = 0;
 		gravDir[2][0] = -1;
@@ -1367,10 +1346,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			{
 				case DATA_TYPE_RAW_ACCEL:
 					accelRaw.inject( static_pointer_cast<DataVector<double>>(*eventIter)->data);
-					accel.inject(accelRaw+GRAVITY*gravDir);
-					break;
-				case DATA_TYPE_GRAVITY_DIR:
-					gravDir.inject( static_pointer_cast<DataVector<double>>(*eventIter)->data );
 					accel.inject(accelRaw+GRAVITY*gravDir);
 					break;
 				case DATA_TYPE_CAMERA_POS:

@@ -260,7 +260,6 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
-	float xBias, yBias, zBias;
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
 		double gainP = 0.25;
@@ -299,25 +298,6 @@ int main(int argv, char* argc[])
 //		commManagerListeners[i]->onNewCommViconCameraOffset(0, 0.035, 0.087);
 		commManagerListeners[i]->onNewCommTargetNominalLength(0.210);
 		commManagerListeners[i]->onNewCommMAPHeightMeasCov(0.1*0.1);
-
-//		switch(dataSet)
-//		{
-//			case 0: // Sep8
-//				xBias = -0.1;
-//				yBias = -0.2;
-//				zBias = -0.2;
-//				break;
-//			case 1: // Sep12
-//				xBias = -0.1;
-//				yBias = -0.2;
-//				zBias = -0.8;
-//				break;
-//			default:
-//				xBias = 0.;
-//				yBias = -0.2;
-//				zBias = 0.4;
-//		}
-//		commManagerListeners[i]->onNewCommAccelBias(xBias, yBias, zBias);
 
 		commManagerListeners[i]->onNewCommVisionFeatureFindQualityLevel(0.01);
 		commManagerListeners[i]->onNewCommVisionFeatureFindSeparationDistance(10);
@@ -373,9 +353,13 @@ int main(int argv, char* argc[])
 //	double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
 //	double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
 
-	double accelOffX = 0;
-	double accelOffY = 0;
-	double accelOffZ = -0.4;
+	double accelOffX = -0.65;
+	double accelOffY = -0.3;
+	double accelOffZ = 0.5;
+
+	double accelScaleX = 1;
+	double accelScaleY = 1;
+	double accelScaleZ = 1;
 
 	int firstTime = -1;
 
@@ -389,7 +373,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 50e3;
+	int endTimeDelta = 100e3;
 	float viconUpdateRate = 100; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -512,9 +496,9 @@ int main(int argv, char* argc[])
 //						accelCal[0][0] = (accel[0][0]-accelOffX)/accelScaleX;
 //						accelCal[1][0] = (accel[1][0]-accelOffY)/accelScaleY;
 //						accelCal[2][0] = (accel[2][0]-accelOffZ)/accelScaleZ;
-						accelCal[0][0] = accel[0][0]-accelOffX;
-						accelCal[1][0] = accel[1][0]-accelOffY;
-						accelCal[2][0] = accel[2][0]-accelOffZ;
+						accelCal[0][0] = (accel[0][0]-accelOffX)*accelScaleX;
+						accelCal[1][0] = (accel[1][0]-accelOffY)*accelScaleY;
+						accelCal[2][0] = (accel[2][0]-accelOffZ)*accelScaleZ;
 
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_ACCEL;

@@ -165,7 +165,7 @@ class Observer_Translational : public Observer_AngularListener,
 	list<shared_ptr<DataVector<double>>> mViconVelBuffer, mCameraVelBuffer, /*mOpticFlowVelBuffer,*/ mMapVelBuffer;
 	list<shared_ptr<Data<double>>> /*mHeightDataBuffer,*/ mMapHeightBuffer;
 	list<shared_ptr<HeightData<double>>> mHeightDataBuffer;
-	list<shared_ptr<DataVector<double>>> mRawAccelDataBuffer, mGravityDirDataBuffer;
+	list<shared_ptr<DataVector<double>>> mRawAccelDataBuffer;
 	list<shared_ptr<IData>> mNewEventsBuffer;
 
 	bool mHaveFirstCameraPos;
@@ -175,6 +175,9 @@ class Observer_Translational : public Observer_AngularListener,
 	bool mUseIbvs;
 
 	Time applyData(list<shared_ptr<IData>> &events);
+
+	static TNT::Array2D<double> mAccelAccum;
+	static int mAccelAccumCnt;
 };
 
 } // namespace Quadrotor
