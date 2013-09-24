@@ -69,6 +69,10 @@ targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_
 targetLocTime = phoneData(targetLocIndices,1)'/1000;
 targetLoc = phoneData(targetLocIndices,3:8)';
 
+camPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_ESTIMATED_POS);
+camPosTime = phoneData(camPosIndices,1)'/1000;
+camPos = phoneData(camPosIndices,3:5)';
+
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
 RotQuadToPhone = createRotMat(3,-pi/4)*...
@@ -143,10 +147,10 @@ if exist('angleState','var') && ~isempty(angleState)
 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
 		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
 		hold off
-% 		if i <= 3
-% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.25 0.25]);
+% 		if i <= 2
+% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.6 0.6]);
 % 		else
-% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
+			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
 % 		end
 		grid on
 
@@ -186,6 +190,9 @@ if exist('tranState','var') && ~isempty(tranState)
 		subplot(2,3,i);		
 		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
 		plot(tranStateTime, tranState(i,:)); hold all
+		if i<=2
+			plot(camPosTime,camPos(i,:),'.'); hold all
+		end
 % 		if i == 3 && ~isempty(mapHeight)
 % 			plot(mapHeightTime, mapHeight,'.'); hold all
 % 		elseif i>3 && ~isempty(mapVel)

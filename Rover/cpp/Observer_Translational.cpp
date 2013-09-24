@@ -8,9 +8,6 @@ using namespace ICSL::Constants;
 using namespace TNT;
 using std::isnan;
 
-Array2D<double> Observer_Translational::mAccelAccum(3,1,0.0);
-int Observer_Translational::mAccelAccumCnt = 0;
-
 	Observer_Translational::Observer_Translational() :
 		mRotViconToPhone(3,3,0.0),
 		mMeasCov(6,6,0.0),
@@ -70,6 +67,7 @@ int Observer_Translational::mAccelAccumCnt = 0;
 		mViconCameraOffset[0][0] = 0;
 		mViconCameraOffset[1][0] = 0;
 		mViconCameraOffset[2][0] = 0.1;
+		mIsViconCameraOffsetSet = false;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -124,6 +122,7 @@ int Observer_Translational::mAccelAccumCnt = 0;
 				mHaveFirstCameraPos = false;
 				logString;
 				mQuadLogger->addEntry(Time(), LOG_ID_TARGET_LOST, logString, LOG_FLAG_PC_UPDATES);
+				mCameraVelBuffer.clear();
 			}
 			mMutex_posTime.unlock();
 
@@ -341,17 +340,17 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 		Array2D<double> errCovOld = errCov.copy();
 
 		for(int i=0; i<3; i++)
-			state[i][0] += dt*state[i+3][0];
+			state[i][0] += dt*state[i+3][0] + 0.5*dt*dt*(accel[i][0]-state[i+6][0]);
 		for(int i=3; i<6; i++)
 			state[i][0] += dt*(accel[i-3][0]-state[i+3][0]);
 		// states 6-8 (bias states) are assumed constant
 
-		// S = A*S*A'+V*dt*dt
+		// S = A*S*A'+G*V*G'
 		double dtSq = dt*dt;
 		for(int i=0; i<3; i++)
 		{
-			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dtSq+dynCov[i][i]*dtSq;
-			errCov[i][i+3] += (errCov[i+3][i+3]-errCov[i][i+6])*dt-errCov[i+3][i+6]*dtSq;
+			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dtSq+dynCov[i][i]*dtSq+dynCov[i+3][i+3]*dtSq*dtSq/4.0;
+			errCov[i][i+3] += (errCov[i+3][i+3]-errCov[i][i+6])*dt-errCov[i+3][i+6]*dtSq+dynCov[i+3][i+3]*dtSq*dt/2.0;
 			errCov[i][i+6] += errCov[i+3][i+6]*dt;
 			errCov[i+3][i] = errCov[i][i+3];
 			errCov[i+6][i] = errCov[i][i+6];
@@ -949,6 +948,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		mViconCameraOffset[0][0] = x;
 		mViconCameraOffset[1][0] = y;
 		mViconCameraOffset[2][0] = z;
+		mIsViconCameraOffsetSet = true;
 		Log::alert(String()+"Vicon--Camera offset updated:\t"+x+"\t"+y+"\t"+z);
 	}
 
@@ -971,6 +971,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			case DATA_TYPE_ACCEL:
 				{
 					Array2D<double> accel = static_pointer_cast<DataVector<double>>(data)->dataCalibrated.copy();
+//					Array2D<double> accel = static_pointer_cast<DataVector<double>>(data)->data.copy();
 
 					// Rotate back to inertial coords
 					mMutex_att.lock();
@@ -1003,6 +1004,14 @@ for(int st=0; st<mStateKF.dim1(); st++)
 	void Observer_Translational::onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double>> &velData,
 																 const shared_ptr<Data<double>> &heightData)
 	{
+		bool tooLow = false;
+		mMutex_kfData.lock();
+		tooLow = mStateKF[2][0] < 0.3;
+		mMutex_kfData.unlock();
+
+		if(tooLow)
+			return;
+
 		mMutex_events.lock();
 		mNewEventsBuffer.push_back(velData);
 		mNewEventsBuffer.push_back(heightData);
@@ -1041,7 +1050,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		p[2][0] = f;
 //		p = att.inv()*mRotCamToPhone*p;
 		p = att*mRotCamToPhone*p;
-		p = -1.0*p; // to get our current position instead of the target's
+		p = -1.0*p; // to get our position instead of the target's
 
 		// Now estimate the pos
 		double avgLength = 0;
@@ -1058,20 +1067,19 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
 		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
 
-		if(resetViconOffset)
+		if(resetViconOffset && !mIsViconCameraOffsetSet)
 		{
 			mMutex_kfData.lock();
 			mViconCameraOffset = submat(mStateKF,0,2,0,0)-pos;
 			printArray("Vicon offset set to: ", mViconCameraOffset);
 			mMutex_kfData.unlock();
+			mIsViconCameraOffsetSet = true;
 		}
-
 		pos = pos+mViconCameraOffset;
 		shared_ptr<DataVector<double>> posData(new DataVector<double>());
 		posData->type = DATA_TYPE_CAMERA_POS;
 		posData->timestamp.setTime(data->imageData->timestamp);
 		posData->data = pos.copy();
-
 		mMutex_events.lock();
 		mNewEventsBuffer.push_back(posData);
 		mMutex_events.unlock();
@@ -1349,8 +1357,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 					accel.inject(accelRaw+GRAVITY*gravDir);
 					break;
 				case DATA_TYPE_CAMERA_POS:
-				case DATA_TYPE_VICON_POS:
-					//doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
 					{
 						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
 						Array2D<double> meas(2,1);
@@ -1359,8 +1365,24 @@ for(int st=0; st<mStateKF.dim1(); st++)
 						doMeasUpdateKF_xyOnly(meas, submat(mPosMeasCov,0,1,0,1), mStateKF, mErrCovKF);
 					}
 					break;
+				case DATA_TYPE_VICON_POS:
+					//doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
+					{
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
+						Array2D<double> meas(2,1);
+						meas[0][0] = d->data[0][0];
+						meas[1][0] = d->data[1][0];
+						Array2D<double> measCov = 1e-4*createIdentity((double)2.0);
+//						Array2D<double> measCov = submat(mPosMeasCov,0,1,0,1);
+						doMeasUpdateKF_xyOnly(meas, measCov, mStateKF, mErrCovKF);
+					}
+					break;
 				case DATA_TYPE_MAP_VEL:
-					doMeasUpdateKF_velOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mVelMeasCov, mStateKF, mErrCovKF);
+					{
+//						Array2D<double> velMeasCov = 0.1*submat(mErrCovKF,3,5,3,5);
+						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
+						doMeasUpdateKF_velOnly(d->data,mVelMeasCov, mStateKF, mErrCovKF);
+					}
 					break;
 				case DATA_TYPE_MAP_HEIGHT:
 					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(*eventIter)->data, mMAPHeightMeasCov, mStateKF, mErrCovKF);
