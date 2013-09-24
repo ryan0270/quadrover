@@ -15,8 +15,7 @@ using std::isnan;
 		mDynCov(9,9,0.0),
 		mErrCovKF(9,9,0.0),
 		mStateKF(9,1,0.0),
-		mViconCameraOffset(3,1,0.0),
-		mAccelBiasReset(3,1,0.0)
+		mViconCameraOffset(3,1,0.0)
 	{
 		mRunning = false;
 		mDone = true;
@@ -95,6 +94,7 @@ using std::isnan;
 
 		Time lastUpdateTime;
 		Array2D<double> accel(3,1,0.0), gravityDir(3,1,0.0);
+		gravityDir[2][0] = -1;
 		Array2D<double> pos(3,1),vel(3,1);
 		Array2D<double> errCov(18,1,0.0);
 		double dt;
@@ -143,6 +143,11 @@ using std::isnan;
 			if(events.size() > 0 && events.front()->timestamp > lastUpdateTime)
 			{
 				// need to advance time to the first event
+				if(mRawAccelDataBuffer.size() > 0)
+				{
+					mMutex_accel.lock(); accel.inject(mRawAccelDataBuffer.back()->data); mMutex_accel.unlock();
+					accel += GRAVITY*gravityDir;
+				}
 				dt = Time::calcDiffNS(lastUpdateTime, events.front()->timestamp)/1.0e9;
 				mMutex_kfData.lock();
 for(int st=0; st<mStateKF.dim1(); st++)
@@ -165,8 +170,8 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			if(events.size() > 0)
 				lastUpdateTime.setTime( applyData(events) );
 
-			if(mGravityDirDataBuffer.size() >0 )
-			{ mMutex_gravDir.lock(); gravityDir.inject(mGravityDirDataBuffer.back()->data); mMutex_gravDir.unlock(); }
+//			if(mGravityDirDataBuffer.size() >0 )
+//			{ mMutex_gravDir.lock(); gravityDir.inject(mGravityDirDataBuffer.back()->data); mMutex_gravDir.unlock(); }
 
 			if(mRawAccelDataBuffer.size() > 0)
 			{
@@ -205,9 +210,9 @@ for(int st=0; st<mStateKF.dim1(); st++)
 	}
 				for(int i=0; i<6; i++)
 					mStateKF[i][0] = 0;
-				mStateKF[6][0] = mAccelBiasReset[0][0];
-				mStateKF[7][0] = mAccelBiasReset[1][0];
-				mStateKF[8][0] = mAccelBiasReset[2][0];
+				mStateKF[6][0] = 0;
+				mStateKF[7][0] = 0;
+				mStateKF[8][0] = 0;
 
 //				mErrCovKF.inject(0.01*mDynCov);
 				mErrCovKF.inject(1e-6*createIdentity((double)9));
@@ -767,6 +772,10 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 //		g[1][0] = c2*s3;
 //		g[2][0] = c2*c3;
 
+		mMutex_att.lock();
+		mCurAtt = attData->rotation;
+		mMutex_att.unlock();
+
 		Array2D<double> e3(3,1);
 		e3[0][0] = e3[1][0] = 0;
 		e3[2][0] = 1;
@@ -892,44 +901,44 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 	void Observer_Translational::onNewCommAccelBias(float xBias, float yBias, float zBias)
 	{
-		mMutex_kfData.lock();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 5:\t",mStateKF);
-		break;
-	}
-		mAccelBiasReset[0][0] = xBias;
-		mAccelBiasReset[1][0] = yBias;
-		mAccelBiasReset[2][0] = zBias;
-
-		mStateKF[6][0] = mAccelBiasReset[0][0];
-		mStateKF[7][0] = mAccelBiasReset[1][0];
-		mStateKF[8][0] = mAccelBiasReset[2][0];
-
-		// also need to clear the buffers so we don't accidentally go back and use 
-		// one of the old values
-		mStateBuffer.clear();
-		mErrCovKFBuffer.clear();
-
-		shared_ptr<DataVector<double>> stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
-		stateData->type = DATA_TYPE_STATE_TRAN;
-		stateData->data = mStateKF.copy();
-		mStateBuffer.push_back(stateData);
-
-		shared_ptr<DataVector<double>> errCovData = shared_ptr<DataVector<double>>(new DataVector<double>());
-		errCovData->type = DATA_TYPE_KF_ERR_COV;
-		errCovData->data = mErrCovKF.copy();
-		mErrCovKFBuffer.push_back(errCovData);
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 5:\t",mStateKF);
-		break;
-	}
-		mMutex_kfData.unlock();
-
-		Log::alert(String()+"accel bias updated:\t"+xBias+"\t"+yBias+"\t"+zBias);
+//		mMutex_kfData.lock();
+//for(int st=0; st<mStateKF.dim1(); st++)
+//	if(isnan(mStateKF[st][0]))
+//	{
+//		printArray("state is nan before 5:\t",mStateKF);
+//		break;
+//	}
+//		mAccelBiasReset[0][0] = xBias;
+//		mAccelBiasReset[1][0] = yBias;
+//		mAccelBiasReset[2][0] = zBias;
+//
+//		mStateKF[6][0] = mAccelBiasReset[0][0];
+//		mStateKF[7][0] = mAccelBiasReset[1][0];
+//		mStateKF[8][0] = mAccelBiasReset[2][0];
+//
+//		// also need to clear the buffers so we don't accidentally go back and use 
+//		// one of the old values
+//		mStateBuffer.clear();
+//		mErrCovKFBuffer.clear();
+//
+//		shared_ptr<DataVector<double>> stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
+//		stateData->type = DATA_TYPE_STATE_TRAN;
+//		stateData->data = mStateKF.copy();
+//		mStateBuffer.push_back(stateData);
+//
+//		shared_ptr<DataVector<double>> errCovData = shared_ptr<DataVector<double>>(new DataVector<double>());
+//		errCovData->type = DATA_TYPE_KF_ERR_COV;
+//		errCovData->data = mErrCovKF.copy();
+//		mErrCovKFBuffer.push_back(errCovData);
+//for(int st=0; st<mStateKF.dim1(); st++)
+//	if(isnan(mStateKF[st][0]))
+//	{
+//		printArray("state is nan after 5:\t",mStateKF);
+//		break;
+//	}
+//		mMutex_kfData.unlock();
+//
+//		Log::alert(String()+"accel bias updated:\t"+xBias+"\t"+yBias+"\t"+zBias);
 	}
 
 	void Observer_Translational::onNewCommViconCameraOffset(float x, float y, float z)
@@ -959,8 +968,14 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			case DATA_TYPE_ACCEL:
 				{
 					Array2D<double> accel = static_pointer_cast<DataVector<double>>(data)->dataCalibrated.copy();
+
+					// Rotate back to inertial coords
+					mMutex_att.lock();
+					accel = mCurAtt*accel;
+					mMutex_att.unlock();
 					// the accelerometer is really noisy so filter out the worst offenders
-					if( abs(norm2(accel)-GRAVITY) < 7  && abs(accel[2][0] - GRAVITY) < 5)
+//					if( abs(norm2(accel)-GRAVITY) < 7  && abs(accel[2][0] - GRAVITY) < 5)
+					if( abs(accel[2][0] - GRAVITY) < 5)
 					{
 						shared_ptr<DataVector<double>> accelData(new DataVector<double>());
 						accelData->type = DATA_TYPE_RAW_ACCEL;
@@ -995,10 +1010,14 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		if(data->target == NULL)
 			return;
 
+		bool resetViconOffset = false;
 		if(mUseIbvs)
 		{
 			if(!mHaveFirstCameraPos)
+			{
 				mQuadLogger->addEntry(Time(), LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
+				resetViconOffset = true;
+			}
 			mHaveFirstCameraPos = true;
 		}
 		mMutex_posTime.lock();
@@ -1034,6 +1053,14 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		mMutex_kfData.unlock();
 		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
 		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
+
+		if(resetViconOffset)
+		{
+			mMutex_kfData.lock();
+			mViconCameraOffset = submat(mStateKF,0,2,0,0)-pos;
+			printArray("Vicon offset set to: ", mViconCameraOffset);
+			mMutex_kfData.unlock();
+		}
 
 		pos = pos+mViconCameraOffset;
 		shared_ptr<DataVector<double>> posData(new DataVector<double>());
@@ -1193,9 +1220,9 @@ for(int st=0; st<mStateKF.dim1(); st++)
 	}
 			for(int i=0; i<6; i++)
 				mStateKF[i][0] = 0;
-			mStateKF[6][0] = mAccelBiasReset[0][0];
-			mStateKF[7][0] = mAccelBiasReset[1][0];
-			mStateKF[8][0] = mAccelBiasReset[2][0];
+			mStateKF[6][0] = 0;
+			mStateKF[7][0] = 0;
+			mStateKF[8][0] = 0;
 
 //			mErrCovKF.inject(0.01*mDynCov);
 			mErrCovKF.inject(1e-6*createIdentity((double)9));
@@ -1300,10 +1327,13 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 		// get accel vector at startTime 
 		Array2D<double> accel(3,1), accelRaw(3,1), gravDir(3,1);
-		if(gravDirIter != mGravityDirDataBuffer.end())
-			gravDir.inject( (*gravDirIter)->data );
-		else
-			gravDir.inject( mGravityDirDataBuffer.back()->data);
+//		if(gravDirIter != mGravityDirDataBuffer.end())
+//			gravDir.inject( (*gravDirIter)->data );
+//		else
+//			gravDir.inject( mGravityDirDataBuffer.back()->data);
+		gravDir[0][0] = 0;
+		gravDir[1][0] = 0;
+		gravDir[2][0] = -1;
 
 		if(rawAccelIter != mRawAccelDataBuffer.end())
 			accelRaw.inject((*rawAccelIter)->data);

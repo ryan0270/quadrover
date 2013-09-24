@@ -155,6 +155,8 @@ class Observer_Translational : public Observer_AngularListener,
 											    TNT::Array2D<double> &errCov);
 
 	SO3 mRotCamToPhone, mRotPhoneToCam;
+	SO3 mCurAtt;
+	std::mutex mMutex_att;
 
 	int mThreadPriority, mScheduler;
 

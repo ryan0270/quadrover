@@ -260,6 +260,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
+	float xBias, yBias, zBias;
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
 		double gainP = 0.25;
@@ -274,21 +275,21 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommNominalMag(nomMag);
 
 		Collection<float> measVar;
+		measVar.push_back(0.000001);
+		measVar.push_back(0.000001);
+		measVar.push_back(0.000001);
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
-		measVar.push_back(0.0001);
-		measVar.push_back(0.05);
-		measVar.push_back(0.05);
 		measVar.push_back(0.05);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
 		Collection<float> dynVar;
-		dynVar.push_back(0.0001);
-		dynVar.push_back(0.0001);
-		dynVar.push_back(0.0001);
-		dynVar.push_back(10);
-		dynVar.push_back(10);
-		dynVar.push_back(10);
+		dynVar.push_back(0.01);
+		dynVar.push_back(0.01);
+		dynVar.push_back(0.01);
+		dynVar.push_back(10*2);
+		dynVar.push_back(10*2);
+		dynVar.push_back(10*2*2);
 		dynVar.push_back(0.01); // accel bias
 		dynVar.push_back(0.01);
 		dynVar.push_back(0.01);
@@ -299,21 +300,24 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommTargetNominalLength(0.210);
 		commManagerListeners[i]->onNewCommMAPHeightMeasCov(0.1*0.1);
 
-		float xBias, yBias, zBias;
-		switch(dataSet)
-		{
-			case 0: // Sep8
-				xBias = -0.1;
-				yBias = -0.2;
-				zBias = -0.2;
-				break;
-			case 1: // Sep12
-				xBias = -0.1;
-				yBias = -0.2;
-				zBias = -0.8;
-				break;
-		}
-		commManagerListeners[i]->onNewCommAccelBias(xBias, yBias, zBias);
+//		switch(dataSet)
+//		{
+//			case 0: // Sep8
+//				xBias = -0.1;
+//				yBias = -0.2;
+//				zBias = -0.2;
+//				break;
+//			case 1: // Sep12
+//				xBias = -0.1;
+//				yBias = -0.2;
+//				zBias = -0.8;
+//				break;
+//			default:
+//				xBias = 0.;
+//				yBias = -0.2;
+//				zBias = 0.4;
+//		}
+//		commManagerListeners[i]->onNewCommAccelBias(xBias, yBias, zBias);
 
 		commManagerListeners[i]->onNewCommVisionFeatureFindQualityLevel(0.01);
 		commManagerListeners[i]->onNewCommVisionFeatureFindSeparationDistance(10);
@@ -333,7 +337,7 @@ int main(int argv, char* argc[])
 			buff[j] = buff1[j];
 		commManagerListeners[i]->onNewCommSendControlSystem(buff);
 
-		commManagerListeners[i]->onNewCommUseIbvs(true);
+//		commManagerListeners[i]->onNewCommUseIbvs(true);
 
 		Collection<float> posGains(3), velGains(3);
 		posGains[0] = 1;
@@ -354,20 +358,24 @@ int main(int argv, char* argc[])
 	list<shared_ptr<IData>> dataList;
 	dataList.clear();
 
-	double accelCal1X = 0.05;
-	double accelCal1Y = 0.06;
-	double accelCal1Z = 9.38;
-	double accelCal2X = 0.06;
-	double accelCal2Y = -0.16;
-	double accelCal2Z = -10.10;
+//	double accelCal1X = 0.05;
+//	double accelCal1Y = 0.06;
+//	double accelCal1Z = 9.38;
+//	double accelCal2X = 0.06;
+//	double accelCal2Y = -0.16;
+//	double accelCal2Z = -10.10;
+//
+//	double accelScaleZ = 1.00;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
+//	double accelScaleX = 1.0;
+//	double accelScaleY = 1.0;
+//
+//	double accelOffX = 0.5*(accelCal1X+accelCal2X);
+//	double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
+//	double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
 
-	double accelScaleZ = 1.00;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
-	double accelScaleX = 1.0;
-	double accelScaleY = 1.0;
-
-	double accelOffX = 0.5*(accelCal1X+accelCal2X);
-	double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
-	double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
+	double accelOffX = 0;
+	double accelOffY = 0;
+	double accelOffZ = -0.4;
 
 	int firstTime = -1;
 
@@ -381,8 +389,8 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 60e3;
-	float viconUpdateRate = 10; // Hz
+	int endTimeDelta = 50e3;
+	float viconUpdateRate = 100; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
 	int heightUpdatePeriodMS = 1.0f/heightUpdateRate*1000+0.5;
@@ -477,19 +485,11 @@ int main(int argv, char* argc[])
 			// Height "sensor"
 			if(lastHeightUpdateTime.getElapsedTimeMS() > heightUpdatePeriodMS && curHeight > 0)
 			{
-				SO3 att = SO3( createRotMat_ZYX(curViconState[2][0], curViconState[1][0], curViconState[0][0]) );
-				Array2D<double> e3(3,1);
-				e3[0][0] = 0;
-				e3[1][0] = 0;
-				e3[2][0] = -1;
-				Array2D<double> g = att*e3;
-				double height2 = curHeight/dot(g, e3);
-
 				lastHeightUpdateTime.setTime();
 				shared_ptr<HeightData<double>> heightData(new HeightData<double>);
 				heightData->type = DATA_TYPE_HEIGHT;
-				heightData->heightRaw = height2 + noiseStd[8][0]*stdGaussDist(randGenerator);
-				heightData->height = height2 + noiseStd[8][0]*stdGaussDist(randGenerator);
+				heightData->heightRaw = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
+				heightData->height = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
 
 				for(int i=0; i<sensorManagerListeners.size(); i++)
 					sensorManagerListeners[i]->onNewSensorUpdate(heightData);
@@ -509,9 +509,12 @@ int main(int argv, char* argc[])
 
 						Array2D<double> accel(3,1), accelCal(3,1);
 						ss >> accel[0][0] >> accel[1][0] >> accel[2][0];
-						accelCal[0][0] = (accel[0][0]-accelOffX)/accelScaleX;
-						accelCal[1][0] = (accel[1][0]-accelOffY)/accelScaleY;
-						accelCal[2][0] = (accel[2][0]-accelOffZ)/accelScaleZ;
+//						accelCal[0][0] = (accel[0][0]-accelOffX)/accelScaleX;
+//						accelCal[1][0] = (accel[1][0]-accelOffY)/accelScaleY;
+//						accelCal[2][0] = (accel[2][0]-accelOffZ)/accelScaleZ;
+						accelCal[0][0] = accel[0][0]-accelOffX;
+						accelCal[1][0] = accel[1][0]-accelOffY;
+						accelCal[2][0] = accel[2][0]-accelOffZ;
 
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_ACCEL;
