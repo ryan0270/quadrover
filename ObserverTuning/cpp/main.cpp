@@ -49,7 +49,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 2;
+	int dataSet = 3;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -67,6 +67,11 @@ int main(int argv, char* argc[])
 			dataDir = "../dataSets/Sep19";
 			startImg = 971;
 			endImg = 2874;
+			break;
+		case 3:
+			dataDir = "../dataSets/Sep23";
+			startImg = 3286;
+			endImg = 5954;
 			break;
 	}
 
@@ -257,8 +262,8 @@ int main(int argv, char* argc[])
 	// Now to set parameters like they would have been online
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
-		double gainP = 1;
-		double gainI = 0.0015;
+		double gainP = 0.25;
+		double gainI = 0.00075;
 		double accelWeight = 1;
 		double magWeight = 0;
 		Collection<float> nomMag;
