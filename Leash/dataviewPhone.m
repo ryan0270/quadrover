@@ -52,10 +52,10 @@ magTime = phoneData(magIndices,1)'/1000;
 mag = phoneData(magIndices,4:end)';
 mag_dt = mean(diff(magTime));
 
-% accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
-% accelTime = phoneData(accelIndices,3)'/1000;
-% accel = phoneData(accelIndices,4:6)';
-% accel_dt = mean(diff(accelTime));
+accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
+accelTime = phoneData(accelIndices,3)'/1000;
+accel = phoneData(accelIndices,4:6)';
+accel_dt = mean(diff(accelTime));
 
 pressureIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PRESSURE);
 pressureTime = phoneData(pressureIndices,1)'/1000;

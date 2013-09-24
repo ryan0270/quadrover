@@ -124,35 +124,35 @@ if exist('angleState','var') && ~isempty(angleState)
 	
 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
 	timeShift = 0.02;
-	shift = zeros(6,1);
-	for i=1:6
-		subplot(2,3,i);		
-		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(angleStateTime, angleState(i,:)); hold all
-		hold off
-
-		xlabel('Time [s]')
-		ylabel(angleStateLabels(i));	
-	end
-
-% 	midPoint = round(length(angleStateTime)/2);
-% 	shift = mean(angleState(:,midPoint:end),2);
-% 	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
+% 	shift = zeros(6,1);
 % 	for i=1:6
-% 		subplot(2,3,i);
-% 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
-% 		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
+% 		subplot(2,3,i);		
+% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
+% 		plot(angleStateTime, angleState(i,:)); hold all
 % 		hold off
-% % 		if i <= 3
-% % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.25 0.25]);
-% % 		else
-% % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
-% % 		end
-% 		grid on
 % 
 % 		xlabel('Time [s]')
-% 		ylabel(angleStateLabels(i));
+% 		ylabel(angleStateLabels(i));	
 % 	end
+
+	midPoint = round(length(angleStateTime)/2);
+	shift = mean(angleState(:,midPoint:end),2);
+	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
+	for i=1:6
+		subplot(2,3,i);
+		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
+		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
+		hold off
+% 		if i <= 3
+% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.25 0.25]);
+% 		else
+% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
+% 		end
+		grid on
+
+		xlabel('Time [s]')
+		ylabel(angleStateLabels(i));
+	end
 	
 	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
 	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
