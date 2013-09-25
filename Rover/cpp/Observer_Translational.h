@@ -19,9 +19,7 @@
 #include "Time.h"
 #include "CommManager.h"
 #include "QuadLogger.h"
-#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
-#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "SensorManager.h"
 #define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 #include "VelocityEstimator.h"
@@ -71,6 +69,8 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> estimateErrCovAtTime(const Time &t);
 
 	bool isTargetFound(){return mHaveFirstCameraPos;}
+
+	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
 
 	// from Observer_AngularListener
 	void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData);
@@ -136,27 +136,34 @@ class Observer_Translational : public Observer_AngularListener,
 							   double dt,
 							   TNT::Array2D<double> &state,
 							   TNT::Array2D<double> &errCov,
-							   const TNT::Array2D<double> &dynCov);
+							   const TNT::Array2D<double> &dynCov,
+							   const SO3 &att);
 	static void doMeasUpdateKF_velOnly(const TNT::Array2D<double> &meas,
 									   const TNT::Array2D<double> &measCov,
 									   TNT::Array2D<double> &state,
-									   TNT::Array2D<double> &errCov);
+									   TNT::Array2D<double> &errCov,
+									   const SO3 &att);
 	static void doMeasUpdateKF_posOnly(const TNT::Array2D<double> &meas,
 									   const TNT::Array2D<double> &measCov,
 									   TNT::Array2D<double> &state,
-									   TNT::Array2D<double> &errCov);
+									   TNT::Array2D<double> &errCov,
+									   const SO3 &att);
 	static void doMeasUpdateKF_xyOnly(const TNT::Array2D<double> &meas,
 									   const TNT::Array2D<double> &measCov,
 									   TNT::Array2D<double> &state,
-									   TNT::Array2D<double> &errCov);
+									   TNT::Array2D<double> &errCov,
+									   const SO3 &att);
 	static void doMeasUpdateKF_heightOnly(double meas, 
-											    double measCov, 
-											    TNT::Array2D<double> &state, 
-											    TNT::Array2D<double> &errCov);
+									      double measCov, 
+										  TNT::Array2D<double> &state, 
+										  TNT::Array2D<double> &errCov,
+										  const SO3 &att);
 
 	SO3 mRotCamToPhone, mRotPhoneToCam;
 	SO3 mCurAtt;
 	std::mutex mMutex_att;
+
+	Observer_Angular *mObsvAngular;
 
 	int mThreadPriority, mScheduler;
 

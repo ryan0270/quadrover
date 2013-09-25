@@ -248,39 +248,39 @@ if exist('forceScaling','var') && ~isempty(forceScaling)
 end
 
 %%
-% if ~isempty(mag)
-%     baseFigMag = 100;
-%     labelsMag = {'Mag x [\muT]' 'Mag y [\muT]' 'Mag z [\muT]'};
-% 
-%     figure(baseFigMag+5);
-%     set(gcf,'Units','Inches');
-%     curPos = get(gcf,'Position'); figSize = [6 4];
-%     set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-%     resetIndex = [];
-%     for i=1:3
-%         subplot(3,1,i)
-%         plot(magTime, mag(i,:)); hold all
-%         hold off
-%         title(labelsMag(i));
-%     end
-% end
+if exist('mag','var') && ~isempty(mag)
+    baseFigMag = 100;
+    labelsMag = {'Mag x [\muT]' 'Mag y [\muT]' 'Mag z [\muT]'};
+
+    figure(baseFigMag+5);
+    set(gcf,'Units','Inches');
+    curPos = get(gcf,'Position'); figSize = [6 4];
+    set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+    resetIndex = [];
+    for i=1:3
+        subplot(3,1,i)
+        plot(magTime, mag(i,:)); hold all
+        hold off
+        title(labelsMag(i));
+    end
+end
 %%
-% if exist('gyro','var') && ~isempty(gyro)
-%     labelsGyro = {'Gyro x [rad/s]' 'Gyro y [rad/s]' 'Gyro z [rad/s]'};
-%     baseFig = 20;
-% 
-%     figure(baseFig+2);set(gcf,'Units','Inches');
-%     % curPos = get(gcf,'Position'); figSize = [6 4];
-%     % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-%     for i=1:3
-%         subplot(3,1,i)
-%         plot(gyroTime, gyro(i,:));
-%         ax = axis;
-%         axis([gyroTime(1) gyroTime(end) ax(3) ax(4)]);
-%         title(labelsGyro(i));
-%     end
-% 
-% end
+if exist('gyro','var') && ~isempty(gyro)
+    labelsGyro = {'Gyro x [rad/s]' 'Gyro y [rad/s]' 'Gyro z [rad/s]'};
+    baseFig = 20;
+
+    figure(baseFig+2);set(gcf,'Units','Inches');
+    % curPos = get(gcf,'Position'); figSize = [6 4];
+    % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+    for i=1:3
+        subplot(3,1,i)
+        plot(gyroTime, gyro(i,:));
+        ax = axis;
+        axis([gyroTime(1) gyroTime(end) ax(3) ax(4)]);
+        title(labelsGyro(i));
+    end
+
+end
 
 %%
 if exist('accel','var') && ~isempty(accel)

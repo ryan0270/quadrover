@@ -365,13 +365,9 @@ TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVect
 	TNT::Array2D<T> interp;
 
 	if(t <= d.front()->timestamp)
-	{
 		interp = d.front()->data.copy();
-	}
 	else if(t >= d.back()->timestamp)
-	{
 		interp = d.back()->data.copy();
-	}
 	else
 	{
 		shared_ptr<DataVector<T>> d1, d2;
@@ -384,14 +380,15 @@ TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVect
 		if(iter != d.end())
 		{
 			d2 = *iter;
-			double a = Time::calcDiffUS(d1->timestamp,t);
-			double b = Time::calcDiffUS(t, d2->timestamp);
-			interp= b/(a+b)*d1->data + a/(a+b)*d2->data;
+			double a = Time::calcDiffNS(d1->timestamp,t);
+			double b = Time::calcDiffNS(t, d2->timestamp);
+			if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
+				interp = d2->data;
+			else
+				interp= b/(a+b)*d1->data + a/(a+b)*d2->data;
 		}
 		else
-		{
 			interp = d1->data.copy();
-		}
 	}
 
 	return interp;
@@ -420,9 +417,12 @@ TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, con
 		interp= d2p->data.copy();
 	else
 	{
-		double a = Time::calcDiffUS(d1p->timestamp,t);
-		double b = Time::calcDiffUS(t, d2p->timestamp);
-		interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
+		double a = Time::calcDiffNS(d1p->timestamp,t);
+		double b = Time::calcDiffNS(t, d2p->timestamp);
+		if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
+			interp = d2->data;
+		else
+			interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
 	}
 
 	return interp;
@@ -452,9 +452,12 @@ T1 IData::interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2)
 		interp = d2p->data;
 	else
 	{
-		T1 a = Time::calcDiffUS(d1p->timestamp,t);
-		T1 b = Time::calcDiffUS(t, d2p->timestamp);
-		interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
+		double a = Time::calcDiffNS(d1p->timestamp,t);
+		double b = Time::calcDiffNS(t, d2p->timestamp);
+		if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
+			interp = d2->data;
+		else
+			interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
 	}
 
 	return interp;
@@ -483,9 +486,12 @@ T IData::interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d)
 		if(iter != d.end())
 		{
 			d2 = *iter;
-			T a = Time::calcDiffUS(d1->timestamp,t);
-			T b = Time::calcDiffUS(t, d2->timestamp);
-			interp= b/(a+b)*d1->data+a/(a+b)*d2->data;
+			double a = Time::calcDiffNS(d1->timestamp,t);
+			double b = Time::calcDiffNS(t, d2->timestamp);
+			if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
+				interp = d2->data;
+			else
+				interp= b/(a+b)*d1->data+a/(a+b)*d2->data;
 		}
 		else
 			interp = d1->data;
@@ -505,7 +511,8 @@ SO3 IData::interpolate(const Time &t, const std::list<shared_ptr<SO3Data<T>>> &d
 	i2 = i1;
 	i2++;
 
-	if( i2 == d.end() ||  Time::calcDiffNS((*i1)->timestamp, t) < Time::calcDiffNS(t, (*i2)->timestamp) )
+	// This assumes no overflow on calcDiff
+	if( i2 == d.end() ||  Time::calcDiffUS((*i1)->timestamp, t) < Time::calcDiffUS(t, (*i2)->timestamp) )
 		return SO3( (*i1)->rotation);
 	else
 		return SO3( (*i2)->rotation);
@@ -534,9 +541,12 @@ T IData::interpolate(const Time &t, const std::list<shared_ptr<HeightData<T>>> &
 		if(iter != d.end())
 		{
 			d2 = *iter;
-			T a = Time::calcDiffUS(d1->timestamp,t);
-			T b = Time::calcDiffUS(t, d2->timestamp);
-			interp= b/(a+b)*d1->height+a/(a+b)*d2->height;
+			double a = Time::calcDiffNS(d1->timestamp,t);
+			double b = Time::calcDiffNS(t, d2->timestamp);
+			if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
+				interp = d2->data;
+			else
+				interp= b/(a+b)*d1->height+a/(a+b)*d2->height;
 		}
 		else
 			interp = d1->height;

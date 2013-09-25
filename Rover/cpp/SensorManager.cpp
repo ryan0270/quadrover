@@ -164,25 +164,29 @@ namespace Quadrotor{
 		thread tempMonitorTh(&SensorManager::runTemperatureMonitor, this);
 		thread heightMonitorTh(&SensorManager::runHeightMonitor, this);
 
-		double accelCal1X = 0.05;
-		double accelCal1Y = 0.06;
-		double accelCal1Z = 9.38;
-		double accelCal2X = 0.06;
-		double accelCal2Y = -0.16;
-		double accelCal2Z = -10.10;
+//		double accelCal1X = 0.05;
+//		double accelCal1Y = 0.06;
+//		double accelCal1Z = 9.38;
+//		double accelCal2X = 0.06;
+//		double accelCal2Y = -0.16;
+//		double accelCal2Z = -10.10;
+//
+////		double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
+////		// don't have information on these so assume they are the same
+////		double accelScaleX = accelScaleZ;
+////		double accelScaleY = accelScaleZ;
+//
+//		double accelScaleZ = 1;
+//		double accelScaleX = 1;
+//		double accelScaleY = 1;
+//
+//		double accelOffX = 0.5*(accelCal1X+accelCal2X);
+//		double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
+//		double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
 
-//		double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
-//		// don't have information on these so assume they are the same
-//		double accelScaleX = accelScaleZ;
-//		double accelScaleY = accelScaleZ;
-
-		double accelScaleZ = 1;
-		double accelScaleX = 1;
-		double accelScaleY = 1;
-
-		double accelOffX = 0.5*(accelCal1X+accelCal2X);
-		double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
-		double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
+		double accelOffX = 0;
+		double accelOffY = 0;
+		double accelOffZ = 0;
 
 		Array2D<double> accelCalibrated(3,1), gyroCalibrated(3,1), magCalibrated(3,1);
 
@@ -223,9 +227,12 @@ namespace Quadrotor{
 							mLastAccel[0][0] = event.data[0];
 							mLastAccel[1][0] = event.data[1];
 							mLastAccel[2][0] = event.data[2];
-							accelCalibrated[0][0] = (event.data[0]-accelOffX)/accelScaleX;
-							accelCalibrated[1][0] = (event.data[1]-accelOffY)/accelScaleY;
-							accelCalibrated[2][0] = (event.data[2]-accelOffZ)/accelScaleZ;
+//							accelCalibrated[0][0] = (event.data[0]-accelOffX)/accelScaleX;
+//							accelCalibrated[1][0] = (event.data[1]-accelOffY)/accelScaleY;
+//							accelCalibrated[2][0] = (event.data[2]-accelOffZ)/accelScaleZ;
+							accelCalibrated[0][0] = event.data[0]-accelOffX;
+							accelCalibrated[1][0] = event.data[1]-accelOffY;
+							accelCalibrated[2][0] = event.data[2]-accelOffZ;
 							data = shared_ptr<IData>(new DataVector<double>());
 							data->type = DATA_TYPE_ACCEL;
 							static_pointer_cast<DataVector<double> >(data)->data = mLastAccel.copy();

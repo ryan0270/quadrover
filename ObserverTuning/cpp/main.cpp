@@ -134,7 +134,8 @@ int main(int argv, char* argc[])
 	Array2D<double> mRotQuadToPhone = matmult(createRotMat(2,-0.25*PI),
 											  createRotMat(0,(double)PI));
 	Array2D<double> mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
-					 						 createRotMat(0,(double)PI));
+											 matmult(createRotMat(1,0.0),
+												 	 createRotMat(0,(double)PI)));
 	Array2D<double> mRotPhoneToCam = transpose(mRotCamToPhone);
 	Array2D<double> mRotViconToPhone = matmult(mRotQuadToPhone, mRotViconToQuad);
 
@@ -179,6 +180,7 @@ int main(int argv, char* argc[])
 	mObsvTranslational.setQuadLogger(&mQuadLogger);
 	mObsvTranslational.setStartTime(startTime);
 	mObsvTranslational.setRotViconToPhone(mRotViconToPhone);
+	mObsvTranslational.setObserverAngular(&mObsvAngular);
 	mObsvTranslational.initialize();
 	mObsvTranslational.addListener(&mTranslationController);
 	mObsvAngular.addListener(&mObsvTranslational);
@@ -262,8 +264,8 @@ int main(int argv, char* argc[])
 	// Now to set parameters like they would have been online
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
-		double gainP = 0.25;
-		double gainI = 0.00075;
+		double gainP = 0.25*2;
+		double gainI = 0.00075/10;
 		double accelWeight = 1;
 		double magWeight = 0;
 		Collection<float> nomMag;
@@ -277,21 +279,21 @@ int main(int argv, char* argc[])
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
-		measVar.push_back(0.001);
-		measVar.push_back(0.001);
-		measVar.push_back(0.05);
+		measVar.push_back(0.001/2);
+		measVar.push_back(0.001/2);
+		measVar.push_back(1/2.0);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
 		Collection<float> dynVar;
-		dynVar.push_back(1.0/2/2);
-		dynVar.push_back(1.0/2/2);
-		dynVar.push_back(1.0/2/2);
+		dynVar.push_back(1.0/2/2/2/2);
+		dynVar.push_back(1.0/2/2/2/2);
+		dynVar.push_back(1.0/2/2/2/2);
 		dynVar.push_back(10*2);
 		dynVar.push_back(10*2);
-		dynVar.push_back(10*2);
-		dynVar.push_back(0.1/2/2); // accel bias
-		dynVar.push_back(0.1/2/2);
-		dynVar.push_back(0.1/2/2);
+		dynVar.push_back(10);
+		dynVar.push_back(0.01); // accel bias
+		dynVar.push_back(0.01);
+		dynVar.push_back(0.01);
 		commManagerListeners[i]->onNewCommKalmanDynVar(dynVar);
 
 		// TODO: Need to add Leash dialogs to send this over wifi
@@ -305,8 +307,8 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommVisionFeatureFindPointCntTarget(50);
 		commManagerListeners[i]->onNewCommVisionFeatureFindFASTAdaptRate(0.05);
 
-		commManagerListeners[i]->onNewCommVelEstMeasCov(30);
-		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005/2/2/2);
+		commManagerListeners[i]->onNewCommVelEstMeasCov(30.0/2);
+		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005);
 
 		SystemModelLinear sys;
 		sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
@@ -353,9 +355,9 @@ int main(int argv, char* argc[])
 //	double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
 //	double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
 
-	double accelOffX = -0;
-	double accelOffY = -0;
-	double accelOffZ = -0;
+	double accelOffX = -0.15;
+	double accelOffY = 0.08;
+	double accelOffZ = -0.4;
 
 	double accelScaleX = 1;
 	double accelScaleY = 1;
@@ -373,7 +375,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 100e3;
+	int endTimeDelta = 40e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -384,9 +386,9 @@ int main(int argv, char* argc[])
 	default_random_engine randGenerator;
 	normal_distribution<double> stdGaussDist(0,1);
 	Array2D<double> noiseStd(12,1,0.0);
-	noiseStd[6][0] = 0.000;
-	noiseStd[7][0] = 0.000;
-	noiseStd[8][0] = 0.000;
+	noiseStd[6][0] = 0.010;
+	noiseStd[7][0] = 0.010;
+	noiseStd[8][0] = 0.010;
 
 	string line;
 	string dataFilename = dataDir+"/phoneLog.txt";
@@ -469,11 +471,14 @@ int main(int argv, char* argc[])
 			// Height "sensor"
 			if(lastHeightUpdateTime.getElapsedTimeMS() > heightUpdatePeriodMS && curHeight > 0)
 			{
+				double height = curHeight;
+				height = (int)(100.0*height+100.0*noiseStd[8][0]*stdGaussDist(randGenerator));
+				height /= 100.0;
 				lastHeightUpdateTime.setTime();
 				shared_ptr<HeightData<double>> heightData(new HeightData<double>);
 				heightData->type = DATA_TYPE_HEIGHT;
-				heightData->heightRaw = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
-				heightData->height = curHeight + noiseStd[8][0]*stdGaussDist(randGenerator);
+				heightData->heightRaw = height;
+				heightData->height = height;
 
 				for(int i=0; i<sensorManagerListeners.size(); i++)
 					sensorManagerListeners[i]->onNewSensorUpdate(heightData);
