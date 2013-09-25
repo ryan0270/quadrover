@@ -141,6 +141,7 @@ class Observer_Angular : public CommManagerListener,
 
 	bool mIsDoingIbvs;
 	Time mLastTargetFindTime;
+	std::mutex mMutex_targetFindTime;
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
