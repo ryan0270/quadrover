@@ -102,6 +102,7 @@ void Rover::initialize()
 	mObsvTranslational.setQuadLogger(&mQuadLogger);
 	mObsvTranslational.setStartTime(mStartTime);
 	mObsvTranslational.setRotViconToPhone(mRotViconToPhone);
+	mObsvTranslational.setObserverAngular(&mObsvAngular);
 	mObsvTranslational.initialize();
 	mObsvTranslational.start();
 	mObsvTranslational.addListener(&mTranslationController);

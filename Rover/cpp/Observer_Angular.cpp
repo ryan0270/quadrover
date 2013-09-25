@@ -237,7 +237,7 @@ void Observer_Angular::doInnovationUpdate(double dt,
 	mMutex_data.lock();
 
 //	if( accel[2][0] > 0 && abs(norm2(accel)-GRAVITY) < 5 )
-	if( abs(accel[2][0]-GRAVITY) < 5 )// && abs(norm2(accel)-GRAVITY) < 6 )
+	if( abs(accel[2][0]-GRAVITY) < 6 )// && abs(norm2(accel)-GRAVITY) < 6 )
 		mLastGoodAccel.inject(accel);
 	else
 		accel.inject(mLastGoodAccel);

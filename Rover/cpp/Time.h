@@ -15,11 +15,36 @@ class Time
 		virtual ~Time(){};
 
 		void clear(){mTime.tv_sec = 0; mTime.tv_nsec = 0;}
+
 		void setTime(){clock_gettime(CLOCK_MONOTONIC,&mTime);};
 		void setTime(const Time &t){mTime.tv_sec = t.mTime.tv_sec; mTime.tv_nsec = t.mTime.tv_nsec;}
 		void setTimeMS(toadlet::uint64 t){mTime.tv_sec = t/1e3; mTime.tv_nsec = (t%(toadlet::uint64)1e3)*1e6;}
 		void setTimeUS(toadlet::uint64 t){mTime.tv_sec = t/1e6; mTime.tv_nsec = (t%(toadlet::uint64)1e6)*1e3;}
 		void setTimeNS(toadlet::uint64 t){mTime.tv_sec = t/1e9; mTime.tv_nsec = (t%(toadlet::uint64)1e9);}
+
+		void addTimeMS(toadlet::uint64 ms)
+		{
+			toadlet::uint64 oldNS = mTime.tv_nsec;
+			mTime.tv_nsec += ms*1.e6;
+			if(mTime.tv_nsec < oldNS) // overflow
+				mTime.tv_sec++;
+		}
+
+		void addTimeUS(toadlet::uint64 us)
+		{
+			toadlet::uint64 oldNS = mTime.tv_nsec;
+			mTime.tv_nsec += us*1.e3;
+			if(mTime.tv_nsec < oldNS) // overflow
+				mTime.tv_sec++;
+		}
+
+		void addTimeNS(toadlet::uint64 ns)
+		{
+			toadlet::uint64 oldNS = mTime.tv_nsec;
+			mTime.tv_nsec += ns;
+			if(mTime.tv_nsec < oldNS) // overflow
+				mTime.tv_sec++;
+		}
 		
 		toadlet::uint64 getNS() const {return mTime.tv_sec*1e9+mTime.tv_nsec;}
 		toadlet::uint64 getUS() const {return mTime.tv_sec*1e6+mTime.tv_nsec/1.0e3;}

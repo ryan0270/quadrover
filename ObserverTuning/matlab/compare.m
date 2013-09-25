@@ -121,62 +121,62 @@ tranStateLabels = { 'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [
 
 %%
 if exist('angleState','var') && ~isempty(angleState)
-  	figure(1); clf;
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	
-	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
-	timeShift = 0.02;
-% 	shift = zeros(6,1);
+%   	figure(1); clf;
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	
+% 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
+% 	timeShift = 0.02;
+% % 	shift = zeros(6,1);
+% % 	for i=1:6
+% % 		subplot(2,3,i);		
+% % 		plot(viconStateTime(mask), viconState(i,mask)); hold all
+% % 		plot(angleStateTime, angleState(i,:)); hold all
+% % 		hold off
+% % 
+% % 		xlabel('Time [s]')
+% % 		ylabel(angleStateLabels(i));	
+% % 	end
+% 
+% 	midPoint = round(length(angleStateTime)/2);
+% 	shift = mean(angleState(:,midPoint:end),2);
+% 	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
 % 	for i=1:6
-% 		subplot(2,3,i);		
-% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
-% 		plot(angleStateTime, angleState(i,:)); hold all
+% 		subplot(2,3,i);
+% 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
+% 		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
 % 		hold off
+% % 		if i <= 2
+% % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.6 0.6]);
+% % 		else
+% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
+% % 		end
+% 		grid on
 % 
 % 		xlabel('Time [s]')
-% 		ylabel(angleStateLabels(i));	
+% 		ylabel(angleStateLabels(i));
 % 	end
-
-	midPoint = round(length(angleStateTime)/2);
-	shift = mean(angleState(:,midPoint:end),2);
-	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
-	for i=1:6
-		subplot(2,3,i);
-		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
-		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
-		hold off
-% 		if i <= 2
-% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.6 0.6]);
-% 		else
-			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
-% 		end
-		grid on
-
-		xlabel('Time [s]')
-		ylabel(angleStateLabels(i));
-	end
-	
-	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
-	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
-				 0*find(angleStateTime(1,:) > 0.05,1,'first');
-				 0*find(angleStateTime > mapVelTime(1),1,'first')
-				 1]);
-	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
-	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
-	err = err-diag(mean(err,2))*ones(size(err));
-	rmsErr = rms(err')';
-	fprintf('Angle state rms err:\t');
-	for i=1:3
-		fprintf('%1.3f\t',rmsErr(i));
-	end
-	fprintf('\n')
-	fprintf('            max err:\t')
-	for i=1:3
-		fprintf('%1.3f\t',max(abs(err(i,:))));
-	end
-	fprintf('\n');
+% 	
+% 	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
+% 	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
+% 				 0*find(angleStateTime(1,:) > 0.05,1,'first');
+% 				 0*find(angleStateTime > mapVelTime(1),1,'first')
+% 				 1]);
+% 	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
+% 	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
+% 	err = err-diag(mean(err,2))*ones(size(err));
+% 	rmsErr = rms(err')';
+% 	fprintf('Angle state rms err:\t');
+% 	for i=1:3
+% 		fprintf('%1.3f\t',rmsErr(i));
+% 	end
+% 	fprintf('\n')
+% 	fprintf('            max err:\t')
+% 	for i=1:3
+% 		fprintf('%1.3f\t',max(abs(err(i,:))));
+% 	end
+% 	fprintf('\n');
 end
 
 %%
@@ -186,9 +186,10 @@ if exist('tranState','var') && ~isempty(tranState)
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 	mask = find( (viconStateTime > tranStateTime(1)) .* (viconStateTime <= tranStateTime(end) ) );
+	timeShift = 0.0;
 	for i=1:6
 		subplot(2,3,i);		
-		plot(viconStateTime(mask), viconState(i+6,mask)); hold all
+		plot(viconStateTime(mask)+timeShift, viconState(i+6,mask)); hold all
 		plot(tranStateTime, tranState(i,:)); hold all
 		if i<=2
 			plot(camPosTime,camPos(i,:),'.'); hold all
@@ -212,9 +213,9 @@ if exist('tranState','var') && ~isempty(tranState)
 		ylabel(tranStateLabels(i));
 	end	
 	
-	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime,[],'extrap')';
+	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime-timeShift,[],'extrap')';
 	start = max([find(tranStateTime > 22,1,'first');
-				 find(abs(tranState(1,:)) > 0.05,1,'first');
+				 find(abs(tranState(3,:)) > 0.2,1,'first');
 				 find(tranStateTime > mapVelTime(1),1,'first')]);
 	rmsErr = rms(viconStateTranInterp(7:12,start:end)'-tranState(:,start:end)')';
 	fprintf('Tran state rms err:\t');
@@ -224,9 +225,10 @@ if exist('tranState','var') && ~isempty(tranState)
 	fprintf('\n');
 	
 	if ~isempty(mapVel)
-		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelTime,[],'extrap')';
-		rmsErrHeight = rms(viconStateMAPInterp(9,:)-mapHeight);
-		rmsErrVel = rms(viconStateMAPInterp(10:12,:)' - mapVel')';
+		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelTime-timeShift,[],'extrap')';
+		start = find(viconStateMAPInterp(9,:) > 0.2,1,'first');
+		rmsErrHeight = rms(viconStateMAPInterp(9,start:end)-mapHeight(start:end));
+		rmsErrVel = rms(viconStateMAPInterp(10:12,start:end)' - mapVel(:,start:end)')';
 		fprintf('MAP vel rms err:\t');
 		fprintf('---\t---\t%1.3f\t',rmsErrHeight);
 		for i=1:3
@@ -238,17 +240,17 @@ end
 
 %%
 if exist('accelBias','var') && ~isempty(accelBias)
-  	figure(3); clf;
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	for i=1:3
-		plot(accelBiasTime, accelBias(i,:)); hold all
-	end
-	hold off
-	xlabel('Time [s]')
-	ylabel('Accel bias [m/s^2]');
-	legend('x','y','z','location','best');
+%   	figure(3); clf;
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	for i=1:3
+% 		plot(accelBiasTime, accelBias(i,:)); hold all
+% 	end
+% 	hold off
+% 	xlabel('Time [s]')
+% 	ylabel('Accel bias [m/s^2]');
+% 	legend('x','y','z','location','best');
 end
 
 %%

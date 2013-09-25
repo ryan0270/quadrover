@@ -68,6 +68,8 @@ using std::isnan;
 		mViconCameraOffset[1][0] = 0;
 		mViconCameraOffset[2][0] = 0.1;
 		mIsViconCameraOffsetSet = false;
+
+		mObsvAngular = NULL;
 	}
 
 	Observer_Translational::~Observer_Translational()
@@ -112,6 +114,7 @@ using std::isnan;
 		float targetRate = 100; // hz
 		float targetPeriodUS = 1.0f/targetRate*1.0e6;
 		String logString;
+		SO3 att;
 		while(mRunning)
 		{
 			loopTime.setTime();
@@ -143,6 +146,10 @@ using std::isnan;
 			mNewEventsBuffer.swap(events);
 			mMutex_events.unlock();
 
+			mMutex_att.lock();
+			att = mCurAtt;
+			mMutex_att.unlock();
+
 			events.sort(IData::timeSortPredicate);
 			if(events.size() > 0 && events.front()->timestamp > lastUpdateTime)
 			{
@@ -154,20 +161,9 @@ using std::isnan;
 				}
 				dt = Time::calcDiffNS(lastUpdateTime, events.front()->timestamp)/1.0e9;
 				mMutex_kfData.lock();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 1:\t",mStateKF);
-		break;
-	}
-				doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
+				doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov, att);
+				lastUpdateTime.setTime(events.front()->timestamp);
 
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 1:\t",mStateKF);
-		break;
-	}
 				mMutex_kfData.unlock();
 			}
 
@@ -185,31 +181,13 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			dt = lastUpdateTime.getElapsedTimeNS()/1.0e9;
 			lastUpdateTime.setTime();
 			mMutex_kfData.lock();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 2:\t",mStateKF);
-		break;
-	}
-			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 2:\t",mStateKF);
-		break;
-	}
+			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov, att);
 			mMutex_kfData.unlock();
 
 			// special handling if we aren't getting any position updates
 			if( ((!mUseIbvs || !mHaveFirstCameraPos) && mLastViconPosTime.getElapsedTimeMS() > 1e3) )
 			{
 				mMutex_kfData.lock();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 2:\t",mStateKF);
-		break;
-	}
 				for(int i=0; i<6; i++)
 					mStateKF[i][0] = 0;
 				mStateKF[6][0] = 0;
@@ -218,12 +196,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 //				mErrCovKF.inject(0.01*mDynCov);
 				mErrCovKF.inject(1e-6*createIdentity((double)9));
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 2:\t",mStateKF);
-		break;
-	}
 				mMutex_kfData.unlock();
 			}
 
@@ -236,12 +208,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			errCovData->timestamp.setTime(lastUpdateTime);
 
 			mMutex_kfData.lock();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 3:\t",mStateKF);
-		break;
-	}
 			stateData->data = mStateKF.copy();
 			mStateBuffer.push_back(stateData);
 
@@ -290,12 +256,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 				mQuadLogger->addEntry(Time(),LOG_ID_CUR_TRANS_STATE, logString,LOG_FLAG_STATE);
 			}
 
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 3:\t",mStateKF);
-		break;
-	}
 			mMutex_kfData.unlock();
 
 			for(int i=0; i<mListeners.size(); i++)
@@ -309,18 +269,13 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		mDone = true;
 	}
 
-	void Observer_Translational::doTimeUpdateKF(const Array2D<double> &accel, double dt, Array2D<double> &state, Array2D<double> &errCov, const Array2D<double> &dynCov)
+	void Observer_Translational::doTimeUpdateKF(const Array2D<double> &accel,
+												double dt,
+												Array2D<double> &state,
+												Array2D<double> &errCov,
+												const Array2D<double> &dynCov,
+												const SO3 &att)
 	{
-if(std::isnan(accel[0][0]) || std::isnan(accel[1][0]) || std::isnan(accel[2][0]))
-	Log::alert("doTimeUpdateKF accel is nan");
-if(std::isnan(dt))
-	Log::alert("doTimeUpdateKF dt is nan");
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-	Log::alert("doTimeUpdateKF: state pos is nan coming in");
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-	Log::alert("doTimeUpdateKF: state vel is nan coming in");
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-	Log::alert("doTimeUpdateKF: state accel bias is nan coming in");
 		if(dt > 1)
 		{
 			Log::alert(String()+"Translation observer time update large dt: " +dt);
@@ -336,22 +291,26 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 			return;
 		}
 
-		Array2D<double> stateOld = state.copy();
-		Array2D<double> errCovOld = errCov.copy();
-
+		Array2D<double> bias = att*submat(state,6,8,0,0);
+		
 		for(int i=0; i<3; i++)
-			state[i][0] += dt*state[i+3][0] + 0.5*dt*dt*(accel[i][0]-state[i+6][0]);
+			state[i][0] += dt*state[i+3][0] + 0.5*dt*dt*(accel[i][0]-bias[i][0]);
 		for(int i=3; i<6; i++)
-			state[i][0] += dt*(accel[i-3][0]-state[i+3][0]);
+			state[i][0] += dt*(accel[i-3][0]-bias[i-3][0]);
 		// states 6-8 (bias states) are assumed constant
 
+		// A = [I dt*I 	-0.5*dt^2*I;
+		// 		0 I		-dt*I;
+		// 		0 0		I;
 		// S = A*S*A'+G*V*G'
 		double dtSq = dt*dt;
 		for(int i=0; i<3; i++)
 		{
-			errCov[i][i] += 2*errCov[i][i+3]*dt+errCov[i+3][i+3]*dtSq+dynCov[i][i]*dtSq+dynCov[i+3][i+3]*dtSq*dtSq/4.0;
-			errCov[i][i+3] += (errCov[i+3][i+3]-errCov[i][i+6])*dt-errCov[i+3][i+6]*dtSq+dynCov[i+3][i+3]*dtSq*dt/2.0;
-			errCov[i][i+6] += errCov[i+3][i+6]*dt;
+			errCov[i][i] += 2.0*errCov[i][i+3]*dt+-errCov[i][i+6]+errCov[i+3][i+3]*dtSq+
+							    dynCov[i][i]*dtSq+dynCov[i+3][i+3]*dtSq*dtSq/4.0;
+			errCov[i][i+3] += (errCov[i+3][i+3]-errCov[i][i+6])*dt-1.5*errCov[i+3][i+6]*dtSq+errCov[i+6][i+6]*dtSq*dt/2.0+
+							  dynCov[i+3][i+3]*dtSq*dt/2.0;
+			errCov[i][i+6] += errCov[i+3][i+6]*dt-errCov[i+6][i+6]*dtSq/2;
 			errCov[i+3][i] = errCov[i][i+3];
 			errCov[i+6][i] = errCov[i][i+6];
 
@@ -361,61 +320,14 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 
 			errCov[i+6][i+6] += dynCov[i+6][i+6]*dtSq;
 		}
-	
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doTimeUpdateKF: state pos is nan");
-}
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doTimeUpdateKF: state vel is nan");
-}
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doTimeUpdateKF: state accel bias is nan");
-}
-if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doTimeUpdateKF: err cov pos is nan");
-}
-if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doTimeUpdateKF: err cov vel is nan");
-}
-if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doTimeUpdateKF: err cov pos is nan");
-}
 	}
 
-	void Observer_Translational::doMeasUpdateKF_posOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	void Observer_Translational::doMeasUpdateKF_posOnly(const Array2D<double> &meas,
+														const Array2D<double> &measCov,
+														Array2D<double> &state,
+														Array2D<double> &errCov,
+														const SO3 &att)
 	{
-if(std::isnan(meas[0][0]) || std::isnan(meas[1][0]) || std::isnan(meas[2][0]))
-	Log::alert("doMeasUpdateKF_posOnly: meas is nan");
-if(std::isnan(measCov[0][0]) || std::isnan(measCov[1][1]) || std::isnan(measCov[2][2]))
-	Log::alert("doMeasUpdateKF_posOnly: measCov is nan");
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-	Log::alert("doMeasUpdateKF_posOnlyKF: state pos is nan coming in");
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-	Log::alert("doMeasUpdateKF_posOnlyKF: state vel is nan coming in");
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-	Log::alert("doMeasUpdateKF_posOnlyKF: state accel bias is nan coming in");
-
-		Array2D<double> stateOld = state.copy();
-		Array2D<double> errCovOld = errCov.copy();
-
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,3,0.0);
 		double den;
@@ -427,14 +339,20 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 			gainKF[i+6][i] = errCov[i][i+6]/den;
 		}
 
+		// this will need to be rotation back to phone coords from inertial coords
+		Array2D<double> biasDelta(3,1);
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
 		Array2D<double> err= meas-submat(state,0,2,0,0);
 		for(int i=0; i<3; i++)
 		{
 			state[i][0] += gainKF[i][i]*err[i][0];
 			state[i+3][0] += gainKF[i+3][i]*err[i][0];
-			state[i+6][0] += gainKF[i+6][i]*err[i][0];
+//			state[i+6][0] += gainKF[i+6][i]*err[i][0];
+			biasDelta[i][0] = gainKF[i+6][i]*err[i][0];
 		}
+		biasDelta = att.inv()*biasDelta;
+		for(int i=0; i<3; i++)
+			state[i+6][0] += biasDelta[i][0];
 
 		// S = (I-KC) S
 		for(int i=0; i<3; i++)
@@ -451,61 +369,14 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 
 			errCov[i+6][i+6] -= gainKF[i+6][i]*errCov[i][i+6];
 		}
-
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_posOnlyKF: state pos is nan");
-}
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_posOnlyKF: state vel is nan");
-}
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_posOnlyKF: state accel bias is nan");
-}
-if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_posOnlyKF: err cov pos is nan");
-}
-if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_posOnlyKF: err cov vel is nan");
-}
-if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_posOnlyKF: err cov pos is nan");
-}
 	}
 
-	void Observer_Translational::doMeasUpdateKF_xyOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	void Observer_Translational::doMeasUpdateKF_xyOnly(const Array2D<double> &meas,
+													   const Array2D<double> &measCov,
+													   Array2D<double> &state,
+													   Array2D<double> &errCov,
+													   const SO3 &att)
 	{
-if(std::isnan(meas[0][0]) || std::isnan(meas[1][0]))
-	Log::alert("doMeasUpdateKF_xyOnly: meas is nan");
-if(std::isnan(measCov[0][0]) || std::isnan(measCov[1][1]))
-	Log::alert("doMeasUpdateKF_xyOnly: measCov is nan");
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-	Log::alert("doMeasUpdateKF_xyOnlyKF: state pos is nan coming in");
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-	Log::alert("doMeasUpdateKF_xyOnlyKF: state vel is nan coming in");
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-	Log::alert("doMeasUpdateKF_xyOnlyKF: state accel bias is nan coming in");
-
-		Array2D<double> stateOld = state.copy();
-		Array2D<double> errCovOld = errCov.copy();
-
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,2,0.0);
 		double den;
@@ -517,14 +388,21 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 			gainKF[i+6][i] = errCov[i][i+6]/den;
 		}
 
+		// this will need to be rotation back to phone coords from inertial coords
+		Array2D<double> biasDelta(3,1);
+		biasDelta[2][0] = 0;
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
 		Array2D<double> err= meas-submat(state,0,1,0,0);
 		for(int i=0; i<2; i++)
 		{
 			state[i][0] += gainKF[i][i]*err[i][0];
 			state[i+3][0] += gainKF[i+3][i]*err[i][0];
-			state[i+6][0] += gainKF[i+6][i]*err[i][0];
+//			state[i+6][0] += gainKF[i+6][i]*err[i][0];
+			biasDelta[i][0] = gainKF[i+6][i]*err[i][0];
 		}
+		biasDelta = att.inv()*biasDelta;
+		for(int i=0; i<3; i++)
+			state[i+6][0] += biasDelta[i][0];
 
 		// S = (I-KC) S
 		for(int i=0; i<2; i++)
@@ -541,63 +419,16 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 
 			errCov[i+6][i+6] -= gainKF[i+6][i]*errCov[i][i+6];
 		}
-
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_xyOnlyKF: state pos is nan");
-}
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_xyOnlyKF: state vel is nan");
-}
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_xyOnlyKF: state accel bias is nan");
-}
-if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_xyOnlyKF: err cov pos is nan");
-}
-if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_xyOnlyKF: err cov vel is nan");
-}
-if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_xyOnlyKF: err cov pos is nan");
-}
 	}
 
-	void Observer_Translational::doMeasUpdateKF_velOnly(const Array2D<double> &meas, const Array2D<double> &measCov, Array2D<double> &state, Array2D<double> &errCov)
+	void Observer_Translational::doMeasUpdateKF_velOnly(const Array2D<double> &meas,
+														const Array2D<double> &measCov,
+														Array2D<double> &state,
+														Array2D<double> &errCov,
+														const SO3 &att)
 	{
-if(std::isnan(meas[0][0]) || std::isnan(meas[1][0]) || std::isnan(meas[2][0]))
-	Log::alert("doMeasUpdateKF_velOnly: meas is nan");
-if(std::isnan(measCov[0][0]) || std::isnan(measCov[1][1]) || std::isnan(measCov[2][2]))
-	Log::alert("doMeasUpdateKF_velOnly: measCov is nan");
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-	Log::alert("doMeasUpdateKF_velOnlyKF: state pos is nan coming in");
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-	Log::alert("doMeasUpdateKF_velOnlyKF: state vel is nan coming in");
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-	Log::alert("doMeasUpdateKF_velOnlyKF: state accel bias is nan coming in");
-
 		if(norm2(meas) > 10)
 			return; // screwy measuremnt
-
-		Array2D<double> stateOld = state.copy();
-		Array2D<double> errCovOld = errCov.copy();
 
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,3,0.0);
@@ -610,14 +441,20 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 			gainKF[i+6][i] = errCov[i+3][i+6]/den;
 		}
 
+		// this will need to be rotation back to phone coords from inertial coords
+		Array2D<double> biasDelta(3,1);
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
 		Array2D<double> err = meas-submat(state,3,5,0,0);
 		for(int i=0; i<3; i++)
 		{
 			state[i][0] += gainKF[i][i]*err[i][0];
 			state[i+3][0] += gainKF[i+3][i]*err[i][0];
-			state[i+6][0] += gainKF[i+6][i]*err[i][0];
+//			state[i+6][0] += gainKF[i+6][i]*err[i][0];
+			biasDelta[i][0] = gainKF[i+6][i]*err[i][0];
 		}
+		biasDelta = att.inv()*biasDelta;
+		for(int i=0; i<3; i++)
+			state[i+6][0] += biasDelta[i][0];
 
 		// S = (I-KC) S
 		for(int i=0; i<3; i++)
@@ -634,64 +471,14 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 
 			errCov[i+6][i+6] -= gainKF[i+6][i]*errCov[i+3][i+6];
 		}
-
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_velOnlyKF: state pos is nan");
-}
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_velOnlyKF: state vel is nan");
-}
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_velOnlyKF: state accel bias is nan");
-}
-if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_velOnlyKF: err cov pos is nan");
-}
-if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_velOnlyKF: err cov vel is nan");
-}
-if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_velOnlyKF: err cov pos is nan");
-}
 	}
 
 	void Observer_Translational::doMeasUpdateKF_heightOnly(double meas,
 														   double measCov,
 														   Array2D<double> &state,
-														   Array2D<double> &errCov)
+														   Array2D<double> &errCov,
+														   const SO3 &att)
 	{
-if(std::isnan(meas))
-	Log::alert("doMeasUpdateKF_heightOnly: meas is nan");
-if(std::isnan(measCov))
-	Log::alert("doMeasUpdateKF_heightOnly: measCov is nan");
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-	Log::alert("doMeasUpdateKF_heightOnly: state pos is nan coming in");
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-	Log::alert("doMeasUpdateKF_heightOnly: state vel is nan coming in");
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-	Log::alert("doMeasUpdateKF_heightOnly: state accel bias is nan coming in");
-
-		Array2D<double> stateOld = state.copy();
-		Array2D<double> errCovOld = errCov.copy();
-
 		// K = S*C'*inv(C*S*C'+W)
 		Array2D<double> gainKF(9,1,0.0);
 		double den = errCov[2][2]+measCov;
@@ -699,11 +486,18 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 		gainKF[5][0] = errCov[2][5]/den;
 		gainKF[8][0] = errCov[2][8]/den;
 
+		// this will need to be rotation back to phone coords from inertial coords
+		Array2D<double> biasDelta(3,1);
+		biasDelta[0][0] = biasDelta[1][0] = 0;
 		// \hat{x} = \hat{x} + K (meas - C \hat{x})
 		double err = meas-state[2][0];
 		state[2][0] += gainKF[2][0]*err;
 		state[5][0] += gainKF[5][0]*err;
-		state[8][0] += gainKF[8][0]*err;
+//		state[8][0] += gainKF[8][0]*err;
+		biasDelta[2][0] = gainKF[8][0]*err;
+		biasDelta = att.inv()*biasDelta;
+		for(int i=0; i<3; i++)
+			state[i+6][0] += biasDelta[i][0];
 
 		// S = (I-KC) S
 		errCov[2][2] -= gainKF[2][0]*errCov[2][2];
@@ -717,42 +511,6 @@ if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0])
 		errCov[8][5] = errCov[5][8];
 
 		errCov[8][8] -= gainKF[8][0]*errCov[2][8];
-if(std::isnan(state[0][0]) || std::isnan(state[1][0]) || std::isnan(state[2][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_heightOnlyKF: state pos is nan");
-}
-if(std::isnan(state[3][0]) || std::isnan(state[4][0]) || std::isnan(state[5][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_heightOnlyKF: state vel is nan");
-}
-if(std::isnan(state[6][0]) || std::isnan(state[7][0]) || std::isnan(state[8][0]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_heightOnlyKF: state accel bias is nan");
-}
-if(std::isnan(errCov[0][0]) || std::isnan(errCov[1][1]) || std::isnan(errCov[2][2]))
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_heightOnlyKF: err cov pos is nan");
-}
-if(std::isnan(errCov[3][3]) || std::isnan(errCov[4][4]) || std::isnan(errCov[5][5]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_heightOnlyKF: err cov vel is nan");
-}
-if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][8]) )
-{
-	state = stateOld.copy();
-	errCov = errCovOld.copy();
-	Log::alert("doMeasUpdateKF_heightOnlyKF: err cov pos is nan");
-}
 	}
 
 	void Observer_Translational::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)
@@ -808,24 +566,12 @@ if(std::isnan(errCov[6][6]) || std::isnan(errCov[7][7]) || std::isnan(errCov[8][
 		if(!mHaveFirstVicon)
 		{
 			mMutex_kfData.lock();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 4:\t",mStateKF);
-		break;
-	}
 			mStateKF[0][0] = pos[0][0];
 			mStateKF[1][0] = pos[1][0];
 			mStateKF[2][0] = pos[2][0];
 
 			mStateBuffer.clear();
 			mErrCovKFBuffer.clear();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 4:\t",mStateKF);
-		break;
-	}
 			mMutex_kfData.unlock();
 		}
 		mHaveFirstVicon = true;
@@ -971,26 +717,27 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			case DATA_TYPE_ACCEL:
 				{
 					Array2D<double> accel = static_pointer_cast<DataVector<double>>(data)->dataCalibrated.copy();
-//					Array2D<double> accel = static_pointer_cast<DataVector<double>>(data)->data.copy();
 
-					// Rotate back to inertial coords
-					mMutex_att.lock();
-					accel = mCurAtt*accel;
-					mMutex_att.unlock();
+					SO3 att;
+					if(mObsvAngular != NULL)
+						att = mObsvAngular->estimateAttAtTime( data->timestamp );
 
-					// the accelerometer is really noisy so filter out the worst offenders
-//					if( abs(norm2(accel)-GRAVITY) < 7  && abs(accel[2][0] - GRAVITY) < 5)
-					if( abs(accel[2][0] - GRAVITY) < 5)
-					{
-						shared_ptr<DataVector<double>> accelData(new DataVector<double>());
-						accelData->type = DATA_TYPE_RAW_ACCEL;
-						accelData->timestamp = data->timestamp;
-						accelData->data = accel;
+					accel = att*accel;
 
-						mMutex_events.lock();
-						mNewEventsBuffer.push_back(accelData);
-						mMutex_events.unlock();
-					}
+					// The accelerometer is too noisy in z so, basically,
+					// we are relying on the height measuremnts to 
+					// keep velocity in check
+					accel[2][0] = GRAVITY;
+
+
+					shared_ptr<DataVector<double>> accelData(new DataVector<double>());
+					accelData->type = DATA_TYPE_RAW_ACCEL;
+					accelData->timestamp = data->timestamp;
+					accelData->data = accel;
+
+					mMutex_events.lock();
+					mNewEventsBuffer.push_back(accelData);
+					mMutex_events.unlock();
 				}
 				break;
 			case DATA_TYPE_HEIGHT:
@@ -1048,7 +795,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		p[0][0] = data->target->meanCenter.x - cx;
 		p[1][0] = data->target->meanCenter.y - cy;
 		p[2][0] = f;
-//		p = att.inv()*mRotCamToPhone*p;
 		p = att*mRotCamToPhone*p;
 		p = -1.0*p; // to get our position instead of the target's
 
@@ -1058,21 +804,21 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			avgLength += data->target->squareData[0]->lineLengths[i];
 		avgLength /= data->target->squareData[0]->lineLengths.size();
 
+		mMutex_kfData.lock();
+		const Array2D<double> state = IData::interpolate(data->timestamp, mStateBuffer);
+		mMutex_kfData.unlock();
+
 		double nomLength =  0.21;
 		Array2D<double> pos(3,1);
 //		pos[2][0] = mTargetNominalLength/avgLength*f;
-		mMutex_kfData.lock();
-		pos[2][0] = mStateKF[2][0]-mViconCameraOffset[2][0];
-		mMutex_kfData.unlock();
+		pos[2][0] = state[2][0]-mViconCameraOffset[2][0];
 		pos[0][0] = p[0][0]/f*abs(pos[2][0]);
 		pos[1][0] = p[1][0]/f*abs(pos[2][0]);
 
 		if(resetViconOffset && !mIsViconCameraOffsetSet)
 		{
-			mMutex_kfData.lock();
-			mViconCameraOffset = submat(mStateKF,0,2,0,0)-pos;
+			mViconCameraOffset = submat(state,0,2,0,0)-pos;
 			printArray("Vicon offset set to: ", mViconCameraOffset);
-			mMutex_kfData.unlock();
 			mIsViconCameraOffsetSet = true;
 		}
 		pos = pos+mViconCameraOffset;
@@ -1093,14 +839,17 @@ for(int st=0; st<mStateKF.dim1(); st++)
 	Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 	{
 		// assume newEvents is sorted
-		newEvents.sort(IData::timeSortPredicate);
-
-		Time startTime(newEvents.front()->timestamp);
+//		newEvents.sort(IData::timeSortPredicate);
 
 		using std::isnan;
 		// first go through and update all the buffers
 		shared_ptr<IData> data;
 		mMutex_kfData.lock();
+		Time startTime;
+		if(mStateBuffer.back()->timestamp > newEvents.front()->timestamp)
+			startTime.setTime(newEvents.front()->timestamp);
+		else
+			startTime.setTime(mStateBuffer.back()->timestamp);
 		while(newEvents.size() > 0)
 		{
 			data = newEvents.front();
@@ -1207,12 +956,6 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 		if(mRawAccelDataBuffer.size() == 0)
 		{
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 6:\t",mStateKF);
-		break;
-	}
 			for(int i=0; i<6; i++)
 				mStateKF[i][0] = 0;
 			mStateKF[6][0] = 0;
@@ -1221,19 +964,13 @@ for(int st=0; st<mStateKF.dim1(); st++)
 
 //			mErrCovKF.inject(0.01*mDynCov);
 			mErrCovKF.inject(1e-6*createIdentity((double)9));
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 6:\t",mStateKF);
-		break;
-	}
 			mMutex_kfData.unlock();
 			return startTime;
 		}
 
 		// now we have to rebuild the state and errcov history
 		list<shared_ptr<DataVector<double>>>::iterator posIter, velIter;
-		list<shared_ptr<DataVector<double>>>::iterator rawAccelIter;//, gravDirIter;
+//		list<shared_ptr<DataVector<double>>>::iterator rawAccelIter;//, gravDirIter;
 		list<shared_ptr<HeightData<double>>>::iterator heightIter;
 		list<shared_ptr<Data<double>>>::iterator mapHeightIter;
 		list<shared_ptr<DataVector<double>>> *posBuffer, *velBuffer;
@@ -1252,13 +989,13 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		// These iters point to the last data point with iter->timestamp <startTime 
 		posIter = IData::findIndexReverse(startTime, *posBuffer);
 		velIter = IData::findIndexReverse(startTime, *velBuffer);
-		rawAccelIter = IData::findIndexReverse(startTime, mRawAccelDataBuffer);
+//		rawAccelIter = IData::findIndexReverse(startTime, mRawAccelDataBuffer);
 		heightIter = IData::findIndexReverse(startTime, mHeightDataBuffer); 
 		mapHeightIter = IData::findIndexReverse(startTime, mMapHeightBuffer); 
 		
 		// but I want the next one for these because
 		// they are not measurements
-		if(rawAccelIter != mRawAccelDataBuffer.end()) rawAccelIter++;
+//		if(rawAccelIter != mRawAccelDataBuffer.end()) rawAccelIter++;
 		
 		// construct a sorted list of all events
 		list<shared_ptr<IData>> events;
@@ -1266,8 +1003,8 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			events.insert(events.end(), ++posIter, posBuffer->end());
 		if(velIter != velBuffer->end())
 			events.insert(events.end(), ++velIter, velBuffer->end());
-		if(rawAccelIter != mRawAccelDataBuffer.end())
-			events.insert(events.end(), ++rawAccelIter, mRawAccelDataBuffer.end());
+//		if(rawAccelIter != mRawAccelDataBuffer.end())
+//			events.insert(events.end(), ++rawAccelIter, mRawAccelDataBuffer.end());
 		if(heightIter != mHeightDataBuffer.end())
 			events.insert(events.end(), ++heightIter, mHeightDataBuffer.end());
 		if(mapHeightIter != mMapHeightBuffer.end())
@@ -1276,39 +1013,15 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		if(events.size() == 0)
 		{
 			// apply data at the correct point in time
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 7:\t",mStateKF);
-		break;
-	}
 			mStateKF.inject( IData::interpolate(startTime, mStateBuffer));
 			mErrCovKF.inject( IData::interpolate(startTime, mErrCovKFBuffer));
 
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 7:\t",mStateKF);
-		break;
-	}
 			mMutex_kfData.unlock();
 			return startTime;
 		}
 
 		// apply data at the correct point in time
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 8:\t",mStateKF);
-		break;
-	}
 		mStateKF.inject( IData::interpolate(startTime, mStateBuffer));
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 8:\t",mStateKF);
-		break;
-	}
 		mErrCovKF.inject( IData::interpolate(startTime, mErrCovKFBuffer));
 		events.sort(IData::timeSortPredicate);
 
@@ -1322,39 +1035,39 @@ for(int st=0; st<mStateKF.dim1(); st++)
 		gravDir[1][0] = 0;
 		gravDir[2][0] = -1;
 
-		if(rawAccelIter != mRawAccelDataBuffer.end())
-			accelRaw.inject((*rawAccelIter)->data);
-		else
-			accelRaw.inject(mRawAccelDataBuffer.back()->data);
-		accel.inject(accelRaw + GRAVITY*gravDir);
+//		if(rawAccelIter != mRawAccelDataBuffer.end())
+//			accelRaw.inject((*rawAccelIter)->data);
+//		else
+//			accelRaw.inject(mRawAccelDataBuffer.back()->data);
+//		accel.inject(IData::interpolate(startTime,mRawAccelDataBuffer);
+//		accel.inject(accelRaw + GRAVITY*gravDir);
 
 		// apply events in order
 		list<shared_ptr<IData>>::const_iterator eventIter = events.begin();
 		Time lastUpdateTime(startTime);
+		Time midTime;
 		double dt;
 		shared_ptr<DataVector<double>> stateData, errCovData;
+		SO3 att;
 		while(eventIter != events.end())
 		{
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 9:\t",mStateKF);
-		break;
-	}
 			dt = Time::calcDiffNS(lastUpdateTime, (*eventIter)->timestamp)/1.0e9;
-			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov);
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 9:\t",mStateKF);
-		break;
-	}
+			midTime.setTime(lastUpdateTime);
+			midTime.addTimeNS(dt*0.5e9);
+			if(mObsvAngular != NULL)
+				att = mObsvAngular->estimateAttAtTime(midTime);
+
+			accelRaw.inject(IData::interpolate(midTime,mRawAccelDataBuffer));
+			accel.inject(accelRaw+GRAVITY*gravDir);
+
+			doTimeUpdateKF(accel, dt, mStateKF, mErrCovKF, mDynCov, att);
 
 			switch((*eventIter)->type)
 			{
 				case DATA_TYPE_RAW_ACCEL:
-					accelRaw.inject( static_pointer_cast<DataVector<double>>(*eventIter)->data);
-					accel.inject(accelRaw+GRAVITY*gravDir);
+					// this is now handled by the above interpolation
+//					accelRaw.inject( static_pointer_cast<DataVector<double>>(*eventIter)->data);
+//					accel.inject(accelRaw+GRAVITY*gravDir);
 					break;
 				case DATA_TYPE_CAMERA_POS:
 					{
@@ -1362,7 +1075,7 @@ for(int st=0; st<mStateKF.dim1(); st++)
 						Array2D<double> meas(2,1);
 						meas[0][0] = d->data[0][0];
 						meas[1][0] = d->data[1][0];
-						doMeasUpdateKF_xyOnly(meas, submat(mPosMeasCov,0,1,0,1), mStateKF, mErrCovKF);
+						doMeasUpdateKF_xyOnly(meas, submat(mPosMeasCov,0,1,0,1), mStateKF, mErrCovKF, att);
 					}
 					break;
 				case DATA_TYPE_VICON_POS:
@@ -1374,21 +1087,21 @@ for(int st=0; st<mStateKF.dim1(); st++)
 						meas[1][0] = d->data[1][0];
 						Array2D<double> measCov = 1e-4*createIdentity((double)2.0);
 //						Array2D<double> measCov = submat(mPosMeasCov,0,1,0,1);
-						doMeasUpdateKF_xyOnly(meas, measCov, mStateKF, mErrCovKF);
+						doMeasUpdateKF_xyOnly(meas, measCov, mStateKF, mErrCovKF, att);
 					}
 					break;
 				case DATA_TYPE_MAP_VEL:
 					{
-//						Array2D<double> velMeasCov = 0.1*submat(mErrCovKF,3,5,3,5);
 						shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
-						doMeasUpdateKF_velOnly(d->data,mVelMeasCov, mStateKF, mErrCovKF);
+						Array2D<double> vel = d->data;
+						doMeasUpdateKF_velOnly(vel,mVelMeasCov, mStateKF, mErrCovKF, att);
 					}
 					break;
 				case DATA_TYPE_MAP_HEIGHT:
-					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(*eventIter)->data, mMAPHeightMeasCov, mStateKF, mErrCovKF);
+					doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(*eventIter)->data, mMAPHeightMeasCov, mStateKF, mErrCovKF, att);
 					break;
 				case DATA_TYPE_HEIGHT:
-					doMeasUpdateKF_heightOnly(static_pointer_cast<HeightData<double>>(*eventIter)->height, mPosMeasCov[2][2], mStateKF, mErrCovKF);
+					doMeasUpdateKF_heightOnly(static_pointer_cast<HeightData<double>>(*eventIter)->height, mPosMeasCov[2][2], mStateKF, mErrCovKF, att);
 					break;
 				default:
 					Log::alert(String()+"Observer_Translational::applyData() --> Unknown data type: "+data->type);
@@ -1425,21 +1138,9 @@ for(int st=0; st<mStateKF.dim1(); st++)
 			mDataBuffers[i]->clear();
 
 		mNewEventsBuffer.clear();
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan before 10:\t",mStateKF);
-		break;
-	}
 
 		for(int i=0; i<6; i++)
 			mStateKF[i][0] = 0;
-for(int st=0; st<mStateKF.dim1(); st++)
-	if(isnan(mStateKF[st][0]))
-	{
-		printArray("state is nan after 10:\t",mStateKF);
-		break;
-	}
 
 		mMutex_kfData.unlock(); mMutex_events.unlock();
 	}
