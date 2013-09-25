@@ -57,7 +57,6 @@ Observer_Angular::Observer_Angular() :
 
 Observer_Angular::~Observer_Angular()
 {
-	mMutex_data.unlock();
 }
 
 void Observer_Angular::initialize()
@@ -220,7 +219,6 @@ void Observer_Angular::run()
 	}
 
 	mDone = true;
-	Log::alert("------------------ QuadLogger runner dead --------------------");
 }
 
 void Observer_Angular::doInnovationUpdate(double dt,
@@ -236,11 +234,12 @@ void Observer_Angular::doInnovationUpdate(double dt,
 	Array2D<double> uB, uI, vB, vI, dMeas, dInertial;
 	mMutex_data.lock();
 
-//	if( accel[2][0] > 0 && abs(norm2(accel)-GRAVITY) < 5 )
-	if( abs(accel[2][0]-GRAVITY) < 6 )// && abs(norm2(accel)-GRAVITY) < 6 )
-		mLastGoodAccel.inject(accel);
-	else
-		accel.inject(mLastGoodAccel);
+//	if( abs(accel[2][0]-GRAVITY) < 6 )// && abs(norm2(accel)-GRAVITY) < 6 )
+//		mLastGoodAccel.inject(accel);
+//	else
+//		accel.inject(mLastGoodAccel);
+	if(abs(accel[2][0]-GRAVITY) > 6)
+		accel[2][0] = GRAVITY;
 
 	// orthogonalize the directions (see Hua et al (2011) - Nonlinear attitude estimation with measurement decoupling and anti-windpu gyro-bias compensation)
 	uB = 1.0/norm2(accel)*accel;
@@ -363,7 +362,6 @@ Array2D<double> Observer_Angular::extractEulerAngles(const Array2D<double> &rotM
 
 SO3 Observer_Angular::estimateAttAtTime(const Time &t)
 {
-	// TODO: Better SO3 interpolation
 	mMutex_SO3Buffer.lock();
 	SO3 att;
 	if(mSO3Buffer.size() > 0)
@@ -507,46 +505,50 @@ void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data
 	if(data->target == NULL)
 		return;
 
-//	cv::Point2f p0 = data->target->squareData[0]->contour[0];
-//	cv::Point2f p1 = data->target->squareData[0]->contour[1];
-//	cv::Point2f p2 = data->target->squareData[0]->contour[2];
-//
-//	// long edge of target
-//	Array2D<double> measDir1(3,1);
-//	measDir1[0][0] = p1.x-p0.x;
-//	measDir1[1][0] = p1.y-p0.y;
-//	measDir1[2][0] = 0;
-//	measDir1 = 1.0/norm2(measDir1)*measDir1;
-//	measDir1 = matmult(mRotCamToPhone, measDir1);
-//
-//	Array2D<double> nomDir1(3,1);
-//	nomDir1[0][0] = -1;
-//	nomDir1[1][0] = 1;
-//	nomDir1[2][0] = 0;
-//	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
-//
-//	// short edge of target
-//	Array2D<double> measDir2(3,1);
-//	measDir2[0][0] = p2.x-p1.x;
-//	measDir2[1][0] = p2.y-p1.y;
-//	measDir2[2][0] = 0;
-//	measDir2 = 1.0/norm2(measDir2)*measDir2;
-//	measDir2 = matmult(mRotCamToPhone, measDir2);
-//
-//	Array2D<double> nomDir2(3,1);
-//	nomDir2[0][0] = 1;
-//	nomDir2[1][0] = 1;
-//	nomDir2[2][0] = 0;
-//	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
-//
-//	mMutex_data.lock();
-//	mExtraDirsMeasured.push_back(measDir1.copy());
-//	mExtraDirsMeasured.push_back(measDir2.copy());
-//	mExtraDirsInertial.push_back(nomDir1);
-//	mExtraDirsInertial.push_back(nomDir2);
-//	mExtraDirsWeight.push_back(2);
-//	mExtraDirsWeight.push_back(2);
-//	mMutex_data.unlock();
+	mMutex_targetFindTime.lock();
+	mLastTargetFindTime.setTime();
+	mMutex_targetFindTime.unlock();
+
+	cv::Point2f p0 = data->target->squareData[0]->contour[0];
+	cv::Point2f p1 = data->target->squareData[0]->contour[1];
+	cv::Point2f p2 = data->target->squareData[0]->contour[2];
+
+	// long edge of target
+	Array2D<double> measDir1(3,1);
+	measDir1[0][0] = p1.x-p0.x;
+	measDir1[1][0] = p1.y-p0.y;
+	measDir1[2][0] = 0;
+	measDir1 = 1.0/norm2(measDir1)*measDir1;
+	measDir1 = matmult(mRotCamToPhone, measDir1);
+
+	Array2D<double> nomDir1(3,1);
+	nomDir1[0][0] = -1;
+	nomDir1[1][0] = 1;
+	nomDir1[2][0] = 0;
+	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
+
+	// short edge of target
+	Array2D<double> measDir2(3,1);
+	measDir2[0][0] = p2.x-p1.x;
+	measDir2[1][0] = p2.y-p1.y;
+	measDir2[2][0] = 0;
+	measDir2 = 1.0/norm2(measDir2)*measDir2;
+	measDir2 = matmult(mRotCamToPhone, measDir2);
+
+	Array2D<double> nomDir2(3,1);
+	nomDir2[0][0] = 1;
+	nomDir2[1][0] = 1;
+	nomDir2[2][0] = 0;
+	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
+
+	mMutex_data.lock();
+	mExtraDirsMeasured.push_back(measDir1.copy());
+	mExtraDirsMeasured.push_back(measDir2.copy());
+	mExtraDirsInertial.push_back(nomDir1.copy());
+	mExtraDirsInertial.push_back(nomDir2.copy());
+	mExtraDirsWeight.push_back(2*2);
+	mExtraDirsWeight.push_back(2*2);
+	mMutex_data.unlock();
 }
 
 void Observer_Angular::onNewCommObserverReset()
@@ -595,8 +597,11 @@ void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
 
 void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 {
-//	if(mIsDoingIbvs && mLastTargetFindTime.getElapsedTimeMS() < 1)
-//		return;
+	mMutex_targetFindTime.lock();
+	Time lastTargetFindTime(mLastTargetFindTime);
+	mMutex_targetFindTime.unlock();
+	if(/*mIsDoingIbvs &&*/ lastTargetFindTime.getElapsedTimeMS() < 1e3)
+		return;
 
 	Array2D<double> nomDir(3,1);
 	nomDir[0][0] = 1;
