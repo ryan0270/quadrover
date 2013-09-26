@@ -131,36 +131,26 @@ namespace Quadrotor {
 				maxCmd = max(maxCmd, cmds[i]);
 			}
 
-			if(minCmd >= 0 && maxCmd <= 2048)
+			if(minCmd >= 0 && maxCmd < 2048)
 				sane = true;
 			else
 			{
-if(cnt > 100)
-{
-	String s = "cmds:\t";
-	for(int i=0; i<4; i++)
-		s = s+cmds[i]+"\t";
-	Log::alert(s);
-}
-				if( maxCmd-minCmd > 2048 || (cmdThrust < 1600 && cmdThrust > 400))
+				if( maxCmd-minCmd >= 2048 || (cmdThrust < 1600 && cmdThrust > 400))
 				{
 					// reduce torque
 					double k = 0.9;
 					cmdRoll *= k;
 					cmdPitch *= k;
 					cmdYaw *= k;
-if(cnt > 100)
-{ Log::alert(String()+"cmdRoll: "+cmdRoll+"\tcmdPitch: "+cmdPitch+"\tcmdYaw:\t"+cmdYaw); }
 				}
 				else
 				{
 					double diff;
-					if(maxCmd > 2048)
+					if(maxCmd >= 2048)
 						diff = maxCmd-2048+10;
 					else // minCmd < 0
 						diff = minCmd-10;
-if(cnt > 100)
-{ Log::alert(String()+"maxCmd: " + maxCmd + "\tminCmd: " + minCmd + "\tcmdThrust: "+cmdThrust+"\tdiff: "+diff); cmdThrust -= diff; }
+					cmdThrust -= diff;
 				}
 			}
 
