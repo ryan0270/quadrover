@@ -4,12 +4,12 @@
       <P>
          <x>4.000000</x>
          <y>4.000000</y>
-         <z>4.000000</z>
+         <z>5.000000</z>
       </P>
       <D>
-         <x>3.000000</x>
-         <y>3.000000</y>
-         <z>3.000000</z>
+         <x>5.000000</x>
+         <y>5.000000</y>
+         <z>4.000000</z>
       </D>
       <I>
          <x>0.000000</x>
@@ -30,8 +30,8 @@
          <z>3.000000</z>
       </P>
       <D>
-         <x>4.000000</x>
-         <y>4.000000</y>
+         <x>3.000000</x>
+         <y>3.000000</y>
          <z>3.000000</z>
       </D>
    </IBVS>
@@ -53,34 +53,34 @@
       <MeasVar>
          <x>0.000100</x>
          <y>0.000100</y>
-         <z>0.000010</z>
-         <xVel>0.000300</xVel>
-         <yVel>0.000300</yVel>
-         <zVel>0.050000</zVel>
+         <z>0.000100</z>
+         <xVel>0.000500</xVel>
+         <yVel>0.000500</yVel>
+         <zVel>0.500000</zVel>
       </MeasVar>
       <DynVar>
-         <x>0.001000</x>
-         <y>0.001000</y>
-         <z>0.001000</z>
-         <xVel>10.000000</xVel>
-         <yVel>10.000000</yVel>
+         <x>0.062500</x>
+         <y>0.062500</y>
+         <z>0.062500</z>
+         <xVel>20.000000</xVel>
+         <yVel>20.000000</yVel>
          <zVel>10.000000</zVel>
       </DynVar>
       <AccelBias>
-         <x>-0.200000</x>
-         <y>-0.200000</y>
-         <z>0.200000</z>
+         <x>-0.150000</x>
+         <y>0.080000</y>
+         <z>-0.400000</z>
       </AccelBias>
       <AccelBiasDynVar>
-         <x>0.001000</x>
-         <y>0.001000</y>
-         <z>0.001000</z>
+         <x>0.010000</x>
+         <y>0.010000</y>
+         <z>0.010000</z>
       </AccelBiasDynVar>
    </Translation>
    <Attitude>
       <Gain>
          <P>0.500000</P>
-         <I>0.001500</I>
+         <I>0.000100</I>
       </Gain>
       <DirWeight>
          <Accel>1.000000</Accel>
@@ -114,7 +114,7 @@
    <MeasurementCov>15.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
-<LogMask>4763</LogMask>
+<LogMask>4767</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>
