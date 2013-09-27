@@ -9,6 +9,39 @@ short motorCommands[4];
 boolean phoneIsConnected;
 unsigned long lastPhoneUpdateTimeMS;
 
+class Ultrasonic
+{
+	public:
+		Ultrasonic(int pin);
+        void DistanceMeasure(void);
+		long microsecondsToCentimeters(void);
+		long microsecondsToInches(void);
+	private:
+		int _pin;//pin number of Arduino that is connected with SIG pin of Ultrasonic Ranger.
+        long duration;// the Pulse time received;
+};
+Ultrasonic::Ultrasonic(int pin)
+{
+	_pin = pin;
+}
+/*Begin the detection and get the pulse back signal*/
+void Ultrasonic::DistanceMeasure(void)
+{
+    pinMode(_pin, OUTPUT);
+	digitalWrite(_pin, LOW);
+	delayMicroseconds(2);
+	digitalWrite(_pin, HIGH);
+	delayMicroseconds(5);
+	digitalWrite(_pin,LOW);
+	pinMode(_pin,INPUT);
+	duration = pulseIn(_pin,HIGH);
+}
+/*The measured distance from the range 0 to 400 Centimeters*/
+long Ultrasonic::microsecondsToCentimeters(void)
+{
+	return duration/29/2;	
+}
+
 // Adb connection.
 Connection * connection;
 // Event handler for the shell connection. 
@@ -56,13 +89,13 @@ void adbEventHandler(Connection * connection, adb_eventType event, uint16_t leng
 
 boolean sendCommand(byte addr, short cmd)
 {
-  Wire.beginTransmission(addr);
-  byte upper = floor(cmd/8.0);
-  byte lower = cmd % 8;
-  Wire.write(upper);
-  Wire.write( lower & 0x07 );
-  byte result = Wire.endTransmission(true);
-  return result == 0;  
+//  Wire.beginTransmission(addr);
+//  byte upper = floor(cmd/8.0);
+//  byte lower = cmd % 8;
+//  Wire.write(upper);
+//  Wire.write( lower & 0x07 );
+//  byte result = Wire.endTransmission(true);
+//  return result == 0;
 }
  
 byte MOTOR_ADDR_E = (0x53 + (0 << 1)) >> 1;
@@ -70,6 +103,8 @@ byte MOTOR_ADDR_W = (0x53 + (1 << 1)) >> 1;
 byte MOTOR_ADDR_S = (0x53 + (2 << 1)) >> 1;
 byte MOTOR_ADDR_N = (0x53 + (3 << 1)) >> 1;
 
+#define SONAR_PIN 4
+Ultrasonic ultrasonic(SONAR_PIN);
 byte motorAddr[4];
 void setup()
 { 
@@ -105,12 +140,21 @@ void setup()
   phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();
 }  
- 
-unsigned long startTime = 0;
+
+enum
+{
+  COMM_ARDUINO_HEIGHT=1,
+};
+
+unsigned long lastHeightSendTimeMS = 0;
 void loop() 
 {
   if((millis() - lastPhoneUpdateTimeMS) > 100)
-    phoneIsConnected = false;  
+  {
+    if(phoneIsConnected && verbosity >= 1)
+      Serial.println("Lost the phone");
+    phoneIsConnected = false;
+  }
     
   for(int i=0; i<4; i++)
   {
@@ -128,7 +172,26 @@ void loop()
   {
     if(phoneIsConnected)
       Serial.print("***");
-    Serial.print("\n");    
+    Serial.print("\n");
+  }
+    
+  if(millis()-lastHeightSendTimeMS > 50 && phoneIsConnected)
+  {
+    lastHeightSendTimeMS = millis();
+    
+    long range;
+    ultrasonic.DistanceMeasure();// get the current signal time;
+    range = ultrasonic.microsecondsToCentimeters();//convert the time to centimeters
+    
+    uint8_t code = COMM_ARDUINO_HEIGHT;
+    uint16_t height = range;
+    // ADB comm seems to wait for an ok reply which is needed
+    // before it will send again. I don't want to wait for that
+    // So I'll build everything into a single send
+    uint8_t buff[3];
+    buff[0] = code;
+    memcpy(&(buff[1]),&height,2);
+    connection->write(3,&(buff[0]));
   }
   
   while(ADB::poll());

@@ -741,9 +741,24 @@ using std::isnan;
 				}
 				break;
 			case DATA_TYPE_HEIGHT:
-				mMutex_events.lock();
-				mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );
-				mMutex_events.unlock();
+				{
+					mMutex_kfData.lock();
+					double curHeight = mStateKF[2][0];
+					mMutex_kfData.unlock();
+					const shared_ptr<HeightData<double>> d = static_pointer_cast<HeightData<double>>(data);
+
+					if( abs(d->height-curHeight) < 0.2 )
+					{
+						mMutex_events.lock();
+						mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );
+						mMutex_events.unlock();
+					}
+					else
+					{
+						// TODO: Better rejection algorithm
+						Log::alert(String()+"Reject height -- curHeight: " + curHeight + "\t\tsonar height: "+d->height);
+					}
+				}
 				break;
 		}
 	}

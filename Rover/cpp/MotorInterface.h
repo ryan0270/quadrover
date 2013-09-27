@@ -3,10 +3,12 @@
 #include <sched.h>
 #include <thread>
 #include <mutex>
+#include <memory>
 
 #include "toadlet/egg.h"
 
 #include "Time.h"
+#include "Data.h"
 
 namespace ICSL {
 namespace Quadrotor{
@@ -16,6 +18,19 @@ using namespace toadlet;
 enum{ 
 	MIN_MOTOR_CMD = 0, 
 	MAX_MOTOR_CMD = 1<<11
+};
+
+enum
+{
+	COMM_ARDUINO_HEIGHT=1,
+};
+
+// Eventually this should be moved to a separate
+// arduino comm object, but I'm lazy
+class SonarListener
+{
+	public:
+	virtual void onNewSonar(const shared_ptr<HeightData<double>> &data)=0;
 };
 
 class MotorInterfaceListener
@@ -45,6 +60,9 @@ class MotorInterface
 	void run();
 
 	void addListener(MotorInterfaceListener *listener){mListeners.push_back(listener);}
+	void addSonarListener(SonarListener *listener){mSonarListeners.push_back(listener);}
+
+	void setStartTime(Time time){mStartTime.setTime(time);}
 
 	protected:
 	toadlet::egg::Socket::ptr mServerSocket, mSocket;
@@ -62,8 +80,13 @@ class MotorInterface
 
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
+	Time mStartTime;
 
 	toadlet::egg::Collection<MotorInterfaceListener*> mListeners;
+	toadlet::egg::Collection<SonarListener*> mSonarListeners;
+
+	void pollTCP();
+	int receiveTCP(tbyte* data, int size);
 };
 
 } // namespace Quadrotor
