@@ -211,8 +211,8 @@ using namespace toadlet::egg;
 							shared_ptr<HeightData<double>> heightData(new HeightData<double>);
 							heightData->timestamp.setTime(curTime);
 							heightData->type = DATA_TYPE_HEIGHT;
-							heightData->heightRaw = height/100.0;
-							heightData->height = height/100.0;
+							heightData->heightRaw = height/1000.0;
+							heightData->height = height/1000.0;
 							
 							for(int i=0; i<mSonarListeners.size(); i++)
 								mSonarListeners[i]->onNewSonar(heightData);

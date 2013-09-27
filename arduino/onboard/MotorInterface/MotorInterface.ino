@@ -2,45 +2,14 @@
 #include <Adb.h>
 #include <Wire.h>
 
+#define SONAR_PIN 2
+
 int verbosity=0;
 
 short motorCommands[4];
 
 boolean phoneIsConnected;
 unsigned long lastPhoneUpdateTimeMS;
-
-class Ultrasonic
-{
-	public:
-		Ultrasonic(int pin);
-        void DistanceMeasure(void);
-		long microsecondsToCentimeters(void);
-		long microsecondsToInches(void);
-	private:
-		int _pin;//pin number of Arduino that is connected with SIG pin of Ultrasonic Ranger.
-        long duration;// the Pulse time received;
-};
-Ultrasonic::Ultrasonic(int pin)
-{
-	_pin = pin;
-}
-/*Begin the detection and get the pulse back signal*/
-void Ultrasonic::DistanceMeasure(void)
-{
-    pinMode(_pin, OUTPUT);
-	digitalWrite(_pin, LOW);
-	delayMicroseconds(2);
-	digitalWrite(_pin, HIGH);
-	delayMicroseconds(5);
-	digitalWrite(_pin,LOW);
-	pinMode(_pin,INPUT);
-	duration = pulseIn(_pin,HIGH);
-}
-/*The measured distance from the range 0 to 400 Centimeters*/
-long Ultrasonic::microsecondsToCentimeters(void)
-{
-	return duration/29/2;	
-}
 
 // Adb connection.
 Connection * connection;
@@ -78,67 +47,77 @@ void adbEventHandler(Connection * connection, adb_eventType event, uint16_t leng
     phoneIsConnected = true;
     for(int i=0; i<4; i++)
     {
-//      byte val = data[i];
+      //      byte val = data[i];
       short val = (data[2*i+1] << 8) | (data[2*i]);
       motorCommands[i] = val;
     }
-    
+
     lastPhoneUpdateTimeMS = millis();
   }
 }
 
 boolean sendCommand(byte addr, short cmd)
 {
-//  Wire.beginTransmission(addr);
-//  byte upper = floor(cmd/8.0);
-//  byte lower = cmd % 8;
-//  Wire.write(upper);
-//  Wire.write( lower & 0x07 );
-//  byte result = Wire.endTransmission(true);
-//  return result == 0;
+  Wire.beginTransmission(addr);
+  byte upper = floor(cmd/8.0);
+  byte lower = cmd % 8;
+  Wire.write(upper);
+  Wire.write( lower & 0x07 );
+  byte result = Wire.endTransmission(true);
+  return result == 0;
 }
- 
+
 byte MOTOR_ADDR_E = (0x53 + (0 << 1)) >> 1;
 byte MOTOR_ADDR_W = (0x53 + (1 << 1)) >> 1;
 byte MOTOR_ADDR_S = (0x53 + (2 << 1)) >> 1;
 byte MOTOR_ADDR_N = (0x53 + (3 << 1)) >> 1;
 
-#define SONAR_PIN 4
-Ultrasonic ultrasonic(SONAR_PIN);
+
 byte motorAddr[4];
+uint8_t sonarPort;
+uint8_t sonarBit;
+volatile uint8_t *sonarReg;
+volatile uint8_t *sonarOut;
 void setup()
-{ 
+{
   if(verbosity > 0)
   {
     Serial.begin(57600);
     Serial.println("Start chadding");
   }
-  
+
   delay(500);
-  
+
   // Initialise the ADB subsystem.  
   ADB::init();
   // Open an ADB stream to the phone's shell. Auto-reconnect
   connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
-  
+
   delay(1000);
-  
+
   Wire.begin();
   motorAddr[0] = MOTOR_ADDR_N;
   motorAddr[1] = MOTOR_ADDR_E;
   motorAddr[2] = MOTOR_ADDR_S;
   motorAddr[3] = MOTOR_ADDR_W;
-    
+
   for(int i=0; i<4; i++)
   {
     motorCommands[i] = 0;
     sendCommand(motorAddr[i], 0);
   }
-    
+
   doRegularMotorStart();
 
   phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();
+
+  sonarPort = digitalPinToPort(SONAR_PIN);
+  sonarBit = digitalPinToBitMask(SONAR_PIN);
+  sonarReg = portModeRegister(sonarPort);
+  sonarOut = portOutputRegister(sonarPort);
+
+  attachInterrupt(0, handleSonarDone, CHANGE);
 }  
 
 enum
@@ -147,6 +126,12 @@ enum
 };
 
 unsigned long lastHeightSendTimeMS = 0;
+unsigned long sonarStartTime = 0;
+boolean sonarIsHigh, sonarIsRunning = false;
+;
+boolean newSonarReady = false;
+long sonarPulseLength = 0;
+unsigned long loopStart = 0;
 void loop() 
 {
   if((millis() - lastPhoneUpdateTimeMS) > 100)
@@ -155,12 +140,12 @@ void loop()
       Serial.println("Lost the phone");
     phoneIsConnected = false;
   }
-    
+
   for(int i=0; i<4; i++)
   {
     if(!phoneIsConnected)
       motorCommands[i] = 0;
-      
+
     sendCommand(motorAddr[i], motorCommands[i]);
     if(verbosity >=2 )
     {
@@ -174,26 +159,48 @@ void loop()
       Serial.print("***");
     Serial.print("\n");
   }
-    
-  if(millis()-lastHeightSendTimeMS > 50 && phoneIsConnected)
+
+  if(newSonarReady)
+  {
+    uint16_t height = sonarPulseLength/5.8;
+    newSonarReady = false;
+    sonarIsHigh = false;
+
+    if(phoneIsConnected)
+    {
+      uint8_t code = COMM_ARDUINO_HEIGHT;
+      // ADB comm seems to wait for an ok reply which is needed
+      // before it will send again. I don't want to wait for that
+      // So I'll build everything into a single send
+      uint8_t buff[3];
+      buff[0] = code;
+      memcpy(&(buff[1]),&height,2);
+      connection->write(3,&(buff[0]));
+    }
+
+  }
+
+  if(millis()-lastHeightSendTimeMS > 50)
   {
     lastHeightSendTimeMS = millis();
-    
+
     long range;
-    ultrasonic.DistanceMeasure();// get the current signal time;
-    range = ultrasonic.microsecondsToCentimeters();//convert the time to centimeters
-    
-    uint8_t code = COMM_ARDUINO_HEIGHT;
-    uint16_t height = range;
-    // ADB comm seems to wait for an ok reply which is needed
-    // before it will send again. I don't want to wait for that
-    // So I'll build everything into a single send
-    uint8_t buff[3];
-    buff[0] = code;
-    memcpy(&(buff[1]),&height,2);
-    connection->write(3,&(buff[0]));
+    // I'm using the direct c calls since they
+    // are faster
+    *sonarReg |= sonarBit; // pinMode(SONAR_PIN,OUTPUT);
+    *sonarOut &= ~sonarBit; // digitalWrite(SONAR_PIN,LOW);
+    delayMicroseconds(2);
+    *sonarOut |= sonarBit; // digitalWrite(SONAR_PIN,HIGH);
+    delayMicroseconds(10);
+    *sonarOut &= ~sonarBit; // digitalWrite(SONAR_PIN,LOW);
+
+    sonarIsHigh = false;
+    sonarIsRunning = true;    
+    *sonarReg &= ~sonarBit; // pinMode(SONAR_PIN,INPUT)
+    *sonarOut &= ~sonarBit;
+    // The sonar echo event will be recorded by the interrupt handler
   }
-  
+
   while(ADB::poll());
   delay(1);
 } 
@@ -212,4 +219,22 @@ void doRegularMotorStart()
   if(verbosity > 0)
     Serial.println(" done");
 }
+
+void handleSonarDone()
+{
+  if(!sonarIsRunning)
+    return;
+
+  sonarIsHigh = !sonarIsHigh;
+  if( sonarIsHigh )
+    sonarStartTime = micros();
+  else
+  {
+    sonarPulseLength = micros()-sonarStartTime;
+    newSonarReady = true;
+    sonarIsRunning = false;
+  }
+}
+
+
 
