@@ -162,7 +162,7 @@ namespace Quadrotor{
 	{
 		mRunning = true;
 		thread tempMonitorTh(&SensorManager::runTemperatureMonitor, this);
-		thread heightMonitorTh(&SensorManager::runHeightMonitor, this);
+//		thread heightMonitorTh(&SensorManager::runHeightMonitor, this);
 
 //		double accelCal1X = 0.05;
 //		double accelCal1Y = 0.06;
@@ -301,8 +301,8 @@ namespace Quadrotor{
 		}
 
 		tempMonitorTh.join();
-		Log::alert("waiting on height monitor");
-		heightMonitorTh.join();
+//		Log::alert("waiting on height monitor");
+//		heightMonitorTh.join();
 
 		mDone = true;
 	}
@@ -342,39 +342,39 @@ namespace Quadrotor{
 		}
 	}
 
-	void SensorManager::runHeightMonitor()
-	{
-		sched_param sp;
-		sp.sched_priority = mThreadPriority-1;
-		sched_setscheduler(0, mScheduler, &sp);
-		double lastHeight=0;
-		mNewHeightAvailable = false;
-		while(mRunning)
-		{
-			if(mNewHeightAvailable)
-			{
-				mMutex_vicon.lock();
-				lastHeight = mLastHeight;
-				mMutex_vicon.unlock();
-
-				shared_ptr<HeightData<double>> data(new HeightData<double>);
-				data->type = DATA_TYPE_HEIGHT;
-				data->heightRaw = lastHeight;
-				data->height = lastHeight;
-
-				mMutex_listeners.lock();
-				for(int i=0; i<mListeners.size(); i++)
-					mListeners[i]->onNewSensorUpdate(data);
-				mMutex_listeners.unlock();
-			}
-
-			// simulate a 20Hz update rate for now
-			// in the future this will be small but
-			// mNewHeightAvailable is the flag for new
-			// data
-			System::msleep(50);
-		}
-	}
+//	void SensorManager::runHeightMonitor()
+//	{
+//		sched_param sp;
+//		sp.sched_priority = mThreadPriority-1;
+//		sched_setscheduler(0, mScheduler, &sp);
+//		double lastHeight=0;
+//		mNewHeightAvailable = false;
+//		while(mRunning)
+//		{
+//			if(mNewHeightAvailable)
+//			{
+//				mMutex_vicon.lock();
+//				lastHeight = mLastHeight;
+//				mMutex_vicon.unlock();
+//
+//				shared_ptr<HeightData<double>> data(new HeightData<double>);
+//				data->type = DATA_TYPE_HEIGHT;
+//				data->heightRaw = lastHeight;
+//				data->height = lastHeight;
+//
+//				mMutex_listeners.lock();
+//				for(int i=0; i<mListeners.size(); i++)
+//					mListeners[i]->onNewSensorUpdate(data);
+//				mMutex_listeners.unlock();
+//			}
+//
+//			// simulate a 20Hz update rate for now
+//			// in the future this will be small but
+//			// mNewHeightAvailable is the flag for new
+//			// data
+//			System::msleep(50);
+//		}
+//	}
 
 	int SensorManager::getBatteryTemp()
 	{
@@ -488,6 +488,20 @@ namespace Quadrotor{
 		mMutex_vicon.unlock();
 
 		mNewHeightAvailable = true;
+	}
+
+	void SensorManager::onNewSonar(const shared_ptr<HeightData<double>> &data)
+	{
+		String str = String()+Time::calcDiffMS(mStartTime, data->timestamp)+"\t"+data->heightRaw;
+		mMutex_logger.lock();
+		// TODO: Make a sonar log flag
+		mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, str, LOG_FLAG_ACCEL);
+		mMutex_logger.unlock();
+
+		mMutex_listeners.lock();
+		for(int i=0; i<mListeners.size(); i++)
+			mListeners[i]->onNewSensorUpdate(data);
+		mMutex_listeners.unlock();
 	}
 
 } // namespace Quadrotor

@@ -42,6 +42,7 @@ class SensorManagerListener
 #include "Time.h"
 #include "Observer_Angular.h"
 #include "CommManager.h"
+#include "MotorInterface.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -54,7 +55,8 @@ namespace Quadrotor{
 using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
-class SensorManager : public CommManagerListener
+class SensorManager : public CommManagerListener,
+					  public SonarListener
 {
 	public:
 	SensorManager();
@@ -79,6 +81,9 @@ class SensorManager : public CommManagerListener
 	// for CommManagerListener
 	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
 
+	// for SonarListener
+	void onNewSonar(const shared_ptr<HeightData<double>> &data);
+
 	protected:
 	bool mRunning, mDone;
 	ASensorManager* mSensorManager;
@@ -89,7 +94,7 @@ class SensorManager : public CommManagerListener
 	static int getSecTemp();
 	static int getFuelgaugeTemp();
 	void runTemperatureMonitor();
-	void runHeightMonitor();
+//	void runHeightMonitor();
 
 	QuadLogger *mQuadLogger;
 

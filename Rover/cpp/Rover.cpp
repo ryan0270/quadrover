@@ -157,7 +157,9 @@ void Rover::initialize()
 	mQuadLogger.setStartTime(mStartTime);
 
 //	mMotorInterface.addListener(&mObsvTranslational);
+	mMotorInterface.setStartTime(mStartTime);
 	mMotorInterface.addListener(&mTranslationController);
+	mMotorInterface.addSonarListener(&mSensorManager);
 
 	mNumCpuCores = android_getCpuCount();
 
@@ -580,6 +582,8 @@ void Rover::onNewCommTimeSync(int time)
 	mFeatureFinder.setStartTime(mStartTime);
 	mTargetFinder.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
+
+	mMotorInterface.setStartTime(mStartTime);
 
 	String str = String()+delta;
 	mQuadLogger.addEntry(Time(), LOG_ID_TIME_SYNC, str,LOG_FLAG_PC_UPDATES);

@@ -17,9 +17,9 @@ QuadLogger::QuadLogger()
 //	mTypeMask |= LOG_FLAG_MOTORS;
 //	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
 //	mTypeMask |= LOG_FLAG_OBSV_BIAS;
-	mTypeMask |= LOG_FLAG_MAGNOMETER;
+//	mTypeMask |= LOG_FLAG_MAGNOMETER;
 	mTypeMask |= LOG_FLAG_ACCEL;
-	mTypeMask |= LOG_FLAG_GYRO;
+//	mTypeMask |= LOG_FLAG_GYRO;
 //	mTypeMask |= LOG_FLAG_PRESSURE;
 	mTypeMask |= LOG_FLAG_CAM_RESULTS;
 //	mTypeMask |= LOG_FLAG_CAM_IMAGES;
@@ -233,6 +233,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_TARGET_LOST="+LOG_ID_TARGET_LOST+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_ACCEL_CMD="+LOG_ID_ACCEL_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_VEL_CMD="+LOG_ID_VEL_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_SONAR_HEIGHT="+LOG_ID_SONAR_HEIGHT+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}
