@@ -106,7 +106,8 @@ int main(int argv, char* argc[])
 	int minArea = 1000;
 	int maxArea = 0.5*320*240;
 	double maxVariation = 0.25; // smaller reduces number of regions
-	double minDiversity = 0.5; // smaller increase the number of regions
+//	double minDiversity = 0.5; // smaller increase the number of regions
+	double minDiversity = 0.8; // smaller increase the number of regions
 	// for color only
 	int maxEvolution = 200;
 	double areaThreshold = 1.01;
@@ -126,6 +127,7 @@ int main(int argv, char* argc[])
 	Time curTime;
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
+cout << "imgCnt: " << imgCnt <<  endl;
 		Time chadTime;
 		curTime.addTimeMS(33);
 
@@ -149,10 +151,10 @@ t2 += start.getElapsedTimeMS(); start.setTime();
 			boundRect.height= min(img.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
 			cv::Point corner(boundRect.x, boundRect.y);
 			cv::Mat mask(boundRect.height, boundRect.width, CV_8UC1, cv::Scalar(0));
-			int minX = 0;
-			int minY = 0;
-			int maxX = mask.cols-1;
-			int maxY = mask.rows-1;
+//			int minX = 0;
+//			int minY = 0;
+//			int maxX = mask.cols-1;
+//			int maxY = mask.rows-1;
 			for(int j=0; j<regions[i].size(); j++)
 			{
 				int x = regions[i][j].x-corner.x;
@@ -188,19 +190,19 @@ t2 += start.getElapsedTimeMS(); start.setTime();
 
 t3 += start.getElapsedTimeMS(); start.setTime();
 		/////////////////// make objects of the new contours ///////////////////////
-		vector<shared_ptr<ActiveObject>> newObjects;
+		vector<shared_ptr<ActiveObject>> curObjects;
 		for(int i=0; i<allContours.size(); i++)
 		{
 			shared_ptr<ActiveObject> ao1(new ActiveObject(allContours[i]));
 			ao1->lastFoundTime.setTime(curTime);
 			if(ao1->mom.m00 > minArea)
-				newObjects.push_back(ao1);
+				curObjects.push_back(ao1);
 		}
 
 		/////////////////// Get location priors for active objects ///////////////////////
 		vector<pair<Array2D<double>, Array2D<double>>> priors;
 		Array2D<double> mv(3,1,0.0);
-		Array2D<double> Sv = 0.1*createIdentity((double)3);
+		Array2D<double> Sv = 0.2*0.2*createIdentity((double)3);
 		double mz = 1;
 		double sz = 0.05;
 		double f = mCameraMatrix_640x480->at<double>(0,0);
@@ -212,124 +214,178 @@ cout << "---------------- priors --------------------------" << endl;
 		{
 			shared_ptr<ActiveObject> ao = activeObjects[i];
 			ao->updatePosition(mv, Sv, mz, sz*sz, f, center, omega, curTime);
+cout << ao->id << "\t\t";
 cout << (int)(ao->expectedPos[0][0]+0.5) << " x " << (int)(ao->expectedPos[1][0]+0.5) << "\t\t";
-cout << (int)(ao->posCov[0][0]+0.5) << " x " << (int)(ao->posCov[1][1]+0.5) << endl;
+cout << (int)(ao->posCov[0][0]+0.5) << " x " << (int)(ao->posCov[1][1]+0.5) << "\t\t";
+cout << ao->mom.m00 << "\t\t";
+cout << endl;
 		}
 
-cout << "---------------- new objects --------------------------" << endl;
-for(int i=0; i<newObjects.size(); i++)
-	cout << newObjects[i]->lastCenter.x << " x " << newObjects[i]->lastCenter.y << endl;
+cout << "---------------- current objects --------------------------" << endl;
+for(int i=0; i<curObjects.size(); i++)
+{
+	cout << curObjects[i]->id << "\t\t";
+	cout << curObjects[i]->lastCenter.x << " x " << curObjects[i]->lastCenter.y << "\t\t";
+	cout << curObjects[i]->mom.m00 << "\t\t";
+	cout << endl;
+}
 
 		/////////////////// Establish correspondence based on postiion ///////////////////////
-		Array2D<double> Sn = 2*5*5*createIdentity((double)2);
+		Array2D<double> Sn = 2*10*10*createIdentity((double)2);
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0];
 		SnInv[1][1] = 1.0/Sn[1][1];
-		float probNoCorr = 0.00005;
-		Array2D<double> C = ActiveObject::calcCorrespondence(activeObjects, newObjects, Sn, SnInv, probNoCorr);
+		double varxi = pow(200,2);
+		float probNoCorr = 0.0000001;
+		Array2D<double> C = ActiveObject::calcCorrespondence(activeObjects, curObjects, Sn, SnInv, varxi, probNoCorr);
 cout << "---------------- correspondence --------------------------" << endl;
 printArray("\n",C);
 
+		vector<Match> goodMatches;
+		shared_ptr<ActiveObject> aoPrev, aoCur;
+		vector<shared_ptr<ActiveObject>> repeatObjects, newObjects;
+		for(int j=0; j<curObjects.size(); j++)
+		{
+			aoCur = curObjects[j];
+			bool hasMatch = false;
+			for(int i=0; i<activeObjects.size(); i++)
+			{
+				aoPrev = activeObjects[i];
+				if(C[i][j] > 0.50)
+				{
+cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
+					hasMatch = true;
+
+					Match m;
+					m.aoPrev = aoPrev;
+					m.aoCur = aoCur;
+					m.score = C[i][j];
+					goodMatches.push_back(m);
+
+					// copy data over to update the shape and position
+					aoPrev->contour.swap(aoCur->contour);
+					aoPrev->mom = aoCur->mom;
+					aoPrev->lastCenter = aoCur->lastCenter;
+					aoPrev->lastFoundTime.setTime(curTime);
+					memcpy(aoPrev->huMom, aoCur->huMom, 7*sizeof(double));
+					memcpy(aoPrev->centralMoms, aoCur->centralMoms, 7*sizeof(double));
+					aoPrev->life= min((float)21, aoPrev->life+2);
+					repeatObjects.push_back(aoPrev);
+					break;
+				}
+			}
+
+			if(!hasMatch)
+				newObjects.push_back(aoCur);
+		}
+
 
 		/////////////////// Find possible matches ///////////////////////
-		vector<Match> possibleMatches;
-		cv::Moments mom;
-		double ma[7];
-		for(int i=0; i<newObjects.size(); i++)
-		{
-			shared_ptr<ActiveObject> ao1 = newObjects[i];
-			memcpy(ma, ao1->centralMoms, 7*sizeof(double));
-			float lowScore = 999;
-			float minDist = 999;
-			int lowIdx = -1;
-			for(int j=0; j<activeObjects.size(); j++)
-			{
-				// based on opencv matchShapes
-				shared_ptr<ActiveObject> ao2 = activeObjects[j];
-				double c1, c2, c3;
-				c1 = c2 = c3 = 0;
-				int sma, smb;
-				for(int k=0; k<7; k++)
-				{
-					double ama = abs( ma[k] );
-//					double amb = abs( ao2->huMom[k] );
-					double amb = abs( ao2->centralMoms[k] );
-					if(ama < 1.e-5 || amb < 1.e-5)
-						continue;
-					if(ma[k] > 0)
-						sma = 1;
-					else if(ma[k] < 0)
-						sma = -1;
-					else
-						sma = 0;
-//					if(ao2->huMom[k] > 0)
-					if(ao2->centralMoms[k] > 0)
-						smb = 1;
-//					else if(ao2->huMom[k] < 0)
-					else if(ao2->centralMoms[k] < 0)
-						smb = -1;
-					else
-						smb = 0;
-
-					ama = sma*log10(ama);
-					amb = smb*log10(amb);
-					c1 += abs(-1./ama+1./amb);
-					c2 += abs(-ama+amb);
-					c3 = max(c3, abs((ama-amb)/ama));
-				}
-
-				float score = c1;
-				float dist = cv::norm(cv::Mat(ao1->lastCenter), cv::Mat(ao2->lastCenter));
-
-				minDist = min(dist,minDist);
-
-				if(dist < 20)
-				{
-					lowScore = min(score, lowScore);
-
-					if(score < 1)
-					{
-						Match m;
-						m.ao1 = ao1;
-						m.ao2 = ao2;
-						m.score = score;
-						possibleMatches.push_back(m);
-					}
-				}
-			}
-		}
-
-t4 += start.getElapsedTimeMS(); start.setTime();
-		/////////////////// now find the best possible matches and ensure unique matches ///////////////////////
-		sort(possibleMatches.begin(), possibleMatches.end(), [&](const Match &m1, const Match &m2){return m1.score < m2.score;});
-		vector<shared_ptr<ActiveObject>> repeatObjects;
-		vector<Match> goodMatches;
-		for(int i=0; i<possibleMatches.size(); i++)
-		{
-			shared_ptr<ActiveObject> ao1 = possibleMatches[i].ao1;
-			shared_ptr<ActiveObject> ao2 = possibleMatches[i].ao2;
-			if(ao1->life< 0)
-				continue;
-			if(find(repeatObjects.begin(), repeatObjects.end(), ao2) != repeatObjects.end())
-			{
-				// this active object has already been used by someone else
-				if(find(newObjects.begin(), newObjects.end(), ao1) != newObjects.end())
-					newObjects.push_back(ao1);
-			}
-			else
-			{
-				goodMatches.push_back(possibleMatches[i]);
-				ao2->contour.swap(ao1->contour);
-				ao2->mom = ao1->mom;
-				ao2->lastCenter = ao1->lastCenter;
-				ao2->lastFoundTime.setTime(curTime);
-				memcpy(ao2->huMom, ao1->huMom, 7*sizeof(double));
-				memcpy(ao2->centralMoms, ao1->centralMoms, 7*sizeof(double));
-				ao2->life= min((float)21, ao2->life+2);
-				repeatObjects.push_back(ao2);
-				ao1->life= -1; // to mark that this is no longer valid
-			}
-		}
+//		vector<Match> possibleMatches;
+//		vector<shared_ptr<ActiveObject>> newObjects;
+//		cv::Moments mom;
+//		double ma[7];
+//		for(int i=0; i<curObjects.size(); i++)
+//		{
+//			shared_ptr<ActiveObject> ao1 = curObjects[i];
+//			memcpy(ma, ao1->centralMoms, 7*sizeof(double));
+//			float lowScore = 999;
+//			float minDist = 999;
+//			int lowIdx = -1;
+//			bool noPossibleMatch = true;
+//			for(int j=0; j<activeObjects.size(); j++)
+//			{
+//				// based on opencv matchShapes
+//				shared_ptr<ActiveObject> ao2 = activeObjects[j];
+//				double c1, c2, c3;
+//				c1 = c2 = c3 = 0;
+//				int sma, smb;
+//				for(int k=0; k<7; k++)
+//				{
+//					double ama = abs( ma[k] );
+////					double amb = abs( ao2->huMom[k] );
+//					double amb = abs( ao2->centralMoms[k] );
+//					if(ama < 1.e-5 || amb < 1.e-5)
+//						continue;
+//					if(ma[k] > 0)
+//						sma = 1;
+//					else if(ma[k] < 0)
+//						sma = -1;
+//					else
+//						sma = 0;
+////					if(ao2->huMom[k] > 0)
+//					if(ao2->centralMoms[k] > 0)
+//						smb = 1;
+////					else if(ao2->huMom[k] < 0)
+//					else if(ao2->centralMoms[k] < 0)
+//						smb = -1;
+//					else
+//						smb = 0;
+//
+//					ama = sma*log10(ama);
+//					amb = smb*log10(amb);
+//					c1 += abs(-1./ama+1./amb);
+//					c2 += abs(-ama+amb);
+//					c3 = max(c3, abs((ama-amb)/ama));
+//				}
+//
+//				float score = c1;
+//				float dist = cv::norm(cv::Mat(ao1->lastCenter), cv::Mat(ao2->lastCenter));
+//
+//				minDist = min(dist,minDist);
+//
+//				if(dist < 20)
+//				{
+//					lowScore = min(score, lowScore);
+//
+//					if(score < 1)
+//					{
+//						Match m;
+//						m.ao1 = ao1;
+//						m.ao2 = ao2;
+//						m.score = score;
+//						possibleMatches.push_back(m);
+//						noPossibleMatch = false;
+//					}
+//				}
+//			}
+//
+//			if(noPossibleMatch)
+//				newObjects.push_back(ao1);
+//		}
+//
+//t4 += start.getElapsedTimeMS(); start.setTime();
+//		/////////////////// now find the best possible matches and ensure unique matches ///////////////////////
+//		sort(possibleMatches.begin(), possibleMatches.end(), [&](const Match &m1, const Match &m2){return m1.score < m2.score;});
+//		vector<shared_ptr<ActiveObject>> repeatObjects;
+//		vector<Match> goodMatches;
+//		for(int i=0; i<possibleMatches.size(); i++)
+//		{
+//			shared_ptr<ActiveObject> ao1 = possibleMatches[i].ao1;
+//			shared_ptr<ActiveObject> ao2 = possibleMatches[i].ao2;
+//			if(ao1->life< 0)
+//				continue;
+//			if(find(repeatObjects.begin(), repeatObjects.end(), ao2) != repeatObjects.end())
+//			{
+//				// this active object has already been used by someone else
+//				if(find(newObjects.begin(), newObjects.end(), ao1) != newObjects.end())
+//					newObjects.push_back(ao1);
+//			}
+//			else
+//			{
+//cout << "matching " << ao1->id << " and " << ao2->id << endl;
+//				goodMatches.push_back(possibleMatches[i]);
+//				ao2->contour.swap(ao1->contour);
+//				ao2->mom = ao1->mom;
+//				ao2->lastCenter = ao1->lastCenter;
+//				ao2->lastFoundTime.setTime(curTime);
+//				memcpy(ao2->huMom, ao1->huMom, 7*sizeof(double));
+//				memcpy(ao2->centralMoms, ao1->centralMoms, 7*sizeof(double));
+//				ao2->life= min((float)21, ao2->life+2);
+//				repeatObjects.push_back(ao2);
+//				ao1->life= -1; // to mark that this is no longer valid
+//			}
+//		}
 
 t5 += start.getElapsedTimeMS(); start.setTime();
 		for(int i=0; i<activeObjects.size(); i++)
@@ -367,7 +423,7 @@ t6 += start.getElapsedTimeMS(); start.setTime();
 		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
 		cv::Point offset(321,0);
 		for(int i=0; i<goodMatches.size(); i++)
-			line(dblImg,goodMatches[i].ao1->lastCenter, goodMatches[i].ao2->lastCenter+offset, cv::Scalar(0,255,0), 2);
+			line(dblImg,goodMatches[i].aoPrev->lastCenter, goodMatches[i].aoCur->lastCenter+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
 t7 += start.getElapsedTimeMS(); start.setTime();
