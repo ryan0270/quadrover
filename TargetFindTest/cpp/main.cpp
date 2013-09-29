@@ -205,14 +205,16 @@ t3 += start.getElapsedTimeMS(); start.setTime();
 		double sz = 0.05;
 		double f = mCameraMatrix_640x480->at<double>(0,0);
 		Array2D<double> omega(3,1,0.0);
-		priors = calcPriorDistributions(activeObjects, mv, Sv, mz, sz*sz, f, center, omega, curTime);
+//		priors = calcPriorDistributions(activeObjects, mv, Sv, mz, sz*sz, f, center, omega, curTime);
 
 cout << "---------------- priors --------------------------" << endl;
-for(int i=0; i<priors.size(); i++)
-{
-	cout << (int)(priors[i].first[0][0]+0.5) << " x " << (int)(priors[i].first[1][0]+0.5) << "\t\t";
-	cout << (int)(priors[i].second[0][0]+0.5) << " x " << (int)(priors[i].second[1][1]+0.5) << endl;
-}
+		for(int i=0; i<activeObjects.size(); i++)
+		{
+			shared_ptr<ActiveObject> ao = activeObjects[i];
+			ao->updatePosition(mv, Sv, mz, sz*sz, f, center, omega, curTime);
+cout << (int)(ao->expectedPos[0][0]+0.5) << " x " << (int)(ao->expectedPos[1][0]+0.5) << "\t\t";
+cout << (int)(ao->posCov[0][0]+0.5) << " x " << (int)(ao->posCov[1][1]+0.5) << endl;
+		}
 
 cout << "---------------- new objects --------------------------" << endl;
 for(int i=0; i<newObjects.size(); i++)
@@ -223,10 +225,10 @@ for(int i=0; i<newObjects.size(); i++)
 		Array2D<double> SnInv(2,2,0.0);
 		SnInv[0][0] = 1.0/Sn[0][0];
 		SnInv[1][1] = 1.0/Sn[1][1];
-		float probNoCorr = 0.0005;
-		Array2D<double> C = calcCorrespondence(priors, newObjects, Sn, SnInv, probNoCorr);
+		float probNoCorr = 0.00005;
+		Array2D<double> C = ActiveObject::calcCorrespondence(activeObjects, newObjects, Sn, SnInv, probNoCorr);
 cout << "---------------- correspondence --------------------------" << endl;
-printArray(C);
+printArray("\n",C);
 
 
 		/////////////////// Find possible matches ///////////////////////

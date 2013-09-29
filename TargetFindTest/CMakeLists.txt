@@ -38,6 +38,7 @@ set (SRC ${SRC}
 	./cpp/main.cpp
 	./cpp/mser.cpp
 	./cpp/funcs.cpp
+	./cpp/ActiveObject.cpp
 )
 
 # Headers
