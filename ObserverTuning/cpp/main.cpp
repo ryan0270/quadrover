@@ -375,7 +375,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 100e3;
+	int endTimeDelta = 60e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz

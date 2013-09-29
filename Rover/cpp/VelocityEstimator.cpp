@@ -405,8 +405,10 @@ Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<
 		while(theta2 < 0) 		theta2 += PI;
 		while(theta2 > PI) 		theta2 -= PI;
 
-		xrange = max( r1*cos(theta1), r2*cos(theta2) );
-		yrange = max( r1*sin(theta1), r2*sin(theta2) );
+		xrange = max( abs(r1*cos(theta1)), abs(r2*cos(theta2)) );
+		yrange = max( abs(r1*sin(theta1)), abs(r2*sin(theta2)) );
+//		xrange = max( r1*cos(theta1), r2*cos(theta2) );
+//		yrange = max( r1*sin(theta1), r2*sin(theta2) );
 
 		SdInvmdList[i] = matmult(SdInv, md);
 		SaInvList[i] = SaInv.copy();
