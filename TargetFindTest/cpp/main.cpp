@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <list>
+#include <vector>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -12,57 +13,16 @@
 
 #include "Time.h"
 
+#include "ActiveObject.h"
+#include "funcs.h"
 //#include "mser.h"
-
-
-class ActiveObject
-{
-	public:
-	ActiveObject(){life = 10; this->id = sNextID()++;}
-	ActiveObject(std::vector<cv::Point> points) : ActiveObject()
-	{
-		contour = points;
-		mom = cv::moments(points);
-		lastCenter.x = mom.m10/mom.m00;
-		lastCenter.y = mom.m01/mom.m00;
-		cv::HuMoments(mom, huMom);
-		centralMoms[0] = mom.mu20;
-		centralMoms[1] = mom.mu11;
-		centralMoms[2] = mom.mu02;
-		centralMoms[3] = mom.mu30;
-		centralMoms[4] = mom.mu21;
-		centralMoms[5] = mom.mu12;
-//		centralMoms[6] = mom.mu03;
-		centralMoms[6] = mom.m00;
-	}
-
-	cv::Point lastCenter;
-	float life;
-	std::vector<cv::Point> contour;
-	cv::Moments mom;
-	double huMom[7];
-	double centralMoms[7];
-	int id;
-
-	static inline unsigned long &sNextID(){ static unsigned long id = 0; return id;}
-
-	static bool sortPredicate(const std::shared_ptr<ActiveObject> &ao1, const std::shared_ptr<ActiveObject> &ao2)
-	{ return ao1->life> ao2->life; }
-};
-
-class Match
-{
-	public:
-	std::shared_ptr<ActiveObject> ao1, ao2;
-	float score;
-};
 
 int main(int argv, char* argc[])
 {
 	using namespace ICSL;
 	using namespace ICSL::Quadrotor;
 //	using namespace ICSL::Constants;
-//	using namespace TNT;
+	using namespace TNT;
 	using namespace std;
 	cout << "start chadding" << endl;
 
@@ -106,6 +66,7 @@ int main(int argv, char* argc[])
 	}
 
 	// Camera calibration
+	cv::Point2f center;
 	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
 	cv::FileStorage fs;
 	string filename = dataDir + "/s3Calib_640x480.yml";
@@ -118,13 +79,16 @@ int main(int argv, char* argc[])
 		fs["camera_matrix"] >> *mCameraMatrix_640x480;
 		fs["distortion_coefficients"] >> *mCameraDistortionCoeffs;
 		cout << "Camera calib loaded from " << filename.c_str() << endl;
-		cout << "\n\t" << "Focal length: " << mCameraMatrix_640x480->at<double>(0,0) << endl;
-		cout << "\n\t" << "centerX: " << mCameraMatrix_640x480->at<double>(0,2) << endl;
-		cout << "\n\t" << "centerY: " << mCameraMatrix_640x480->at<double>(1,2) << endl;
+//		cout << "\t" << "Focal length: " << mCameraMatrix_640x480->at<double>(0,0) << endl;
+//		cout << "\t" << "centerX: " << mCameraMatrix_640x480->at<double>(0,2) << endl;
+//		cout << "\t" << "centerY: " << mCameraMatrix_640x480->at<double>(1,2) << endl;
 
 		mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
 		mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
 		(*mCameraMatrix_320x240) = (*mCameraMatrix_320x240)*0.5;
+
+		center.x = mCameraMatrix_320x240->at<double>(0,2);
+		center.y = mCameraMatrix_320x240->at<double>(1,2);
 	}
 	else
 	cout << "Failed to open " <<  filename.c_str();
@@ -134,8 +98,8 @@ int main(int argv, char* argc[])
 	cv::moveWindow("chad",0,0);
 	cv::namedWindow("bob",1);
 	cv::moveWindow("bob",321,0);
-	cv::namedWindow("dick",1);
-	cv::moveWindow("dick",0,261);
+	cv::namedWindow("tom",1);
+	cv::moveWindow("tom",0,261);
 
 	// make the mser detector
 	int delta = 5;
@@ -156,20 +120,24 @@ int main(int argv, char* argc[])
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
 	cv::Mat img(240,320, CV_8UC3), imgGray, oldImg(240,320,CV_8UC3);
 	vector<vector<cv::Point>> regions;
-	int t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
+	float t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
 	t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = 0;
-	int maxCalcTime = 0;
+	int imgCnt = 0;
+	Time curTime;
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
-//		oldImg = img;
+		Time chadTime;
+		curTime.addTimeMS(33);
+
 Time start;
 		img = *(imgIter->second);
 		cvtColor(img, imgGray, CV_BGR2GRAY);
 
-t1 = start.getElapsedTimeMS(); start.setTime();
+t1 += start.getElapsedTimeMS(); start.setTime();
 		mserDetector(imgGray, regions);
 
-t2 = start.getElapsedTimeMS(); start.setTime();
+t2 += start.getElapsedTimeMS(); start.setTime();
+		/////////////////// Find contours ///////////////////////
 		vector<vector<cv::Point>> allContours;
 		int border = 2;
 		for(int i=0; i<regions.size(); i++)
@@ -181,19 +149,23 @@ t2 = start.getElapsedTimeMS(); start.setTime();
 			boundRect.height= min(img.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
 			cv::Point corner(boundRect.x, boundRect.y);
 			cv::Mat mask(boundRect.height, boundRect.width, CV_8UC1, cv::Scalar(0));
-///			vector<vector<cv::Point>> chad(1);
-///			for(int j=0; j<regions[i].size(); j++)
-///				chad[0].push_back(regions[i][j]-corner);
-///			cv::fillPoly(mask, chad, cv::Scalar(255));
-
+			int minX = 0;
+			int minY = 0;
+			int maxX = mask.cols-1;
+			int maxY = mask.rows-1;
 			for(int j=0; j<regions[i].size(); j++)
 			{
 				int x = regions[i][j].x-corner.x;
 				int y = regions[i][j].y-corner.y;
 				mask.at<uchar>(y,x) = 255;
+
+				// Do a dilate as long as I'm here. This should save a little time since I don't have
+				// to slide over all the black pixels
+				// Right now this isn't giving the same results as OpenCV's dilate :(
+//				for(int c=max(minX, x-1); c<min(maxX,x+1); c++)
+//					for(int r=max(minY, y-1); r<min(maxY,y+1); r++)
+//						mask.at<uchar>(r,c) = 255;
 			}
-//			imshow("mask",mask);
-//			cv::waitKey(0);
 
 			cv::dilate(mask, mask, cv::Mat());
 			cv::erode(mask, mask, cv::Mat());
@@ -214,22 +186,60 @@ t2 = start.getElapsedTimeMS(); start.setTime();
 			}
 		}
 
-t3 = start.getElapsedTimeMS(); start.setTime();
+t3 += start.getElapsedTimeMS(); start.setTime();
+		/////////////////// make objects of the new contours ///////////////////////
 		vector<shared_ptr<ActiveObject>> newObjects;
-		vector<Match> possibleMatches;
-		cv::Moments mom;
-		double ma[7];
 		for(int i=0; i<allContours.size(); i++)
 		{
 			shared_ptr<ActiveObject> ao1(new ActiveObject(allContours[i]));
-			if(ao1->mom.m00 < minArea)
-				continue;
+			ao1->lastFoundTime.setTime(curTime);
+			if(ao1->mom.m00 > minArea)
+				newObjects.push_back(ao1);
+		}
 
+		/////////////////// Get location priors for active objects ///////////////////////
+		vector<pair<Array2D<double>, Array2D<double>>> priors;
+		Array2D<double> mv(3,1,0.0);
+		Array2D<double> Sv = 0.1*createIdentity((double)3);
+		double mz = 1;
+		double sz = 0.05;
+		double f = mCameraMatrix_640x480->at<double>(0,0);
+		Array2D<double> omega(3,1,0.0);
+		priors = calcPriorDistributions(activeObjects, mv, Sv, mz, sz*sz, f, center, omega, curTime);
+
+cout << "---------------- priors --------------------------" << endl;
+for(int i=0; i<priors.size(); i++)
+{
+	cout << (int)(priors[i].first[0][0]+0.5) << " x " << (int)(priors[i].first[1][0]+0.5) << "\t\t";
+	cout << (int)(priors[i].second[0][0]+0.5) << " x " << (int)(priors[i].second[1][1]+0.5) << endl;
+}
+
+cout << "---------------- new objects --------------------------" << endl;
+for(int i=0; i<newObjects.size(); i++)
+	cout << newObjects[i]->lastCenter.x << " x " << newObjects[i]->lastCenter.y << endl;
+
+		/////////////////// Establish correspondence based on postiion ///////////////////////
+		Array2D<double> Sn = 2*5*5*createIdentity((double)2);
+		Array2D<double> SnInv(2,2,0.0);
+		SnInv[0][0] = 1.0/Sn[0][0];
+		SnInv[1][1] = 1.0/Sn[1][1];
+		float probNoCorr = 0.0005;
+		Array2D<double> C = calcCorrespondence(priors, newObjects, Sn, SnInv, probNoCorr);
+cout << "---------------- correspondence --------------------------" << endl;
+printArray(C);
+
+
+		/////////////////// Find possible matches ///////////////////////
+		vector<Match> possibleMatches;
+		cv::Moments mom;
+		double ma[7];
+		for(int i=0; i<newObjects.size(); i++)
+		{
+			shared_ptr<ActiveObject> ao1 = newObjects[i];
 			memcpy(ma, ao1->centralMoms, 7*sizeof(double));
 			float lowScore = 999;
 			float minDist = 999;
 			int lowIdx = -1;
-			bool noMatch = true;
 			for(int j=0; j<activeObjects.size(); j++)
 			{
 				// based on opencv matchShapes
@@ -237,7 +247,6 @@ t3 = start.getElapsedTimeMS(); start.setTime();
 				double c1, c2, c3;
 				c1 = c2 = c3 = 0;
 				int sma, smb;
-				bool noAdd = true;
 				for(int k=0; k<7; k++)
 				{
 					double ama = abs( ma[k] );
@@ -260,7 +269,6 @@ t3 = start.getElapsedTimeMS(); start.setTime();
 					else
 						smb = 0;
 
-					noAdd = false;
 					ama = sma*log10(ama);
 					amb = smb*log10(amb);
 					c1 += abs(-1./ama+1./amb);
@@ -279,7 +287,6 @@ t3 = start.getElapsedTimeMS(); start.setTime();
 
 					if(score < 1)
 					{
-						noMatch = false;
 						Match m;
 						m.ao1 = ao1;
 						m.ao2 = ao2;
@@ -288,13 +295,10 @@ t3 = start.getElapsedTimeMS(); start.setTime();
 					}
 				}
 			}
-
-			if(noMatch)
-				newObjects.push_back(ao1);
 		}
 
-t4 = start.getElapsedTimeMS(); start.setTime();
-		// now find the best possible matches and ensure unique matches
+t4 += start.getElapsedTimeMS(); start.setTime();
+		/////////////////// now find the best possible matches and ensure unique matches ///////////////////////
 		sort(possibleMatches.begin(), possibleMatches.end(), [&](const Match &m1, const Match &m2){return m1.score < m2.score;});
 		vector<shared_ptr<ActiveObject>> repeatObjects;
 		vector<Match> goodMatches;
@@ -316,6 +320,7 @@ t4 = start.getElapsedTimeMS(); start.setTime();
 				ao2->contour.swap(ao1->contour);
 				ao2->mom = ao1->mom;
 				ao2->lastCenter = ao1->lastCenter;
+				ao2->lastFoundTime.setTime(curTime);
 				memcpy(ao2->huMom, ao1->huMom, 7*sizeof(double));
 				memcpy(ao2->centralMoms, ao1->centralMoms, 7*sizeof(double));
 				ao2->life= min((float)21, ao2->life+2);
@@ -324,7 +329,7 @@ t4 = start.getElapsedTimeMS(); start.setTime();
 			}
 		}
 
-t5 = start.getElapsedTimeMS(); start.setTime();
+t5 += start.getElapsedTimeMS(); start.setTime();
 		for(int i=0; i<activeObjects.size(); i++)
 			activeObjects[i]->life -= 1;
 
@@ -341,7 +346,7 @@ t5 = start.getElapsedTimeMS(); start.setTime();
 		for(int i=0; i<newObjects.size(); i++)
 			activeObjects.push_back(newObjects[i]);
 
-t6 = start.getElapsedTimeMS(); start.setTime();
+t6 += start.getElapsedTimeMS(); start.setTime();
 		imshow("chad",oldImg);
 
 		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
@@ -361,17 +366,22 @@ t6 = start.getElapsedTimeMS(); start.setTime();
 		cv::Point offset(321,0);
 		for(int i=0; i<goodMatches.size(); i++)
 			line(dblImg,goodMatches[i].ao1->lastCenter, goodMatches[i].ao2->lastCenter+offset, cv::Scalar(0,255,0), 2);
-		imshow("dick",dblImg);
+		imshow("tom",dblImg);
 
-t7 = start.getElapsedTimeMS(); start.setTime();
-		keypress = cv::waitKey(33) % 256;
-
-		maxCalcTime = max(maxCalcTime, t1+t2+t3+t4+t5+t6+t7+t8+t9+t10);
+t7 += start.getElapsedTimeMS(); start.setTime();
+		keypress = cv::waitKey(0) % 256;
 
 		imgIter++;
+		imgCnt++;
 	}
 
-	cout << "maxCalcTime: " << maxCalcTime << endl;
+	cout << "t1:\t" << t1/imgCnt << endl;
+	cout << "t2:\t" << t2/imgCnt << endl;
+	cout << "t3:\t" << t3/imgCnt << endl;
+	cout << "t4:\t" << t4/imgCnt << endl;
+	cout << "t5:\t" << t5/imgCnt << endl;
+	cout << "t6:\t" << t6/imgCnt << endl;
+	cout << "t7:\t" << t7/imgCnt << endl;
 
     return 0;
 }

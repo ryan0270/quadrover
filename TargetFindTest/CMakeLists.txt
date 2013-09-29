@@ -37,11 +37,14 @@ set (LIBS
 set (SRC ${SRC}
 	./cpp/main.cpp
 	./cpp/mser.cpp
+	./cpp/funcs.cpp
 )
 
 # Headers
 set (H ${H}
 	./cpp/mser.h
+	./cpp/funcs.h
+	./cpp/ActiveObject.h
 	${ROVER_DIR}/cpp/Time.h
 )
 
