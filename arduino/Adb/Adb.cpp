@@ -35,7 +35,7 @@ static void usbEventHandler(usb_device * device, usb_eventType event);
 unsigned long ADB::lastPollTime = 0;
 
 /**
- * Initialises the ADB protocol. This function initialises the USB layer underneath so no further setup is required.
+ * Initialises the ADB protocol. This function initialises the USB1 layer underneath so no further setup is required.
  */
 void ADB::init()
 {
@@ -43,9 +43,9 @@ void ADB::init()
 	adbDevice = NULL;
 	connected = false;
 
-	// Initialise the USB layer and attach an event handler.
-	USB::setEventHandler(usbEventHandler);
-	USB::init();
+	// Initialise the USB1 layer and attach an event handler.
+	USB1::setEventHandler(usbEventHandler);
+	USB1::init();
 }
 
 /**
@@ -82,7 +82,7 @@ void ADB::fireEvent(Connection * connection, adb_eventType type, uint16_t length
  * Adds a new ADB connection. The connection string is per ADB specs, for example "tcp:1234" opens a
  * connection to tcp port 1234, and "shell:ls" outputs a listing of the phone root filesystem. Connections
  * can be made persistent by setting reconnect to true. Persistent connections will be automatically
- * reconnected when the USB cable is re-plugged in. Non-persistent connections will connect only once,
+ * reconnected when the USB1 cable is re-plugged in. Non-persistent connections will connect only once,
  * and should never be used after they are closed.
  *
  * The connection string is copied into the Connection record and may not exceed ADB_CONNECTIONSTRING_LENGTH-1
@@ -161,7 +161,7 @@ static void adb_printMessage(adb_message * message)
 /**
  * Writes an empty message (without payload) to the ADB device.
  *
- * @param device USB device handle.
+ * @param device USB1 device handle.
  * @param command ADB command.
  * @param arg0 first ADB argument (command dependent).
  * @param arg0 second ADB argument (command dependent).
@@ -182,13 +182,13 @@ int ADB::writeEmptyMessage(usb_device * device, uint32_t command, uint32_t arg0,
 //	serialPrint("OUT << "); adb_printMessage(&message);
 #endif
 
-	return USB::bulkWrite(device, sizeof(adb_message), (uint8_t*)&message);
+	return USB1::bulkWrite(device, sizeof(adb_message), (uint8_t*)&message);
 }
 
 /**
  * Writes an ADB message with payload to the ADB device.
  *
- * @param device USB device handle.
+ * @param device USB1 device handle.
  * @param command ADB command.
  * @param arg0 first ADB argument (command dependent).
  * @param arg0 second ADB argument (command dependent).
@@ -220,18 +220,29 @@ int ADB::writeMessage(usb_device * device, uint32_t command, uint32_t arg0, uint
 //	serialPrint("OUT << "); adb_printMessage(&message);
 #endif
 
-unsigned long start = millis();
-	rcode = USB::bulkWrite(device, sizeof(adb_message), (uint8_t*)&message);
+Serial.print("size of adb_message: "); Serial.println(sizeof(adb_message));
+Serial.print("length: "); Serial.println(length);
+Serial.print("sum: "); Serial.println(sum);
+Serial.print("magic: "); Serial.println(message.magic);
+uint8_t *p = (uint8_t*)&message;
+for(int i=0; i<sizeof(adb_message); i++)
+	Serial.print(*p++, HEX);
+Serial.print("\n");
+	rcode = USB1::bulkWrite(device, sizeof(adb_message), (uint8_t*)&message);
 	if (rcode) return rcode;
 
-	rcode = USB::bulkWrite(device, length, data);
+p = data;
+for(int i=0; i<length; i++)
+	Serial.print(*p++, HEX);
+Serial.print("\n");
+	rcode = USB1::bulkWrite(device, length, data);
 	return rcode;
 }
 
 /**
  * Writes an ADB command with a string as payload.
  *
- * @param device USB device handle.
+ * @param device USB1 device handle.
  * @param command ADB command.
  * @param arg0 first ADB argument (command dependent).
  * @param arg0 second ADB argument (command dependent).
@@ -254,13 +265,10 @@ boolean ADB::pollMessage(adb_message * message, boolean poll)
 	int bytesRead;
 	uint8_t buf[ADB_USB_PACKETSIZE];
 
-if(false)
-	Serial.println("Polling for lies");
+	// Poll a packet from the USB1
+	bytesRead = USB1::bulkRead(adbDevice, ADB_USB_PACKETSIZE, buf, poll);
 
-	// Poll a packet from the USB
-	bytesRead = USB::bulkRead(adbDevice, ADB_USB_PACKETSIZE, buf, poll);
-
-	// Check if the USB in transfer was successful.
+	// Check if the USB1 in transfer was successful.
 	if (bytesRead<0) return false;
 
 	// Check if the buffer contains a valid message
@@ -375,7 +383,7 @@ void ADB::handleWrite(Connection * connection, adb_message * message)
 		int len = bytesLeft < ADB_USB_PACKETSIZE ? bytesLeft : ADB_USB_PACKETSIZE;
 
 		// Read payload
-		bytesRead = USB::bulkRead(adbDevice, len, buf, false);
+		bytesRead = USB1::bulkRead(adbDevice, len, buf, false);
 
 //		if (len != bytesRead)
 //			serialPrintf("bytes read mismatch: %d expected, %d read, %ld left\n", len, bytesRead, bytesLeft);
@@ -424,7 +432,7 @@ void ADB::handleConnect(adb_message * message)
 
 	// Read payload (remote ADB device ID)
 	len = message->data_length < MAX_BUF_SIZE ? message->data_length : MAX_BUF_SIZE;
-	bytesRead = USB::bulkRead(adbDevice, len, buf, false);
+	bytesRead = USB1::bulkRead(adbDevice, len, buf, false);
 
 	// Signal that we are now connected to an Android device (yay!)
 	connected = true;
@@ -435,17 +443,17 @@ void ADB::handleConnect(adb_message * message)
 }
 
 /**
- * This method is called periodically to check for new messages on the USB bus and process them.
+ * This method is called periodically to check for new messages on the USB1 bus and process them.
  */
 boolean ADB::poll()
 {
 	Connection * connection;
 	adb_message message;
 
-	// Poll the USB layer.
-	USB::poll();
+	// Poll the USB1 layer.
+	USB1::poll();
 
-	// If no USB device, there's no work for us to be done, so just return.
+	// If no USB1 device, there's no work for us to be done, so just return.
 	if (adbDevice==NULL)
 		return false;
 
@@ -461,10 +469,7 @@ boolean ADB::poll()
 		ADB::openClosedConnections();
 
 	// Check for an incoming ADB message.
-	bool pollOnly = true;
-	if(firstConnection->status == ADB_WRITING)
-		pollOnly= false;
-	if (!ADB::pollMessage(&message, pollOnly))
+	if (!ADB::pollMessage(&message, true))
 		return false;
 
 	// Handle a response from the ADB device to our CONNECT message.
@@ -515,9 +520,9 @@ boolean ADB::isAdbInterface(usb_interfaceDescriptor * interface)
 }
 
 /**
- * Checks whether the a connected USB device is an ADB device and populates a configuration record if it is.
+ * Checks whether the a connected USB1 device is an ADB device and populates a configuration record if it is.
  *
- * @param device USB device.
+ * @param device USB1 device.
  * @param handle pointer to a configuration record. The endpoint device address, configuration, and endpoint information will be stored here.
  * @return true iff the device is an ADB device.
  */
@@ -528,7 +533,7 @@ boolean ADB::isAdbDevice(usb_device * device, int configuration, adb_usbConfigur
 	int bytesRead;
 
 	// Read the length of the configuration descriptor.
-	bytesRead = USB::getConfigurationDescriptor(device, configuration, MAX_BUF_SIZE, buf);
+	bytesRead = USB1::getConfigurationDescriptor(device, configuration, MAX_BUF_SIZE, buf);
 	if (bytesRead<0) return false;
 
 	int pos = 0;
@@ -582,29 +587,33 @@ boolean ADB::isAdbDevice(usb_device * device, int configuration, adb_usbConfigur
 		pos += descriptorLength;
 	}
 
-	return ret;
+	if(!ret)
+		Serial.println("Not a chad");
+	else
+		Serial.println("Chad it up");
 
+	return ret;
 }
 
 /**
  * Initialises an ADB device.
  *
- * @param device the USB device.
+ * @param device the USB1 device.
  * @param configuration configuration information.
  */
 void ADB::initUsb(usb_device * device, adb_usbConfiguration * handle)
 {
-	// Initialise/configure the USB device.
+	// Initialise/configure the USB1 device.
 	// TODO write a usb_initBulkDevice function?
-	USB::initDevice(device, handle->configuration);
+	USB1::initDevice(device, handle->configuration);
 
 	// Initialise bulk input endpoint.
-	USB::initEndPoint(&(device->bulk_in), handle->inputEndPointAddress);
+	USB1::initEndPoint(&(device->bulk_in), handle->inputEndPointAddress);
 	device->bulk_in.attributes = USB_TRANSFER_TYPE_BULK;
 	device->bulk_in.maxPacketSize = ADB_USB_PACKETSIZE;
 
 	// Initialise bulk output endpoint.
-	USB::initEndPoint(&(device->bulk_out), handle->outputEndPointAddress);
+	USB1::initEndPoint(&(device->bulk_out), handle->outputEndPointAddress);
 	device->bulk_out.attributes = USB_TRANSFER_TYPE_BULK;
 	device->bulk_out.maxPacketSize = ADB_USB_PACKETSIZE;
 
@@ -613,10 +622,10 @@ void ADB::initUsb(usb_device * device, adb_usbConfiguration * handle)
 }
 
 /**
- * Handles events from the USB layer.
+ * Handles events from the USB1 layer.
  *
- * @param device USB device that generated the event.
- * @param event USB event.
+ * @param device USB1 device that generated the event.
+ * @param event USB1 event.
  */
 static void usbEventHandler(usb_device * device, usb_eventType event)
 {

@@ -1,7 +1,6 @@
 #include <SPI.h>
 #include <Wire.h>
-
-#include "/home/ryantr/Software/QuadRover/arduino/Adb/Adb.h"
+#include <Adb.h>
 
 #define SONAR_PIN 2
 
@@ -141,7 +140,7 @@ void loop()
       Serial.println("Lost the phone");
     phoneIsConnected = false;
   }
-  else if((millis()-lastPhoneUpdateTimeMS) > 3)
+  else if((millis()-lastPhoneUpdateTimeMS) > 30)
     Serial.println(millis()-lastPhoneUpdateTimeMS);
 
   for(int i=0; i<4; i++)
@@ -171,18 +170,18 @@ void loop()
 
     if(phoneIsConnected)
     {
-//      uint8_t code = COMM_ARDUINO_HEIGHT;
-//      // ADB comm seems to wait for an ok reply which is needed
-//      // before it will send again. I don't want to wait for that
-//      // So I'll build everything into a single send
-//      uint8_t buff[3];
-//      buff[0] = code;
-//      memcpy(&(buff[1]),&height,2);
-//      connection->write(3,&(buff[0]));
+      uint8_t code = COMM_ARDUINO_HEIGHT;
+      // ADB comm seems to wait for an ok reply which is needed
+      // before it will send again. I don't want to wait for that
+      // So I'll build everything into a single send
+      uint8_t buff[3];
+      buff[0] = code;
+      memcpy(&(buff[1]),&height,2);
+      connection->write(3,&(buff[0]));
     }
   }
 
-  if(millis()-lastHeightSendTimeMS > 50)
+  if(millis()-lastHeightSendTimeMS > 1000)
   {
     lastHeightSendTimeMS = millis();
 
