@@ -1,10 +1,11 @@
 #include <SPI.h>
-#include <Adb.h>
 #include <Wire.h>
+
+#include "/home/ryantr/Software/QuadRover/arduino/Adb/Adb.h"
 
 #define SONAR_PIN 2
 
-int verbosity=0;
+int verbosity=1;
 
 short motorCommands[4];
 
@@ -58,13 +59,13 @@ void adbEventHandler(Connection * connection, adb_eventType event, uint16_t leng
 
 boolean sendCommand(byte addr, short cmd)
 {
-  Wire.beginTransmission(addr);
-  byte upper = floor(cmd/8.0);
-  byte lower = cmd % 8;
-  Wire.write(upper);
-  Wire.write( lower & 0x07 );
-  byte result = Wire.endTransmission(true);
-  return result == 0;
+//  Wire.beginTransmission(addr);
+//  byte upper = floor(cmd/8.0);
+//  byte lower = cmd % 8;
+//  Wire.write(upper);
+//  Wire.write( lower & 0x07 );
+//  byte result = Wire.endTransmission(true);
+//  return result == 0;
 }
 
 byte MOTOR_ADDR_E = (0x53 + (0 << 1)) >> 1;
@@ -87,15 +88,15 @@ void setup()
   }
 
   delay(500);
-
+Serial.println("1");
   // Initialise the ADB subsystem.  
   ADB::init();
   // Open an ADB stream to the phone's shell. Auto-reconnect
   connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
-
+Serial.println("2");
   delay(1000);
 
-  Wire.begin();
+//  Wire.begin();
   motorAddr[0] = MOTOR_ADDR_N;
   motorAddr[1] = MOTOR_ADDR_E;
   motorAddr[2] = MOTOR_ADDR_S;
@@ -107,7 +108,7 @@ void setup()
     sendCommand(motorAddr[i], 0);
   }
 
-  doRegularMotorStart();
+//  doRegularMotorStart();
 
   phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();
@@ -140,6 +141,8 @@ void loop()
       Serial.println("Lost the phone");
     phoneIsConnected = false;
   }
+  else if((millis()-lastPhoneUpdateTimeMS) > 3)
+    Serial.println(millis()-lastPhoneUpdateTimeMS);
 
   for(int i=0; i<4; i++)
   {
@@ -168,14 +171,14 @@ void loop()
 
     if(phoneIsConnected)
     {
-      uint8_t code = COMM_ARDUINO_HEIGHT;
-      // ADB comm seems to wait for an ok reply which is needed
-      // before it will send again. I don't want to wait for that
-      // So I'll build everything into a single send
-      uint8_t buff[3];
-      buff[0] = code;
-      memcpy(&(buff[1]),&height,2);
-      connection->write(3,&(buff[0]));
+//      uint8_t code = COMM_ARDUINO_HEIGHT;
+//      // ADB comm seems to wait for an ok reply which is needed
+//      // before it will send again. I don't want to wait for that
+//      // So I'll build everything into a single send
+//      uint8_t buff[3];
+//      buff[0] = code;
+//      memcpy(&(buff[1]),&height,2);
+//      connection->write(3,&(buff[0]));
     }
   }
 
@@ -201,6 +204,7 @@ void loop()
   }
 
   while(ADB::poll());
+  
   delay(1);
 } 
 

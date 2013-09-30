@@ -69,7 +69,7 @@ using namespace toadlet::egg;
 				if(mSocket != NULL)
 					Log::alert("Connected to motors");
 			}
-			else if(!mMotorsEnabled && !mDoMotorWarmup && lastSendTime.getElapsedTimeMS() > 20)
+			else if(!mMotorsEnabled && !mDoMotorWarmup)// && lastSendTime.getElapsedTimeMS() > 20)
 			{
 				// this is just to keep the connection alive
 				Collection<uint16> cmds(4,0);
@@ -118,6 +118,8 @@ using namespace toadlet::egg;
 			return;
 
 		mMutex_sendTime.lock();
+if(mLastSendTime.getElapsedTimeMS() > 10)
+	Log::alert(String()+"Last send time 1: " + mLastSendTime.getElapsedTimeMS());
 		mLastSendTime.setTime();
 		mMutex_sendTime.unlock();
 
@@ -144,6 +146,8 @@ using namespace toadlet::egg;
 			return;
 
 		mMutex_sendTime.lock();
+if(mLastSendTime.getElapsedTimeMS() > 10)
+	Log::alert(String()+"Last send time 2: " + mLastSendTime.getElapsedTimeMS());
 		mLastSendTime.setTime();
 		mMutex_sendTime.unlock();
 
