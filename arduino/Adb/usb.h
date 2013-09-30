@@ -25,12 +25,12 @@ typedef struct
 {
 	uint8_t bLength;				// Length of this descriptor.
 	uint8_t bDescriptorType;		// DEVICE descriptor type (USB_DESCRIPTOR_DEVICE).
-	uint16_t bcdUSB;				// USB Spec Release Number (BCD).
-	uint8_t bDeviceClass;			// Class code (assigned by the USB-IF). 0xFF-Vendor specific.
-	uint8_t bDeviceSubClass;		// Subclass code (assigned by the USB-IF).
-	uint8_t bDeviceProtocol;		// Protocol code (assigned by the USB-IF). 0xFF-Vendor specific.
+	uint16_t bcdUSB;				// USB1 Spec Release Number (BCD).
+	uint8_t bDeviceClass;			// Class code (assigned by the USB1-IF). 0xFF-Vendor specific.
+	uint8_t bDeviceSubClass;		// Subclass code (assigned by the USB1-IF).
+	uint8_t bDeviceProtocol;		// Protocol code (assigned by the USB1-IF). 0xFF-Vendor specific.
 	uint8_t bMaxPacketSize0;		// Maximum packet size for endpoint 0.
-	uint16_t idVendor;				// Vendor ID (assigned by the USB-IF).
+	uint16_t idVendor;				// Vendor ID (assigned by the USB1-IF).
 	uint16_t idProduct;				// Product ID (assigned by the manufacturer).
 	uint16_t bcdDevice;				// Device release number (BCD).
 	uint8_t iManufacturer;			// Index of String Descriptor describing the manufacturer.
@@ -60,9 +60,9 @@ typedef struct
 	uint8_t bInterfaceNumber;		// Number of this interface (0 based).
 	uint8_t bAlternateSetting;		// Value of this alternate interface setting.
 	uint8_t bNumEndpoints;			// Number of endpoints in this interface.
-	uint8_t bInterfaceClass;		// Class code (assigned by the USB-IF).  0xFF-Vendor specific.
-	uint8_t bInterfaceSubClass;		// Subclass code (assigned by the USB-IF).
-	uint8_t bInterfaceProtocol;		// Protocol code (assigned by the USB-IF).  0xFF-Vendor specific.
+	uint8_t bInterfaceClass;		// Class code (assigned by the USB1-IF).  0xFF-Vendor specific.
+	uint8_t bInterfaceSubClass;		// Subclass code (assigned by the USB1-IF).
+	uint8_t bInterfaceProtocol;		// Protocol code (assigned by the USB1-IF).  0xFF-Vendor specific.
 	uint8_t iInterface;				// Index of String Descriptor describing the interface.
 } usb_interfaceDescriptor;
 
@@ -77,7 +77,7 @@ typedef struct
 	uint8_t bInterval;				// Polling interval in frames.
 } usb_endpointDescriptor;
 
-// USB Setup Packet.
+// USB1 Setup Packet.
 typedef struct
 {
 	uint8_t bmRequestType;			// 0 Bit-map of request type
@@ -88,7 +88,7 @@ typedef struct
 } usb_setupPacket;
 
 /**
- * USB endpoint.
+ * USB1 endpoint.
  */
 typedef struct
 {
@@ -108,7 +108,7 @@ typedef struct
 } usb_endpoint;
 
 /**
- * USB device.
+ * USB1 device.
  */
 typedef struct
 {
@@ -146,15 +146,15 @@ typedef enum
 #define bmREQ_HIDREPORT     USB_SETUP_DEVICE_TO_HOST|USB_SETUP_TYPE_STANDARD|USB_SETUP_RECIPIENT_INTERFACE
 */
 
-#define USB_XFER_TIMEOUT    5000    // USB transfer timeout in milliseconds, per section 9.2.6.1 of USB 2.0 spec
+#define USB_XFER_TIMEOUT    5000    // USB1 transfer timeout in milliseconds, per section 9.2.6.1 of USB1 2.0 spec
 #define USB_NAK_LIMIT       32000   // NAK limit for a transfer. o meand NAKs are not counted
 #define USB_RETRY_LIMIT     3       // retry limit for a transfer
 #define USB_SETTLE_DELAY    200     // settle delay in milliseconds
 #define USB_NAK_NOWAIT      1       // used in Richard's PS2/Wiimote code
 
-#define USB_NUMDEVICES  2           // Number of USB devices
+#define USB_NUMDEVICES  2           // Number of USB1 devices
 
-/* USB state machine states */
+/* USB1 state machine states */
 
 #define USB_STATE_MASK                                      0xf0
 
@@ -172,7 +172,7 @@ typedef enum
 #define USB_STATE_RUNNING                                   0x90
 #define USB_STATE_ERROR                                     0xa0
 
-// USB Device
+// USB1 Device
 typedef struct _usb_deviceRecord
 {
     usb_endpoint * epinfo;      //device endpoint information
@@ -181,7 +181,7 @@ typedef struct _usb_deviceRecord
 
 typedef void(usb_eventHandler)(usb_device * device, usb_eventType event);
 
-class USB
+class USB1
 {
 
 private:
