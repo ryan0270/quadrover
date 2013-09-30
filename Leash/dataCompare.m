@@ -108,6 +108,10 @@ targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_
 targetLocTime = phoneData(targetLocIndices,1)'/1000;
 targetLoc = phoneData(targetLocIndices,3:8)';
 
+sonarHeightIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_SONAR_HEIGHT);
+sonarHeightTime = phoneData(sonarHeightIndices,1)'/1000;
+sonarHeight = phoneData(sonarHeightIndices,4)';
+
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
 RotQuadToPhone = createRotMat(3,-pi/4)*...
@@ -159,11 +163,15 @@ if exist('state','var') && ~isempty(state)
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 	mask = viconStateTime <= stateTime(end);
+	offset = [0 0 0 0 0 0 0 0 0.1 0 0 0];
 	for i=1:12
 		subplot(4,3,i)
 		
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(stateTime, state(i,:)); hold all
+		plot(stateTime, state(i,:)+offset(i)); hold all
+		if i == 9
+			plot(sonarHeightTime, sonarHeight+0.1, 'm');
+		end
 		if i > 9
 			plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
 		end
@@ -184,7 +192,7 @@ if exist('state','var') && ~isempty(state)
 % 	% legend('Vicon','Phone');
 	
 	viconInterp = interp1(viconStateTime,viconState',tranStateTime,[],'extrap')';
-	err = tranState-viconInterp(7:end,:);
+	err = tranState-viconInterp(7:end,:)+diag(offset(7:end))*ones(size(tranState));
 	rmsErr = rms(err')';
 	fprintf('tran state rms err:\t');
 	for i=1:6
@@ -194,7 +202,7 @@ if exist('state','var') && ~isempty(state)
 	
 	if ~isempty(mapVelEst)
 		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelEstTime,[],'extrap')';
-		rmsErrHeight = rms(viconStateMAPInterp(9,:)-mapHeightEst);
+		rmsErrHeight = rms(viconStateMAPInterp(9,:)-mapHeightEst-offset(9));
 		rmsErrVel = rms(viconStateMAPInterp(10:12,:)' - mapVelEst')';
 		fprintf('MAP vel rms err:\t');
 		fprintf('---\t---\t%1.3f\t',rmsErrHeight);

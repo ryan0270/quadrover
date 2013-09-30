@@ -184,7 +184,7 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	double mz = max(-curState[2][0], 0.130);
 	double sz = sqrt(curErrCov[2][2]);
 
-	double camOffset = 0.087;
+	double camOffset = 0;
 	mz -= camOffset;
 
 	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);

@@ -94,7 +94,7 @@ class SensorManager : public CommManagerListener,
 	static int getSecTemp();
 	static int getFuelgaugeTemp();
 	void runTemperatureMonitor();
-//	void runHeightMonitor();
+	void runHeightMonitor();
 
 	QuadLogger *mQuadLogger;
 
