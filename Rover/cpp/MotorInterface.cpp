@@ -55,8 +55,12 @@ using namespace toadlet::egg;
 		sched_param sp;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
+		Time lastSendTime;
 		while(mRunning)
 		{
+			mMutex_sendTime.lock();
+			lastSendTime.setTime(mLastSendTime);
+			mMutex_sendTime.unlock();
 			if(!isConnected())
 			{
 				mWaitingForConnection = true;
@@ -65,7 +69,7 @@ using namespace toadlet::egg;
 				if(mSocket != NULL)
 					Log::alert("Connected to motors");
 			}
-			else if(!mMotorsEnabled && !mDoMotorWarmup)
+			else if(!mMotorsEnabled && !mDoMotorWarmup && lastSendTime.getElapsedTimeMS() > 20)
 			{
 				// this is just to keep the connection alive
 				Collection<uint16> cmds(4,0);
@@ -113,6 +117,10 @@ using namespace toadlet::egg;
 		if(!isConnected() || !mMotorsEnabled)
 			return;
 
+		mMutex_sendTime.lock();
+		mLastSendTime.setTime();
+		mMutex_sendTime.unlock();
+
 		mMutex_socket.lock(); mMutex_data.lock();
 
 		for(int i=0; i<cmds.size(); i++)
@@ -134,6 +142,10 @@ using namespace toadlet::egg;
 	{
 		if(!isConnected())
 			return;
+
+		mMutex_sendTime.lock();
+		mLastSendTime.setTime();
+		mMutex_sendTime.unlock();
 
 		mMutex_socket.lock(); mMutex_data.lock();
 

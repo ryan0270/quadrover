@@ -66,7 +66,7 @@ using std::isnan;
 		mTargetNominalLength = 0.210;
 		mViconCameraOffset[0][0] = 0;
 		mViconCameraOffset[1][0] = 0;
-		mViconCameraOffset[2][0] = 0.1;
+		mViconCameraOffset[2][0] = 0;
 		mIsViconCameraOffsetSet = false;
 
 		mObsvAngular = NULL;

@@ -177,7 +177,6 @@ void loop()
       memcpy(&(buff[1]),&height,2);
       connection->write(3,&(buff[0]));
     }
-
   }
 
   if(millis()-lastHeightSendTimeMS > 50)

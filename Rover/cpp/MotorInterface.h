@@ -81,6 +81,8 @@ class MotorInterface
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
 	Time mStartTime;
+	Time mLastSendTime;
+	std::mutex mMutex_sendTime;
 
 	toadlet::egg::Collection<MotorInterfaceListener*> mListeners;
 	toadlet::egg::Collection<SonarListener*> mSonarListeners;
