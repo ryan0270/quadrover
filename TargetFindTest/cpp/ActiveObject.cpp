@@ -173,12 +173,32 @@ Array2D<double> ActiveObject::calcCorrespondence(const vector<shared_ptr<ActiveO
 		S.inject(Sd+Sn);
 		eigMid = 0.5*(S[0][0]+S[1][1]);
 		eigOffset = 0.5*sqrt( (S[0][0]-S[1][1])*(S[0][0]-S[1][1]) + 4*S[0][1]*S[0][1] );
-		D[0][0] = eigMid-eigOffset;
-		D[1][1] = eigMid+eigOffset;
-		V[0][0] = D[0][0]-S[1][1];
-		V[1][0] = S[0][1];
-		V[0][1] = V[1][0];
-		V[1][1] = -V[0][0];
+		D[0][0] = eigMid+eigOffset;
+		D[1][1] = eigMid-eigOffset;
+		if(S[0][1] == 0)
+		{
+			if(S[0][0] > S[1][1])
+			{
+				V[0][0] = 1;
+				V[1][0] = 0;
+				V[0][1] = 0;
+				V[1][1] = 1;
+			}
+			else
+			{
+				V[0][0] = 0;
+				V[1][0] = 1;
+				V[0][1] = 1;
+				V[1][1] = 0;
+			}
+		}
+		else
+		{
+			V[0][0] = D[0][0]-S[1][1];
+			V[1][0] = S[0][1];
+			V[0][1] = V[1][0];
+			V[1][1] = -V[0][0];
+		}
 
 		theta1 = atan2(V[1][0], V[0][0]);
 		theta2 = atan2(V[1][1], V[1][0]);
