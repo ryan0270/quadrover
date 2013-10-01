@@ -200,14 +200,12 @@ t3 += start.getElapsedTimeMS(); start.setTime();
 		}
 
 		/////////////////// Get location priors for active objects ///////////////////////
-		vector<pair<Array2D<double>, Array2D<double>>> priors;
 		Array2D<double> mv(3,1,0.0);
 		Array2D<double> Sv = 0.2*0.2*createIdentity((double)3);
 		double mz = 1;
 		double sz = 0.05;
 		double f = mCameraMatrix_640x480->at<double>(0,0);
 		Array2D<double> omega(3,1,0.0);
-//		priors = calcPriorDistributions(activeObjects, mv, Sv, mz, sz*sz, f, center, omega, curTime);
 
 cout << "---------------- priors --------------------------" << endl;
 		for(int i=0; i<activeObjects.size(); i++)
@@ -244,148 +242,60 @@ printArray("\n",C);
 		vector<Match> goodMatches;
 		shared_ptr<ActiveObject> aoPrev, aoCur;
 		vector<shared_ptr<ActiveObject>> repeatObjects, newObjects;
-		for(int j=0; j<curObjects.size(); j++)
+		int N1 = activeObjects.size();
+		int N2 = curObjects.size();
+		vector<bool> matched(N2, false);
+		for(int i=0; i<N1; i++)
 		{
-			aoCur = curObjects[j];
-			bool hasMatch = false;
-			for(int i=0; i<activeObjects.size(); i++)
+			if(C[i][N2] > 0.5)
+				continue; // this object probably doesn't have a partner
+
+			aoPrev = activeObjects[i];
+
+			int maxIndex = 0;
+			float maxScore = 0;
+			for(int j=0; j<N2; j++)
 			{
-				aoPrev = activeObjects[i];
-				if(C[i][j] > 0.50)
+				if(C[i][j] > maxScore && !matched[j])
 				{
-cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
-					hasMatch = true;
-
-					Match m;
-					m.aoPrev = aoPrev;
-					m.aoCur = aoCur;
-					m.score = C[i][j];
-					goodMatches.push_back(m);
-
-					// copy data over to update the shape and position
-					aoPrev->contour.swap(aoCur->contour);
-					aoPrev->mom = aoCur->mom;
-					aoPrev->lastCenter = aoCur->lastCenter;
-					aoPrev->lastFoundTime.setTime(curTime);
-					memcpy(aoPrev->huMom, aoCur->huMom, 7*sizeof(double));
-					memcpy(aoPrev->centralMoms, aoCur->centralMoms, 7*sizeof(double));
-					aoPrev->life= min((float)21, aoPrev->life+2);
-					repeatObjects.push_back(aoPrev);
-					break;
+					maxScore = C[i][j];
+					maxIndex =j;
+					matched[j] = true;
 				}
+//				else if(C[i][j] > 0.3)
+//				{
+//					// I think this object is probably a duplicate (i.e.
+//					// I found two very similar contours for the same
+//					// thing) There may be some cases where this is not
+//					// the best handling, though, but I'll dealing with
+//					// those when they become an issue
+//					matched[j] = true;
+//				}
 			}
 
-			if(!hasMatch)
-				newObjects.push_back(aoCur);
+			aoCur = curObjects[maxIndex];
+cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
+
+			Match m;
+			m.aoPrev = aoPrev;
+			m.aoCur = aoCur;
+			m.score = C[i][maxIndex];
+			goodMatches.push_back(m);
+
+			// copy data over to update the shape and position
+			aoPrev->contour.swap(aoCur->contour);
+			aoPrev->mom = aoCur->mom;
+			aoPrev->lastCenter = aoCur->lastCenter;
+			aoPrev->lastFoundTime.setTime(curTime);
+			memcpy(aoPrev->huMom, aoCur->huMom, 7*sizeof(double));
+			memcpy(aoPrev->centralMoms, aoCur->centralMoms, 7*sizeof(double));
+			aoPrev->life= min((float)21, aoPrev->life+2);
+			repeatObjects.push_back(aoPrev);
 		}
-
-
-		/////////////////// Find possible matches ///////////////////////
-//		vector<Match> possibleMatches;
-//		vector<shared_ptr<ActiveObject>> newObjects;
-//		cv::Moments mom;
-//		double ma[7];
-//		for(int i=0; i<curObjects.size(); i++)
-//		{
-//			shared_ptr<ActiveObject> ao1 = curObjects[i];
-//			memcpy(ma, ao1->centralMoms, 7*sizeof(double));
-//			float lowScore = 999;
-//			float minDist = 999;
-//			int lowIdx = -1;
-//			bool noPossibleMatch = true;
-//			for(int j=0; j<activeObjects.size(); j++)
-//			{
-//				// based on opencv matchShapes
-//				shared_ptr<ActiveObject> ao2 = activeObjects[j];
-//				double c1, c2, c3;
-//				c1 = c2 = c3 = 0;
-//				int sma, smb;
-//				for(int k=0; k<7; k++)
-//				{
-//					double ama = abs( ma[k] );
-////					double amb = abs( ao2->huMom[k] );
-//					double amb = abs( ao2->centralMoms[k] );
-//					if(ama < 1.e-5 || amb < 1.e-5)
-//						continue;
-//					if(ma[k] > 0)
-//						sma = 1;
-//					else if(ma[k] < 0)
-//						sma = -1;
-//					else
-//						sma = 0;
-////					if(ao2->huMom[k] > 0)
-//					if(ao2->centralMoms[k] > 0)
-//						smb = 1;
-////					else if(ao2->huMom[k] < 0)
-//					else if(ao2->centralMoms[k] < 0)
-//						smb = -1;
-//					else
-//						smb = 0;
-//
-//					ama = sma*log10(ama);
-//					amb = smb*log10(amb);
-//					c1 += abs(-1./ama+1./amb);
-//					c2 += abs(-ama+amb);
-//					c3 = max(c3, abs((ama-amb)/ama));
-//				}
-//
-//				float score = c1;
-//				float dist = cv::norm(cv::Mat(ao1->lastCenter), cv::Mat(ao2->lastCenter));
-//
-//				minDist = min(dist,minDist);
-//
-//				if(dist < 20)
-//				{
-//					lowScore = min(score, lowScore);
-//
-//					if(score < 1)
-//					{
-//						Match m;
-//						m.ao1 = ao1;
-//						m.ao2 = ao2;
-//						m.score = score;
-//						possibleMatches.push_back(m);
-//						noPossibleMatch = false;
-//					}
-//				}
-//			}
-//
-//			if(noPossibleMatch)
-//				newObjects.push_back(ao1);
-//		}
-//
-//t4 += start.getElapsedTimeMS(); start.setTime();
-//		/////////////////// now find the best possible matches and ensure unique matches ///////////////////////
-//		sort(possibleMatches.begin(), possibleMatches.end(), [&](const Match &m1, const Match &m2){return m1.score < m2.score;});
-//		vector<shared_ptr<ActiveObject>> repeatObjects;
-//		vector<Match> goodMatches;
-//		for(int i=0; i<possibleMatches.size(); i++)
-//		{
-//			shared_ptr<ActiveObject> ao1 = possibleMatches[i].ao1;
-//			shared_ptr<ActiveObject> ao2 = possibleMatches[i].ao2;
-//			if(ao1->life< 0)
-//				continue;
-//			if(find(repeatObjects.begin(), repeatObjects.end(), ao2) != repeatObjects.end())
-//			{
-//				// this active object has already been used by someone else
-//				if(find(newObjects.begin(), newObjects.end(), ao1) != newObjects.end())
-//					newObjects.push_back(ao1);
-//			}
-//			else
-//			{
-//cout << "matching " << ao1->id << " and " << ao2->id << endl;
-//				goodMatches.push_back(possibleMatches[i]);
-//				ao2->contour.swap(ao1->contour);
-//				ao2->mom = ao1->mom;
-//				ao2->lastCenter = ao1->lastCenter;
-//				ao2->lastFoundTime.setTime(curTime);
-//				memcpy(ao2->huMom, ao1->huMom, 7*sizeof(double));
-//				memcpy(ao2->centralMoms, ao1->centralMoms, 7*sizeof(double));
-//				ao2->life= min((float)21, ao2->life+2);
-//				repeatObjects.push_back(ao2);
-//				ao1->life= -1; // to mark that this is no longer valid
-//			}
-//		}
+		
+		for(int j=0; j<curObjects.size(); j++)
+			if(!matched[j])
+				newObjects.push_back(curObjects[j]);
 
 t5 += start.getElapsedTimeMS(); start.setTime();
 		for(int i=0; i<activeObjects.size(); i++)
@@ -403,6 +313,21 @@ t5 += start.getElapsedTimeMS(); start.setTime();
 		// TODO
 		for(int i=0; i<newObjects.size(); i++)
 			activeObjects.push_back(newObjects[i]);
+
+		/////////////////// self-similarity check ///////////////////////
+		// First reset all expected positions and covariances
+		for(int i=0; i<activeObjects.size(); i++)
+		{
+			activeObjects[i]->expectedPos[0][0] = activeObjects[i]->lastCenter.x;
+			activeObjects[i]->expectedPos[1][0] = activeObjects[i]->lastCenter.y;
+
+			if(activeObjects[i]->posCov[0][1] == 0) // this is very crude indication of a new object
+				activeObjects[i]->posCov.inject(Sn);
+			else {/* posCov was already set when calculating the priors */};
+		}
+		// now calculate the correspondence matrix
+		C = ActiveObject::calcCorrespondence(activeObjects, activeObjects, Sn, SnInv, varxi, 0);
+printArray("self-similarity:\n",C);
 
 t6 += start.getElapsedTimeMS(); start.setTime();
 		imshow("chad",oldImg);
