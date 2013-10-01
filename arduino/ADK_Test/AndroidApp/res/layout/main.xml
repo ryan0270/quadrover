@@ -19,7 +19,6 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/demoTitle"
         android:layout_centerHorizontal="true"
-        android:text="@string/refreshing"
         android:padding="8dp"
         android:textSize="18sp" />
     

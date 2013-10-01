@@ -3,18 +3,15 @@
 #include <thread>
 #include <android/log.h>
 
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "TestActivity", __VA_ARGS__))
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "ADKTest", __VA_ARGS__))
 
 
 bool isShutdown = true;
 bool doShutdown = true;
-bool haveNewData = false;
-float newFloat = 0;
 JavaVM *myJVM = NULL;
 jobject obj = 0;
 jclass cls = 0;
-jmethodID mid_sendFloat = 0;
-jmethodID mid_sendCommControlMessage = 0;
+jmethodID mid_sendMotorCommands = 0;
 
 enum
 {
@@ -33,31 +30,21 @@ jint JNI_OnLoad(JavaVM *jvm, void *reserved)
 		LOGI("Error getting environ");
 		return -1;
 	}
-	jclass tmpcls = env->FindClass("com/icsl/serialtest/TestActivity");
-	cls = (jclass)env->NewGlobalRef(tmpcls); // keep cls and, hence, mid_sendFloat valid even after this function exits
-	mid_sendFloat = env->GetMethodID(cls, "sendFloat","(FI)I");
-	if(mid_sendFloat == 0)
+	jclass tmpcls = env->FindClass("com/icsl/adktest/ADKTest");
+	cls = (jclass)env->NewGlobalRef(tmpcls); // keep cls and, hence, mid_sendMotorCommands valid even after this function exits
+	mid_sendMotorCommands = env->GetMethodID(cls, "sendMotorCommands","(IIII)Z");
+	if(mid_sendMotorCommands == 0)
 	{
-		LOGI("Couldn't find java method sendFloat");
+		LOGI("Couldn't find java method sendMotorCommands");
 		return -1;
 	}
+	else
+		LOGI("Found java function sendMotorCommands");
 
-	mid_sendCommControlMessage= env->GetMethodID(cls, "sendCommControlMessage","(II)I");
-	if(mid_sendCommControlMessage== 0)
-	{
-		LOGI("Couldn't find java method sendInt");
-		return -1;
-	}
 	return JNI_VERSION_1_6;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_serialtest_TestActivity_doChad(JNIEnv* env, jobject thiz, jfloat val)
-{
-	newFloat = val;
-	haveNewData = true;
-}
-
-JNIEXPORT void JNICALL Java_com_icsl_serialtest_TestActivity_shutdown(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_adktest_ADKTest_jniShutdown(JNIEnv* env, jobject thiz)
 {
 	doShutdown = true;
 	env->DeleteGlobalRef(cls);
@@ -79,31 +66,29 @@ void run()
 		LOGI("Error getting environ");
 		return;
 	}
+	int vals[4];
+	vals[0] = 0;
+	vals[1] = 1;
+	vals[2] = 2;
+	vals[3] = 3;
     while( !doShutdown )
     {
-		if(haveNewData)
+		if(env->CallBooleanMethod(obj, mid_sendMotorCommands, vals[0], vals[1], vals[2], vals[3]))
 		{
-			float val = newFloat;
-			haveNewData = false;
-
-			if(val > 0.9)
-				val = 0;
-			int chad = COMM_ADK_PREFIX;
-			int bob = COMM_ADK_SUFFIX;
-			env->CallBooleanMethod(obj, mid_sendCommControlMessage, chad, timeoutMS);
-//			usleep(1e6);
-			env->CallBooleanMethod(obj, mid_sendFloat, val, timeoutMS);
-			env->CallBooleanMethod(obj, mid_sendCommControlMessage, bob, timeoutMS);
+			for(int i=0; i<4; i++)
+				vals[i]++;
+			LOGI("Sent");
 		}
-
-		usleep(10e3);
+		else
+			LOGI("Couldn't send commands");
+		usleep(500e3);
     }
 
 	myJVM->DetachCurrentThread();
 	isShutdown = true;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_serialtest_TestActivity_jniInit(JNIEnv* env, jobject thiz)
+JNIEXPORT void JNICALL Java_com_icsl_adktest_ADKTest_jniInit(JNIEnv* env, jobject thiz)
 {
 	obj = env->NewGlobalRef(thiz);
 
