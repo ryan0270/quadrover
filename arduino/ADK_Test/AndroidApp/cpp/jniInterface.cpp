@@ -13,12 +13,6 @@ jobject obj = 0;
 jclass cls = 0;
 jmethodID mid_sendMotorCommands = 0;
 
-enum
-{
-	COMM_ADK_PREFIX = 0xDDCCBBAA,
-	COMM_ADK_SUFFIX = 0xDDCCBBAA-2,
-};
-
 extern "C" {
 jint JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
@@ -54,6 +48,12 @@ JNIEXPORT void JNICALL Java_com_icsl_adktest_ADKTest_jniShutdown(JNIEnv* env, jo
 		usleep(10e3);
 }
 
+JNIEXPORT void JNICALL Java_com_icsl_adktest_ADKTest_onNewVal(JNIEnv* env, jobject thiz, jlong jval)
+{
+	uint16_t val = jval;
+	LOGI("val: %i",val);
+}
+
 void run()
 {
 	isShutdown = false;
@@ -77,14 +77,13 @@ void run()
 		{
 			for(int i=0; i<4; i++)
 				vals[i]++;
-			LOGI("Sent");
 		}
-		else
-			LOGI("Couldn't send commands");
-		usleep(500e3);
+		usleep(5e3);
     }
-
 	myJVM->DetachCurrentThread();
+
+	LOGI("jni runner dead");
+
 	isShutdown = true;
 }
 
