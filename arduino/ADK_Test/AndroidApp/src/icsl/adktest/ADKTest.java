@@ -164,6 +164,7 @@ public class ADKTest extends Activity implements Runnable {
 			mInputStream = new FileInputStream(fd);
 			mOutputStream = new FileOutputStream(fd);
 			Log.d(ME, "accessory opened");
+			setAdkConnected(true);
 		}
 		else
 			Log.d(ME, "accessory open fail");
@@ -172,6 +173,7 @@ public class ADKTest extends Activity implements Runnable {
 	private void closeAccessory()
 	{
 		Log.i(ME,"Closing accessory");
+		setAdkConnected(false);
 		try
 		{
 			if (mFileDescriptor != null)
@@ -323,6 +325,7 @@ public class ADKTest extends Activity implements Runnable {
 	public native void jniInit();
 	public native void jniShutdown();
 	public native void onNewVal(long val);
+	public native void setAdkConnected(boolean isConnected);
 
 	static{
 		System.loadLibrary("adkTest");
