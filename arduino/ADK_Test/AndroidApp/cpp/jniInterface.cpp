@@ -8,6 +8,7 @@
 
 bool isShutdown = true;
 bool doShutdown = true;
+bool isAdkConnected = false;
 JavaVM *myJVM = NULL;
 jobject obj = 0;
 jclass cls = 0;
@@ -54,6 +55,15 @@ JNIEXPORT void JNICALL Java_com_icsl_adktest_ADKTest_onNewVal(JNIEnv* env, jobje
 	LOGI("val: %i",val);
 }
 
+JNIEXPORT void JNICALL Java_com_icsl_adktest_ADKTest_setAdkConnected(JNIEnv* env, jobject thiz, jboolean jisConnected)
+{
+	isAdkConnected = jisConnected;
+	if(isAdkConnected)
+		LOGI("ADK board is connected");
+	else
+		LOGI("ADK board is disconnected");
+}
+
 void run()
 {
 	isShutdown = false;
@@ -73,12 +83,12 @@ void run()
 	vals[3] = 3;
     while( !doShutdown )
     {
-		if(env->CallBooleanMethod(obj, mid_sendMotorCommands, vals[0], vals[1], vals[2], vals[3]))
+		if(isAdkConnected && env->CallBooleanMethod(obj, mid_sendMotorCommands, vals[0], vals[1], vals[2], vals[3]))
 		{
 			for(int i=0; i<4; i++)
 				vals[i]++;
 		}
-		usleep(5e3);
+		usleep(2e3);
     }
 	myJVM->DetachCurrentThread();
 

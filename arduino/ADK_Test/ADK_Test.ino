@@ -23,33 +23,53 @@ void setup()
 }
 
 uint16_t vals[4];
+unsigned long lastCommTime = 0;
+unsigned long lastSendTime = 0;
+boolean isConnected = false;
+unsigned long startTime = 0;
 void loop()
 {    
+  if(millis()-lastCommTime > 100)
+    isConnected = false;
   Usb.Task();
   if(adk.isReady()) 
   {
+    if(startTime == 0)
+      startTime = millis();
     boolean haveNewVals = false;
-    int cnt = 0;
     while(readVals(vals) == 0)
-    { haveNewVals = true; cnt++;}
+    {
+      isConnected = true;
+      haveNewVals = true;
+      if(millis()-lastCommTime > 10)
+      {
+        Serial.print("long comm time: ");
+        Serial.println(millis()-lastCommTime);
+      }
+      lastCommTime = millis();
+    }
     
     if(haveNewVals)
     {
 //      Serial.print("cnt: ");
 //      Serial.println(cnt);
-      printVals();
-      
-      uint16_t sum = 0;
-      for(int i=0; i<4; i++)
-        sum += vals[i];
-        
-      sendVal(sum);
-    }
+//      printVals();
+     }
+     
+     if(millis()-lastSendTime > 100 && isConnected)
+     {
+       lastSendTime = millis();
+       uint16_t sum = 0;
+       for(int i=0; i<4; i++)
+         sum += vals[i];
+       
+       sendVal(sum);
+     }
   } 
   else
     digitalWrite(LED, LOW);
     
-    delay(100);
+//  delay(1);
 }
 
 int readVals(uint16_t vals[])
