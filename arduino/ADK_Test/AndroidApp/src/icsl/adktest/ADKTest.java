@@ -36,7 +36,7 @@ import java.io.IOException;
 
 public class ADKTest extends Activity implements Runnable {
 
-    private final String TAG = "ADK_Test";
+    private final String ME = "ADK_Test";
 
 	private static final String ACTION_USB_PERMISSION = "com.google.android.DemoKit.action.USB_PERMISSION";
 
@@ -67,7 +67,7 @@ public class ADKTest extends Activity implements Runnable {
 					if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false))
 						openAccessory(accessory);
 					else
-						Log.d(TAG, "permission denied for accessory " + accessory);
+						Log.d(ME, "permission denied for accessory " + accessory);
 					mPermissionRequestPending = false;
 				}
 			}
@@ -111,7 +111,7 @@ public class ADKTest extends Activity implements Runnable {
 			try{ Thread.sleep(10); }
 			catch(Exception e){};
 		}
-//		shutdown();
+		jniShutdown();
         finish();
     }
 
@@ -141,9 +141,10 @@ public class ADKTest extends Activity implements Runnable {
 			}
 		}
 		else
-			Log.d(TAG, "mAccessory is null");
+			Log.d(ME, "mAccessory is null");
 
-//		jniInit();
+		(new Thread(this)).start();
+		jniInit();
     }
 
 	@Override
@@ -161,10 +162,10 @@ public class ADKTest extends Activity implements Runnable {
 			FileDescriptor fd = mFileDescriptor.getFileDescriptor();
 			mInputStream = new FileInputStream(fd);
 			mOutputStream = new FileOutputStream(fd);
-			Log.d(TAG, "accessory opened");
+			Log.d(ME, "accessory opened");
 		}
 		else
-			Log.d(TAG, "accessory open fail");
+			Log.d(ME, "accessory open fail");
 	}
  
 	private void closeAccessory()
@@ -186,45 +187,90 @@ public class ADKTest extends Activity implements Runnable {
 	boolean mDoThreadRun = false;
 	public void run()
 	{
-		Log.i(TAG,"Starting runner");
+		Log.i(ME,"Starting runner");
 		mIsThreadDone = false;
 		mDoThreadRun = true;
 		int timeoutMS = 500;
 		boolean blinkOn = false;
+		int[] curVals = new int[4];
+		curVals[0] = 0;
+		curVals[1] = 1;
+		curVals[2] = 2;
+		curVals[3] = 3;
 		while(mDoThreadRun)
 		{
-			if(mOutputStream != null)
-			{
-				blinkOn = !blinkOn;
-				byte[] buff = new byte[1];
-				buff[0] = blinkOn ? (byte)1 : (byte)0;
-
-				try
-				{ mOutputStream.write(buff); }
-				catch (IOException e)
-				{ Log.e(TAG, "write failed: ", e); }
-			}
-//			if(mIsNewDataReady && mDriver != null)
+//			if(sendMotorCommands(curVals))
 //			{
-//				float val = mNewFloat;
-//				doChad(val);
-//				mIsNewDataReady = false;
+//				for(int i=0; i<curVals.length; i++)
+//					curVals[i]++;
 //			}
-//
 			try{ Thread.sleep(500); }
-			catch(Exception e){ Log.e(TAG,"Caught sleeping"); }
+			catch(Exception e){ Log.e(ME,"Caught sleeping"); }
 		}
 		
 		mIsThreadDone = true;
 	}
 
+	public boolean sendMotorCommands(int cmd0, int cmd1, int cmd2, int cmd3)
+	{
+		if(mOutputStream == null)
+			return false;
+
+		byte[] b0 = int2ByteArray(cmd0,2);
+		byte[] b1 = int2ByteArray(cmd1,2);
+		byte[] b2 = int2ByteArray(cmd2,2);
+		byte[] b3 = int2ByteArray(cmd3,2);
+
+		byte[] buff = new byte[8];
+		buff[0] = b0[0];
+		buff[1] = b0[1];
+		buff[2] = b1[0];
+		buff[3] = b1[1];
+		buff[4] = b2[0];
+		buff[5] = b2[1];
+		buff[6] = b3[0];
+		buff[7] = b3[1];
+
+		boolean success = false;
+		try
+		{
+			mOutputStream.write(buff);
+			success = true;
+		}
+		catch (IOException e)
+		{ Log.e(ME, "write failed: ", e); }
+
+		return success;
+	}
+
+	public byte[] int2ByteArray(int val, int numBytes)
+	{
+		byte[] chad = new byte[numBytes];
+		for(int i=0; i<numBytes; i++)
+			chad[i] = (byte)(val >> i*8);
+
+		return chad;
+	}
+
+	// I don't use this so it's not well tested
+	public byte[] float2ByteArray(float val)
+	{
+		int valBytes = Float.floatToIntBits(val);
+		byte[] chad = new byte[4];
+		chad[3] = (byte)(valBytes >> 3*8);
+		chad[2] = (byte)(valBytes >> 2*8);
+		chad[1] = (byte)(valBytes >> 1*8);
+		chad[0] = (byte)(valBytes >> 0*8);
+
+		return chad;
+	}
 
 //	public native void doChad(float val);
-//	public native void jniInit();
-//	public native void shutdown();
-//
-//	static{
-//		System.loadLibrary("SerialTest");
-//	}
+	public native void jniInit();
+	public native void jniShutdown();
+
+	static{
+		System.loadLibrary("adkTest");
+	}
 
 }
