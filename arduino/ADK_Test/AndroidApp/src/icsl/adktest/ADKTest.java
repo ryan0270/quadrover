@@ -12,14 +12,9 @@ import android.view.View;
 import android.widget.ToggleButton;
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
 import android.util.Log;
 import android.widget.ScrollView;
 import android.widget.TextView;
-
-import android.hardware.usb.UsbDevice;
 
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbAccessory;
@@ -67,7 +62,7 @@ public class ADKTest extends Activity implements Runnable {
 					if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false))
 						openAccessory(accessory);
 					else
-						Log.d(ME, "permission denied for accessory " + accessory);
+						Log.i(ME, "permission denied for accessory " + accessory);
 					mPermissionRequestPending = false;
 				}
 			}
