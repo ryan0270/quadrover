@@ -29,10 +29,18 @@ import android.util.Log;
 import android.widget.Toast;
 import android.view.SurfaceView;
 import android.view.SurfaceHolder;
+import android.hardware.usb.UsbAccessory;
+import android.hardware.usb.UsbManager;
+import android.os.ParcelFileDescriptor;
 
 import java.lang.Thread;
 import java.io.File;
 import java.util.List;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -59,6 +67,11 @@ public class RoverService extends Service {
 	private double mAvgDT = 0;
 	private Mat mImage = null;
 	private Bitmap mBmp = null;
+
+	private UsbManager mUsbManager;
+	private PendingIntent mPermissionIntent;
+	private boolean mPermissionRequestPending;
+	ParcelFileDescriptor mFileDescriptor = null;
 
 	public class RoverBinder extends Binder 
 	{ RoverService getService(){ return RoverService.this; } }
@@ -110,9 +123,11 @@ public class RoverService extends Service {
 
 		openCamera();
 
-		onJNIStart();
-		setLogDir(logDir.toString());
-		startLogging();
+        mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+
+//		onJNIStart();
+//		setLogDir(logDir.toString());
+//		startLogging();
 
 		mNotificationBuilder = new Notification.Builder(this);
 		mNotificationBuilder.setContentTitle("Rover");
@@ -152,18 +167,38 @@ public class RoverService extends Service {
 	{
 		super.onDestroy();
 		Log.i(ME,"Rover service stop started");
-		if(mCamera != null)
+		try
 		{
-			mCamera.setPreviewCallback(null);
-			mCamera.release();
-			mCamera = null;
+			if(mCamera != null)
+			{
+				mCamera.setPreviewCallback(null);
+				mCamera.release();
+				mCamera = null;
+			}
 		}
-		if(mMediaRecorder != null)
+		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
+
+		try
 		{
-			mMediaRecorder.reset();
-			mMediaRecorder.release();
-			mMediaRecorder = null;
+			if(mMediaRecorder != null)
+			{
+				mMediaRecorder.reset();
+				mMediaRecorder.release();
+				mMediaRecorder = null;
+			}
 		}
+		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
+
+		try
+		{
+			if(mAdkMonitor != null)
+			{
+				mAdkMonitor.stop();
+				mAdkMonitorThread.join();
+			}
+			mAdkMonitor = null;
+		}
+		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
 
 		onJNIStop();
 		if(mWakeLock != null)
@@ -306,29 +341,146 @@ public class RoverService extends Service {
 
 	public Bitmap getImage()
 	{
-return null;
-//		if(pcIsConnected())
-//			return null;
-//
-//		try{
-//			if(mImage == null)
-//				mImage = new Mat(240,320,CvType.CV_8UC3);
-////				mImage = new Mat(480,640,CvType.CV_8UC3);
-//
-//			if( getImage(mImage.getNativeObjAddr()) )
-//				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
-//			else
-//				return null;
-//			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
-//				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
-//			Utils.matToBitmap(mImage, mBmp);
-//		} catch(Exception e){
-//			Log.e(ME,e.toString());
-//			mImage = null;
-//			mBmp = null;
-//		}
-//		return mBmp;
+		if(pcIsConnected())
+			return null;
+
+		try{
+			if(mImage == null)
+				mImage = new Mat(240,320,CvType.CV_8UC3);
+//				mImage = new Mat(480,640,CvType.CV_8UC3);
+
+			if( getImage(mImage.getNativeObjAddr()) )
+				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
+			else
+				return null;
+			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
+				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
+			Utils.matToBitmap(mImage, mBmp);
+		} catch(Exception e){
+			Log.e(ME,e.toString());
+			mImage = null;
+			mBmp = null;
+		}
+		return mBmp;
 	}
+
+	public void openAccessory(UsbAccessory accessory)
+	{
+		mFileDescriptor = mUsbManager.openAccessory(accessory);
+		if (mFileDescriptor != null)
+		{
+			FileDescriptor fd = mFileDescriptor.getFileDescriptor();
+			mAdkMonitor = new ADKMonitor(new FileInputStream(fd), new FileOutputStream(fd));
+			mAdkMonitorThread = new Thread(mAdkMonitor);
+			mAdkMonitorThread.start();
+			Log.d(ME, "accessory opened");
+//			setAdkConnected(true);
+		}
+		else
+			Log.d(ME, "accessory open fail");
+	}
+
+	public void closeAccessory()
+	{
+		Log.i(ME,"Closing accessory");
+//		setAdkConnected(false);
+		try
+		{
+			if(mAdkMonitor != null)
+			{
+				mAdkMonitor.stop();
+				mAdkMonitorThread.join();
+			}
+			mAdkMonitor = null;
+
+			if (mFileDescriptor != null)
+				mFileDescriptor.close();
+		}
+		catch (Exception e){}
+		finally
+		{
+			mFileDescriptor = null;
+		}
+
+		Log.i(ME,"Closing the accessory");
+	}
+
+	private class ADKMonitor implements Runnable
+	{
+		ADKMonitor(FileInputStream inputStream, FileOutputStream outputStream)
+		{
+			mInputStream = inputStream;
+//			mOutputStream = outputStream;
+		}
+
+		public void stop()
+		{
+			Log.i(ME,"Telling adk runner to stop");
+			mRunning = false;
+		}
+
+		public void run()
+		{
+			mRunning = true;
+			while(mRunning)
+			{
+				if(mInputStream != null)
+				{
+					try
+					{
+						// mInputStream.available() throws an error so I have to do this the hard way
+						byte[] buff = new byte[2];
+						int ret = mInputStream.read(buff, 0, 2);
+						boolean readVal = false;
+						if(ret == 2)
+							readVal = true;
+						else if(ret == 1)
+						{
+							Log.i(ME,"Recovery");
+							Thread.sleep(1);
+							ret = mInputStream.read(buff,1,1);
+							if(ret == 1)
+								readVal = true;
+							else
+								Log.i(ME, "Strange chad");
+						}
+
+						if(readVal)
+						{
+							int val = ByteBuffer.wrap(buff).getShort();
+							Log.i(ME,"Received val: " + String.valueOf(val));
+						}
+
+					}
+					catch (Exception e)
+					{
+						Log.e(ME,"Error reading stream: "+e.toString());
+						try
+						{
+							mInputStream = null;
+							if (mFileDescriptor != null)
+								mFileDescriptor.close();
+						}
+						catch (Exception e1){}
+						finally
+						{ mFileDescriptor = null; }
+					}
+				}
+
+				try{ Thread.sleep(1); }
+				catch(Exception e){ Log.e(ME,"Caught sleeping"); }
+			}
+
+			Log.i(ME,"ADKMonitor runner finished");
+		}
+
+		private boolean mRunning;
+		private FileInputStream mInputStream = null;
+//		private FileOutputStream mOutputStream = null;
+
+	}
+	private ADKMonitor mAdkMonitor = null;
+	private Thread mAdkMonitorThread = null;
 
 	float[] getRoverGyroValue(){ return getGyroValue(); }
 	float[] getRoverAccelValue(){ return getAccelValue(); }
