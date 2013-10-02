@@ -68,10 +68,13 @@ public class RoverService extends Service {
 	private Mat mImage = null;
 	private Bitmap mBmp = null;
 
+	private UsbAccessory mAccessory;
 	private UsbManager mUsbManager;
 	private PendingIntent mPermissionIntent;
 	private boolean mPermissionRequestPending;
-	ParcelFileDescriptor mFileDescriptor = null;
+	private ParcelFileDescriptor mFileDescriptor = null;
+	private FileInputStream mInputStream;
+	private FileOutputStream mOutputStream;
 
 	public class RoverBinder extends Binder 
 	{ RoverService getService(){ return RoverService.this; } }
@@ -125,9 +128,9 @@ public class RoverService extends Service {
 
         mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
-//		onJNIStart();
-//		setLogDir(logDir.toString());
-//		startLogging();
+		onJNIStart();
+		setLogDir(logDir.toString());
+		startLogging();
 
 		mNotificationBuilder = new Notification.Builder(this);
 		mNotificationBuilder.setContentTitle("Rover");
@@ -191,12 +194,18 @@ public class RoverService extends Service {
 
 		try
 		{
-			if(mAdkMonitor != null)
+			if(mAdkReadMonitor != null)
 			{
-				mAdkMonitor.stop();
-				mAdkMonitorThread.join();
+				mAdkReadMonitor.stop();
+				mAdkReadMonitorThread.join();
 			}
-			mAdkMonitor = null;
+			if(mAdkMotorCmdSender != null)
+			{
+				mAdkMotorCmdSender.stop();
+				mAdkMotoCmdSenderThread.join();
+			}
+			mAdkReadMonitor = null;
+			mAdkMotorCmdSender = null;
 		}
 		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
 
@@ -215,6 +224,7 @@ public class RoverService extends Service {
 	}
 
 	private Object imgLock = new Object();
+	private Object adkLock = new Object();
 	private void openCamera()
 	{
 		try{
@@ -366,13 +376,26 @@ public class RoverService extends Service {
 
 	public void openAccessory(UsbAccessory accessory)
 	{
+		mAccessory = accessory;
+		if(mUsbManager.hasPermission(accessory))
+			Log.i(ME,"I have the power!!!!!!!!!!!!!!!!!!!!");
+		else
+			Log.i(ME,"boooooooooooo");
 		mFileDescriptor = mUsbManager.openAccessory(accessory);
 		if (mFileDescriptor != null)
 		{
 			FileDescriptor fd = mFileDescriptor.getFileDescriptor();
-			mAdkMonitor = new ADKMonitor(new FileInputStream(fd), new FileOutputStream(fd));
-			mAdkMonitorThread = new Thread(mAdkMonitor);
-			mAdkMonitorThread.start();
+
+			mInputStream = new FileInputStream(fd);
+			mAdkReadMonitor = new ADKReadMonitor();
+			mAdkReadMonitorThread = new Thread(mAdkReadMonitor);
+			mAdkReadMonitorThread.start();
+
+			mOutputStream = new FileOutputStream(fd);
+			mAdkMotorCmdSender = new ADKMotorCmdSender();
+			mAdkMotoCmdSenderThread = new Thread(mAdkMotorCmdSender);
+			mAdkMotoCmdSenderThread.start();
+
 			Log.d(ME, "accessory opened");
 //			setAdkConnected(true);
 		}
@@ -383,36 +406,58 @@ public class RoverService extends Service {
 	public void closeAccessory()
 	{
 		Log.i(ME,"Closing accessory");
-//		setAdkConnected(false);
 		try
 		{
-			if(mAdkMonitor != null)
+			if(mAdkReadMonitor != null)
 			{
-				mAdkMonitor.stop();
-				mAdkMonitorThread.join();
+				mAdkReadMonitor.stop();
+				mAdkReadMonitorThread.join();
 			}
-			mAdkMonitor = null;
+			if(mAdkMotorCmdSender != null)
+			{
+				mAdkMotorCmdSender.stop();
+				mAdkMotoCmdSenderThread.join();
+			}
+			mAdkReadMonitor = null;
+			mAdkMotorCmdSender = null;
 
 			if (mFileDescriptor != null)
 				mFileDescriptor.close();
 		}
 		catch (Exception e){}
-		finally
-		{
-			mFileDescriptor = null;
-		}
 
+		mFileDescriptor = null;
+		mAccessory = null;
 		Log.i(ME,"Closing the accessory");
 	}
 
-	private class ADKMonitor implements Runnable
+	public byte[] int2ByteArray(int val, int numBytes)
 	{
-		ADKMonitor(FileInputStream inputStream, FileOutputStream outputStream)
-		{
-			mInputStream = inputStream;
-//			mOutputStream = outputStream;
-		}
+		byte[] chad = new byte[numBytes];
+		for(int i=0; i<numBytes; i++)
+			chad[numBytes-i-1] = (byte)(val >> i*8);
 
+		return chad;
+	}
+
+	// I don't use this so it's not well tested
+	public byte[] float2ByteArray(float val)
+	{
+		int valBytes = Float.floatToIntBits(val);
+		byte[] chad = new byte[4];
+		chad[0] = (byte)(valBytes >> 3*8);
+		chad[1] = (byte)(valBytes >> 2*8);
+		chad[2] = (byte)(valBytes >> 1*8);
+		chad[3] = (byte)(valBytes >> 0*8);
+
+		return chad;
+	}
+	
+	// mInputStream.read() blocks and I can't use mInputStream.available()
+	// due to an apparent bug (always throws and exception) so I have to run
+	// separate threads for read/write
+	private class ADKReadMonitor implements Runnable
+	{
 		public void stop()
 		{
 			Log.i(ME,"Telling adk runner to stop");
@@ -428,42 +473,22 @@ public class RoverService extends Service {
 				{
 					try
 					{
-						// mInputStream.available() throws an error so I have to do this the hard way
 						byte[] buff = new byte[2];
 						int ret = mInputStream.read(buff, 0, 2);
-						boolean readVal = false;
-						if(ret == 2)
-							readVal = true;
-						else if(ret == 1)
-						{
-							Log.i(ME,"Recovery");
-							Thread.sleep(1);
-							ret = mInputStream.read(buff,1,1);
-							if(ret == 1)
-								readVal = true;
-							else
-								Log.i(ME, "Strange chad");
-						}
-
-						if(readVal)
-						{
-							int val = ByteBuffer.wrap(buff).getShort();
-							Log.i(ME,"Received val: " + String.valueOf(val));
-						}
-
+						int val = ByteBuffer.wrap(buff).getShort();
+						Log.i(ME,"Received val: " + String.valueOf(val));
 					}
 					catch (Exception e)
 					{
 						Log.e(ME,"Error reading stream: "+e.toString());
-						try
+						mInputStream = null;
+						mOutputStream = null;
+						if (mFileDescriptor != null)
 						{
-							mInputStream = null;
-							if (mFileDescriptor != null)
-								mFileDescriptor.close();
+							try{ mFileDescriptor.close(); }
+							catch (Exception e1){}
 						}
-						catch (Exception e1){}
-						finally
-						{ mFileDescriptor = null; }
+						mFileDescriptor = null;
 					}
 				}
 
@@ -475,12 +500,82 @@ public class RoverService extends Service {
 		}
 
 		private boolean mRunning;
-		private FileInputStream mInputStream = null;
-//		private FileOutputStream mOutputStream = null;
-
 	}
-	private ADKMonitor mAdkMonitor = null;
-	private Thread mAdkMonitorThread = null;
+	private ADKReadMonitor mAdkReadMonitor = null;
+	private Thread mAdkReadMonitorThread = null;
+
+	private class ADKMotorCmdSender implements Runnable
+	{
+		public void stop()
+		{
+			Log.i(ME,"Telling adk cmd send runner to stop");
+			mRunning = false;
+		}
+
+		public boolean sendMotorCommands(int cmd0, int cmd1, int cmd2, int cmd3)
+		{
+			if(mOutputStream == null)
+				return false;
+
+			byte[] b0 = int2ByteArray(cmd0,2);
+			byte[] b1 = int2ByteArray(cmd1,2);
+			byte[] b2 = int2ByteArray(cmd2,2);
+			byte[] b3 = int2ByteArray(cmd3,2);
+
+			byte[] buff = new byte[8];
+			buff[0] = b0[0];
+			buff[1] = b0[1];
+			buff[2] = b1[0];
+			buff[3] = b1[1];
+			buff[4] = b2[0];
+			buff[5] = b2[1];
+			buff[6] = b3[0];
+			buff[7] = b3[1];
+
+			boolean success = false;
+			try
+			{
+				mOutputStream.write(buff);
+				success = true;
+			}
+			catch (IOException e)
+			{
+				Log.e(ME, "write failed: ", e);
+				mInputStream = null;
+				mOutputStream = null;
+				if (mFileDescriptor != null)
+				{
+					try
+					{ mFileDescriptor.close(); }
+					catch (Exception e1){}
+				}
+				mFileDescriptor = null;
+			}
+
+			return success;
+		}
+
+		public void run()
+		{
+			mRunning = true;
+			while(mRunning)
+			{
+
+				int[] cmds = getMotorCmds();
+				if(cmds.length == 4)
+					sendMotorCommands(cmds[0], cmds[1], cmds[2], cmds[3]);
+
+				try{ Thread.sleep(5); }
+				catch(Exception e){ Log.e(ME,"Caught sleeping"); }
+			}
+
+			Log.i(ME,"ADKMonitor runner finished");
+		}
+
+		private boolean mRunning;
+	}
+	private ADKMotorCmdSender mAdkMotorCmdSender= null;
+	private Thread mAdkMotoCmdSenderThread= null;
 
 	float[] getRoverGyroValue(){ return getGyroValue(); }
 	float[] getRoverAccelValue(){ return getAccelValue(); }
@@ -488,7 +583,6 @@ public class RoverService extends Service {
 	float[] getRoverAttitude(){ return getAttitude(); }
 	int getRoverImageProcTimeMS(){ return getImageProcTimeMS(); }
 	boolean isConnectedToPC(){ return pcIsConnected();}
-//	boolean isConnectedToPC(){ return true; }
 
 	public native String nativeTest();
 	public native void onJNIStart();
@@ -501,6 +595,7 @@ public class RoverService extends Service {
 	public native float[] getAccelValue();
 	public native float[] getMagValue();
 	public native float[] getAttitude();
+	public native int[] getMotorCmds();
 	public native int getImageProcTimeMS();
 	public native boolean pcIsConnected();
 	public native void passNewImage(long addr, long timestampNS);

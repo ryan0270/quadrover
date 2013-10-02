@@ -49,15 +49,18 @@ class MotorInterface
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	bool isConnected() const;
+	void start(){ thread th(&MotorInterface::run, this); th.detach(); }
+	void run();
 
-	void sendCommand(const toadlet::egg::Collection<uint16> &cmds);
+	vector<uint16> getMotorCmds();
+
+//	bool isConnected() const;
+
+	void setCommand(const toadlet::egg::Collection<uint16> &cmds);
 
 	void enableMotors(bool on);
 	bool isMotorsEnabled() const {return mMotorsEnabled;}
 
-	void start(){ thread th(&MotorInterface::run, this); th.detach(); }
-	void run();
 
 	void addListener(MotorInterfaceListener *listener){mListeners.push_back(listener);}
 	void addSonarListener(SonarListener *listener){mSonarListeners.push_back(listener);}
@@ -65,13 +68,13 @@ class MotorInterface
 	void setStartTime(Time time){mStartTime.setTime(time);}
 
 	protected:
-	toadlet::egg::Socket::ptr mServerSocket, mSocket;
+//;	toadlet::egg::Socket::ptr mServerSocket, mSocket;
 	bool mRunning, mShutdown;
 	bool mMotorsEnabled;
 	bool mWaitingForConnection;
-	uint16 mMotorCmds[4];
+	vector<uint16> mMotorCmds;
 
-	std::mutex mMutex_data, mMutex_socket;
+	std::mutex mMutex_cmds;//, mMutex_socket;
 
 	// skips enabled/disabled checks
 	void sendCommandForced(const toadlet::egg::Collection<uint16> &cmds);
@@ -81,8 +84,8 @@ class MotorInterface
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
 	Time mStartTime;
-	Time mLastSendTime;
-	std::mutex mMutex_sendTime;
+//	Time mLastSendTime;
+//	std::mutex mMutex_sendTime;
 
 	toadlet::egg::Collection<MotorInterfaceListener*> mListeners;
 	toadlet::egg::Collection<SonarListener*> mSonarListeners;

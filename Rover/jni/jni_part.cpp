@@ -1,20 +1,16 @@
 #include <jni.h>
-#include <string.h>
+#include <string>
+#include <vector>
 
 #include "../cpp/Rover.h"
 #include <opencv2/core/core.hpp>
 #include "../cpp/TNT/tnt.h"
-//#include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/features2d/features2d.hpp>
-//#include <vector>
 
-//using namespace std;
-//using namespace cv;
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "ADKTest", __VA_ARGS__))
 
 static ICSL::Quadrotor::Rover *rover = NULL;
 
 extern "C" {
-
 JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_onJNIStart(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)
@@ -127,6 +123,21 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getAttitude(JNIEn
 	elem[2] = (jfloat)att[2][0];
 
 	env->ReleaseFloatArrayElements(jval, elem, 0);
+	return jval;
+}
+
+JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getMotorCmds(JNIEnv* env, jobject thiz)
+{
+	if(rover == NULL)
+		return env->NewIntArray(0);
+
+	std::vector<uint16> cmds = rover->getMotorCmds();
+	jintArray jval = env->NewIntArray(cmds.size());
+	jint *elem = env->GetIntArrayElements(jval,0);
+	for(int i=0; i<cmds.size(); i++)
+		elem[i] = (jint)cmds[i];
+
+	env->ReleaseIntArrayElements(jval, elem, 0);
 	return jval;
 }
 
