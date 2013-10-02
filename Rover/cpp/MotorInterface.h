@@ -25,14 +25,6 @@ enum
 	COMM_ARDUINO_HEIGHT=1,
 };
 
-// Eventually this should be moved to a separate
-// arduino comm object, but I'm lazy
-class SonarListener
-{
-	public:
-	virtual void onNewSonar(const shared_ptr<HeightData<double>> &data)=0;
-};
-
 class MotorInterfaceListener
 {
 	public:
@@ -63,7 +55,6 @@ class MotorInterface
 
 
 	void addListener(MotorInterfaceListener *listener){mListeners.push_back(listener);}
-	void addSonarListener(SonarListener *listener){mSonarListeners.push_back(listener);}
 
 	void setStartTime(Time time){mStartTime.setTime(time);}
 
@@ -88,7 +79,6 @@ class MotorInterface
 //	std::mutex mMutex_sendTime;
 
 	toadlet::egg::Collection<MotorInterfaceListener*> mListeners;
-	toadlet::egg::Collection<SonarListener*> mSonarListeners;
 
 	void pollTCP();
 	int receiveTCP(tbyte* data, int size);

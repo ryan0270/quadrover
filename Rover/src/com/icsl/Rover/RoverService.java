@@ -377,10 +377,6 @@ public class RoverService extends Service {
 	public void openAccessory(UsbAccessory accessory)
 	{
 		mAccessory = accessory;
-		if(mUsbManager.hasPermission(accessory))
-			Log.i(ME,"I have the power!!!!!!!!!!!!!!!!!!!!");
-		else
-			Log.i(ME,"boooooooooooo");
 		mFileDescriptor = mUsbManager.openAccessory(accessory);
 		if (mFileDescriptor != null)
 		{
@@ -460,7 +456,7 @@ public class RoverService extends Service {
 	{
 		public void stop()
 		{
-			Log.i(ME,"Telling adk runner to stop");
+			Log.i(ME,"Telling adk cmd runner to stop");
 			mRunning = false;
 		}
 
@@ -475,20 +471,19 @@ public class RoverService extends Service {
 					{
 						byte[] buff = new byte[2];
 						int ret = mInputStream.read(buff, 0, 2);
+						long timestamp = System.nanoTime();
 						int val = ByteBuffer.wrap(buff).getShort();
-						Log.i(ME,"Received val: " + String.valueOf(val));
+						onNewSonarReading(val, timestamp);
 					}
 					catch (Exception e)
 					{
 						Log.e(ME,"Error reading stream: "+e.toString());
 						mInputStream = null;
-						mOutputStream = null;
-						if (mFileDescriptor != null)
+						if(mFileDescriptor != null)
 						{
-							try{ mFileDescriptor.close(); }
-							catch (Exception e1){}
+							FileDescriptor fd = mFileDescriptor.getFileDescriptor();
+							mInputStream = new FileInputStream(fd);
 						}
-						mFileDescriptor = null;
 					}
 				}
 
@@ -599,6 +594,7 @@ public class RoverService extends Service {
 	public native int getImageProcTimeMS();
 	public native boolean pcIsConnected();
 	public native void passNewImage(long addr, long timestampNS);
+	public native void onNewSonarReading(int val, long timestampNS);
 
 	static
 	{

@@ -42,7 +42,6 @@ class SensorManagerListener
 #include "Time.h"
 #include "Observer_Angular.h"
 #include "CommManager.h"
-#include "MotorInterface.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -55,8 +54,7 @@ namespace Quadrotor{
 using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
-class SensorManager : public CommManagerListener,
-					  public SonarListener
+class SensorManager : public CommManagerListener
 {
 	public:
 	SensorManager();
@@ -75,8 +73,11 @@ class SensorManager : public CommManagerListener,
 
 	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
 
+	// this comes from jni
+	void onNewSonarReading(int heightMM, uint64 timestampNS);
+
 	// used to pass images in from Java
-	void passNewImage(const cv::Mat *image, int64 timestampNS);
+	void passNewImage(const cv::Mat *image, uint64 timestampNS);
 
 	// for CommManagerListener
 	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);

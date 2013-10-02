@@ -73,6 +73,7 @@ public:
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
 	void passNewImage(cv::Mat *img, int64 const &timestampNS){mSensorManager.passNewImage(img, timestampNS);}
 	vector<uint16> getMotorCmds() {return mMotorInterface.getMotorCmds();}
+	void onNewSonarReading(int heightMM, uint64 timestampNS){mSensorManager.onNewSonarReading(heightMM, timestampNS);}
 
 	// Observer_AngularListener
 	void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData);
