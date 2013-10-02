@@ -159,7 +159,6 @@ void Rover::initialize()
 //	mMotorInterface.addListener(&mObsvTranslational);
 	mMotorInterface.setStartTime(mStartTime);
 	mMotorInterface.addListener(&mTranslationController);
-	mMotorInterface.addSonarListener(&mSensorManager);
 
 	mNumCpuCores = android_getCpuCount();
 

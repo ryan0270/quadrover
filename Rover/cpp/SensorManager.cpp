@@ -436,7 +436,7 @@ namespace Quadrotor{
 		return temp;
 	}
 
-	void SensorManager::passNewImage(const cv::Mat *imageYUV, int64 timestampNS)
+	void SensorManager::passNewImage(const cv::Mat *imageYUV, uint64 timestampNS)
 	{
 		shared_ptr<DataImage> data(new DataImage());
 		data->type = DATA_TYPE_IMAGE;
@@ -489,8 +489,13 @@ namespace Quadrotor{
 		mNewHeightAvailable = true;
 	}
 
-	void SensorManager::onNewSonar(const shared_ptr<HeightData<double>> &data)
+	void SensorManager::onNewSonarReading(int heightMM, uint64 timestampNS)
 	{
+		shared_ptr<HeightData<double>> data(new HeightData<double>());
+		data->timestamp.setTimeNS(timestampNS);
+		data->heightRaw = heightMM/1.0e3;
+		data->height = heightMM/1.0e3;
+
 		String str = String()+Time::calcDiffMS(mStartTime, data->timestamp)+"\t"+data->heightRaw;
 		mMutex_logger.lock();
 		// TODO: Make a sonar log flag
