@@ -23,6 +23,8 @@ ActiveObject::ActiveObject(std::vector<cv::Point> points) : ActiveObject()
 	mom = cv::moments(points);
 	lastCenter.x = mom.m10/mom.m00;
 	lastCenter.y = mom.m01/mom.m00;
+	expectedPos[0][0] = lastCenter.x;
+	expectedPos[1][0] = lastCenter.y;
 	cv::HuMoments(mom, huMom);
 	centralMoms[0] = mom.mu20;
 	centralMoms[1] = mom.mu11;
@@ -122,6 +124,8 @@ void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 	expectedPos[1][0] += center.y;
 }
 
+// TODO: This should operate on S1 and S2 (the covariances of each point being matched
+// instead of assuming a constant Sn for curObjectList
 Array2D<double> ActiveObject::calcCorrespondence(const vector<shared_ptr<ActiveObject>> &prevObjectList,
 												 const vector<shared_ptr<ActiveObject>> &curObjectList,
 												 const Array2D<double> &Sn,
@@ -289,6 +293,10 @@ Array2D<double> ActiveObject::calcCorrespondence(const vector<shared_ptr<ActiveO
 			if(C[i][j] != 0)
 				C[i][j] /= colSum;
 	}
+
+	// nothing else to do here since the last colum and row have to be zeros
+	if(probNoCorr == 0)
+		return C;
 
 	// Now check if any of the rows sum to over 1
 	for(int i=0; i<N1; i++)
