@@ -106,8 +106,7 @@ int main(int argv, char* argc[])
 	int minArea = 1000;
 	int maxArea = 0.5*320*240;
 	double maxVariation = 0.25; // smaller reduces number of regions
-//	double minDiversity = 0.5; // smaller increase the number of regions
-	double minDiversity = 0.8; // smaller increase the number of regions
+	double minDiversity = 0.5; // smaller increase the number of regions
 	// for color only
 	int maxEvolution = 200;
 	double areaThreshold = 1.01;
@@ -116,6 +115,13 @@ int main(int argv, char* argc[])
 	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
 
 	vector<shared_ptr<ActiveObject>> activeObjects;
+
+	Array2D<double> Sn = 2*10*10*createIdentity((double)2);
+	Array2D<double> SnInv(2,2,0.0);
+	SnInv[0][0] = 1.0/Sn[0][0];
+	SnInv[1][1] = 1.0/Sn[1][1];
+	double varxi = pow(500,2);
+	float probNoCorr = 0.0000001;
 
 	int keypress = 0;
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
@@ -195,8 +201,37 @@ t3 += start.getElapsedTimeMS(); start.setTime();
 		{
 			shared_ptr<ActiveObject> ao1(new ActiveObject(allContours[i]));
 			ao1->lastFoundTime.setTime(curTime);
+			ao1->posCov.inject(0.5*Sn);
 			if(ao1->mom.m00 > minArea)
 				curObjects.push_back(ao1);
+		}
+
+		/////////////////// self-similarity check ///////////////////////
+		// Ideally, I would do this on all of the active objects at the end of the loop
+		// but I still need to work out the math for that. Doing it here, I can take
+		// advantage of everything having the same covariance
+		// First reset all expected positions and covariances
+		// now calculate the correspondence matrix
+		Array2D<double> ssC = ActiveObject::calcCorrespondence(curObjects, curObjects, 0.5*Sn, 2.0*SnInv, varxi, 0);
+
+		// Now keep only things that don't have confusion
+		// if there is confusion, only keep one
+		vector<shared_ptr<ActiveObject>> tempList;
+		tempList.swap(curObjects);
+		vector<bool> isStillGood(tempList.size(), true);
+		for(int i=0; i<tempList.size(); i++)
+		{
+			if(!isStillGood[i])
+				continue;
+			vector<int> confusionList;
+			for(int j=i+1; j<tempList.size(); j++)
+				if(ssC[i][j] > 0.2)
+					confusionList.push_back(j);
+
+			for(int j=0; j<confusionList.size(); j++)
+				isStillGood[confusionList[j]] = false;
+
+			curObjects.push_back(tempList[i]);
 		}
 
 		/////////////////// Get location priors for active objects ///////////////////////
@@ -229,12 +264,6 @@ for(int i=0; i<curObjects.size(); i++)
 }
 
 		/////////////////// Establish correspondence based on postiion ///////////////////////
-		Array2D<double> Sn = 2*10*10*createIdentity((double)2);
-		Array2D<double> SnInv(2,2,0.0);
-		SnInv[0][0] = 1.0/Sn[0][0];
-		SnInv[1][1] = 1.0/Sn[1][1];
-		double varxi = pow(200,2);
-		float probNoCorr = 0.0000001;
 		Array2D<double> C = ActiveObject::calcCorrespondence(activeObjects, curObjects, Sn, SnInv, varxi, probNoCorr);
 cout << "---------------- correspondence --------------------------" << endl;
 printArray("\n",C);
@@ -247,7 +276,7 @@ printArray("\n",C);
 		vector<bool> matched(N2, false);
 		for(int i=0; i<N1; i++)
 		{
-			if(C[i][N2] > 0.5)
+			if(N2 == 0 || C[i][N2] > 0.5)
 				continue; // this object probably doesn't have a partner
 
 			aoPrev = activeObjects[i];
@@ -260,7 +289,6 @@ printArray("\n",C);
 				{
 					maxScore = C[i][j];
 					maxIndex =j;
-					matched[j] = true;
 				}
 //				else if(C[i][j] > 0.3)
 //				{
@@ -273,6 +301,7 @@ printArray("\n",C);
 //				}
 			}
 
+			matched[maxIndex] = true;
 			aoCur = curObjects[maxIndex];
 cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
 
@@ -314,21 +343,6 @@ t5 += start.getElapsedTimeMS(); start.setTime();
 		for(int i=0; i<newObjects.size(); i++)
 			activeObjects.push_back(newObjects[i]);
 
-		/////////////////// self-similarity check ///////////////////////
-		// First reset all expected positions and covariances
-		for(int i=0; i<activeObjects.size(); i++)
-		{
-			activeObjects[i]->expectedPos[0][0] = activeObjects[i]->lastCenter.x;
-			activeObjects[i]->expectedPos[1][0] = activeObjects[i]->lastCenter.y;
-
-			if(activeObjects[i]->posCov[0][1] == 0) // this is very crude indication of a new object
-				activeObjects[i]->posCov.inject(Sn);
-			else {/* posCov was already set when calculating the priors */};
-		}
-		// now calculate the correspondence matrix
-		C = ActiveObject::calcCorrespondence(activeObjects, activeObjects, Sn, SnInv, varxi, 0);
-printArray("self-similarity:\n",C);
-
 t6 += start.getElapsedTimeMS(); start.setTime();
 		imshow("chad",oldImg);
 
@@ -352,7 +366,7 @@ t6 += start.getElapsedTimeMS(); start.setTime();
 		imshow("tom",dblImg);
 
 t7 += start.getElapsedTimeMS(); start.setTime();
-		keypress = cv::waitKey(0) % 256;
+		keypress = cv::waitKey(33) % 256;
 
 		imgIter++;
 		imgCnt++;
