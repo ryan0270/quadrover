@@ -172,7 +172,7 @@ namespace Quadrotor {
 			for(int i=0; i<4;i++)
 				motorCmds[i] = 0;
 		mMutex_motorInterface.lock();
-		mMotorInterface->sendCommand(motorCmds);
+		mMotorInterface->setCommand(motorCmds);
 		mLastMotorCmds = motorCmds; // should copy all the data
 		mMutex_motorInterface.unlock();
 	

@@ -9,8 +9,6 @@ ADK adk(&Usb,"arduino", // Manufacturer Name
 "", // URL (web page to visit if no installed apps support the accessory)
 "123456789"); // Serial Number (optional)
 
-#define LED 13 // Pin 13 is occupied by the SCK pin on a normal Arduino (Uno, Duemilanove etc.), so use a different pin
-
 void setup()
 {
   Serial.begin(115200);
@@ -19,7 +17,10 @@ void setup()
     Serial.println("OSCOKIRQ failed to assert");
     while(1); //halt
   }
-  pinMode(LED, OUTPUT);  
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
+  digitalWrite(5,LOW);
+  digitalWrite(6,LOW);
 }
 
 uint16_t vals[4];
@@ -30,7 +31,12 @@ unsigned long startTime = 0;
 void loop()
 {    
   if(millis()-lastCommTime > 100)
+  {
+    if(!isConnected)
+      digitalWrite(6,LOW);
     isConnected = false;
+  }
+  
   Usb.Task();
   if(adk.isReady()) 
   {
@@ -39,6 +45,8 @@ void loop()
     boolean haveNewVals = false;
     while(readVals(vals) == 0)
     {
+      if(!isConnected)
+        digitalWrite(6,HIGH);
       isConnected = true;
       haveNewVals = true;
       if(millis()-lastCommTime > 10)
@@ -49,14 +57,10 @@ void loop()
       lastCommTime = millis();
     }
     
-    if(haveNewVals)
-    {
-//      Serial.print("cnt: ");
-//      Serial.println(cnt);
+//    if(haveNewVals)
 //      printVals();
-     }
      
-     if(millis()-lastSendTime > 100 && isConnected)
+     if(millis()-lastSendTime > 50 && isConnected)
      {
        lastSendTime = millis();
        uint16_t sum = 0;
@@ -66,10 +70,8 @@ void loop()
        sendVal(sum);
      }
   } 
-  else
-    digitalWrite(LED, LOW);
     
-//  delay(1);
+  delay(1);
 }
 
 int readVals(uint16_t vals[])

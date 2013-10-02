@@ -246,12 +246,6 @@ public class ADKTest extends Activity implements Runnable {
 				}
 			}
 
-//			if(sendMotorCommands(curVals))
-//			{
-//				for(int i=0; i<curVals.length; i++)
-//					curVals[i]++;
-//			}
-			
 			try{ Thread.sleep(1); }
 			catch(Exception e){ Log.e(ME,"Caught sleeping"); }
 		}

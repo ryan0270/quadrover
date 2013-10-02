@@ -303,11 +303,11 @@ void Rover::transmitDataUDP()
 	Packet pImgProcTime, pUseIbvs, pBarometerHeight, pPressure, pPhoneTemp;
 	Packet pTime;
 	mMutex_cntl.lock();
-	int arduinoStatus;
-	if(mMotorInterface.isConnected())
-		arduinoStatus = 1;
-	else
-		arduinoStatus = 0;
+	int arduinoStatus = 0;
+//	if(mMotorInterface.isConnected())
+//		arduinoStatus = 1;
+//	else
+//		arduinoStatus = 0;
 
 	pUseMotors.dataBool.push_back(mMotorInterface.isMotorsEnabled());
 	pUseMotors.type = COMM_USE_MOTORS;

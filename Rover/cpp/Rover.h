@@ -72,6 +72,7 @@ public:
 //	void setVisionParams(toadlet::egg::Collection<int> p);
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
 	void passNewImage(cv::Mat *img, int64 const &timestampNS){mSensorManager.passNewImage(img, timestampNS);}
+	vector<uint16> getMotorCmds() {return mMotorInterface.getMotorCmds();}
 
 	// Observer_AngularListener
 	void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData);

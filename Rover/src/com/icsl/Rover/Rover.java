@@ -205,6 +205,8 @@ public class Rover extends Activity implements Runnable
 	{
 		if(mBound)
 		{
+			if(mService != null)
+				mService.closeAccessory();
 			unbindService(mConnection);
 			mBound = false;
 		}
