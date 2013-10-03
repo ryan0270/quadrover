@@ -245,17 +245,18 @@ Quaternion& Quaternion::operator-=(const Quaternion& q)
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-SO3_LieAlgebra::SO3_LieAlgebra()
+SO3_LieAlgebra::SO3_LieAlgebra() : mVector(3,1,0.0)
 {
 }
 
-SO3_LieAlgebra::SO3_LieAlgebra(const TNT::Array2D<double> &v)
+SO3_LieAlgebra::SO3_LieAlgebra(const TNT::Array2D<double> &v) : SO3_LieAlgebra()
 {
+	assert(v.dim1() == 3 && (v.dim2() == 3 || v.dim2() == 1));
+
 	if(v.dim2() == 1)
-		mVector = v.copy();
-	else // assume it's 3x3 matrix form
+		mVector.inject(v);
+	else // it's 3x3 matrix form
 	{
-		mVector = TNT::Array2D<double>(3,1);
 		mVector[0][0] = v[2][1];
 		mVector[1][0] = v[0][2];
 		mVector[2][0] = v[1][0];

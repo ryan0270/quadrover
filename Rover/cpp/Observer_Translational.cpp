@@ -747,7 +747,7 @@ using std::isnan;
 					mMutex_kfData.unlock();
 					const shared_ptr<HeightData<double>> d = static_pointer_cast<HeightData<double>>(data);
 
-					if( abs(d->height-curHeight) < 0.2 )
+					if( abs(d->height-curHeight) < 0.1 )
 					{
 						mMutex_events.lock();
 						mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );

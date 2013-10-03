@@ -287,10 +287,10 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 		return; // too long of a period to integrate over
 
 	mMutex_data.lock();
-	gyroData->lock();
-	mCurVel = gyroData->data - mGyroBias;
+//	gyroData->lock();
+	mCurVel.inject(gyroData->data - mGyroBias);
 	Time gyroTime( gyroData->timestamp);
-	gyroData->unlock();
+//	gyroData->unlock();
 	Array2D<double> gyro = mCurVel+mGainP*mInnovation;
 
 	SO3_LieAlgebra gyro_so3(gyro);
