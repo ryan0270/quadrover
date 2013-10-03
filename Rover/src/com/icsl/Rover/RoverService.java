@@ -210,7 +210,7 @@ public class RoverService extends Service {
 		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
 
 		onJNIStop();
-		if(mWakeLock != null)
+		if(mWakeLock != null && mWakeLock.isHeld())
 			mWakeLock.release();
 		Toast.makeText(this, "Rover sleeping", Toast.LENGTH_SHORT).show();
 		stopForeground(true);

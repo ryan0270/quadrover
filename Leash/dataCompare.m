@@ -170,7 +170,9 @@ if exist('state','var') && ~isempty(state)
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
 		plot(stateTime, state(i,:)+offset(i)); hold all
 		if i == 9
-			plot(sonarHeightTime, sonarHeight+0.1, 'm.');
+			chad = interp1(tranStateTime,tranState',sonarHeightTime)';
+			mask = find(abs(chad(3,:)-sonarHeight) < 0.1);
+			plot(sonarHeightTime(mask), sonarHeight(mask)+0.1, 'm.');
 		end
 		if i > 9
 			plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
