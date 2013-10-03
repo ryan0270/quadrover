@@ -33,10 +33,11 @@ angleState = phoneData(angleStateIndices,4:9)';
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
-
+mask = [1 1+find(diff(tranStateTime)~=0)];
+tranStateTime = tranStateTime(mask);
+tranState = tranState(:,mask);
 if ~isempty(tranState)
-	mask = [1 1+find(diff(tranStateTime)~=0)];
-	tranStateInterp = interp1(tranStateTime(mask),tranState(:,mask)',angleStateTime,[],'extrap')';
+	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime,[],'extrap')';
 % 	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime,[],'extrap')';
 	stateTime = angleStateTime;
 	state = [angleState; tranStateInterp];

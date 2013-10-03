@@ -234,6 +234,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_ACCEL_CMD="+LOG_ID_ACCEL_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_VEL_CMD="+LOG_ID_VEL_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_SONAR_HEIGHT="+LOG_ID_SONAR_HEIGHT+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_MOTOR_PLANE_BIAS="+LOG_ID_MOTOR_PLANE_BIAS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}

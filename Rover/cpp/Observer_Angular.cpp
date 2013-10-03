@@ -626,7 +626,7 @@ void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 	mMutex_data.lock();
 	mExtraDirsMeasured.push_back(measDir.copy());
 	mExtraDirsInertial.push_back(nomDir.copy());
-	mExtraDirsWeight.push_back(10);
+	mExtraDirsWeight.push_back(5);
 	mMutex_data.unlock();
 
 //	mMutex_data.lock();

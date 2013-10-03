@@ -67,33 +67,33 @@ motorCmd = phoneData(motorIndices,3:6)';
 cntlCalcTime = phoneData(motorIndices,8)'/1000;
 motor_dt = mean(diff(motorTime));
 
-targetFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_TARGET_FIND);
-targetFindTimeTime = phoneData(targetFindTimeIndices,1)'/1000;
-targetFindTime = phoneData(targetFindTimeIndices,3)';
+% targetFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_TARGET_FIND);
+% targetFindTimeTime = phoneData(targetFindTimeIndices,1)'/1000;
+% targetFindTime = phoneData(targetFindTimeIndices,3)';
+% 
+% mapVelCalcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL_CALC_TIME);
+% mapVelCalcTimeTime = phoneData(mapVelCalcTimeIndices,1)'/1000;
+% mapVelCalcTime = phoneData(mapVelCalcTimeIndices,3)';
+% 
+% velCalcDelayTotalTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW_VELOCITY_DELAY);
+% velCalcDelayTotalTimeTime = phoneData(velCalcDelayTotalTimeIndices,1)'/1000;
+% velCalcDelayTotalTime = phoneData(velCalcDelayTotalTimeIndices,3)';
+% 
+% featureFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FEATURE_FIND_TIME);
+% featureFindTimeTime = phoneData(featureFindTimeIndices,1)'/1000;
+% featureFindTime = phoneData(featureFindTimeIndices,3)';
 
-mapVelCalcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL_CALC_TIME);
-mapVelCalcTimeTime = phoneData(mapVelCalcTimeIndices,1)'/1000;
-mapVelCalcTime = phoneData(mapVelCalcTimeIndices,3)';
-
-velCalcDelayTotalTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW_VELOCITY_DELAY);
-velCalcDelayTotalTimeTime = phoneData(velCalcDelayTotalTimeIndices,1)'/1000;
-velCalcDelayTotalTime = phoneData(velCalcDelayTotalTimeIndices,3)';
-
-featureFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FEATURE_FIND_TIME);
-featureFindTimeTime = phoneData(featureFindTimeIndices,1)'/1000;
-featureFindTime = phoneData(featureFindTimeIndices,3)';
-
-gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO_BIAS);
-gyroBiasTime = phoneData(gyroBiasIndices,1)'/1000;
-gyroBias = phoneData(gyroBiasIndices,3:5)';
-
-attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
-attBiasTime = phoneData(attBiasIndices,1)'/1000;
-attBias = phoneData(attBiasIndices,3:5)';
-
-forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_FORCE_GAIN);
-forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
-forceScaling = phoneData(forceScalingIndices,3)';
+% gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO_BIAS);
+% gyroBiasTime = phoneData(gyroBiasIndices,1)'/1000;
+% gyroBias = phoneData(gyroBiasIndices,3:5)';
+% 
+% attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
+% attBiasTime = phoneData(attBiasIndices,1)'/1000;
+% attBias = phoneData(attBiasIndices,3:5)';
+% 
+% forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_FORCE_GAIN);
+% forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
+% forceScaling = phoneData(forceScalingIndices,3)';
 
 cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
 cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
@@ -111,25 +111,25 @@ phoneTemp = phoneData(phoneTempIndices,3:6)';
 % mapHeightEstTime = phoneData(mapHeightEstIndices,1)'/1000;
 % mapHeightEst = phoneData(mapHeightEstIndices,3)';
 
-velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
-velEstTime = phoneData(velEstIndices,1)'/1000;
-velEst = phoneData(velEstIndices,3:5)';
-
-viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
-viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
-viconReceive = phoneData(viconReceiveIndices,3:14)';
-
-fastThreshIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FAST_THRESHOLD);
-fastThreshTime = phoneData(fastThreshIndices,1)'/1000;
-fastThresh = phoneData(fastThreshIndices,3)';
-
-mapNumMatchesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_NUM_MATCHES);
-mapNumMatchesTime = phoneData(mapNumMatchesIndices,1)'/1000;
-mapNumMatches = phoneData(mapNumMatchesIndices,3)';
-
-numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
-numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
-numFeatures = phoneData(numFeaturesIndices,3)';
+% velEstIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW);
+% velEstTime = phoneData(velEstIndices,1)'/1000;
+% velEst = phoneData(velEstIndices,3:5)';
+% 
+% viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
+% viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
+% viconReceive = phoneData(viconReceiveIndices,3:14)';
+% 
+% fastThreshIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FAST_THRESHOLD);
+% fastThreshTime = phoneData(fastThreshIndices,1)'/1000;
+% fastThresh = phoneData(fastThreshIndices,3)';
+% 
+% mapNumMatchesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_NUM_MATCHES);
+% mapNumMatchesTime = phoneData(mapNumMatchesIndices,1)'/1000;
+% mapNumMatches = phoneData(mapNumMatchesIndices,3)';
+% 
+% numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
+% numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
+% numFeatures = phoneData(numFeaturesIndices,3)';
 
 % kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
 % kfCovTime = phoneData(kfCovIndices,1)'/1000;
@@ -139,17 +139,17 @@ numFeatures = phoneData(numFeaturesIndices,3)';
 % obsvTransProcTimeTime = phoneData(obsvTransProcTimeIndices,1)'/1000;
 % obsvTransProcTime = phoneData(obsvTransProcTimeIndices,3:6)';
 
-attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
-attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
-attInnovation = phoneData(attInnovationIndices,3:5)';
-
-targetFindProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_PROC_TIME);
-targetFindProcTimeTime = phoneData(targetFindProcTimeIndices,1)'/1000;
-targetFindProcTime = phoneData(targetFindProcTimeIndices,3)';
-
-targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_CENTERS);
-targetLocTime = phoneData(targetLocIndices,1)'/1000;
-targetLoc = phoneData(targetLocIndices,3:8)';
+% attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+% attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+% attInnovation = phoneData(attInnovationIndices,3:5)';
+% 
+% targetFindProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_PROC_TIME);
+% targetFindProcTimeTime = phoneData(targetFindProcTimeIndices,1)'/1000;
+% targetFindProcTime = phoneData(targetFindProcTimeIndices,3)';
+% 
+% targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_CENTERS);
+% targetLocTime = phoneData(targetLocIndices,1)'/1000;
+% targetLoc = phoneData(targetLocIndices,3:8)';
 
 % targetAreasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_AREAS);
 % targetAreasTime = phoneData(targetAreasIndices,1)'/1000;
@@ -159,9 +159,13 @@ velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
 velCmdTime = phoneData(velCmdIndices,1)'/1000;
 velCmd = phoneData(velCmdIndices,3:5)';
 
-accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CMD);
-accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
-accelCmd = phoneData(accelCmdIndices,3:5)';
+% accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CMD);
+% accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
+% accelCmd = phoneData(accelCmdIndices,3:5)';
+
+motorPlaneBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MOTOR_PLANE_BIAS);
+motorPlaneBiasTime = phoneData(motorPlaneBiasIndices,1)'/1000;
+motorPlaneBias = phoneData(motorPlaneBiasIndices,3:5)';
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
@@ -557,25 +561,20 @@ if exist('accelCmd','var') && ~isempty(accelCmd)
 end
 
 %%
-% if exist('velCmd','var') && ~isempty(velCmd)
-% 	figure(6601); clf
-% % 	set(gcf,'Units','Inches');
-% % 	curPos = get(gcf,'Position'); figSize = [6 4];
-% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 	mask = find( (tranStateTime > velCmdTime(1)) .* (tranStateTime < velCmdTime(end)) );
-% 	for i=1:3
-% 		subplot(3,1,i)
-% 		plot(velCmdTime, velCmd(i,:),'.');hold all
-% 		plot(tranStateTime(mask), tranState(i+3,mask)); hold all
-% 		hold off
-% 		ax = axis;
-% 		line([ax(1) ax(2)],[0 0],'Color','k','LineStyle','--');
-% 		
-% 		xlabel('Time [s]');
-% 		ylabel(stateLabels{i+9})
-% 	end	
-% 	legend('cmd','actual');
-% end
+if exist('motorPlaneBias','var') && ~isempty(motorPlaneBias)
+	figure(6600); clf
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	plot(motorPlaneBiasTime, motorPlaneBias');hold all
+	ax = axis;
+	plot([ax(1) ax(2)],[0 0],'k--'); hold all
+	hold off
+	xlabel('Time [s]');
+	ylabel('Motor Plane Bias')
+	legend('x','y','z');
+end
+
 
 %%
 disp('chad accomplished')

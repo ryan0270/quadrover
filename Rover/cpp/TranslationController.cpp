@@ -151,10 +151,9 @@ using namespace TNT;
 		for(int i=0; i<3; i++)
 			mErrInt[i][0] = constrain(mErrInt[i][0]+dt*error[i][0],-mErrIntLimit[i][0],mErrIntLimit[i][0]);
 
-
 		Array2D<double> tempI(3,1,0.0);
 		mMutex_state.lock();
-		if(mDesState[2][0] > 0.1) // don't build up the integrator when we're sitting still
+		if(mDesState[2][0] > 0.2) // don't build up the integrator when we're sitting still
 			tempI.inject(mGainI);
 		mMutex_state.unlock();
 		for(int i=0; i<3; i++)
