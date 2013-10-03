@@ -5,7 +5,7 @@
 
 #define SONAR_PIN 2
 
-int verbosity=1;
+int verbosity=0;
 
 USB Usb;
 ADK adk(&Usb,"arduino", // Manufacturer Name
@@ -52,8 +52,12 @@ void setup()
     Serial.println("Start chadding");
   }
 
-  if (Usb.Init() == -1)
+  if(Usb.Init() == -1)
+  {
+    if(verbosity > 0)
+      Serial.println("USB failed to init");
     while(1); //halt
+  }
   
   Wire.begin();
   motorAddr[0] = MOTOR_ADDR_N;
@@ -67,7 +71,7 @@ void setup()
     sendCommand(motorAddr[i], 0);
   }
 
-  //  doRegularMotorStart();
+  doRegularMotorStart();
 
   phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();
@@ -150,14 +154,7 @@ void loop()
     sonarIsHigh = false;
 
     if(phoneIsConnected)
-    {
-      //      uint8_t code = COMM_ARDUINO_HEIGHT;
-      //      uint8_t buff[3];
-      //      buff[0] = code;
-      //      memcpy(&(buff[1]),&height,2);
-      //      connection->write(3,&(buff[0]));
       sendVal(height);
-    }
   }
 
   if(millis()-lastSonarMeasureTimeMS > 50)
@@ -181,14 +178,14 @@ void loop()
     // The sonar echo event will be recorded by the interrupt handler
   }
 
-  delay(1);
+  delayMicroseconds(500);
 } 
 
 void doRegularMotorStart()
 {
   if(verbosity > 0)
     Serial.print("Starting motors in operation mode...");
-  for(int i=0; i<500; i++)
+  for(int i=0; i<100; i++)
   {
     // need to keep the comm alive
     for(int mdl=0; mdl<4; mdl++)
