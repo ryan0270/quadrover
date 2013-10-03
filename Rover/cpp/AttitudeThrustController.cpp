@@ -38,7 +38,7 @@ namespace Quadrotor {
 
 		mDesAccel[2][0] = GRAVITY;
 
-		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.05), createRotMat(0,-0.02) ) );
+		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.045), createRotMat(0,-0.015) ) );
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
@@ -104,9 +104,15 @@ namespace Quadrotor {
 		rotErr[0][0] = rotMatErr_AS[2][1];
 		rotErr[1][0] = rotMatErr_AS[0][2];
 		rotErr[2][0] = rotMatErr_AS[1][0];
+
+		// HACK HACK HACk
+		Array2D<double> offset(3,1);
+		offset[0][0] = 0;
+		offset[1][0] = 0.02;
+		offset[2][0] = -0.02;
 	
 		mMutex_data.lock();
-		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*mCurAngularVel;
+		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*mCurAngularVel+offset;
 		double cmdRoll = torque[0][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdPitch = torque[1][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdYaw = torque[2][0]/mTorqueScaling/4.0;
