@@ -167,6 +167,18 @@ public class Rover extends Activity implements Runnable
 			mImage.release();
 		mImage = null;
 
+		if(mBound)
+		{
+			if(mService != null)
+				mService.closeAccessory();
+			unbindService(mConnection);
+			mBound = false;
+		}
+		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
+		stopService(roverServiceIntent);
+		mService = null;
+		mAccessory = null;
+
 		// There seems be a thread issue where android is still trying to draw the bitmap during
 		// shutdown after I've already recycled mBitmap. So set the image to null before recycling.
 		mIvImageDisplay.setImageBitmap(null);
@@ -190,6 +202,10 @@ public class Rover extends Activity implements Runnable
 			unbindService(mConnection);
 			mBound = false;
 		}
+		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
+		stopService(roverServiceIntent);
+		mService = null;
+		mAccessory = null;
 		Log.i(ME,"Java stopped");
 	}
 
@@ -212,6 +228,8 @@ public class Rover extends Activity implements Runnable
 		}
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		stopService(roverServiceIntent);
+		mService = null;
+		mAccessory = null;
 	}
 
 	public void run()
