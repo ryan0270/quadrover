@@ -546,8 +546,8 @@ void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data
 	mExtraDirsMeasured.push_back(measDir2.copy());
 	mExtraDirsInertial.push_back(nomDir1.copy());
 	mExtraDirsInertial.push_back(nomDir2.copy());
-	mExtraDirsWeight.push_back(2);
-	mExtraDirsWeight.push_back(2);
+	mExtraDirsWeight.push_back(2*2);
+	mExtraDirsWeight.push_back(2*2);
 	mMutex_data.unlock();
 }
 
