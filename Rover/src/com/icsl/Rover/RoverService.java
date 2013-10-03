@@ -560,11 +560,11 @@ public class RoverService extends Service {
 				if(cmds.length == 4)
 					sendMotorCommands(cmds[0], cmds[1], cmds[2], cmds[3]);
 
-				try{ Thread.sleep(5); }
+				try{ Thread.sleep(2); }
 				catch(Exception e){ Log.e(ME,"Caught sleeping"); }
 			}
 
-			Log.i(ME,"ADKMonitor runner finished");
+			Log.i(ME,"ADKMotorCmdSender runner finished");
 		}
 
 		private boolean mRunning;
