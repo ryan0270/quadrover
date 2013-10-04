@@ -195,20 +195,22 @@ stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch
               'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
 if exist('state','var') && ~isempty(state)
     baseFigState = 10;
-    % figure(3); set(gcf,'Units','Inches');
-    % curPos = get(gcf,'Position'); figSize = [5 5];
-    % set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+    figure(baseFigState); set(gcf,'Units','Inches');
+    curPos = get(gcf,'Position'); figSize = [8 6];
+    set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
     figure(baseFigState+0)
-    for i=1:12
-        subplot(4,3,i)
+    for i=1:3
+%         subplot(4,3,i)
+		subplot(3,1,i);
 		if ~isempty(stateRef)
 			plot(stateRefTime, stateRef(i,:)); hold all
 		end
-        plot(stateTime,state(i,:)); hold off
+        plot(stateTime,state(i,:),'LineWidth',2); hold off
         xlabel('Time [s]');
         ylabel(stateLabels(i));
 
-    	ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)])
+%     	ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)])
+		ax = axis; axis([30 120 ax(3) ax(4)])
     % 	if i == 4 || i == 5
     % 		axis([0 40 -.75 .75]);
     % 	elseif i == 6
@@ -217,6 +219,8 @@ if exist('state','var') && ~isempty(state)
     end
     legend('Commanded','Measured');
 end
+
+return
  
 %%
 % gyroBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
