@@ -36,6 +36,7 @@ int main(int argv, char* argc[])
 //			startImg = 971;
 			startImg = 1360;
 			endImg = 2874;
+			endImg = 2600;
 			break;
 	}
 
@@ -102,16 +103,11 @@ int main(int argv, char* argc[])
 	cv::moveWindow("tom",0,261);
 
 	// make the mser detector
-	int delta = 5;
+	int delta = 5*2;
 	int minArea = 1000;
 	int maxArea = 0.5*320*240;
 	double maxVariation = 0.25; // smaller reduces number of regions
-	double minDiversity = 0.5; // smaller increase the number of regions
-	// for color only
-	int maxEvolution = 200;
-	double areaThreshold = 1.01;
-	double minMargin = 0.003;
-	int edgeBlurSize = 5;
+	double minDiversity = 0.4; // smaller increase the number of regions
 	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
 
 	vector<shared_ptr<ActiveObject>> activeObjects;
@@ -129,16 +125,18 @@ int main(int argv, char* argc[])
 	vector<vector<cv::Point>> regions;
 	float t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
 	t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = 0;
+	int activeCnt = 0;
 	int imgCnt = 0;
 	Time curTime;
+	cv::Mat mask(240,320,CV_8UC1, cv::Scalar(0));
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
-cout << "imgCnt: " << imgCnt <<  endl;
+//cout << "imgCnt: " << imgCnt <<  endl;
 		Time chadTime;
 		curTime.addTimeMS(33);
 
-Time start;
 		img = *(imgIter->second);
+Time start;
 		cvtColor(img, imgGray, CV_BGR2GRAY);
 
 t1 += start.getElapsedTimeMS(); start.setTime();
@@ -150,48 +148,43 @@ t2 += start.getElapsedTimeMS(); start.setTime();
 		int border = 2;
 		for(int i=0; i<regions.size(); i++)
 		{
+Time inTime;
 			cv::Rect boundRect = boundingRect( cv::Mat(regions[i]) );
 			boundRect.x = max(0, boundRect.x-border);
 			boundRect.y = max(0, boundRect.y-border);
 			boundRect.width = min(img.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
 			boundRect.height= min(img.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
 			cv::Point corner(boundRect.x, boundRect.y);
-			cv::Mat mask(boundRect.height, boundRect.width, CV_8UC1, cv::Scalar(0));
-//			int minX = 0;
-//			int minY = 0;
-//			int maxX = mask.cols-1;
-//			int maxY = mask.rows-1;
+			mask(boundRect) = cv::Scalar(0);
+			uchar *row;
+			int step = mask.step;
 			for(int j=0; j<regions[i].size(); j++)
 			{
-				int x = regions[i][j].x-corner.x;
-				int y = regions[i][j].y-corner.y;
+				int x = regions[i][j].x;
+				int y = regions[i][j].y;
 				mask.at<uchar>(y,x) = 255;
-
-				// Do a dilate as long as I'm here. This should save a little time since I don't have
-				// to slide over all the black pixels
-				// Right now this isn't giving the same results as OpenCV's dilate :(
-//				for(int c=max(minX, x-1); c<min(maxX,x+1); c++)
-//					for(int r=max(minY, y-1); r<min(maxY,y+1); r++)
-//						mask.at<uchar>(r,c) = 255;
 			}
 
-			cv::dilate(mask, mask, cv::Mat());
-			cv::erode(mask, mask, cv::Mat());
+t7 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
 
-			cv::Canny(mask, mask, 0, 10, 3);
+			cv::Canny(mask(boundRect), mask(boundRect), 50, 100, 5, true);
 
+t8 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
 			vector<vector<cv::Point>> contours;
-			cv::findContours(mask, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, corner);
-			cv::Mat mask2(img.size(), CV_8UC1, cv::Scalar(0));
-			drawContours(mask2, contours, -1, cv::Scalar(255));
+			cv::findContours(mask(boundRect), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, corner);
+//			cv::Mat mask2(img.size(), CV_8UC1, cv::Scalar(0));
+//			drawContours(mask2, contours, -1, cv::Scalar(255));
+
+t9 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
 
 			for(int i=0; i<contours.size(); i++)
 			{
-				approxPolyDP(cv::Mat(contours[i]), contours[i], 2, true);
-				if(contours[i].size() < 3 || cv::contourArea(contours[i]) < minArea)
-					continue;
+				if(cv::contourArea(contours[i]) < minArea)
+						continue;
+//				approxPolyDP(cv::Mat(contours[i]), contours[i], 2, true);
 				allContours.push_back(contours[i]);
 			}
+t10 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
 		}
 
 t3 += start.getElapsedTimeMS(); start.setTime();
@@ -242,31 +235,31 @@ t3 += start.getElapsedTimeMS(); start.setTime();
 		double f = mCameraMatrix_640x480->at<double>(0,0);
 		Array2D<double> omega(3,1,0.0);
 
-cout << "---------------- priors --------------------------" << endl;
+//cout << "---------------- priors --------------------------" << endl;
 		for(int i=0; i<activeObjects.size(); i++)
 		{
 			shared_ptr<ActiveObject> ao = activeObjects[i];
 			ao->updatePosition(mv, Sv, mz, sz*sz, f, center, omega, curTime);
-cout << ao->id << "\t\t";
-cout << (int)(ao->expectedPos[0][0]+0.5) << " x " << (int)(ao->expectedPos[1][0]+0.5) << "\t\t";
-cout << (int)(ao->posCov[0][0]+0.5) << " x " << (int)(ao->posCov[1][1]+0.5) << "\t\t";
-cout << ao->mom.m00 << "\t\t";
-cout << endl;
+//cout << ao->id << "\t\t";
+//cout << (int)(ao->expectedPos[0][0]+0.5) << " x " << (int)(ao->expectedPos[1][0]+0.5) << "\t\t";
+//cout << (int)(ao->posCov[0][0]+0.5) << " x " << (int)(ao->posCov[1][1]+0.5) << "\t\t";
+//cout << ao->mom.m00 << "\t\t";
+//cout << endl;
 		}
 
-cout << "---------------- current objects --------------------------" << endl;
-for(int i=0; i<curObjects.size(); i++)
-{
-	cout << curObjects[i]->id << "\t\t";
-	cout << curObjects[i]->lastCenter.x << " x " << curObjects[i]->lastCenter.y << "\t\t";
-	cout << curObjects[i]->mom.m00 << "\t\t";
-	cout << endl;
-}
+//cout << "---------------- current objects --------------------------" << endl;
+//for(int i=0; i<curObjects.size(); i++)
+//{
+//	cout << curObjects[i]->id << "\t\t";
+//	cout << curObjects[i]->lastCenter.x << " x " << curObjects[i]->lastCenter.y << "\t\t";
+//	cout << curObjects[i]->mom.m00 << "\t\t";
+//	cout << endl;
+//}
 
 		/////////////////// Establish correspondence based on postiion ///////////////////////
 		Array2D<double> C = ActiveObject::calcCorrespondence(activeObjects, curObjects, Sn, SnInv, varxi, probNoCorr);
-cout << "---------------- correspondence --------------------------" << endl;
-printArray("\n",C);
+//cout << "---------------- correspondence --------------------------" << endl;
+//printArray("\n",C);
 
 		vector<Match> goodMatches;
 		shared_ptr<ActiveObject> aoPrev, aoCur;
@@ -303,7 +296,7 @@ printArray("\n",C);
 
 			matched[maxIndex] = true;
 			aoCur = curObjects[maxIndex];
-cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
+//cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
 
 			Match m;
 			m.aoPrev = aoPrev;
@@ -326,7 +319,7 @@ cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
 			if(!matched[j])
 				newObjects.push_back(curObjects[j]);
 
-t5 += start.getElapsedTimeMS(); start.setTime();
+t4 += start.getElapsedTimeMS(); start.setTime();
 		for(int i=0; i<activeObjects.size(); i++)
 			activeObjects[i]->life -= 1;
 
@@ -343,7 +336,9 @@ t5 += start.getElapsedTimeMS(); start.setTime();
 		for(int i=0; i<newObjects.size(); i++)
 			activeObjects.push_back(newObjects[i]);
 
-t6 += start.getElapsedTimeMS(); start.setTime();
+		activeCnt += activeObjects.size();
+
+t5 += start.getElapsedTimeMS(); start.setTime();
 		imshow("chad",oldImg);
 
 		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
@@ -359,14 +354,18 @@ t6 += start.getElapsedTimeMS(); start.setTime();
 			repeatContours[i] = repeatObjects[i]->contour;
 		cv::drawContours(img, repeatContours, -1, cv::Scalar(0,0,255), 2);
 
+//		stringstream name;
+//		name << imgDir << "/annotated/img_" << imgCnt << ".bmp";
+//		imwrite(name.str().c_str(),img);
+
 		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
 		cv::Point offset(321,0);
 		for(int i=0; i<goodMatches.size(); i++)
 			line(dblImg,goodMatches[i].aoPrev->lastCenter, goodMatches[i].aoCur->lastCenter+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
-t7 += start.getElapsedTimeMS(); start.setTime();
-		keypress = cv::waitKey(33) % 256;
+//t6 += start.getElapsedTimeMS(); start.setTime();
+		keypress = cv::waitKey(1) % 256;
 
 		imgIter++;
 		imgCnt++;
@@ -379,6 +378,11 @@ t7 += start.getElapsedTimeMS(); start.setTime();
 	cout << "t5:\t" << t5/imgCnt << endl;
 	cout << "t6:\t" << t6/imgCnt << endl;
 	cout << "t7:\t" << t7/imgCnt << endl;
+	cout << "t8:\t" << t8/imgCnt << endl;
+	cout << "t9:\t" << t9/imgCnt << endl;
+	cout << "t10:\t" << t10/imgCnt << endl;
+	cout << "avg algo time: " << (t1+t2+t3+t4+t5)/imgCnt << endl;
+	cout << "num objects:\t" << activeCnt/imgCnt << endl;
 
     return 0;
 }

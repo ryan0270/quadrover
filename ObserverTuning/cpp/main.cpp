@@ -49,7 +49,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 1;
+	int dataSet = 4;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -72,6 +72,11 @@ int main(int argv, char* argc[])
 			dataDir = "../dataSets/Sep23";
 			startImg = 3286;
 			endImg = 5954;
+			break;
+		case 4:
+			dataDir = "../dataSets/Oct3_2";
+			startImg = 989;
+			endImg = 3850;
 			break;
 	}
 
@@ -238,27 +243,38 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-//	cv::namedWindow("dispFeatureFind",1);
-//	cv::namedWindow("dispTargetFind",1);
-//	cv::moveWindow("dispFeatureFind",0,0);
-//	cv::moveWindow("dispTargetFind",321,0);
-//
-//	class MyFeatureFinderListener : public FeatureFinderListener
-//	{
-//		public:
-//		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-//		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
-//	} myFeatureFinderListener;
-//	mFeatureFinder.addListener(&myFeatureFinderListener);
-//
-//	class MyTargetFinderListener : public TargetFinderListener
-//	{
-//		public:
-//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-//		{ imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated)); cv::waitKey(1);};
-//
-//	} myTargetFinderListener;
-//	mTargetFinder.addListener(&myTargetFinderListener);
+	cv::namedWindow("dispFeatureFind",1);
+	cv::namedWindow("dispTargetFind",1);
+	cv::moveWindow("dispFeatureFind",0,0);
+	cv::moveWindow("dispTargetFind",321,0);
+
+	class MyFeatureFinderListener : public FeatureFinderListener
+	{
+		public:
+		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
+		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
+	} myFeatureFinderListener;
+	mFeatureFinder.addListener(&myFeatureFinderListener);
+
+	class MyTargetFinderListener : public TargetFinderListener
+	{
+		public:
+		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+		{
+			stringstream ss;
+			ss << imgDir << "/annotated_target/img_" << imgCnt++ << ".bmp";
+			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+			imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated));
+			cv::waitKey(1);
+		};
+
+		int imgCnt;
+		string imgDir;
+
+	} myTargetFinderListener;
+	myTargetFinderListener.imgCnt = 0;
+	myTargetFinderListener.imgDir = imgDir;
+	mTargetFinder.addListener(&myTargetFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -375,7 +391,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 55e3;
+	int endTimeDelta = 1000e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz

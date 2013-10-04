@@ -58,7 +58,7 @@ void TargetFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-			&& mIsMotorOn
+//			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -98,8 +98,8 @@ void TargetFinder::run()
 
 			double procTime = procStart.getElapsedTimeNS()/1.0e9;
 
-			if(target != NULL)
-			{
+//			if(target != NULL)
+//			{
 				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 				curImage.copyTo(*imageAnnotated);
 				drawTarget(*imageAnnotated, target);
@@ -119,6 +119,8 @@ void TargetFinder::run()
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onTargetFound(data);
 
+if(target != NULL)
+{
 				logString = String();
 				for(int i=0; i<target->squareData.size(); i++)
 					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
@@ -395,6 +397,8 @@ shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &ca
 
 void TargetFinder::drawTarget(cv::Mat &image, const shared_ptr<RectGroup> &target)
 {
+	if(target == NULL)
+		return;
 	for( int i = 0; i < target->squareData.size(); i++ )
 	{
 		const cv::Point *p = &target->squareData[i]->contourInt[0];
