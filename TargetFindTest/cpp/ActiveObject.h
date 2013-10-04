@@ -31,7 +31,16 @@ class ActiveObject
 	double centralMoms[7];
 	int id;
 
+	TNT::Array2D<double> principalAxes;
+	vector<double> principalAxesEigVal;
+	
+
 	TNT::Array2D<double> expectedPos, posCov;
+
+	void copyData(const ActiveObject &ao);
+
+	// assumes moments have already been calculated
+	void calcPrincipalAxes();
 
 	cv::Point2f meanPos;
 	void updatePosition(const TNT::Array2D<double> &mv, const TNT::Array2D<double> &Sv, 
