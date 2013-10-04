@@ -102,14 +102,6 @@ int main(int argv, char* argc[])
 	cv::namedWindow("tom",1);
 	cv::moveWindow("tom",0,261);
 
-	// make the mser detector
-	int delta = 5*2;
-	int minArea = 1000;
-	int maxArea = 0.5*320*240;
-	double maxVariation = 0.25; // smaller reduces number of regions
-	double minDiversity = 0.4; // smaller increase the number of regions
-	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
-
 	vector<shared_ptr<ActiveObject>> activeObjects;
 
 	Array2D<double> Sn = 2*10*10*createIdentity((double)2);
@@ -121,73 +113,22 @@ int main(int argv, char* argc[])
 
 	int keypress = 0;
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
-	cv::Mat img(240,320, CV_8UC3), imgGray, oldImg(240,320,CV_8UC3);
-	vector<vector<cv::Point>> regions;
+	cv::Mat img(240,320, CV_8UC3), oldImg(240,320,CV_8UC3);
 	float t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
 	t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = 0;
 	int activeCnt = 0;
 	int imgCnt = 0;
 	Time curTime;
-	cv::Mat mask(240,320,CV_8UC1, cv::Scalar(0));
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
 //cout << "imgCnt: " << imgCnt <<  endl;
-		Time chadTime;
+Time start;
 		curTime.addTimeMS(33);
 
 		img = *(imgIter->second);
-Time start;
-		cvtColor(img, imgGray, CV_BGR2GRAY);
+		vector<vector<cv::Point>> allContours = findContours(img);
 
-t1 += start.getElapsedTimeMS(); start.setTime();
-		mserDetector(imgGray, regions);
-
-t2 += start.getElapsedTimeMS(); start.setTime();
-		/////////////////// Find contours ///////////////////////
-		vector<vector<cv::Point>> allContours;
-		int border = 2;
-		for(int i=0; i<regions.size(); i++)
-		{
-Time inTime;
-			cv::Rect boundRect = boundingRect( cv::Mat(regions[i]) );
-			boundRect.x = max(0, boundRect.x-border);
-			boundRect.y = max(0, boundRect.y-border);
-			boundRect.width = min(img.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
-			boundRect.height= min(img.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
-			cv::Point corner(boundRect.x, boundRect.y);
-			mask(boundRect) = cv::Scalar(0);
-			uchar *row;
-			int step = mask.step;
-			for(int j=0; j<regions[i].size(); j++)
-			{
-				int x = regions[i][j].x;
-				int y = regions[i][j].y;
-				mask.at<uchar>(y,x) = 255;
-			}
-
-t7 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
-
-			cv::Canny(mask(boundRect), mask(boundRect), 50, 100, 5, true);
-
-t8 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
-			vector<vector<cv::Point>> contours;
-			cv::findContours(mask(boundRect), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, corner);
-//			cv::Mat mask2(img.size(), CV_8UC1, cv::Scalar(0));
-//			drawContours(mask2, contours, -1, cv::Scalar(255));
-
-t9 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
-
-			for(int i=0; i<contours.size(); i++)
-			{
-				if(cv::contourArea(contours[i]) < minArea)
-						continue;
-//				approxPolyDP(cv::Mat(contours[i]), contours[i], 2, true);
-				allContours.push_back(contours[i]);
-			}
-t10 += inTime.getElapsedTimeNS()/1.0e6; inTime.setTime();
-		}
-
-t3 += start.getElapsedTimeMS(); start.setTime();
+t3 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		/////////////////// make objects of the new contours ///////////////////////
 		vector<shared_ptr<ActiveObject>> curObjects;
 		for(int i=0; i<allContours.size(); i++)
@@ -195,8 +136,7 @@ t3 += start.getElapsedTimeMS(); start.setTime();
 			shared_ptr<ActiveObject> ao1(new ActiveObject(allContours[i]));
 			ao1->lastFoundTime.setTime(curTime);
 			ao1->posCov.inject(0.5*Sn);
-			if(ao1->mom.m00 > minArea)
-				curObjects.push_back(ao1);
+			curObjects.push_back(ao1);
 		}
 
 		/////////////////// self-similarity check ///////////////////////
@@ -303,15 +243,9 @@ t3 += start.getElapsedTimeMS(); start.setTime();
 			m.aoCur = aoCur;
 			m.score = C[i][maxIndex];
 			goodMatches.push_back(m);
-
-			// copy data over to update the shape and position
-			aoPrev->contour.swap(aoCur->contour);
-			aoPrev->mom = aoCur->mom;
-			aoPrev->lastCenter = aoCur->lastCenter;
-			aoPrev->lastFoundTime.setTime(curTime);
-			memcpy(aoPrev->huMom, aoCur->huMom, 7*sizeof(double));
-			memcpy(aoPrev->centralMoms, aoCur->centralMoms, 7*sizeof(double));
+			aoPrev->copyData(*aoCur);
 			aoPrev->life= min((float)21, aoPrev->life+2);
+			aoPrev->lastFoundTime.setTime(curTime);
 			repeatObjects.push_back(aoPrev);
 		}
 		
@@ -319,7 +253,7 @@ t3 += start.getElapsedTimeMS(); start.setTime();
 			if(!matched[j])
 				newObjects.push_back(curObjects[j]);
 
-t4 += start.getElapsedTimeMS(); start.setTime();
+t4 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		for(int i=0; i<activeObjects.size(); i++)
 			activeObjects[i]->life -= 1;
 
@@ -338,7 +272,7 @@ t4 += start.getElapsedTimeMS(); start.setTime();
 
 		activeCnt += activeObjects.size();
 
-t5 += start.getElapsedTimeMS(); start.setTime();
+t5 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		imshow("chad",oldImg);
 
 		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
@@ -347,7 +281,24 @@ t5 += start.getElapsedTimeMS(); start.setTime();
 		cv::drawContours(img, allContours, -1, cv::Scalar(255,0,0), 2);
 		img.copyTo(oldImg);
 
-		imshow("bob",img);
+		/////////////////// draw principal axes ///////////////////////
+		cv::Mat axisImg;
+		img.copyTo(axisImg);
+		for(int i=0; i<curObjects.size(); i++)
+		{
+			shared_ptr<ActiveObject> obj = curObjects[i];
+			cv::Point2f cen = obj->lastCenter;
+			cv::Point2f p1, p2;
+			p1.x = cen.x + 10*obj->principalAxes[0][0] * obj->principalAxesEigVal[0];
+			p1.y = cen.y + 10*obj->principalAxes[1][0] * obj->principalAxesEigVal[0];
+			p2.x = cen.x + 10*obj->principalAxes[0][1] * obj->principalAxesEigVal[1];
+			p2.y = cen.y + 10*obj->principalAxes[1][1] * obj->principalAxesEigVal[1];
+
+			line(axisImg,cen,p1,cv::Scalar(0,255,255),1);
+			line(axisImg,cen,p2,cv::Scalar(255,0,255),1);
+		}
+
+		imshow("bob",axisImg);
 		vector<vector<cv::Point>> repeatContours(repeatObjects.size());
 		
 		for(int i=0; i<repeatObjects.size(); i++)
@@ -364,8 +315,8 @@ t5 += start.getElapsedTimeMS(); start.setTime();
 			line(dblImg,goodMatches[i].aoPrev->lastCenter, goodMatches[i].aoCur->lastCenter+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
-//t6 += start.getElapsedTimeMS(); start.setTime();
-		keypress = cv::waitKey(1) % 256;
+//t6 += start.getElapsedTimeNS()/1.0e6; start.setTime();
+		keypress = cv::waitKey(0) % 256;
 
 		imgIter++;
 		imgCnt++;

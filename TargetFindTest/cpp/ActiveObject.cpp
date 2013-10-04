@@ -8,7 +8,11 @@ using namespace ICSL::Constants;
 unsigned long ActiveObject::lastID = 0;
 
 
-ActiveObject::ActiveObject() : expectedPos(2,1,0.0), posCov(2,2,0.0)
+ActiveObject::ActiveObject() :
+	expectedPos(2,1,0.0),
+	posCov(2,2,0.0),
+	principalAxes(2,2,0.0),
+	principalAxesEigVal(2,0.0)
 {
 	life = 10;
 	this->id = lastID++;
@@ -34,6 +38,68 @@ ActiveObject::ActiveObject(std::vector<cv::Point> points) : ActiveObject()
 	centralMoms[5] = mom.mu12;
 //		centralMoms[6] = mom.mu03;
 	centralMoms[6] = mom.m00;
+
+	calcPrincipalAxes();
+}
+
+void ActiveObject::copyData(const ActiveObject &ao)
+{
+	contour.assign(ao.contour.begin(), ao.contour.end());
+	mom = ao.mom;
+	lastCenter = ao.lastCenter;
+	memcpy(huMom, ao.huMom, 7*sizeof(double));
+	memcpy(centralMoms, ao.centralMoms, 7*sizeof(double));
+	principalAxes.inject(ao.principalAxes);
+	principalAxesEigVal[0] = ao.principalAxesEigVal[0];
+	principalAxesEigVal[1] = ao.principalAxesEigVal[1];
+}
+
+// from http://en.wikipedia.org/wiki/Image_moment
+void ActiveObject::calcPrincipalAxes()
+{
+	Array2D<double> cov(2,2);
+	cov[0][0] = mom.mu20/mom.m00;
+	cov[0][1] = mom.mu11/mom.m00;
+	cov[1][0] = cov[0][1];
+	cov[1][1] = mom.mu02/mom.m00;
+
+	double eigMid = 0.5*(cov[0][0]+cov[1][1]);
+	double eigOffset = 0.5*sqrt( (cov[0][0]-cov[1][1])*(cov[0][0]-cov[1][1]) + 4*cov[0][1]*cov[0][1] );
+	principalAxesEigVal[0] = eigMid+eigOffset;
+	principalAxesEigVal[1] = eigMid-eigOffset;
+	if(cov[0][1] == 0)
+	{
+		if(cov[0][0] > cov[1][1])
+		{
+			principalAxes[0][0] = 1;
+			principalAxes[1][0] = 0;
+			principalAxes[0][1] = 0;
+			principalAxes[1][1] = 1;
+		}
+		else
+		{
+			principalAxes[0][0] = 0;
+			principalAxes[1][0] = 1;
+			principalAxes[0][1] = 1;
+			principalAxes[1][1] = 0;
+		}
+	}
+	else
+	{
+		principalAxes[0][0] = principalAxesEigVal[0]-cov[1][1];
+		principalAxes[1][0] = cov[0][1];
+		principalAxes[0][1] = principalAxes[1][0];
+		principalAxes[1][1] = -principalAxes[0][0];
+	}
+
+	double scale0 = norm2(submat(principalAxes,0,1,0,0));
+	double scale1 = norm2(submat(principalAxes,0,1,1,1));
+	principalAxes[0][0] /= scale0;
+	principalAxes[1][0] /= scale0;
+	principalAxes[0][1] /= scale1;
+	principalAxes[1][1] /= scale1;
+	principalAxesEigVal[0] /= scale0;
+	principalAxesEigVal[1] /= scale1;
 }
 
 void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<double> &Sv, 
