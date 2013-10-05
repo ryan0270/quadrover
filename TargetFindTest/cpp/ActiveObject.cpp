@@ -4,6 +4,7 @@ namespace ICSL{
 using namespace std;
 using namespace TNT;
 using namespace ICSL::Constants;
+using namespace toadlet::egg;
 
 unsigned long ActiveObject::lastID = 0;
 
@@ -194,16 +195,20 @@ void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 // instead of assuming a constant Sn for curObjectList
 Array2D<double> ActiveObject::calcCorrespondence(const vector<shared_ptr<ActiveObject>> &prevObjectList,
 												 const vector<shared_ptr<ActiveObject>> &curObjectList,
-												 const Array2D<double> &Sn,
-												 const Array2D<double> &SnInv,
+												 const Array2D<double> &Sn1,
+												 const Array2D<double> &SnInv1,
 												 double varxi,
-												 float probNoCorr)
+												 double probNoCorr)
 {
 	int N1 = prevObjectList.size();
 	int N2 = curObjectList.size();
 
 	if(N1 == 0 || N2 == 0)
 		return Array2D<double>();
+
+	// To account for measurement noise both in the previous object and the current object
+	Array2D<double> Sn = 2.0*Sn1;
+	Array2D<double> SnInv = 0.5*SnInv1;
 
 	// Precompute some things
 	vector<Array2D<double>> SdInvmdList(N1), SaInvList(N1), SaList(N1);

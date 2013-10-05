@@ -7,6 +7,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "toadlet/egg.h"
+
 #include "TNT/tnt.h"
 #include "TNT_Utils.h"
 
@@ -54,7 +56,7 @@ class ActiveObject
 												   const TNT::Array2D<double> &Sn,
 												   const TNT::Array2D<double> &SnInv,
 												   double varxi, // variance of the shape metric
-												   float probNoCorr);
+												   double probNoCorr);
 
 	static double calcShapeDistance(const shared_ptr<ActiveObject> &ao1, const shared_ptr<ActiveObject> &ao2);
 

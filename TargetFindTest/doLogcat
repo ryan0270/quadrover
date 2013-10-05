@@ -1,0 +1,5 @@
+#!/bin/bash
+
+adb logcat -c
+# adb logcat | grep -e toadlet -e OpenCV -e Rover -e DEBUG -e RoverService
+adb logcat TargetFindTest:V toadlet:V OpenCV:V *:S

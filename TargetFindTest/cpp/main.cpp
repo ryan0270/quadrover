@@ -21,7 +21,6 @@ int main(int argv, char* argc[])
 {
 	using namespace ICSL;
 	using namespace ICSL::Quadrotor;
-//	using namespace ICSL::Constants;
 	using namespace TNT;
 	using namespace std;
 	cout << "start chadding" << endl;
@@ -51,7 +50,6 @@ int main(int argv, char* argc[])
 	numImages = endImg-startImg;;
 	for(int i=0; i<numImages; i++)
 	{
-//		cout << "Loading image " << i << ": " << imgId << endl;
 		cv::Mat img;
 		while(img.data == NULL)
 		{
@@ -80,9 +78,6 @@ int main(int argv, char* argc[])
 		fs["camera_matrix"] >> *mCameraMatrix_640x480;
 		fs["distortion_coefficients"] >> *mCameraDistortionCoeffs;
 		cout << "Camera calib loaded from " << filename.c_str() << endl;
-//		cout << "\t" << "Focal length: " << mCameraMatrix_640x480->at<double>(0,0) << endl;
-//		cout << "\t" << "centerX: " << mCameraMatrix_640x480->at<double>(0,2) << endl;
-//		cout << "\t" << "centerY: " << mCameraMatrix_640x480->at<double>(1,2) << endl;
 
 		mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
 		mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
@@ -104,12 +99,12 @@ int main(int argv, char* argc[])
 
 	vector<shared_ptr<ActiveObject>> activeObjects;
 
-	Array2D<double> Sn = 2*10*10*createIdentity((double)2);
+	Array2D<double> Sn = 10*10*createIdentity((double)2);
 	Array2D<double> SnInv(2,2,0.0);
 	SnInv[0][0] = 1.0/Sn[0][0];
 	SnInv[1][1] = 1.0/Sn[1][1];
 	double varxi = pow(500,2);
-	float probNoCorr = 0.0000001;
+	double probNoCorr = 0.0000001;
 
 	int keypress = 0;
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
@@ -128,44 +123,9 @@ Time start;
 		img = *(imgIter->second);
 		vector<vector<cv::Point>> allContours = findContours(img);
 
-t3 += start.getElapsedTimeNS()/1.0e6; start.setTime();
-		/////////////////// make objects of the new contours ///////////////////////
-		vector<shared_ptr<ActiveObject>> curObjects;
-		for(int i=0; i<allContours.size(); i++)
-		{
-			shared_ptr<ActiveObject> ao1(new ActiveObject(allContours[i]));
-			ao1->lastFoundTime.setTime(curTime);
-			ao1->posCov.inject(0.5*Sn);
-			curObjects.push_back(ao1);
-		}
-
-		/////////////////// self-similarity check ///////////////////////
-		// Ideally, I would do this on all of the active objects at the end of the loop
-		// but I still need to work out the math for that. Doing it here, I can take
-		// advantage of everything having the same covariance
-		// First reset all expected positions and covariances
-		// now calculate the correspondence matrix
-		Array2D<double> ssC = ActiveObject::calcCorrespondence(curObjects, curObjects, 0.5*Sn, 2.0*SnInv, varxi, 0);
-
-		// Now keep only things that don't have confusion
-		// if there is confusion, only keep one
-		vector<shared_ptr<ActiveObject>> tempList;
-		tempList.swap(curObjects);
-		vector<bool> isStillGood(tempList.size(), true);
-		for(int i=0; i<tempList.size(); i++)
-		{
-			if(!isStillGood[i])
-				continue;
-			vector<int> confusionList;
-			for(int j=i+1; j<tempList.size(); j++)
-				if(ssC[i][j] > 0.2)
-					confusionList.push_back(j);
-
-			for(int j=0; j<confusionList.size(); j++)
-				isStillGood[confusionList[j]] = false;
-
-			curObjects.push_back(tempList[i]);
-		}
+t1 += start.getElapsedTimeNS()/1.0e6; start.setTime();
+		
+		vector<shared_ptr<ActiveObject>> curObjects = objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
 
 		/////////////////// Get location priors for active objects ///////////////////////
 		Array2D<double> mv(3,1,0.0);
@@ -175,110 +135,28 @@ t3 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		double f = mCameraMatrix_640x480->at<double>(0,0);
 		Array2D<double> omega(3,1,0.0);
 
-//cout << "---------------- priors --------------------------" << endl;
 		for(int i=0; i<activeObjects.size(); i++)
 		{
 			shared_ptr<ActiveObject> ao = activeObjects[i];
 			ao->updatePosition(mv, Sv, mz, sz*sz, f, center, omega, curTime);
-//cout << ao->id << "\t\t";
-//cout << (int)(ao->expectedPos[0][0]+0.5) << " x " << (int)(ao->expectedPos[1][0]+0.5) << "\t\t";
-//cout << (int)(ao->posCov[0][0]+0.5) << " x " << (int)(ao->posCov[1][1]+0.5) << "\t\t";
-//cout << ao->mom.m00 << "\t\t";
-//cout << endl;
 		}
 
-//cout << "---------------- current objects --------------------------" << endl;
-//for(int i=0; i<curObjects.size(); i++)
-//{
-//	cout << curObjects[i]->id << "\t\t";
-//	cout << curObjects[i]->lastCenter.x << " x " << curObjects[i]->lastCenter.y << "\t\t";
-//	cout << curObjects[i]->mom.m00 << "\t\t";
-//	cout << endl;
-//}
-
-		/////////////////// Establish correspondence based on postiion ///////////////////////
-		Array2D<double> C = ActiveObject::calcCorrespondence(activeObjects, curObjects, Sn, SnInv, varxi, probNoCorr);
-//cout << "---------------- correspondence --------------------------" << endl;
-//printArray("\n",C);
-
+		/////////////////// make matches ///////////////////////
 		vector<Match> goodMatches;
-		shared_ptr<ActiveObject> aoPrev, aoCur;
-		vector<shared_ptr<ActiveObject>> repeatObjects, newObjects;
-		int N1 = activeObjects.size();
-		int N2 = curObjects.size();
-		vector<bool> matched(N2, false);
-		for(int i=0; i<N1; i++)
-		{
-			if(N2 == 0 || C[i][N2] > 0.5)
-				continue; // this object probably doesn't have a partner
-
-			aoPrev = activeObjects[i];
-
-			int maxIndex = 0;
-			float maxScore = 0;
-			for(int j=0; j<N2; j++)
-			{
-				if(C[i][j] > maxScore && !matched[j])
-				{
-					maxScore = C[i][j];
-					maxIndex =j;
-				}
-//				else if(C[i][j] > 0.3)
-//				{
-//					// I think this object is probably a duplicate (i.e.
-//					// I found two very similar contours for the same
-//					// thing) There may be some cases where this is not
-//					// the best handling, though, but I'll dealing with
-//					// those when they become an issue
-//					matched[j] = true;
-//				}
-			}
-
-			matched[maxIndex] = true;
-			aoCur = curObjects[maxIndex];
-//cout << "matching " << aoPrev->id << " and " << aoCur->id << endl;
-
-			Match m;
-			m.aoPrev = aoPrev;
-			m.aoCur = aoCur;
-			m.score = C[i][maxIndex];
-			goodMatches.push_back(m);
-			aoPrev->copyData(*aoCur);
-			aoPrev->life= min((float)21, aoPrev->life+2);
-			aoPrev->lastFoundTime.setTime(curTime);
-			repeatObjects.push_back(aoPrev);
-		}
-		
-		for(int j=0; j<curObjects.size(); j++)
-			if(!matched[j])
-				newObjects.push_back(curObjects[j]);
-
-t4 += start.getElapsedTimeNS()/1.0e6; start.setTime();
-		for(int i=0; i<activeObjects.size(); i++)
-			activeObjects[i]->life -= 1;
-
-		sort(activeObjects.begin(), activeObjects.end(), ActiveObject::sortPredicate);
-		while(activeObjects.size() > 0 && activeObjects.back()->life <= 0)
-			activeObjects.pop_back();
-
-//		cout << " =======  LIFE ======== " << endl;
-//		for(int i=0; i<activeObjects.size(); i++)
-//			cout << activeObjects[i]->id << ": " <<  activeObjects[i]->life << endl;
-//		cout << endl;
-
-		// TODO
-		for(int i=0; i<newObjects.size(); i++)
-			activeObjects.push_back(newObjects[i]);
-
+		vector<shared_ptr<ActiveObject>> repeatObjects;
+		matchify(activeObjects, curObjects, goodMatches, repeatObjects, Sn, SnInv, varxi, probNoCorr, curTime);
 		activeCnt += activeObjects.size();
 
-t5 += start.getElapsedTimeNS()/1.0e6; start.setTime();
+t3 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		imshow("chad",oldImg);
 
 		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
 		oldImg.copyTo(dblImg(cv::Rect(0,0,oldImg.cols,oldImg.rows)));
 
-		cv::drawContours(img, allContours, -1, cv::Scalar(255,0,0), 2);
+		vector<vector<cv::Point>> curContours(curObjects.size());
+		for(int i=0; i<curObjects.size(); i++)
+			curContours[i] = curObjects[i]->contour;
+		cv::drawContours(img, curContours, -1, cv::Scalar(255,0,0), 2);
 		img.copyTo(oldImg);
 
 		/////////////////// draw principal axes ///////////////////////
@@ -315,8 +193,7 @@ t5 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 			line(dblImg,goodMatches[i].aoPrev->lastCenter, goodMatches[i].aoCur->lastCenter+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
-//t6 += start.getElapsedTimeNS()/1.0e6; start.setTime();
-		keypress = cv::waitKey(0) % 256;
+		keypress = cv::waitKey(1) % 256;
 
 		imgIter++;
 		imgCnt++;

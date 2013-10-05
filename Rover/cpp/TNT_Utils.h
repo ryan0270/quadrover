@@ -8,25 +8,6 @@
 #include <toadlet/egg.h>
 
 namespace TNT{
-//	template <class T>
-//	inline void printTNTArray(Array2D<T> array) 
-//	{ 
-//		int m = array.dim1(); 
-//		int n = array.dim2(); 
-//		int i,j; 
-//		for(i=0; i<m; i++) 
-//		{ 
-//			for(j=0; j<n; j++) 
-//			{ 
-//				std::cout.width(8);
-//				std::cout << array[i][j]; 
-//				if( j < n-1 ) 
-//					std::cout << "\t"; 
-//			} 
-//			std::cout << std::endl; 
-//		} 
-//	} 
-
 	template <class T>
 	inline Array2D<T> transpose(const Array2D<T> &array)
 	{
@@ -320,8 +301,7 @@ namespace TNT{
 			{
 				for(int j=0; j<m.dim2(); j++)
 					str = str+m[i][j]+"\t";
-				if(i+1 < m.dim1())
-					str = str+"\n";
+				str = str+"\n";
 			}
 		}
 		toadlet::egg::Log::alert(str.substr(0, str.length()-1));
