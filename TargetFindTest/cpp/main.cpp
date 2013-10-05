@@ -15,7 +15,6 @@
 
 #include "ActiveObject.h"
 #include "funcs.h"
-//#include "mser.h"
 
 int main(int argv, char* argc[])
 {
@@ -36,6 +35,7 @@ int main(int argv, char* argc[])
 			startImg = 1360;
 			endImg = 2874;
 			endImg = 2600;
+			endImg = 1400;
 			break;
 	}
 
@@ -109,8 +109,7 @@ int main(int argv, char* argc[])
 	int keypress = 0;
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
 	cv::Mat img(240,320, CV_8UC3), oldImg(240,320,CV_8UC3);
-	float t1, t2, t3, t4, t5, t6, t7, t8, t9, t10;
-	t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = t9 = t10 = 0;
+	TimeKeeper::times.resize(10);
 	int activeCnt = 0;
 	int imgCnt = 0;
 	Time curTime;
@@ -123,7 +122,7 @@ Time start;
 		img = *(imgIter->second);
 		vector<vector<cv::Point>> allContours = findContours(img);
 
-t1 += start.getElapsedTimeNS()/1.0e6; start.setTime();
+TimeKeeper::times[0] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		
 		vector<shared_ptr<ActiveObject>> curObjects = objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
 
@@ -147,7 +146,7 @@ t1 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		matchify(activeObjects, curObjects, goodMatches, repeatObjects, Sn, SnInv, varxi, probNoCorr, curTime);
 		activeCnt += activeObjects.size();
 
-t3 += start.getElapsedTimeNS()/1.0e6; start.setTime();
+TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		imshow("chad",oldImg);
 
 		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
@@ -199,17 +198,9 @@ t3 += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		imgCnt++;
 	}
 
-	cout << "t1:\t" << t1/imgCnt << endl;
-	cout << "t2:\t" << t2/imgCnt << endl;
-	cout << "t3:\t" << t3/imgCnt << endl;
-	cout << "t4:\t" << t4/imgCnt << endl;
-	cout << "t5:\t" << t5/imgCnt << endl;
-	cout << "t6:\t" << t6/imgCnt << endl;
-	cout << "t7:\t" << t7/imgCnt << endl;
-	cout << "t8:\t" << t8/imgCnt << endl;
-	cout << "t9:\t" << t9/imgCnt << endl;
-	cout << "t10:\t" << t10/imgCnt << endl;
-	cout << "avg algo time: " << (t1+t2+t3+t4+t5)/imgCnt << endl;
+	for(int i=0; i<TimeKeeper::times.size(); i++)
+		cout << "t" << i << ":\t" << TimeKeeper::times[i]/imgCnt << endl;
+	cout << "avg algo time: " << TimeKeeper::sum(0,4)/imgCnt << endl;
 	cout << "num objects:\t" << activeCnt/imgCnt << endl;
 
     return 0;

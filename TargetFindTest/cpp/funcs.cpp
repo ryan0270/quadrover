@@ -9,18 +9,22 @@ vector<double> TimeKeeper::times;
 
 vector<vector<cv::Point>> findContours(const cv::Mat &img)
 {
+Time start;
 	cv::Mat imgGray;
 	cvtColor(img, imgGray, CV_BGR2GRAY);
 
+TimeKeeper::times[5] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	int delta = 5*2;
 	int minArea = 1000;
 	int maxArea = 0.5*240*320;
 	double maxVariation = 0.25; // smaller reduces number of regions
 	double minDiversity = 0.4; // smaller increase the number of regions
-	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
+//	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
+	MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
 	vector<vector<cv::Point>> regions;
 	mserDetector(imgGray, regions);
 
+TimeKeeper::times[6] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	// preallocate
 	cv::Mat mask(img.rows,img.cols,CV_8UC1, cv::Scalar(0));
 
@@ -58,6 +62,7 @@ vector<vector<cv::Point>> findContours(const cv::Mat &img)
 		}
 	}
 
+TimeKeeper::times[7] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	return allContours;
 }
 

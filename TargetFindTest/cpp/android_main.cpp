@@ -386,7 +386,7 @@ TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	}
 
 	for(int i=0; i<TimeKeeper::times.size(); i++)
-		Log::alert(String()+"t0:\t" + (TimeKeeper::times[i]/imgCnt));
+		Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
 	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,3)/imgCnt);
 	Log::alert(String()+"num objects:\t" + activeCnt/imgCnt);
 
