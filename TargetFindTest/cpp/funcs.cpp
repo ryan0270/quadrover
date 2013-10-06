@@ -13,10 +13,10 @@ Time start;
 	cv::Mat imgGray;
 	cvtColor(img, imgGray, CV_BGR2GRAY);
 
-TimeKeeper::times[5] += start.getElapsedTimeNS()/1.0e6; start.setTime();
+TimeKeeper::times[10] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	int delta = 5*2;
-	int minArea = 1000;
-	int maxArea = 0.5*240*320;
+	int minArea = 1.0/pow(10,2)*240*320;
+	int maxArea = 1.0/pow(2,2)*240*320;
 	double maxVariation = 0.25; // smaller reduces number of regions
 	double minDiversity = 0.4; // smaller increase the number of regions
 //	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
@@ -24,7 +24,7 @@ TimeKeeper::times[5] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	vector<vector<cv::Point>> regions;
 	mserDetector(imgGray, regions);
 
-TimeKeeper::times[6] += start.getElapsedTimeNS()/1.0e6; start.setTime();
+TimeKeeper::times[11] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	// preallocate
 	cv::Mat mask(img.rows,img.cols,CV_8UC1, cv::Scalar(0));
 
@@ -49,20 +49,21 @@ TimeKeeper::times[6] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 			mask.at<uchar>(y,x) = 255;
 		}
 
-		cv::Canny(mask(boundRect), mask(boundRect), 50, 100, 5, true);
+//		cv::Canny(mask(boundRect), mask(boundRect), 50, 100, 5, true);
 
 		vector<vector<cv::Point>> contours;
 		cv::findContours(mask(boundRect), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, corner);
 
 		for(int i=0; i<contours.size(); i++)
-		{
-			if(cv::contourArea(contours[i]) < minArea)
-				continue;
-			allContours.push_back(contours[i]);
-		}
+			if(cv::contourArea(contours[i]) >= minArea)
+				allContours.push_back(contours[i]);
 	}
 
-TimeKeeper::times[7] += start.getElapsedTimeNS()/1.0e6; start.setTime();
+//	vector<vector<cv::Point>> allContours;
+//	for(int i=0; i<regions.size(); i++)
+//		allContours.push_back( MSERToContour(regions[i]));
+
+TimeKeeper::times[12] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	return allContours;
 }
 

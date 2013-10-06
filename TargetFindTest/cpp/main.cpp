@@ -22,6 +22,8 @@ int main(int argv, char* argc[])
 	using namespace ICSL::Quadrotor;
 	using namespace TNT;
 	using namespace std;
+	using toadlet::egg::Log;
+	using toadlet::egg::String;
 	cout << "start chadding" << endl;
 
 	string dataDir;
@@ -35,7 +37,7 @@ int main(int argv, char* argc[])
 			startImg = 1360;
 			endImg = 2874;
 			endImg = 2600;
-			endImg = 1400;
+			endImg = startImg+200;
 			break;
 	}
 
@@ -109,23 +111,25 @@ int main(int argv, char* argc[])
 	int keypress = 0;
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
 	cv::Mat img(240,320, CV_8UC3), oldImg(240,320,CV_8UC3);
-	TimeKeeper::times.resize(10);
+	TimeKeeper::times.resize(100);
+	for(int i=0; i<TimeKeeper::times.size(); i++)
+		TimeKeeper::times[i] = 0;
 	int activeCnt = 0;
 	int imgCnt = 0;
 	Time curTime;
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
-//cout << "imgCnt: " << imgCnt <<  endl;
-Time start;
 		curTime.addTimeMS(33);
-
 		img = *(imgIter->second);
+
+Time start;
 		vector<vector<cv::Point>> allContours = findContours(img);
 
 TimeKeeper::times[0] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		
 		vector<shared_ptr<ActiveObject>> curObjects = objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
 
+TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		/////////////////// Get location priors for active objects ///////////////////////
 		Array2D<double> mv(3,1,0.0);
 		Array2D<double> Sv = 0.2*0.2*createIdentity((double)3);
@@ -140,13 +144,15 @@ TimeKeeper::times[0] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 			ao->updatePosition(mv, Sv, mz, sz*sz, f, center, omega, curTime);
 		}
 
+TimeKeeper::times[2] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		/////////////////// make matches ///////////////////////
 		vector<Match> goodMatches;
 		vector<shared_ptr<ActiveObject>> repeatObjects;
 		matchify(activeObjects, curObjects, goodMatches, repeatObjects, Sn, SnInv, varxi, probNoCorr, curTime);
 		activeCnt += activeObjects.size();
 
-TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
+TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
+
 		imshow("chad",oldImg);
 
 		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
@@ -199,9 +205,10 @@ TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	}
 
 	for(int i=0; i<TimeKeeper::times.size(); i++)
-		cout << "t" << i << ":\t" << TimeKeeper::times[i]/imgCnt << endl;
-	cout << "avg algo time: " << TimeKeeper::sum(0,4)/imgCnt << endl;
-	cout << "num objects:\t" << activeCnt/imgCnt << endl;
+		if(TimeKeeper::times[i] != 0)
+			Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
+	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,4)/imgCnt);
+	Log::alert(String()+"num objects:\t" + activeCnt/imgCnt);
 
     return 0;
 }

@@ -7,6 +7,10 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include <limits>
 
+// for TimeKeeper
+#include "funcs.h"
+#include "Time.h"
+
 namespace ICSL
 {
 
