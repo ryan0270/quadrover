@@ -30,10 +30,14 @@ class Time
 
 		void addTimeNS(toadlet::uint64 ns)
 		{
-			toadlet::uint64 oldNS = mTime.tv_nsec;
-			mTime.tv_nsec = oldNS+ns;
-			if(mTime.tv_nsec < oldNS) // overflow
-				mTime.tv_sec++;
+			mTime.tv_nsec += ns;
+//			toadlet::uint64 oldNS = mTime.tv_nsec;
+//			mTime.tv_nsec = oldNS+ns;
+//			if(mTime.tv_nsec < oldNS) // overflow
+//			{
+//				Log::alert("overflow");
+//				mTime.tv_sec++;
+//			}
 		}
 		
 		toadlet::uint64 getNS() const {return mTime.tv_sec*1e9+mTime.tv_nsec;}
