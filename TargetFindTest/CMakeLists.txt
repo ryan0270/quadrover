@@ -15,6 +15,7 @@ set (H ${H}
 	./cpp/ActiveObject.h
 	./cpp/mser.h
 	${ROVER_DIR}/cpp/Time.h
+	${ROVER_DIR}/cpp/TNT_Utils.h
 	)
 
 if(BUILD_ANDROID)

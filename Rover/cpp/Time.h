@@ -23,25 +23,15 @@ class Time
 		void setTimeNS(toadlet::uint64 t){mTime.tv_sec = t/1e9; mTime.tv_nsec = (t%(toadlet::uint64)1e9);}
 
 		void addTimeMS(toadlet::uint64 ms)
-		{
-			toadlet::uint64 oldNS = mTime.tv_nsec;
-			mTime.tv_nsec += ms*1.e6;
-			if(mTime.tv_nsec < oldNS) // overflow
-				mTime.tv_sec++;
-		}
+		{ addTimeNS(ms*1.e6); }
 
 		void addTimeUS(toadlet::uint64 us)
-		{
-			toadlet::uint64 oldNS = mTime.tv_nsec;
-			mTime.tv_nsec += us*1.e3;
-			if(mTime.tv_nsec < oldNS) // overflow
-				mTime.tv_sec++;
-		}
+		{ addTimeNS(us*1.e3); }
 
 		void addTimeNS(toadlet::uint64 ns)
 		{
 			toadlet::uint64 oldNS = mTime.tv_nsec;
-			mTime.tv_nsec += ns;
+			mTime.tv_nsec = oldNS+ns;
 			if(mTime.tv_nsec < oldNS) // overflow
 				mTime.tv_sec++;
 		}

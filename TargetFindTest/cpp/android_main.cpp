@@ -270,8 +270,8 @@ void android_main(struct android_app* state)
 		case 0:
 			dataDir = "/sdcard/TargetFindTest/dataSets/Sep19";
 			startImg = 1360;
-			endImg = 2600;
-			endImg = 1400;
+//			endImg = 2600;
+			endImg = startImg+200;
 			break;
 	}
 
@@ -315,7 +315,7 @@ void android_main(struct android_app* state)
 
 		fs["camera_matrix"] >> *mCameraMatrix_640x480;
 		fs["distortion_coefficients"] >> *mCameraDistortionCoeffs;
-		cout << "Camera calib loaded from " << filename.c_str() << endl;
+		Log::alert(String()+"Camera calib loaded from " + filename.c_str());
 
 		mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
 		mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
@@ -325,7 +325,7 @@ void android_main(struct android_app* state)
 		center.y = mCameraMatrix_320x240->at<double>(1,2);
 	}
 	else
-	cout << "Failed to open " <<  filename.c_str();
+	Log::alert(String()+"Failed to open " + filename.c_str());
 	fs.release();
 
 	vector<shared_ptr<ActiveObject>> activeObjects;
@@ -339,7 +339,7 @@ void android_main(struct android_app* state)
 
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
 	cv::Mat img(240,320, CV_8UC3), oldImg(240,320,CV_8UC3);
-	TimeKeeper::times.resize(10);
+	TimeKeeper::times.resize(100);
 	for(int i=0; i<TimeKeeper::times.size(); i++)
 		TimeKeeper::times[i] = 0;
 	int activeCnt = 0;
@@ -379,6 +379,7 @@ TimeKeeper::times[2] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		vector<shared_ptr<ActiveObject>> repeatObjects;
 		matchify(activeObjects, curObjects, goodMatches, repeatObjects, Sn, SnInv, varxi, probNoCorr, curTime);
 		activeCnt += activeObjects.size();
+
 TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 
 		imgIter++;
@@ -386,8 +387,9 @@ TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	}
 
 	for(int i=0; i<TimeKeeper::times.size(); i++)
-		Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
-	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,3)/imgCnt);
+		if(TimeKeeper::times[i] != 0)
+			Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
+	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,4)/imgCnt);
 	Log::alert(String()+"num objects:\t" + activeCnt/imgCnt);
 
     // loop waiting for stuff to do.

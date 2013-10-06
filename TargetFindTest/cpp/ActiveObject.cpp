@@ -167,6 +167,7 @@ void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 
 	SDelta[0][0] = pow(x*svz*dt,2)+pow(f*svx*dt, 2);
 	SDelta[1][1] = pow(y*svz*dt,2)+pow(f*svy*dt, 2);
+	SDelta[0][1] = SDelta[1][0] = 0;
 
 	// calc distribution moments
 	expectedPos = mDelta*mz1Inv;
@@ -180,7 +181,7 @@ void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 	expectedPos[0][0] += x;
 	expectedPos[1][0] += y;
 
-	// Calculate the ocvariance
+	// Calculate the covariance
 	posCov[0][0] = (pow(mDelta[0][0],2)+SDelta[0][0])*mz2Inv-pow(mDelta[0][0],2)*pow(mz1Inv,2);
 	posCov[1][1] = (pow(mDelta[1][0],2)+SDelta[1][1])*mz2Inv-pow(mDelta[1][0],2)*pow(mz1Inv,2);
 

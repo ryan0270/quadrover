@@ -61,7 +61,7 @@ class ActiveObject
 	static double calcShapeDistance(const shared_ptr<ActiveObject> &ao1, const shared_ptr<ActiveObject> &ao2);
 
 	static bool sortPredicate(const std::shared_ptr<ActiveObject> &ao1, const std::shared_ptr<ActiveObject> &ao2)
-	{ return ao1->life> ao2->life; }
+	{ return ao1->life > ao2->life; }
 
 	private:
 	static unsigned long lastID;
