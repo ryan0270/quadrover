@@ -119,15 +119,19 @@ int main(int argv, char* argc[])
 	Time curTime;
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
+Log::alert("--------------------------------------------------");
+Log::alert(String()+"imgCnt: "+imgCnt);
 		curTime.addTimeMS(33);
 		img = *(imgIter->second);
 
 Time start;
 		vector<vector<cv::Point>> allContours = findContours(img);
+Log::alert(String()+"numContours: "+((int)allContours.size()));
 
 TimeKeeper::times[0] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		
 		vector<shared_ptr<ActiveObject>> curObjects = objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
+Log::alert(String()+"numObjects: "+(int)curObjects.size());
 
 TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		/////////////////// Get location priors for active objects ///////////////////////
@@ -150,8 +154,20 @@ TimeKeeper::times[2] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		vector<shared_ptr<ActiveObject>> repeatObjects;
 		matchify(activeObjects, curObjects, goodMatches, repeatObjects, Sn, SnInv, varxi, probNoCorr, curTime);
 		activeCnt += activeObjects.size();
+Log::alert(String()+"activeCnt: "+activeCnt);
 
 TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
+
+		for(int i=0; i<activeObjects.size(); i++)
+		{
+			shared_ptr<ActiveObject> ao = activeObjects[i];
+			String str;
+			str = str+ao->id+": \t";
+			str = str+ao->lastCenter.x+"x"+ao->lastCenter.y+"\t";
+			str = str+ao->mom.m00+"\t";
+			str = str+ao->life;
+			Log::alert(str);
+		}
 
 		imshow("chad",oldImg);
 

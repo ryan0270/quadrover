@@ -190,6 +190,11 @@ void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 	// offset the point back to original coords
 	expectedPos[0][0] += center.x;
 	expectedPos[1][0] += center.y;
+Log::alert(String()+"dt: "+dt);
+//printArray("mDelta:\t",mDelta);
+printArray("SDelta:\n",SDelta);
+printArray("expectedPos:\t",expectedPos);
+printArray("posCov:\n",posCov);
 }
 
 // TODO: This should operate on S1 and S2 (the covariances of each point being matched
