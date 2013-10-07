@@ -22,12 +22,13 @@
 #include "TranslationController.h"
 #include "AttitudeThrustController.h"
 #include "VideoMaker.h"
-#include "SensorManager.h"
+//#include "SensorManager.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
 #include "TargetFinder2.h"
 #include "VelocityEstimator.h"
 #include "Rotation.h"
+#include "Listeners.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -206,6 +207,7 @@ int main(int argv, char* argc[])
 	mTargetFinder.addListener(&mObsvTranslational);
 	mTargetFinder.addListener(&mTranslationController);
 	addCommManagerListener(&mTargetFinder);
+	mTranslationController.setObserverTranslational(&mObsvTranslational);
 	mTargetFinder.start();
 
 	mVelocityEstimator.initialize();

@@ -118,6 +118,11 @@ void ActiveRegion::updatePositionDistribution(const Array2D<double> &mv, const A
 									const Array2D<double> &omega,
 									const Time &curTime)
 {
+
+//	Array2D<double> oldState = mObsvTranslational->estimateStateAtTime(Time());
+//	Array2D<double> curState = mObsvTranslational->estimateStateAtTime(curTime);
+//	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
+
 	double mvx = mv[0][0];
 	double mvy = mv[1][0];
 	double mvz = mv[2][0];

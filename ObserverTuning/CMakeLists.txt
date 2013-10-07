@@ -71,8 +71,9 @@ set (H ${H}
 	${ROVER_DIR}/cpp/TranslationController.h
 	${ROVER_DIR}/cpp/AttitudeThrustController.h
 	${ROVER_DIR}/cpp/AttitudeThrustControllerListener.h
-	${ROVER_DIR}/cpp/ActiveRegion.cpp
+	${ROVER_DIR}/cpp/ActiveRegion.h
 	${ROVER_DIR}/cpp/MotorInterface.h
+	${ROVER_DIR}/cpp/Listeners.h
 #	${ROVER_DIR}/cpp/SensorManager.h
 	${ROVER_DIR}/cpp/VideoMaker.h
 	${ROVER_DIR}/cpp/constants.h

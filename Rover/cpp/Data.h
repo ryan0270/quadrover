@@ -78,47 +78,30 @@ class IData
 	DataType type;
 	unsigned long dataID;
 
-	template <class T1, class T2>
-	static T1 interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2);
-	template <class T>
-	static T interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d);
-	template <class T1, class T2>
-	static TNT::Array2D<T1> interpolate(const Time &t, const DataVector<T1> &d1, const DataVector<T2> &d2);
-	template <class T>
-	static TNT::Array2D<T> interpolate(const Time &t, const std::list<shared_ptr<DataVector<T>>> &d);
-	template <class T>
-	static SO3 interpolate(const Time &t, const std::list<shared_ptr<SO3Data<T>>> &d);
+	template<class T1, class T2>	static T1 interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2);
+	template<class T> 				static T interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d);
+	template<class T1, class T2>	static TNT::Array2D<T1> interpolate(const Time &t, const DataVector<T1> &d1, const DataVector<T2> &d2);
+	template<class T>				static TNT::Array2D<T> interpolate(const Time &t, const std::list<shared_ptr<DataVector<T>>> &d);
+	template<class T>				static SO3 interpolate(const Time &t, const std::list<shared_ptr<SO3Data<T>>> &d);
 
 	// Right now this returns the interpolated compensated value
 	// I should work out something smarter in the future
-	template <class T>
-	static T interpolate(const Time &t, const std::list<shared_ptr<HeightData<T>>> &d);
+	template <class T> static T interpolate(const Time &t, const std::list<shared_ptr<HeightData<T>>> &d);
 
 	// ideally, the list would be passed in const here but then the returned iterator has to be const and I
 	// couldn't do some things with it (like modify the list based on the returned iterator)
-	template <class T>
-	static typename std::list<std::shared_ptr<Data<T>>>::iterator findIndex(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<Data<T>>>::iterator findIndexReverse(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<DataVector<T>>>::iterator findIndex(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<DataVector<T>>>::iterator findIndexReverse(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<SO3Data<T>>>::iterator findIndex(const Time &t, std::list<std::shared_ptr<SO3Data<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<SO3Data<T>>>::iterator findIndexReverse(const Time &t, std::list<std::shared_ptr<SO3Data<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<SO3Data<T>>>::const_iterator findIndexReverse(const Time &t, const std::list<std::shared_ptr<SO3Data<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<HeightData<T>>>::iterator findIndex(const Time &t, std::list<std::shared_ptr<HeightData<T>>> &d);
-	template <class T>
-	static typename std::list<std::shared_ptr<HeightData<T>>>::iterator findIndexReverse(const Time &t, std::list<std::shared_ptr<HeightData<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<Data<T>>>::iterator			findIndex(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<DataVector<T>>>::iterator	findIndex(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<SO3Data<T>>>::iterator		findIndex(const Time &t, std::list<std::shared_ptr<SO3Data<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<HeightData<T>>>::iterator	findIndex(const Time &t, std::list<std::shared_ptr<HeightData<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<Data<T>>>::iterator			findIndexReverse(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<DataVector<T>>>::iterator	findIndexReverse(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<SO3Data<T>>>::iterator		findIndexReverse(const Time &t, std::list<std::shared_ptr<SO3Data<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<SO3Data<T>>>::const_iterator findIndexReverse(const Time &t, const std::list<std::shared_ptr<SO3Data<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<HeightData<T>>>::iterator	findIndexReverse(const Time &t, std::list<std::shared_ptr<HeightData<T>>> &d);
 
-	template<class T>
-	static typename std::list<std::shared_ptr<Data<T>>>::iterator truncate(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
-	template <class T>
-	static void truncate(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
+	template<class T> static typename std::list<std::shared_ptr<Data<T>>>::iterator truncate(const Time &t, std::list<std::shared_ptr<Data<T>>> &d);
+	template<class T> static void truncate(const Time &t, std::list<std::shared_ptr<DataVector<T>>> &d);
 
 	static bool timeSortPredicate(const shared_ptr<IData> &d1, const shared_ptr<IData> &d2){return d1->timestamp < d2->timestamp;}
 

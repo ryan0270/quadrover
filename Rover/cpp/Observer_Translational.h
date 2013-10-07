@@ -17,33 +17,34 @@
 
 #include "Data.h"
 #include "Time.h"
-#include "CommManager.h"
+//#include "CommManager.h"
 #include "QuadLogger.h"
 #include "Observer_Angular.h"
-#include "SensorManager.h"
-#define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
-#include "VelocityEstimator.h"
-#undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
+//#include "SensorManager.h"
+#include "Listeners.h"
+//#define ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
+//#include "VelocityEstimator.h"
+//#undef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 
-#define ICSL_TARGETFINDER_LISTENER_ONLY
-#include "TargetFinder.h"
-#undef ICSL_TARGETFINDER_LISTENER_ONLY
-#define ICSL_TARGETFINDER2_LISTENER_ONLY
-#include "TargetFinder2.h"
-#undef ICSL_TARGETFINDER2_LISTENER_ONLY
+//#define ICSL_TARGETFINDER_LISTENER_ONLY
+//#include "TargetFinder.h"
+//#undef ICSL_TARGETFINDER_LISTENER_ONLY
+//#define ICSL_TARGETFINDER2_LISTENER_ONLY
+//#include "TargetFinder2.h"
+//#undef ICSL_TARGETFINDER2_LISTENER_ONLY
 
 #include "toadlet/egg.h"
 
 namespace ICSL{
 namespace Quadrotor{
-class Observer_TranslationalListener
-{
-	public:
-	Observer_TranslationalListener(){};
-	virtual ~Observer_TranslationalListener(){};
-
-	virtual void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel)=0;
-};
+//class Observer_TranslationalListener
+//{
+//	public:
+//	Observer_TranslationalListener(){};
+//	virtual ~Observer_TranslationalListener(){};
+//
+//	virtual void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel)=0;
+//};
 
 class Observer_Translational : public Observer_AngularListener,
 								public CommManagerListener,
