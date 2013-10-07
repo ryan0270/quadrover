@@ -3,7 +3,6 @@
 namespace ICSL {
 namespace Quadrotor{
 using namespace TNT;
-//using namespace ICSL::Constants;
 
 TargetFinder2::TargetFinder2()
 {
@@ -22,6 +21,8 @@ TargetFinder2::TargetFinder2()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+	mObsvTranslational = NULL;
 }
 
 void TargetFinder2::shutdown()
@@ -99,70 +100,68 @@ void TargetFinder2::run()
 			vector<vector<cv::Point>> allContours = findContours(*imageData->imageGray);
 			vector<shared_ptr<ActiveRegion>> curRegions = objectify(allContours,Sn,SnInv,varxi,probNoCorr,imageTime);
 
-			Array2D<double> mv(3,1,0.0);
-			Array2D<double> Sv = 0.2*0.2*createIdentity((double)3);
-			double mz = 1;
-			double sz = 0.05;
 			double f = imageData->focalLength;
 			cv::Point2f center = imageData->center;
-			Array2D<double> omega(3,1,0.0);
 
+			Array2D<double> oldState(9,1), oldErrCov(9,9);
+			Array2D<double> mv(3,1), Sv(3,3);
+			double mz, varz;
+			const Array2D<double> curState = mObsvTranslational->estimateStateAtTime(imageTime);
+			const Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(imageTime);
+			Array2D<double> omega(3,1);
+			SO3 curAtt = imageData->att;
+			SO3 oldAtt, attChange;
+			double theta;
+			Array2D<double> axis;
+			double dt;
 			for(int i=0; i<mActiveRegions.size(); i++)
 			{
 				shared_ptr<ActiveRegion> ao = mActiveRegions[i];
-				ao->updatePositionDistribution(mv, Sv, mz, sz*sz, f, center, omega, imageTime);
+
+				dt = Time::calcDiffNS(ao->getLastFoundTime(), imageTime)/1.0e6;
+				oldState.inject(mObsvTranslational->estimateStateAtTime(ao->getLastFoundTime()));
+				oldErrCov.inject(mObsvTranslational->estimateErrCovAtTime(ao->getLastFoundTime()));
+				oldAtt = mObsvAngular->estimateAttAtTime(ao->getLastFoundTime());
+
+				attChange = curAtt*oldAtt.inv();
+				attChange.getAngleAxis(theta, axis);
+				omega.inject(theta/dt*axis);
+
+				mv.inject(0.5*(submat(oldState,3,5,0,0)+submat(curState,3,5,0,0)));
+				// HACK HACK HACK
+				Sv.inject(0.5*(submat(oldErrCov,3,5,3,5)+submat(curErrCov,3,5,3,5)));
+				mz = 0.5*(oldState[2][0]+curState[2][0]);
+				varz = 0.5*(oldErrCov[2][2]+curErrCov[2][2]);
+
+				ao->updatePositionDistribution(mv, Sv, mz, varz, f, center, omega, imageTime);
 			}
 
 			vector<RegionMatch> goodMatches;
 			vector<shared_ptr<ActiveRegion>> repeatRegions;
 			matchify(curRegions, goodMatches, repeatRegions, Sn, SnInv, varxi, probNoCorr, imageTime);
 
-			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-			imageData->image->copyTo(*imageAnnotated);
-			drawTarget(*imageAnnotated, curRegions, repeatRegions);
+			double procTime = procStart.getElapsedTimeNS()/1.0e9;
+			if(repeatRegions.size() > 0)
+			{
+				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
+				imageData->image->copyTo(*imageAnnotated);
+				drawTarget(*imageAnnotated, curRegions, repeatRegions);
 
-			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
-			imageAnnotatedData->imageAnnotated = imageAnnotated;
-			imageAnnotatedData->imageDataSource = imageData;
-			imageAnnotatedData->timestamp.setTime(imageData->timestamp);
+				shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
+				imageAnnotatedData->imageAnnotated = imageAnnotated;
+				imageAnnotatedData->imageDataSource = imageData;
+				imageAnnotatedData->timestamp.setTime(imageData->timestamp);
 
-			shared_ptr<ImageTargetFind2Data> data(new ImageTargetFind2Data());
-			data->type = DATA_TYPE_TARGET_FIND;
-			data->regions= repeatRegions;
-			data->imageData = imageData;
-			data->imageAnnotatedData = imageAnnotatedData;
-			data->timestamp.setTime(imageTime);
-			for(int i=0; i<mListeners.size(); i++)
-				mListeners[i]->onTargetFound2(data);
+				shared_ptr<ImageTargetFind2Data> data(new ImageTargetFind2Data());
+				data->type = DATA_TYPE_TARGET_FIND;
+				data->regions= repeatRegions;
+				data->imageData = imageData;
+				data->imageAnnotatedData = imageAnnotatedData;
+				data->timestamp.setTime(imageTime);
 
-//			target = findTarget(pyr1ImageGray, *imageData->cameraMatrix, *imageData->distCoeffs);
-//			// TODO: Compensate for current attitdue
-//			if(curImage.cols == 640)
-//				Log::alert("TargetFinder2 doesn't handle 640x480 images at this time");
-//
-//			double procTime = procStart.getElapsedTimeNS()/1.0e9;
-//
-//			if(target != NULL)
-//			{
-//				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-//				curImage.copyTo(*imageAnnotated);
-//				drawTarget(*imageAnnotated, target);
-//
-//				shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
-//				imageAnnotatedData->imageAnnotated = imageAnnotated;
-//				imageAnnotatedData->imageDataSource = imageData;
-//				imageAnnotatedData->timestamp.setTime(imageData->timestamp);
-//				mImageAnnotatedLast = imageAnnotatedData;
-//
-//				shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
-//				data->type = DATA_TYPE_CAMERA_POS;
-//				data->target = target;
-//				data->imageData = imageData;
-//				data->imageAnnotatedData = imageAnnotatedData;
-//				data->timestamp.setTime(imageData->timestamp);
-//				for(int i=0; i<mListeners.size(); i++)
-//					mListeners[i]->onTargetFound2(data);
-//
+				for(int i=0; i<mListeners.size(); i++)
+					mListeners[i]->onTargetFound2(data);
+
 //				logString = String();
 //				for(int i=0; i<target->squareData.size(); i++)
 //					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
@@ -172,10 +171,10 @@ void TargetFinder2::run()
 //				for(int i=0; i<target->squareData.size(); i++)
 //					logString = logString+target->squareData[i]->area+"\t";
 //				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_AREAS,logString, LOG_FLAG_CAM_RESULTS);
-//
-//				logString = String()+procTime;
-//				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
-//			}
+
+				logString = String()+procTime;
+				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
+			}
 		}
 
 		System::msleep(1);

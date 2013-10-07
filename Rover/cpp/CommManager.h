@@ -15,54 +15,6 @@ namespace ICSL{
 namespace Quadrotor{
 using namespace std;
 using namespace toadlet;
-//class CommManagerListener
-//{
-//	public:
-//	explicit CommManagerListener(){};
-//	virtual ~CommManagerListener(){};
-//
-//	virtual void onNewCommMotorOn(){};
-//	virtual void onNewCommMotorOff(){};
-////	virtual void const onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float yawPID[3]){};
-//	virtual void const onNewCommMotorTrim(int trim[4]){};
-//	virtual void onNewCommObserverReset(){};
-//	virtual void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight){};
-//	virtual void onNewCommTimeSync(int time){};
-//	virtual void onNewCommLogTransfer(){};
-////	virtual void onNewCommControlSystemGains(const Collection<float> &gains){};
-//	virtual void onNewCommSendControlSystem(const toadlet::egg::Collection<tbyte> &buff){};
-//	virtual void onNewCommLogMask(uint32 mask){};
-//	virtual void onNewCommLogClear(){};
-//	virtual void onNewCommStateVicon(const toadlet::egg::Collection<float> &data){};
-//	virtual void onNewCommDesState(const toadlet::egg::Collection<float> &data){};
-//	virtual void onCommConnectionLost(){};
-//	virtual void onNewCommForceGain(float k){};
-//	virtual void onNewCommTorqueGain(float k){};
-//	virtual void onNewCommMass(float m){};
-//	virtual void onNewCommIbvsGains(const toadlet::egg::Collection<float> &posGains, const toadlet::egg::Collection<float> &velGains){};
-//	virtual void onNewCommUseIbvs(bool useIbvs){};
-//	virtual void onNewCommAccelBias(float xBias, float yBias, float zBias){};
-//	virtual void onNewCommForceGainAdaptRate(float rate){};
-//	virtual void onNewCommAttitudeGains(const toadlet::egg::Collection<float> &gains){};
-//	virtual void onNewCommTransGains(const toadlet::egg::Collection<float> &gains){};
-//	virtual void onNewCommKalmanMeasVar(const toadlet::egg::Collection<float> &std){};
-//	virtual void onNewCommKalmanDynVar(const toadlet::egg::Collection<float> &std){};
-//	virtual void onNewCommNominalMag(const toadlet::egg::Collection<float> &nomMag){};
-//	virtual void onNewCommMotorArmLength(float l){};
-//	virtual void onNewCommImgBufferSize(int size){};
-//	virtual void onNewCommBarometerZeroHeight(float h){};
-//	virtual void onNewCommVisionFeatureFindQualityLevel(float qLevel){};
-//	virtual void onNewCommVisionFeatureFindSeparationDistance(int sepDist){};
-//	virtual void onNewCommVisionFeatureFindFASTThreshold(int thresh){};
-//	virtual void onNewCommVisionFeatureFindPointCntTarget(int target){};
-//	virtual void onNewCommVisionFeatureFindFASTAdaptRate(float r){};
-//	virtual void onNewCommVelEstMeasCov(float measCov){};
-//	virtual void onNewCommVelEstProbNoCorr(float probNoCorr){};
-//	virtual void onNewCommSetDesiredPos(){};
-//	virtual void onNewCommViconCameraOffset(float x, float y, float z){};
-//	virtual void onNewCommTargetNominalLength(float length){};
-//	virtual void onNewCommMAPHeightMeasCov(float cov){};
-//}; // class CommManagerListener
 
 class CommManager 
 {

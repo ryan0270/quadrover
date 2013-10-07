@@ -1,24 +1,3 @@
-//#ifndef ICSL_VELOCITY_ESTIMATOR_LISTENER_H
-//#define ICSL_VELOCITY_ESTIMATOR_LISTENER_H
-//
-//#include <memory>
-//#include "Data.h"
-//
-//namespace ICSL {
-//namespace Quadrotor { 
-////using namespace std; 
-//class VelocityEstimatorListener
-//{
-//	public:
-//	VelocityEstimatorListener(){};
-//	virtual ~VelocityEstimatorListener(){};
-//
-//	virtual void onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double> > &velData, const shared_ptr<Data<double> > &heightData)=0;
-//};
-//}}
-//#endif
-//
-//#ifndef ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY
 #ifndef ICSL_VELOCITY_ESTIMATOR_H
 #define ICSL_VELOCITY_ESTIMATOR_H
 #include <memory>
@@ -37,9 +16,6 @@
 #include "Data.h"
 #include "Time.h"
 #include "QuadLogger.h"
-//#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
-//#include "Observer_Angular.h"
-//#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Translational.h"
 #include "FeatureFinder.h"
 #include "Listeners.h"
@@ -48,8 +24,6 @@
 
 namespace ICSL {
 namespace Quadrotor {
-
-//using namespace std;
 using namespace TNT;
 
 class VelocityEstimator : public FeatureFinderListener,
@@ -150,4 +124,3 @@ class VelocityEstimator : public FeatureFinderListener,
 } // namespace ICSL
 
 #endif
-//#endif //ICSL_VELOCITY_ESTIMATOR_LISTENER_ONLY

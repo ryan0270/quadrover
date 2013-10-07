@@ -78,6 +78,8 @@ badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder2.h
 badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder2.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.h
 badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.cpp
+badd +1 ~/Software/QuadRover/Rover/cpp/Listeners.h
+badd +1 ~/Software/QuadRover/Rover/cpp/TNT_Utils.h
 args main.cpp main.cpp
 edit main.cpp
 set splitbelow splitright

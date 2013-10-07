@@ -1,22 +1,3 @@
-//#ifndef ICSL_TARGETFINDER2_LISTENER_H
-//#define ICSL_TARGETFINDER2_LISTENER_H
-//#include <memory>
-//
-//#include "Data.h"
-//
-//namespace ICSL {
-//namespace Quadrotor {
-//class TargetFinder2Listener
-//{
-//	public:
-//		virtual ~TargetFinder2Listener(){};
-//
-//		virtual void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)=0;
-//};
-//}}
-//#endif
-//
-//#ifndef ICSL_TARGETFINDER2_LISTENER_ONLY
 #ifndef ICSL_TARGETFINDER2_H
 #define ICSL_TARGETFINDER2_H
 #include <memory>
@@ -37,95 +18,99 @@
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Time.h"
-//#include "CommManager.h"
-//#include "SensorManager.h"
-#include "Data.h"
+//#include "Data.h"
 #include "ActiveRegion.h"
 #include "Listeners.h"
+#include "Observer_Angular.h"
+#include "Observer_Translational.h"
 
 namespace ICSL {
 namespace Quadrotor {
 class TargetFinder2 : public CommManagerListener,
 						public SensorManagerListener
 {
-	public:
-		explicit TargetFinder2();
-		virtual ~TargetFinder2(){};
+public:
+	explicit TargetFinder2();
+	virtual ~TargetFinder2(){};
 
-		void shutdown();
-		void start(){ thread th(&TargetFinder2::run, this); th.detach(); }
-		void initialize();
-		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void shutdown();
+	void start(){ thread th(&TargetFinder2::run, this); th.detach(); }
+	void initialize();
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-		bool isFirstImageProcessed(){return mFirstImageProcessed;}
+	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
+	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
 
-		void setStartTime(Time t){mStartTime = t;}
-		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
-		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
-		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
-		void getLastImage(cv::Mat *outImage);
-		toadlet::egg::Collection<int> getVisionParams();
+	void setStartTime(Time t){mStartTime = t;}
+	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
-		void addListener(TargetFinder2Listener *listener){mListeners.push_back(listener);}
+	int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
+	int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
+	void getLastImage(cv::Mat *outImage);
+	toadlet::egg::Collection<int> getVisionParams();
 
-		// CommManagerListener functions
-		void onNewCommMotorOn(){mIsMotorOn = true;}
-		void onNewCommMotorOff(){mIsMotorOn = false;}
-		
-		// SensorManagerListener
-		void onNewSensorUpdate(const shared_ptr<IData> &data);
+	void addListener(TargetFinder2Listener *listener){mListeners.push_back(listener);}
 
-	protected:
-		bool mUseIbvs;
-		bool mFirstImageProcessed;
-		bool mRunning, mFinished;
-		bool mNewImageReady, mNewImageReady_targetFind;
-		bool mLogImages;
-		bool mHaveUpdatedSettings;
-		bool mIsMotorOn;
+	// CommManagerListener functions
+	void onNewCommMotorOn(){mIsMotorOn = true;}
+	void onNewCommMotorOff(){mIsMotorOn = false;}
+	
+	// SensorManagerListener
+	void onNewSensorUpdate(const shared_ptr<IData> &data);
 
-		shared_ptr<DataImage> mImageDataNext;
-		shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
+protected:
+	bool mUseIbvs;
+	bool mFirstImageProcessed;
+	bool mRunning, mFinished;
+	bool mNewImageReady, mNewImageReady_targetFind;
+	bool mLogImages;
+	bool mHaveUpdatedSettings;
+	bool mIsMotorOn;
 
-		Time mStartTime;//, mLastProcessTime;
+	shared_ptr<DataImage> mImageDataNext;
+	shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
 
-		toadlet::uint32 mImageProcTimeUS;
+	Time mStartTime;//, mLastProcessTime;
 
-		QuadLogger *mQuadLogger;
+	toadlet::uint32 mImageProcTimeUS;
 
-		std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
-		std::mutex mMutex_logger;
-		std::mutex mMutex_params;
+	QuadLogger *mQuadLogger;
 
-		toadlet::egg::Collection<TargetFinder2Listener*> mListeners;
+	std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
+	std::mutex mMutex_logger;
+	std::mutex mMutex_params;
 
-		void run();
+	toadlet::egg::Collection<TargetFinder2Listener*> mListeners;
 
-		int mThreadPriority, mScheduler;
+	void run();
 
-//		shared_ptr<RectGroup> findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs);
-		static void drawTarget(cv::Mat &image,
-							   const vector<shared_ptr<ActiveRegion>> &curRegions,
-							   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
+	int mThreadPriority, mScheduler;
 
-		// for new targetfinder
-		vector<shared_ptr<ActiveRegion>> mActiveRegions;
-		vector<vector<cv::Point>> findContours(const cv::Mat &image);
+	static void drawTarget(cv::Mat &image,
+						   const vector<shared_ptr<ActiveRegion>> &curRegions,
+						   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
 
-		vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
-				const TNT::Array2D<double> Sn,
-				const TNT::Array2D<double> SnInv,
-				double varxi, double probNoCorr,
-				const Time &imageTime);
+	// for new targetfinder
+	Observer_Angular *mObsvAngular;
+	Observer_Translational *mObsvTranslational;
+	vector<shared_ptr<ActiveRegion>> mActiveRegions;
+	vector<vector<cv::Point>> findContours(const cv::Mat &image);
 
-		void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
-				vector<RegionMatch> &goodMatches,
-				vector<shared_ptr<ActiveRegion>> &repeatRegions,
-				const TNT::Array2D<double> Sn,
-				const TNT::Array2D<double> SnInv,
-				double varxi, double probNoCorr,
-				const Time &imageTime);
+	vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
+			const TNT::Array2D<double> Sn,
+			const TNT::Array2D<double> SnInv,
+			double varxi, double probNoCorr,
+			const Time &imageTime);
+
+	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
+			vector<RegionMatch> &goodMatches,
+			vector<shared_ptr<ActiveRegion>> &repeatRegions,
+			const TNT::Array2D<double> Sn,
+			const TNT::Array2D<double> SnInv,
+			double varxi, double probNoCorr,
+			const Time &imageTime);
 };
 
 } // namespace Quadrotor

@@ -1,6 +1,4 @@
 #include "Observer_Translational.h"
-#include "TNT/jama_lu.h"
-#include "TNT/jama_qr.h"
 
 namespace ICSL{
 namespace Quadrotor{

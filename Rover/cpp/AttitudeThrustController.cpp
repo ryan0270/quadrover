@@ -1,9 +1,8 @@
 #include "AttitudeThrustController.h"
-//#include "AttitudeThrustControllerListener.h"
 
 namespace ICSL {
 namespace Quadrotor {
-//using namespace TNT;
+using namespace TNT;
 	AttitudeThrustController::AttitudeThrustController() :
 		mCurAngularVel(3,1,0.0),
 		mGainAngle(3,1,0.0),

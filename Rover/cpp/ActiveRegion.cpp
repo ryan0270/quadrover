@@ -1,6 +1,7 @@
 #include "ActiveRegion.h"
 
 namespace ICSL{
+namespace Quadrotor{
 using namespace std;
 using namespace TNT;
 using namespace ICSL::Constants;
@@ -118,20 +119,15 @@ void ActiveRegion::updatePositionDistribution(const Array2D<double> &mv, const A
 									const Array2D<double> &omega,
 									const Time &curTime)
 {
-
-//	Array2D<double> oldState = mObsvTranslational->estimateStateAtTime(Time());
-//	Array2D<double> curState = mObsvTranslational->estimateStateAtTime(curTime);
-//	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
-
-	double mvx = mv[0][0];
-	double mvy = mv[1][0];
-	double mvz = mv[2][0];
-	double svx = sqrt(Sv[0][0]);
-	double svy = sqrt(Sv[1][1]);
-	double svz = sqrt(Sv[2][2]);
-	double sz = sqrt(varz);
-	double f = focalLength;
-	double fInv = 1.0/f;
+	const double mvx = mv[0][0];
+	const double mvy = mv[1][0];
+	const double mvz = mv[2][0];
+	const double svx = sqrt(Sv[0][0]);
+	const double svy = sqrt(Sv[1][1]);
+	const double svz = sqrt(Sv[2][2]);
+	const double sz = sqrt(varz);
+	const double f = focalLength;
+	const double fInv = 1.0/f;
 
 	// calc distribution of Z^-1
 	double mz1Inv = 1.0/mz;
@@ -451,4 +447,5 @@ double ActiveRegion::calcShapeDistance(const shared_ptr<ActiveRegion> &ao1, cons
 //	return c1;
 }
 
+}
 }
