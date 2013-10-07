@@ -113,6 +113,8 @@ void ActiveRegion::calcPrincipalAxes()
 	mPrincipalAxesEigVal[1] /= scale1;
 }
 
+// Hmm, should I change this so it does incremental updates instead of updating as
+// one big step from the last found time
 void ActiveRegion::updatePositionDistribution(const Array2D<double> &mv, const Array2D<double> &Sv, 
 									double mz, double varz, 
 									double focalLength, const cv::Point2f &center,
