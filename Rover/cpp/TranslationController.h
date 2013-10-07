@@ -85,7 +85,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
 
 	// for TargetFinder2Listener
-	void onTargetFound2(const shared_ptr<ImageTargetFindData> &data);
+	void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data);
 
 	protected:
 	bool mRunning, mDone;

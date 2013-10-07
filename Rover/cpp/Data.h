@@ -10,6 +10,7 @@
 #include "TNT_Utils.h"
 #include "constants.h"
 #include "Rotation.h"
+#include "ActiveRegion.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -58,7 +59,8 @@ enum DataType
 	DATA_TYPE_GRAVITY_DIR,
 	DATA_TYPE_RAW_ACCEL,
 	DATA_TYPE_SO3,
-	DATA_TYPE_HEIGHT
+	DATA_TYPE_HEIGHT,
+	DATA_TYPE_TARGET_FIND,
 };
 
 template<class T> class Data;
@@ -330,9 +332,18 @@ class ImageTargetFindData : public IData
 
 	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
 	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
+};
 
-	protected:
-	std::mutex mMutex;
+class ImageTargetFind2Data : public IData
+{
+	public:
+	ImageTargetFind2Data() : IData() {};
+	vector<Match> matchedRegions;
+	shared_ptr<DataImage> imageData;
+	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
+
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 };
 
 template <class T>

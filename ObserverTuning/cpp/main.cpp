@@ -279,7 +279,7 @@ int main(int argv, char* argc[])
 	class MyTargetFinder2Listener : public TargetFinder2Listener
 	{
 		public:
-		void onTargetFound2(const shared_ptr<ImageTargetFindData> &data)
+		void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 		{
 			stringstream ss;
 			ss << imgDir << "/annotated_target/img_" << imgCnt++ << ".bmp";

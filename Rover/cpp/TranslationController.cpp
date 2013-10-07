@@ -413,7 +413,6 @@ using namespace TNT;
 		printArray("IBVS pos gains updated:\t",mIbvsPosGains);
 		printArray("IBVS vel gains updated:\t",mIbvsVelGains);
 		mMutex_gains.unlock();
-
 	}
 
 	void TranslationController::onNewCommStateVicon(const Collection<float> &data)
@@ -451,16 +450,16 @@ using namespace TNT;
 		}
 	}
 
-	void TranslationController::onTargetFound2(const shared_ptr<ImageTargetFindData> &data)
+	void TranslationController::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 	{
-		if(data->target != NULL)
-		{
-			mMutex_target.lock();
-			mTargetData = data;
-			mMutex_target.unlock();
-
-			mNewMeasAvailable = true;
-		}
+//		if(data->target != NULL)
+//		{
+//			mMutex_target.lock();
+//			mTargetData = data;
+//			mMutex_target.unlock();
+//
+//			mNewMeasAvailable = true;
+//		}
 	}
 
 } // namespace Quadrotor
