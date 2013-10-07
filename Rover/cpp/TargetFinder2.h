@@ -11,7 +11,7 @@ class TargetFinder2Listener
 	public:
 		virtual ~TargetFinder2Listener(){};
 
-		virtual void onTargetFound2(const shared_ptr<ImageTargetFindData> &data)=0;
+		virtual void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)=0;
 };
 }}
 #endif
@@ -104,7 +104,9 @@ class TargetFinder2 : public CommManagerListener,
 		int mThreadPriority, mScheduler;
 
 //		shared_ptr<RectGroup> findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs);
-		void drawTarget(cv::Mat &image);
+		static void drawTarget(cv::Mat &image,
+							   const vector<shared_ptr<ActiveRegion>> &curRegions,
+							   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
 
 		// for new targetfinder
 		vector<shared_ptr<ActiveRegion>> mActiveRegions;
@@ -116,9 +118,9 @@ class TargetFinder2 : public CommManagerListener,
 				double varxi, double probNoCorr,
 				const Time &imageTime);
 
-		void matchify(const vector<shared_ptr<ActiveRegion>> &curObjects,
+		void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 				vector<Match> &goodMatches,
-				vector<shared_ptr<ActiveRegion>> &repeatObjects,
+				vector<shared_ptr<ActiveRegion>> &repeatRegions,
 				const TNT::Array2D<double> Sn,
 				const TNT::Array2D<double> SnInv,
 				double varxi, double probNoCorr,

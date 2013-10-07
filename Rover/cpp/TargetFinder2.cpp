@@ -97,8 +97,7 @@ void TargetFinder2::run()
 			imageTime.setTime(imageData->timestamp);
 
 			vector<vector<cv::Point>> allContours = findContours(*imageData->imageGray);
-Log::alert(String()+"found " + (int)allContours.size() + " contours");
-			vector<shared_ptr<ActiveRegion>> curObjects = objectify(allContours,Sn,SnInv,varxi,probNoCorr,imageTime);
+			vector<shared_ptr<ActiveRegion>> curRegions = objectify(allContours,Sn,SnInv,varxi,probNoCorr,imageTime);
 
 			Array2D<double> mv(3,1,0.0);
 			Array2D<double> Sv = 0.2*0.2*createIdentity((double)3);
@@ -115,8 +114,26 @@ Log::alert(String()+"found " + (int)allContours.size() + " contours");
 			}
 
 			vector<Match> goodMatches;
-			vector<shared_ptr<ActiveRegion>> repeatObjects;
-			matchify(curObjects, goodMatches, repeatObjects, Sn, SnInv, varxi, probNoCorr, imageTime);
+			vector<shared_ptr<ActiveRegion>> repeatRegions;
+			matchify(curRegions, goodMatches, repeatRegions, Sn, SnInv, varxi, probNoCorr, imageTime);
+
+			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
+			imageData->image->copyTo(*imageAnnotated);
+			drawTarget(*imageAnnotated, curRegions, repeatRegions);
+
+			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
+			imageAnnotatedData->imageAnnotated = imageAnnotated;
+			imageAnnotatedData->imageDataSource = imageData;
+			imageAnnotatedData->timestamp.setTime(imageData->timestamp);
+
+			shared_ptr<ImageTargetFind2Data> data(new ImageTargetFind2Data());
+			data->type = DATA_TYPE_TARGET_FIND;
+			data->matchedRegions = goodMatches;
+			data->imageData = imageData;
+			data->imageAnnotatedData = imageAnnotatedData;
+			data->timestamp.setTime(imageTime);
+			for(int i=0; i<mListeners.size(); i++)
+				mListeners[i]->onTargetFound2(data);
 
 //			target = findTarget(pyr1ImageGray, *imageData->cameraMatrix, *imageData->distCoeffs);
 //			// TODO: Compensate for current attitdue
@@ -167,18 +184,32 @@ Log::alert(String()+"found " + (int)allContours.size() + " contours");
 	mFinished = true;
 }
 
-void TargetFinder2::drawTarget(cv::Mat &image)
+void TargetFinder2::drawTarget(cv::Mat &image,
+							   const vector<shared_ptr<ActiveRegion>> &curRegions,
+							   const vector<shared_ptr<ActiveRegion>> &repeatRegions)
 {
-//	for( int i = 0; i < target->squareData.size(); i++ )
-//	{
-//		const cv::Point *p = &target->squareData[i]->contourInt[0];
-//		int n = (int)target->squareData[i]->contourInt.size();
-//		polylines(image, &p, &n, 1, true, cv::Scalar(255,0,0), 2, CV_AA);
-//
-//		cv::Scalar colors[] {cv::Scalar(0,0,255), cv::Scalar(0,255,0), cv::Scalar(0,255,255), cv::Scalar(255,0,255)};
-//		for(int j=0; j<target->squareData[i]->contour.size(); j++)
-//			circle(image, target->squareData[i]->contour[j], 4, colors[j], -1);
-//	}
+	vector<vector<cv::Point>> curContours(curRegions.size()), repeatContours(repeatRegions.size());
+	for(int i=0; i<curRegions.size(); i++)
+		curContours[i] = curRegions[i]->contour;
+	for(int i=0; i<repeatRegions.size(); i++)
+		repeatContours[i] = repeatRegions[i]->contour;
+
+	cv::drawContours(image, curContours, -1, cv::Scalar(255,0,0), 2);
+	cv::drawContours(image, repeatContours, -1, cv::Scalar(0,0,255), 2);
+
+	for(int i=0; i<curRegions.size(); i++)
+	{
+		shared_ptr<ActiveRegion> obj = curRegions[i];
+		cv::Point2f cen = obj->lastCenter;
+		cv::Point2f p1, p2;
+		p1.x = cen.x + 10*obj->principalAxes[0][0] * obj->principalAxesEigVal[0];
+		p1.y = cen.y + 10*obj->principalAxes[1][0] * obj->principalAxesEigVal[0];
+		p2.x = cen.x + 10*obj->principalAxes[0][1] * obj->principalAxesEigVal[1];
+		p2.y = cen.y + 10*obj->principalAxes[1][1] * obj->principalAxesEigVal[1];
+
+		line(image,cen,p1,cv::Scalar(0,255,255),1);
+		line(image,cen,p2,cv::Scalar(255,0,255),1);
+	}
 }
 
 
@@ -250,13 +281,13 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 										   const Time &imageTime)
 {
 	/////////////////// make objects of the new contours ///////////////////////
-	vector<shared_ptr<ActiveRegion>> curObjects;
+	vector<shared_ptr<ActiveRegion>> curRegions;
 	for(int i=0; i<contours.size(); i++)
 	{
 		shared_ptr<ActiveRegion> ao1(new ActiveRegion(contours[i]));
 		ao1->lastFoundTime.setTime(imageTime);
 		ao1->posCov.inject(Sn);
-		curObjects.push_back(ao1);
+		curRegions.push_back(ao1);
 	}
 
 	/////////////////// similarity check ///////////////////////
@@ -265,12 +296,12 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 	// advantage of everything having the same covariance
 	// First reset all expected positions and covariances
 	// now calculate the correspondence matrix
-	Array2D<double> ssC = ActiveRegion::calcCorrespondence(curObjects, curObjects, 0.5*Sn, 2.0*SnInv, varxi, 0);
+	Array2D<double> ssC = ActiveRegion::calcCorrespondence(curRegions, curRegions, 0.5*Sn, 2.0*SnInv, varxi, 0);
 
 	// Now keep only things that don't have confusion
 	// if there is confusion, only keep one
 	vector<shared_ptr<ActiveRegion>> tempList;
-	tempList.swap(curObjects);
+	tempList.swap(curRegions);
 	vector<bool> isStillGood(tempList.size(), true);
 	for(int i=0; i<tempList.size(); i++)
 	{
@@ -284,28 +315,28 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 		for(int j=0; j<confusionList.size(); j++)
 			isStillGood[confusionList[j]] = false;
 
-		curObjects.push_back(tempList[i]);
+		curRegions.push_back(tempList[i]);
 	}
 
-	return curObjects;
+	return curRegions;
 }
 
-void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curObjects,
+void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 			  vector<Match> &goodMatches,
-			  vector<shared_ptr<ActiveRegion>> &repeatObjects,
+			  vector<shared_ptr<ActiveRegion>> &repeatRegions,
 			  const TNT::Array2D<double> Sn,
 			  const TNT::Array2D<double> SnInv,
 			  double varxi, double probNoCorr,
 			  const Time &imageTime)
 {
 	/////////////////// Establish correspondence based on postiion ///////////////////////
-	Array2D<double> C = ActiveRegion::calcCorrespondence(mActiveRegions, curObjects, Sn, SnInv, varxi, probNoCorr);
+	Array2D<double> C = ActiveRegion::calcCorrespondence(mActiveRegions, curRegions, Sn, SnInv, varxi, probNoCorr);
 
 	///////////////////  make matches ///////////////////////
 	shared_ptr<ActiveRegion> aoPrev, aoCur;
 	vector<shared_ptr<ActiveRegion>> newObjects;
 	int N1 = mActiveRegions.size();
-	int N2 = curObjects.size();
+	int N2 = curRegions.size();
 	vector<bool> matched(N2, false);
 	for(int i=0; i<N1; i++)
 	{
@@ -326,7 +357,7 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curObjects,
 		}
 
 		matched[maxIndex] = true;
-		aoCur = curObjects[maxIndex];
+		aoCur = curRegions[maxIndex];
 
 		Match m;
 		m.aoPrev = aoPrev;
@@ -336,12 +367,12 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curObjects,
 		aoPrev->copyData(*aoCur);
 		aoPrev->life= min((float)21, aoPrev->life+2);
 		aoPrev->lastFoundTime.setTime(imageTime);
-		repeatObjects.push_back(aoPrev);
+		repeatRegions.push_back(aoPrev);
 	}
 
-	for(int j=0; j<curObjects.size(); j++)
+	for(int j=0; j<curRegions.size(); j++)
 		if(!matched[j])
-			newObjects.push_back(curObjects[j]);
+			newObjects.push_back(curRegions[j]);
 
 	for(int i=0; i<mActiveRegions.size(); i++)
 		mActiveRegions[i]->life -= 1;
