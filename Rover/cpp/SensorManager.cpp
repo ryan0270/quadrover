@@ -470,8 +470,8 @@ namespace Quadrotor{
 		else
 			data->cameraMatrix = mCameraMatrix_640x480;
 		data->focalLength = data->cameraMatrix->at<double>(0,0);
-		data->centerX = data->cameraMatrix->at<double>(0,2);
-		data->centerY = data->cameraMatrix->at<double>(1,2);
+		data->center.x = data->cameraMatrix->at<double>(0,2);
+		data->center.y = data->cameraMatrix->at<double>(1,2);
 		data->distCoeffs = mCameraDistortionCoeffs;
 
 		mMutex_listeners.lock();

@@ -1,24 +1,24 @@
-#ifndef ICSL_TARGETFINDER_LISTENER_H
-#define ICSL_TARGETFINDER_LISTENER_H
+#ifndef ICSL_TARGETFINDER2_LISTENER_H
+#define ICSL_TARGETFINDER2_LISTENER_H
 #include <memory>
 
 #include "Data.h"
 
 namespace ICSL {
 namespace Quadrotor {
-class TargetFinderListener
+class TargetFinder2Listener
 {
 	public:
-		virtual ~TargetFinderListener(){};
+		virtual ~TargetFinder2Listener(){};
 
-		virtual void onTargetFound(const shared_ptr<ImageTargetFindData> &data)=0;
+		virtual void onTargetFound2(const shared_ptr<ImageTargetFindData> &data)=0;
 };
 }}
 #endif
 
-#ifndef ICSL_TARGETFINDER_LISTENER_ONLY
-#ifndef ICSL_TARGETFINDER_H
-#define ICSL_TARGETFINDER_H
+#ifndef ICSL_TARGETFINDER2_LISTENER_ONLY
+#ifndef ICSL_TARGETFINDER2_H
+#define ICSL_TARGETFINDER2_H
 #include <memory>
 #include <sched.h>
 #include <thread>
@@ -29,6 +29,7 @@ class TargetFinderListener
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 #include <toadlet/egg.h>
 
@@ -39,18 +40,19 @@ class TargetFinderListener
 #include "CommManager.h"
 #include "SensorManager.h"
 #include "Data.h"
+#include "ActiveRegion.h"
 
 namespace ICSL {
 namespace Quadrotor {
-class TargetFinder : public CommManagerListener,
+class TargetFinder2 : public CommManagerListener,
 						public SensorManagerListener
 {
 	public:
-		explicit TargetFinder();
-		virtual ~TargetFinder(){};
+		explicit TargetFinder2();
+		virtual ~TargetFinder2(){};
 
 		void shutdown();
-		void start(){ thread th(&TargetFinder::run, this); th.detach(); }
+		void start(){ thread th(&TargetFinder2::run, this); th.detach(); }
 		void initialize();
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
@@ -64,7 +66,7 @@ class TargetFinder : public CommManagerListener,
 		void getLastImage(cv::Mat *outImage);
 		toadlet::egg::Collection<int> getVisionParams();
 
-		void addListener(TargetFinderListener *listener){mListeners.push_back(listener);}
+		void addListener(TargetFinder2Listener *listener){mListeners.push_back(listener);}
 
 		// CommManagerListener functions
 		void onNewCommMotorOn(){mIsMotorOn = true;}
@@ -95,26 +97,32 @@ class TargetFinder : public CommManagerListener,
 		std::mutex mMutex_logger;
 		std::mutex mMutex_params;
 
-		toadlet::egg::Collection<TargetFinderListener*> mListeners;
+		toadlet::egg::Collection<TargetFinder2Listener*> mListeners;
 
 		void run();
 
 		int mThreadPriority, mScheduler;
 
-		shared_ptr<RectGroup> findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs);
-		static void drawTarget(cv::Mat &img, const shared_ptr<RectGroup> &target);
+//		shared_ptr<RectGroup> findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs);
+		void drawTarget(cv::Mat &image);
 
-		// helper function:
-		// finds a cosine of angle between vectors
-		// from pt0->pt1 and from pt0->pt2
-		static double angle( cv::Point pt1, cv::Point pt2, cv::Point pt0 )
-		{
-			double dx1 = pt1.x - pt0.x;
-			double dy1 = pt1.y - pt0.y;
-			double dx2 = pt2.x - pt0.x;
-			double dy2 = pt2.y - pt0.y;
-			return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
-		}
+		// for new targetfinder
+		vector<shared_ptr<ActiveRegion>> mActiveRegions;
+		vector<vector<cv::Point>> findContours(const cv::Mat &image);
+
+		vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
+				const TNT::Array2D<double> Sn,
+				const TNT::Array2D<double> SnInv,
+				double varxi, double probNoCorr,
+				const Time &imageTime);
+
+		void matchify(const vector<shared_ptr<ActiveRegion>> &curObjects,
+				vector<Match> &goodMatches,
+				vector<shared_ptr<ActiveRegion>> &repeatObjects,
+				const TNT::Array2D<double> Sn,
+				const TNT::Array2D<double> SnInv,
+				double varxi, double probNoCorr,
+				const Time &imageTime);
 };
 
 } // namespace Quadrotor

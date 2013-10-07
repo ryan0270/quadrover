@@ -1,4 +1,4 @@
-#include "ActiveObject.h"
+#include "ActiveRegion.h"
 
 namespace ICSL{
 using namespace std;
@@ -6,10 +6,10 @@ using namespace TNT;
 using namespace ICSL::Constants;
 using namespace toadlet::egg;
 
-unsigned long ActiveObject::lastID = 0;
+unsigned long ActiveRegion::lastID = 0;
 
 
-ActiveObject::ActiveObject() :
+ActiveRegion::ActiveRegion() :
 	expectedPos(2,1,0.0),
 	posCov(2,2,0.0),
 	principalAxes(2,2,0.0),
@@ -22,7 +22,7 @@ ActiveObject::ActiveObject() :
 	posCov[0][0] = posCov[1][1] = 1;
 }
 
-ActiveObject::ActiveObject(std::vector<cv::Point> points) : ActiveObject()
+ActiveRegion::ActiveRegion(std::vector<cv::Point> points) : ActiveRegion()
 {
 	contour = points;
 	mom = cv::moments(points);
@@ -43,7 +43,7 @@ ActiveObject::ActiveObject(std::vector<cv::Point> points) : ActiveObject()
 	calcPrincipalAxes();
 }
 
-void ActiveObject::copyData(const ActiveObject &ao)
+void ActiveRegion::copyData(const ActiveRegion &ao)
 {
 	contour.assign(ao.contour.begin(), ao.contour.end());
 	mom = ao.mom;
@@ -56,7 +56,7 @@ void ActiveObject::copyData(const ActiveObject &ao)
 }
 
 // from http://en.wikipedia.org/wiki/Image_moment
-void ActiveObject::calcPrincipalAxes()
+void ActiveRegion::calcPrincipalAxes()
 {
 	Array2D<double> cov(2,2);
 	cov[0][0] = mom.mu20/mom.m00;
@@ -103,7 +103,7 @@ void ActiveObject::calcPrincipalAxes()
 	principalAxesEigVal[1] /= scale1;
 }
 
-void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<double> &Sv, 
+void ActiveRegion::updatePosition(const Array2D<double> &mv, const Array2D<double> &Sv, 
 									double mz, double varz, 
 									double focalLength, const cv::Point2f &center,
 									const Array2D<double> &omega,
@@ -194,8 +194,8 @@ void ActiveObject::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 
 // TODO: This should operate on S1 and S2 (the covariances of each point being matched
 // instead of assuming a constant Sn for curObjectList
-Array2D<double> ActiveObject::calcCorrespondence(const vector<shared_ptr<ActiveObject>> &prevObjectList,
-												 const vector<shared_ptr<ActiveObject>> &curObjectList,
+Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveRegion>> &prevObjectList,
+												 const vector<shared_ptr<ActiveRegion>> &curObjectList,
 												 const Array2D<double> &Sn1,
 												 const Array2D<double> &SnInv1,
 												 double varxi,
@@ -402,7 +402,7 @@ Array2D<double> ActiveObject::calcCorrespondence(const vector<shared_ptr<ActiveO
 }
 
 // Adapted from OpenCV's matchShapes (but I use central moments instead of Hu moments)
-double ActiveObject::calcShapeDistance(const shared_ptr<ActiveObject> &ao1, const shared_ptr<ActiveObject> &ao2)
+double ActiveRegion::calcShapeDistance(const shared_ptr<ActiveRegion> &ao1, const shared_ptr<ActiveRegion> &ao2)
 {
 return abs(ao1->mom.m00 - ao2->mom.m00);
 	double c1, c2, c3;

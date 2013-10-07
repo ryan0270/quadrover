@@ -34,6 +34,7 @@ set showmatch
 set smartcase
 set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc
 set tabstop=4
+set nowrap
 let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
 let v:this_session=expand("<sfile>:p")
 silent only
@@ -73,6 +74,10 @@ badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/Time.h
 badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.h
 badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.cpp
+badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder2.h
+badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder2.cpp
+badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.h
+badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.cpp
 args main.cpp main.cpp
 edit main.cpp
 set splitbelow splitright

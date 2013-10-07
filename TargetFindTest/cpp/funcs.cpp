@@ -19,8 +19,7 @@ TimeKeeper::times[10] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	int maxArea = 1.0/pow(2,2)*240*320;
 	double maxVariation = 0.25; // smaller reduces number of regions
 	double minDiversity = 0.4; // smaller increase the number of regions
-//	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
-	MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
+	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
 	vector<vector<cv::Point>> regions;
 	mserDetector(imgGray, regions);
 

@@ -5,6 +5,8 @@
 
 #include "TNT/tnt.h"
 
+#include "toadlet/egg.h"
+
 #include "constants.h"
 
 #include "QuadLogger.h"
@@ -14,8 +16,8 @@
 #include "Observer_Translational.h"
 #include "MotorInterface.h"
 #include "Rotation.h"
-
-#include "toadlet/egg.h"
+#include "TargetFinder.h"
+#include "TargetFinder2.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -32,7 +34,8 @@ class TranslationControllerListener
 class TranslationController : 	public Observer_TranslationalListener,
 								public CommManagerListener,
 								public MotorInterfaceListener,
-								public TargetFinderListener
+								public TargetFinderListener,
+								public TargetFinder2Listener
 {
 	public:
 	TranslationController();
@@ -80,6 +83,9 @@ class TranslationController : 	public Observer_TranslationalListener,
 	
 	// for TargetFinderListener
 	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
+
+	// for TargetFinder2Listener
+	void onTargetFound2(const shared_ptr<ImageTargetFindData> &data);
 
 	protected:
 	bool mRunning, mDone;

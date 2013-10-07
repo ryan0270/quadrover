@@ -201,8 +201,8 @@ using namespace TNT;
 				imgPoints.push_back(targetData->target->squareData[i]->contour[j]);
 
 		// move center from corner to middle
-		double cx = targetData->imageData->centerX;
-		double cy = targetData->imageData->centerY;
+		double cx = targetData->imageData->center.x;
+		double cy = targetData->imageData->center.y;
 		cv::Point2f center(cx,cy);
 		for(int i=0; i<imgPoints.size(); i++)
 			imgPoints[i] -= center;
@@ -440,6 +440,18 @@ using namespace TNT;
 	}
 
 	void TranslationController::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+	{
+		if(data->target != NULL)
+		{
+			mMutex_target.lock();
+			mTargetData = data;
+			mMutex_target.unlock();
+
+			mNewMeasAvailable = true;
+		}
+	}
+
+	void TranslationController::onTargetFound2(const shared_ptr<ImageTargetFindData> &data)
 	{
 		if(data->target != NULL)
 		{
