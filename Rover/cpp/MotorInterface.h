@@ -9,6 +9,7 @@
 
 #include "Time.h"
 #include "Data.h"
+#include "Listeners.h"
 
 namespace ICSL {
 namespace Quadrotor{
@@ -25,11 +26,11 @@ enum
 	COMM_ARDUINO_HEIGHT=1,
 };
 
-class MotorInterfaceListener
-{
-	public:
-	virtual void onMotorWarmupDone()=0;
-};
+//class MotorInterfaceListener
+//{
+//	public:
+//	virtual void onMotorWarmupDone()=0;
+//};
 
 class MotorInterface
 {

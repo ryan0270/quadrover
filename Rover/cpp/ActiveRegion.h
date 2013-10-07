@@ -1,5 +1,5 @@
-#ifndef ICSL_ACTIVEOBJECT_H
-#define ICSL_ACTIVEOBJECT_H
+#ifndef ICSL_ACTIVEREGION_H
+#define ICSL_ACTIVEREGION_H
 #include <vector>
 #include <memory>
 #include <iostream>
@@ -14,6 +14,7 @@
 
 #include "Time.h"
 #include "constants.h"
+//#include "Observer_Translational.h"
 
 namespace ICSL{
 using namespace std;
@@ -23,6 +24,8 @@ class ActiveRegion
 	public:
 	ActiveRegion();
 	ActiveRegion(std::vector<cv::Point> points);
+
+//	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
 
 	void copyData(const ActiveRegion &ao);
 	void markFound(const Time &time);
@@ -73,6 +76,8 @@ class ActiveRegion
 	vector<double> mPrincipalAxesEigVal;
 	
 	TNT::Array2D<double> mExpectedPos, mPosCov;
+
+//	Observer_Translational *mObsvTranslational;
 
 	constexpr static double maxLife = 20;
 	static unsigned long lastID;

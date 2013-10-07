@@ -1,22 +1,22 @@
-#ifndef ICSL_TARGETFINDER2_LISTENER_H
-#define ICSL_TARGETFINDER2_LISTENER_H
-#include <memory>
-
-#include "Data.h"
-
-namespace ICSL {
-namespace Quadrotor {
-class TargetFinder2Listener
-{
-	public:
-		virtual ~TargetFinder2Listener(){};
-
-		virtual void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)=0;
-};
-}}
-#endif
-
-#ifndef ICSL_TARGETFINDER2_LISTENER_ONLY
+//#ifndef ICSL_TARGETFINDER2_LISTENER_H
+//#define ICSL_TARGETFINDER2_LISTENER_H
+//#include <memory>
+//
+//#include "Data.h"
+//
+//namespace ICSL {
+//namespace Quadrotor {
+//class TargetFinder2Listener
+//{
+//	public:
+//		virtual ~TargetFinder2Listener(){};
+//
+//		virtual void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)=0;
+//};
+//}}
+//#endif
+//
+//#ifndef ICSL_TARGETFINDER2_LISTENER_ONLY
 #ifndef ICSL_TARGETFINDER2_H
 #define ICSL_TARGETFINDER2_H
 #include <memory>
@@ -37,10 +37,11 @@ class TargetFinder2Listener
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Time.h"
-#include "CommManager.h"
-#include "SensorManager.h"
+//#include "CommManager.h"
+//#include "SensorManager.h"
 #include "Data.h"
 #include "ActiveRegion.h"
+#include "Listeners.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -131,4 +132,4 @@ class TargetFinder2 : public CommManagerListener,
 } // namespace ICSL
 
 #endif
-#endif
+//#endif

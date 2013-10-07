@@ -15,23 +15,24 @@
 #include "constants.h"
 #include "QuadLogger.h"
 #include "Common.h"
-#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
-#include "Observer_Angular.h"
-#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+//#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
+//#include "Observer_Angular.h"
+//#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Time.h"
-#include "CommManager.h"
-#include "SensorManager.h"
+//#include "CommManager.h"
+//#include "SensorManager.h"
 #include "Data.h"
+#include "Listeners.h"
 
 namespace ICSL {
 namespace Quadrotor {
-class FeatureFinderListener
-{
-	public:
-		virtual ~FeatureFinderListener(){};
-
-		virtual void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)=0;
-};
+//class FeatureFinderListener
+//{
+//	public:
+//		virtual ~FeatureFinderListener(){};
+//
+//		virtual void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)=0;
+//};
 
 class FeatureFinder : public CommManagerListener,
 						public SensorManagerListener

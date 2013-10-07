@@ -12,24 +12,25 @@
 #include "QuadLogger.h"
 #include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 #include "Time.h"
-#include "CommManager.h"
+//#include "CommManager.h"
 #include "Observer_Translational.h"
 #include "MotorInterface.h"
 #include "Rotation.h"
 #include "TargetFinder.h"
 #include "TargetFinder2.h"
+#include "Listeners.h"
 
 namespace ICSL {
 namespace Quadrotor {
 
-class TranslationControllerListener
-{
-	public:
-	TranslationControllerListener(){};
-	virtual ~TranslationControllerListener(){};
-
-	virtual void onTranslationControllerAccelCmdUpdated(const TNT::Array2D<double> &accelCmd)=0;
-};
+//class TranslationControllerListener
+//{
+//	public:
+//	TranslationControllerListener(){};
+//	virtual ~TranslationControllerListener(){};
+//
+//	virtual void onTranslationControllerAccelCmdUpdated(const TNT::Array2D<double> &accelCmd)=0;
+//};
 
 class TranslationController : 	public Observer_TranslationalListener,
 								public CommManagerListener,

@@ -1,5 +1,5 @@
 #include "AttitudeThrustController.h"
-#include "AttitudeThrustControllerListener.h"
+//#include "AttitudeThrustControllerListener.h"
 
 namespace ICSL {
 namespace Quadrotor {
