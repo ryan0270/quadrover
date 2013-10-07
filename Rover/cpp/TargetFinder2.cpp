@@ -110,10 +110,10 @@ void TargetFinder2::run()
 			for(int i=0; i<mActiveRegions.size(); i++)
 			{
 				shared_ptr<ActiveRegion> ao = mActiveRegions[i];
-				ao->updatePosition(mv, Sv, mz, sz*sz, f, center, omega, imageTime);
+				ao->updatePositionDistribution(mv, Sv, mz, sz*sz, f, center, omega, imageTime);
 			}
 
-			vector<Match> goodMatches;
+			vector<RegionMatch> goodMatches;
 			vector<shared_ptr<ActiveRegion>> repeatRegions;
 			matchify(curRegions, goodMatches, repeatRegions, Sn, SnInv, varxi, probNoCorr, imageTime);
 
@@ -128,7 +128,7 @@ void TargetFinder2::run()
 
 			shared_ptr<ImageTargetFind2Data> data(new ImageTargetFind2Data());
 			data->type = DATA_TYPE_TARGET_FIND;
-			data->matchedRegions = goodMatches;
+			data->regions= repeatRegions;
 			data->imageData = imageData;
 			data->imageAnnotatedData = imageAnnotatedData;
 			data->timestamp.setTime(imageTime);
@@ -190,9 +190,9 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 {
 	vector<vector<cv::Point>> curContours(curRegions.size()), repeatContours(repeatRegions.size());
 	for(int i=0; i<curRegions.size(); i++)
-		curContours[i] = curRegions[i]->contour;
+		curContours[i] = curRegions[i]->getContour();
 	for(int i=0; i<repeatRegions.size(); i++)
-		repeatContours[i] = repeatRegions[i]->contour;
+		repeatContours[i] = repeatRegions[i]->getContour();
 
 	cv::drawContours(image, curContours, -1, cv::Scalar(255,0,0), 2);
 	cv::drawContours(image, repeatContours, -1, cv::Scalar(0,0,255), 2);
@@ -200,15 +200,21 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 	for(int i=0; i<curRegions.size(); i++)
 	{
 		shared_ptr<ActiveRegion> obj = curRegions[i];
-		cv::Point2f cen = obj->lastCenter;
+		cv::Point2f cen = obj->getLastFoundPos();
 		cv::Point2f p1, p2;
-		p1.x = cen.x + 10*obj->principalAxes[0][0] * obj->principalAxesEigVal[0];
-		p1.y = cen.y + 10*obj->principalAxes[1][0] * obj->principalAxesEigVal[0];
-		p2.x = cen.x + 10*obj->principalAxes[0][1] * obj->principalAxesEigVal[1];
-		p2.y = cen.y + 10*obj->principalAxes[1][1] * obj->principalAxesEigVal[1];
+		const Array2D<double> principalAxes = obj->getPrincipalAxes();
+		const vector<double> principalAxesEigVal = obj->getPrincipalAxesEigVal();
+		double ratio = principalAxesEigVal[0]/principalAxesEigVal[1];
+		if(ratio > 2)
+		{
+			p1.x = cen.x + 10*principalAxes[0][0] * principalAxesEigVal[0];
+			p1.y = cen.y + 10*principalAxes[1][0] * principalAxesEigVal[0];
+			p2.x = cen.x + 10*principalAxes[0][1] * principalAxesEigVal[1];
+			p2.y = cen.y + 10*principalAxes[1][1] * principalAxesEigVal[1];
 
-		line(image,cen,p1,cv::Scalar(0,255,255),1);
-		line(image,cen,p2,cv::Scalar(255,0,255),1);
+			line(image,cen,p1,cv::Scalar(0,255,255),1);
+			line(image,cen,p2,cv::Scalar(255,0,255),1);
+		}
 	}
 }
 
@@ -257,8 +263,6 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 			mask.at<uchar>(y,x) = 255;
 		}
 
-//		cv::Canny(mask(boundRect), mask(boundRect), 50, 100, 5, true);
-
 		vector<vector<cv::Point>> contours;
 		cv::findContours(mask(boundRect), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, corner);
 
@@ -266,10 +270,6 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 			if(cv::contourArea(contours[i]) >= minArea)
 				allContours.push_back(contours[i]);
 	}
-
-//	vector<vector<cv::Point>> allContours;
-//	for(int i=0; i<regions.size(); i++)
-//		allContours.push_back( MSERToContour(regions[i]));
 
 	return allContours;
 }
@@ -285,8 +285,8 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 	for(int i=0; i<contours.size(); i++)
 	{
 		shared_ptr<ActiveRegion> ao1(new ActiveRegion(contours[i]));
-		ao1->lastFoundTime.setTime(imageTime);
-		ao1->posCov.inject(Sn);
+		ao1->markFound(imageTime);
+		ao1->setPosCov(Sn);
 		curRegions.push_back(ao1);
 	}
 
@@ -294,8 +294,6 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 	// Ideally, I would do this on all of the active objects at the end of the loop
 	// but I still need to work out the math for that. Doing it here, I can take
 	// advantage of everything having the same covariance
-	// First reset all expected positions and covariances
-	// now calculate the correspondence matrix
 	Array2D<double> ssC = ActiveRegion::calcCorrespondence(curRegions, curRegions, 0.5*Sn, 2.0*SnInv, varxi, 0);
 
 	// Now keep only things that don't have confusion
@@ -322,7 +320,7 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 }
 
 void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
-			  vector<Match> &goodMatches,
+			  vector<RegionMatch> &goodMatches,
 			  vector<shared_ptr<ActiveRegion>> &repeatRegions,
 			  const TNT::Array2D<double> Sn,
 			  const TNT::Array2D<double> SnInv,
@@ -359,14 +357,14 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		matched[maxIndex] = true;
 		aoCur = curRegions[maxIndex];
 
-		Match m;
+		RegionMatch m;
 		m.aoPrev = aoPrev;
 		m.aoCur = aoCur;
 		m.score = C[i][maxIndex];
 		goodMatches.push_back(m);
 		aoPrev->copyData(*aoCur);
-		aoPrev->life= min((float)21, aoPrev->life+2);
-		aoPrev->lastFoundTime.setTime(imageTime);
+		aoPrev->markFound(imageTime);
+		aoPrev->addLife(2);
 		repeatRegions.push_back(aoPrev);
 	}
 
@@ -375,10 +373,10 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 			newObjects.push_back(curRegions[j]);
 
 	for(int i=0; i<mActiveRegions.size(); i++)
-		mActiveRegions[i]->life -= 1;
+		mActiveRegions[i]->takeLife(1);
 
 	sort(mActiveRegions.begin(), mActiveRegions.end(), ActiveRegion::sortPredicate);
-	while(mActiveRegions.size() > 0 && mActiveRegions.back()->life <= 0)
+	while(mActiveRegions.size() > 0 && !mActiveRegions.back()->isAlive() )
 		mActiveRegions.pop_back();
 
 	// TODO

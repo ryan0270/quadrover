@@ -4,16 +4,18 @@ namespace ICSL {
 using namespace std;
 using namespace TNT;
 using namespace ICSL::Constants;
+using toadlet::egg::Log;
+using toadlet::egg::String;
 
 vector<double> TimeKeeper::times;
 
-vector<vector<cv::Point>> findContours(const cv::Mat &img)
+vector<vector<cv::Point>> findContours(const cv::Mat &image)
 {
-Time start;
-	cv::Mat imgGray;
-	cvtColor(img, imgGray, CV_BGR2GRAY);
-
-TimeKeeper::times[10] += start.getElapsedTimeNS()/1.0e6; start.setTime();
+	cv::Mat imageGray;
+	if(image.channels() == 3)
+		cvtColor(image, imageGray, CV_BGR2GRAY);
+	else
+		imageGray = image;
 	int delta = 5*2;
 	int minArea = 1.0/pow(10,2)*240*320;
 	int maxArea = 1.0/pow(2,2)*240*320;
@@ -21,11 +23,10 @@ TimeKeeper::times[10] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	double minDiversity = 0.4; // smaller increase the number of regions
 	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
 	vector<vector<cv::Point>> regions;
-	mserDetector(imgGray, regions);
+	mserDetector(imageGray, regions);
 
-TimeKeeper::times[11] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	// preallocate
-	cv::Mat mask(img.rows,img.cols,CV_8UC1, cv::Scalar(0));
+	cv::Mat mask(imageGray.rows,imageGray.cols,CV_8UC1, cv::Scalar(0));
 
 	/////////////////// Find contours ///////////////////////
 	vector<vector<cv::Point>> allContours;
@@ -35,8 +36,8 @@ TimeKeeper::times[11] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		cv::Rect boundRect = boundingRect( cv::Mat(regions[i]) );
 		boundRect.x = max(0, boundRect.x-border);
 		boundRect.y = max(0, boundRect.y-border);
-		boundRect.width = min(img.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
-		boundRect.height= min(img.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
+		boundRect.width = min(imageGray.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
+		boundRect.height= min(imageGray.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
 		cv::Point corner(boundRect.x, boundRect.y);
 		mask(boundRect) = cv::Scalar(0);
 		uchar *row;
@@ -48,8 +49,6 @@ TimeKeeper::times[11] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 			mask.at<uchar>(y,x) = 255;
 		}
 
-//		cv::Canny(mask(boundRect), mask(boundRect), 50, 100, 5, true);
-
 		vector<vector<cv::Point>> contours;
 		cv::findContours(mask(boundRect), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, corner);
 
@@ -58,42 +57,35 @@ TimeKeeper::times[11] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 				allContours.push_back(contours[i]);
 	}
 
-//	vector<vector<cv::Point>> allContours;
-//	for(int i=0; i<regions.size(); i++)
-//		allContours.push_back( MSERToContour(regions[i]));
-
-TimeKeeper::times[12] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 	return allContours;
 }
 
-vector<shared_ptr<ActiveObject>> objectify(const vector<vector<cv::Point>> &contours,
+vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
 										   const TNT::Array2D<double> Sn,
 										   const TNT::Array2D<double> SnInv,
 										   double varxi, double probNoCorr,
-										   const Time &curTime)
+										   const Time &imageTime)
 {
 	/////////////////// make objects of the new contours ///////////////////////
-	vector<shared_ptr<ActiveObject>> curObjects;
+	vector<shared_ptr<ActiveRegion>> curRegions;
 	for(int i=0; i<contours.size(); i++)
 	{
-		shared_ptr<ActiveObject> ao1(new ActiveObject(contours[i]));
-		ao1->lastFoundTime.setTime(curTime);
-		ao1->posCov.inject(Sn);
-		curObjects.push_back(ao1);
+		shared_ptr<ActiveRegion> ao1(new ActiveRegion(contours[i]));
+		ao1->markFound(imageTime);
+		ao1->setPosCov(Sn);
+		curRegions.push_back(ao1);
 	}
 
 	/////////////////// similarity check ///////////////////////
 	// Ideally, I would do this on all of the active objects at the end of the loop
 	// but I still need to work out the math for that. Doing it here, I can take
 	// advantage of everything having the same covariance
-	// First reset all expected positions and covariances
-	// now calculate the correspondence matrix
-	Array2D<double> ssC = ActiveObject::calcCorrespondence(curObjects, curObjects, 0.5*Sn, 2.0*SnInv, varxi, 0);
+	Array2D<double> ssC = ActiveRegion::calcCorrespondence(curRegions, curRegions, 0.5*Sn, 2.0*SnInv, varxi, 0);
 
 	// Now keep only things that don't have confusion
 	// if there is confusion, only keep one
-	vector<shared_ptr<ActiveObject>> tempList;
-	tempList.swap(curObjects);
+	vector<shared_ptr<ActiveRegion>> tempList;
+	tempList.swap(curRegions);
 	vector<bool> isStillGood(tempList.size(), true);
 	for(int i=0; i<tempList.size(); i++)
 	{
@@ -107,77 +99,128 @@ vector<shared_ptr<ActiveObject>> objectify(const vector<vector<cv::Point>> &cont
 		for(int j=0; j<confusionList.size(); j++)
 			isStillGood[confusionList[j]] = false;
 
-		curObjects.push_back(tempList[i]);
+		curRegions.push_back(tempList[i]);
 	}
 
-	return curObjects;
+	return curRegions;
 }
 
-void matchify(vector<shared_ptr<ActiveObject>> &activeObjects,
-			  const vector<shared_ptr<ActiveObject>> &curObjects,
-			  vector<Match> &goodMatches,
-			  vector<shared_ptr<ActiveObject>> &repeatObjects,
+void matchify(vector<shared_ptr<ActiveRegion>> &activeRegions,
+			  const vector<shared_ptr<ActiveRegion>> &curRegions,
+			  vector<RegionMatch> &goodMatches,
+			  vector<shared_ptr<ActiveRegion>> &repeatRegions,
 			  const TNT::Array2D<double> Sn,
 			  const TNT::Array2D<double> SnInv,
 			  double varxi, double probNoCorr,
-			  const Time &curTime)
+			  const Time &imageTime)
 {
 	/////////////////// Establish correspondence based on postiion ///////////////////////
-	Array2D<double> C = ActiveObject::calcCorrespondence(activeObjects, curObjects, Sn, SnInv, varxi, probNoCorr);
+	Array2D<double> C = ActiveRegion::calcCorrespondence(activeRegions, curRegions, Sn, SnInv, varxi, probNoCorr);
 
+cout << "------------------ activeRegions --------------------------------" << endl;;
+for(int i=0; i<activeRegions.size(); i++)
+{
+	cout << activeRegions[i]->getId() << ": " << activeRegions[i]->getLife() << "\t";
+	cout << activeRegions[i]->getLastFoundPos().x << "x" << activeRegions[i]->getLastFoundPos().y << "\t";
+	cout << activeRegions[i]->getArea() << endl;
+}
+
+cout << "------------------ curRegions --------------------------------" << endl;;
+for(int i=0; i<curRegions.size(); i++)
+{
+	cout << curRegions[i]->getId() << ": " << curRegions[i]->getLife() << "\t";
+	cout << curRegions[i]->getLastFoundPos().x << "x" << curRegions[i]->getLastFoundPos().y << "\t";
+	cout << curRegions[i]->getArea() << endl;
+}
 
 	///////////////////  make matches ///////////////////////
-	shared_ptr<ActiveObject> aoPrev, aoCur;
-	vector<shared_ptr<ActiveObject>> newObjects;
-	int N1 = activeObjects.size();
-	int N2 = curObjects.size();
-	vector<bool> matched(N2, false);
+	shared_ptr<ActiveRegion> aoPrev, aoCur;
+	vector<shared_ptr<ActiveRegion>> newObjects;
+	int N1 = activeRegions.size();
+	int N2 = curRegions.size();
+	vector<bool> prevMatched(N1, false);
+	vector<bool> curMatched(N2, false);
 	for(int i=0; i<N1; i++)
 	{
 		if(N2 == 0 || C[i][N2] > 0.5)
 			continue; // this object probably doesn't have a partner
 
-		aoPrev = activeObjects[i];
+		aoPrev = activeRegions[i];
 
 		int maxIndex = 0;
 		float maxScore = 0;
 		for(int j=0; j<N2; j++)
 		{
-			if(C[i][j] > maxScore && !matched[j])
+			if(C[i][j] > maxScore && !curMatched[j])
 			{
 				maxScore = C[i][j];
 				maxIndex =j;
 			}
 		}
 
-		matched[maxIndex] = true;
-		aoCur = curObjects[maxIndex];
+		prevMatched[i] = true;
+		curMatched[maxIndex] = true;
+		aoCur = curRegions[maxIndex];
 
-		Match m;
+		RegionMatch m;
 		m.aoPrev = aoPrev;
 		m.aoCur = aoCur;
 		m.score = C[i][maxIndex];
 		goodMatches.push_back(m);
 		aoPrev->copyData(*aoCur);
-		aoPrev->life= min((float)21, aoPrev->life+2);
-		aoPrev->lastFoundTime.setTime(curTime);
-		repeatObjects.push_back(aoPrev);
+		aoPrev->markFound(imageTime);
+		aoPrev->addLife(2);
+		repeatRegions.push_back(aoPrev);
 	}
 
-	for(int j=0; j<curObjects.size(); j++)
-		if(!matched[j])
-			newObjects.push_back(curObjects[j]);
+	vector<int> dupIndices;
+	for(int j=0; j<curRegions.size(); j++)
+		if(!curMatched[j])
+		{
+			// first check to see if we didn't match because there
+			// were too many similar regions
+			bool addMe = true;
+			if(C.dim1() > 0 && C.dim2() > 0 && C[N1][j] < 0.5)
+			{
+				// yup, now we should clear out the riff raff
+				for(int i=0; i<N1; i++)
+					if(C[i][j] > 0.1)
+					{
+						if(prevMatched[i]) // the dupe already found a good match so we shouldn't delete him
+							addMe = false;
+						else
+							dupIndices.push_back(i);
+						Log::alert(String()+"found dupe at " + i + " -- id " + activeRegions[i]->getId());
+					}
+			}
 
-	for(int i=0; i<activeObjects.size(); i++)
-		activeObjects[i]->life -= 1;
+			// Now add the new region which will be the 
+			// only remaining one
+			if(addMe)
+				newObjects.push_back(curRegions[j]);
+		}
 
-	sort(activeObjects.begin(), activeObjects.end(), ActiveObject::sortPredicate);
-	while(activeObjects.size() > 0 && activeObjects.back()->life <= 0)
-		activeObjects.pop_back();
+	// sort and remove repeats 
+	sort(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator endIter = unique(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator iter = dupIndices.begin();
+	while(iter != endIter)
+	{
+		activeRegions[(*iter)]->kill();
+		iter++;
+	}
+
+	for(int i=0; i<activeRegions.size(); i++)
+		activeRegions[i]->takeLife(1);
+
+printArray("C:\n",C);
+	sort(activeRegions.begin(), activeRegions.end(), ActiveRegion::sortPredicate);
+	while(activeRegions.size() > 0 && !activeRegions.back()->isAlive() )
+		activeRegions.pop_back();
 
 	// TODO
 	for(int i=0; i<newObjects.size(); i++)
-		activeObjects.push_back(newObjects[i]);
+		activeRegions.push_back(newObjects[i]);
 }
 
 }

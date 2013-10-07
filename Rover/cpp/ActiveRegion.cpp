@@ -10,100 +10,109 @@ unsigned long ActiveRegion::lastID = 0;
 
 
 ActiveRegion::ActiveRegion() :
-	expectedPos(2,1,0.0),
-	posCov(2,2,0.0),
-	principalAxes(2,2,0.0),
-	principalAxesEigVal(2,0.0)
+	mExpectedPos(2,1,0.0),
+	mPosCov(2,2,0.0),
+	mPrincipalAxes(2,2,0.0),
+	mPrincipalAxesEigVal(2,0.0)
 {
-	life = 10;
-	this->id = lastID++;
+	mLife = 10;
+	this->mId = lastID++;
 
 	// make sure this is pos def
-	posCov[0][0] = posCov[1][1] = 1;
+	mPosCov[0][0] = mPosCov[1][1] = 1;
 }
 
 ActiveRegion::ActiveRegion(std::vector<cv::Point> points) : ActiveRegion()
 {
-	contour = points;
-	mom = cv::moments(points);
-	lastCenter.x = mom.m10/mom.m00;
-	lastCenter.y = mom.m01/mom.m00;
-	expectedPos[0][0] = lastCenter.x;
-	expectedPos[1][0] = lastCenter.y;
-	cv::HuMoments(mom, huMom);
-	centralMoms[0] = mom.mu20;
-	centralMoms[1] = mom.mu11;
-	centralMoms[2] = mom.mu02;
-	centralMoms[3] = mom.mu30;
-	centralMoms[4] = mom.mu21;
-	centralMoms[5] = mom.mu12;
-//		centralMoms[6] = mom.mu03;
-	centralMoms[6] = mom.m00;
+	mContour = points;
+	mMoments = cv::moments(points);
+	mLastFoundPos.x = mMoments.m10/mMoments.m00;
+	mLastFoundPos.y = mMoments.m01/mMoments.m00;
+	mExpectedPos[0][0] = mLastFoundPos.x;
+	mExpectedPos[1][0] = mLastFoundPos.y;
 
 	calcPrincipalAxes();
 }
 
 void ActiveRegion::copyData(const ActiveRegion &ao)
 {
-	contour.assign(ao.contour.begin(), ao.contour.end());
-	mom = ao.mom;
-	lastCenter = ao.lastCenter;
-	memcpy(huMom, ao.huMom, 7*sizeof(double));
-	memcpy(centralMoms, ao.centralMoms, 7*sizeof(double));
-	principalAxes.inject(ao.principalAxes);
-	principalAxesEigVal[0] = ao.principalAxesEigVal[0];
-	principalAxesEigVal[1] = ao.principalAxesEigVal[1];
+	mContour.assign(ao.mContour.begin(), ao.mContour.end());
+	mMoments = ao.mMoments;
+	mLastFoundPos = ao.mLastFoundPos;
+	mPrincipalAxes.inject(ao.mPrincipalAxes);
+	mPrincipalAxesEigVal[0] = ao.mPrincipalAxesEigVal[0];
+	mPrincipalAxesEigVal[1] = ao.mPrincipalAxesEigVal[1];
+}
+
+void ActiveRegion::markFound(const Time &time)
+{
+	mLastFoundTime.setTime(time);
+}
+
+void ActiveRegion::addLife(float val)
+{
+	mLife = min(21.f, mLife+val);
+}
+
+void ActiveRegion::takeLife(float val)
+{
+	mLife -= val;
+}
+
+void ActiveRegion::kill()
+{
+	mLife = 0;
 }
 
 // from http://en.wikipedia.org/wiki/Image_moment
 void ActiveRegion::calcPrincipalAxes()
 {
 	Array2D<double> cov(2,2);
-	cov[0][0] = mom.mu20/mom.m00;
-	cov[0][1] = mom.mu11/mom.m00;
+	cov[0][0] = mMoments.mu20/mMoments.m00;
+	cov[0][1] = mMoments.mu11/mMoments.m00;
 	cov[1][0] = cov[0][1];
-	cov[1][1] = mom.mu02/mom.m00;
+	cov[1][1] = mMoments.mu02/mMoments.m00;
 
 	double eigMid = 0.5*(cov[0][0]+cov[1][1]);
 	double eigOffset = 0.5*sqrt( (cov[0][0]-cov[1][1])*(cov[0][0]-cov[1][1]) + 4*cov[0][1]*cov[0][1] );
-	principalAxesEigVal[0] = eigMid+eigOffset;
-	principalAxesEigVal[1] = eigMid-eigOffset;
+	mPrincipalAxesEigVal[0] = eigMid+eigOffset;
+	mPrincipalAxesEigVal[1] = eigMid-eigOffset;
 	if(cov[0][1] == 0)
 	{
 		if(cov[0][0] > cov[1][1])
 		{
-			principalAxes[0][0] = 1;
-			principalAxes[1][0] = 0;
-			principalAxes[0][1] = 0;
-			principalAxes[1][1] = 1;
+			mPrincipalAxes[0][0] = 1;
+			mPrincipalAxes[1][0] = 0;
+			mPrincipalAxes[0][1] = 0;
+			mPrincipalAxes[1][1] = 1;
 		}
 		else
 		{
-			principalAxes[0][0] = 0;
-			principalAxes[1][0] = 1;
-			principalAxes[0][1] = 1;
-			principalAxes[1][1] = 0;
+			mPrincipalAxes[0][0] = 0;
+			mPrincipalAxes[1][0] = 1;
+			mPrincipalAxes[0][1] = 1;
+			mPrincipalAxes[1][1] = 0;
 		}
 	}
 	else
 	{
-		principalAxes[0][0] = principalAxesEigVal[0]-cov[1][1];
-		principalAxes[1][0] = cov[0][1];
-		principalAxes[0][1] = principalAxes[1][0];
-		principalAxes[1][1] = -principalAxes[0][0];
+		mPrincipalAxes[0][0] = mPrincipalAxesEigVal[0]-cov[1][1];
+		mPrincipalAxes[1][0] = cov[0][1];
+		mPrincipalAxes[0][1] = mPrincipalAxes[1][0];
+		mPrincipalAxes[1][1] = -mPrincipalAxes[0][0];
 	}
 
-	double scale0 = norm2(submat(principalAxes,0,1,0,0));
-	double scale1 = norm2(submat(principalAxes,0,1,1,1));
-	principalAxes[0][0] /= scale0;
-	principalAxes[1][0] /= scale0;
-	principalAxes[0][1] /= scale1;
-	principalAxes[1][1] /= scale1;
-	principalAxesEigVal[0] /= scale0;
-	principalAxesEigVal[1] /= scale1;
+	double scale0 = norm2(submat(mPrincipalAxes,0,1,0,0));
+	double scale1 = norm2(submat(mPrincipalAxes,0,1,1,1));
+	mPrincipalAxes[0][0] /= scale0;
+	mPrincipalAxes[1][0] /= scale0;
+	mPrincipalAxes[0][1] /= scale1;
+	mPrincipalAxes[1][1] /= scale1;
+	mPrincipalAxesEigVal[0] /= scale0;
+	mPrincipalAxesEigVal[1] /= scale1;
 }
 
-void ActiveRegion::updatePosition(const Array2D<double> &mv, const Array2D<double> &Sv, 
+void ActiveRegion::updatePositionDistribution(const Array2D<double> &mv, const Array2D<double> &Sv, 
 									double mz, double varz, 
 									double focalLength, const cv::Point2f &center,
 									const Array2D<double> &omega,
@@ -156,9 +165,9 @@ void ActiveRegion::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 		mz2Inv = 1.0/mz/mz+sz*sz/pow(mz,4);
 	}
 
-	double x = lastCenter.x-center.x;
-	double y = lastCenter.y-center.y;
-	double dt = Time::calcDiffNS(lastFoundTime, curTime)/1.0e9;
+	double x = mLastFoundPos.x-center.x;
+	double y = mLastFoundPos.y-center.y;
+	double dt = Time::calcDiffNS(mLastFoundTime, curTime)/1.0e9;
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
 	Array2D<double> mDelta(2,1), SDelta(2,2);
@@ -170,26 +179,26 @@ void ActiveRegion::updatePosition(const Array2D<double> &mv, const Array2D<doubl
 	SDelta[0][1] = SDelta[1][0] = 0;
 
 	// calc distribution moments
-	expectedPos = mDelta*mz1Inv;
+	mExpectedPos = mDelta*mz1Inv;
 
 	// Shift the mean to so the distribution is for the location of q2 instead of q2-q1-Lw*w
 	Array2D<double> Lw(2,3);
 	Lw[0][0] = fInv*x*y; 		Lw[0][1] = -(f+fInv*x*x); 	Lw[0][2] = y;
 	Lw[1][0] = f+fInv*y*y;		Lw[1][1] = -fInv*x*y;		Lw[1][2] = -x;
-	expectedPos = expectedPos+dt*matmult(Lw, omega);
+	mExpectedPos = mExpectedPos+dt*matmult(Lw, omega);
 
-	expectedPos[0][0] += x;
-	expectedPos[1][0] += y;
+	mExpectedPos[0][0] += x;
+	mExpectedPos[1][0] += y;
 
 	// Calculate the covariance
-	posCov[0][0] = (pow(mDelta[0][0],2)+SDelta[0][0])*mz2Inv-pow(mDelta[0][0],2)*pow(mz1Inv,2);
-	posCov[1][1] = (pow(mDelta[1][0],2)+SDelta[1][1])*mz2Inv-pow(mDelta[1][0],2)*pow(mz1Inv,2);
+	mPosCov[0][0] = (pow(mDelta[0][0],2)+SDelta[0][0])*mz2Inv-pow(mDelta[0][0],2)*pow(mz1Inv,2);
+	mPosCov[1][1] = (pow(mDelta[1][0],2)+SDelta[1][1])*mz2Inv-pow(mDelta[1][0],2)*pow(mz1Inv,2);
 
-	posCov[0][1] = posCov[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
+	mPosCov[0][1] = mPosCov[1][0] = x*y*pow(dt,2)*pow(svz,2)*mz2Inv + mDelta[0][0]*mDelta[1][0]*(mz2Inv-pow(mz1Inv,2));
 
 	// offset the point back to original coords
-	expectedPos[0][0] += center.x;
-	expectedPos[1][0] += center.y;
+	mExpectedPos[0][0] += center.x;
+	mExpectedPos[1][0] += center.y;
 }
 
 // TODO: This should operate on S1 and S2 (the covariances of each point being matched
@@ -224,8 +233,8 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 	double eigMid, eigOffset;
 	for(int i=0; i<N1; i++)
 	{
-		md.inject(prevObjectList[i]->expectedPos);
-		Sd.inject(prevObjectList[i]->posCov);
+		md.inject(prevObjectList[i]->mExpectedPos);
+		Sd.inject(prevObjectList[i]->mPosCov);
 
 		den = Sd[0][0]*Sd[1][1]-Sd[0][1]*Sd[1][0];
 		SdInv[0][0] = Sd[1][1]/den;
@@ -303,11 +312,11 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 	double x, y, fC, f;
 	for(int j=0; j<N2; j++)
 	{
-		x = curObjectList[j]->lastCenter.x;
-		y = curObjectList[j]->lastCenter.y;
+		x = curObjectList[j]->mLastFoundPos.x;
+		y = curObjectList[j]->mLastFoundPos.y;
 		for(int i=0; i<N1; i++)
 		{
-			md.inject(prevObjectList[i]->expectedPos);
+			md.inject(prevObjectList[i]->mExpectedPos);
 			if(abs(x-md[0][0]) < xRangeList[i] && abs(y-md[1][0]) < yRangeList[i] )
 				chad.push_back(make_pair(i, j));
 			else
@@ -323,8 +332,8 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 	{
 		int i=chad[idx].first;
 		int j=chad[idx].second;
-		mq[0][0] = curObjectList[j]->lastCenter.x;
-		mq[1][0] = curObjectList[j]->lastCenter.y;
+		mq[0][0] = curObjectList[j]->mLastFoundPos.x;
+		mq[1][0] = curObjectList[j]->mLastFoundPos.y;
 
 		SnInvmq[0][0] = SnInv[0][0]*mq[0][0]; // assumes Sn diagonal
 		SnInvmq[1][0] = SnInv[1][1]*mq[1][0];
@@ -332,7 +341,7 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 //		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
 		fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
 		
-		md.inject(prevObjectList[i]->expectedPos);
+		md.inject(prevObjectList[i]->mExpectedPos);
 //		ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
 		temp1.inject(SdInvmdList[i]+SnInvmq);
 		ma[0][0] = SaList[i][0][0]*temp1[0][0] + SaList[i][0][1]*temp1[1][0];
@@ -401,40 +410,40 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 	return C;
 }
 
-// Adapted from OpenCV's matchShapes (but I use central moments instead of Hu moments)
 double ActiveRegion::calcShapeDistance(const shared_ptr<ActiveRegion> &ao1, const shared_ptr<ActiveRegion> &ao2)
 {
-return abs(ao1->mom.m00 - ao2->mom.m00);
-	double c1, c2, c3;
-	c1 = c2 = c3 = 0;
-	int sma, smb;
-	for(int k=0; k<7; k++)
-	{
-		double ama = abs( ao1->centralMoms[k] );
-		double amb = abs( ao2->centralMoms[k] );
-		if(ama < 1.e-5 || amb < 1.e-5)
-			continue;
-		if(ao1->centralMoms[k] > 0)
-			sma = 1;
-		else if(ao1->centralMoms[k] < 0)
-			sma = -1;
-		else
-			sma = 0;
-		if(ao2->centralMoms[k] > 0)
-			smb = 1;
-		else if(ao2->centralMoms[k] < 0)
-			smb = -1;
-		else
-			smb = 0;
-
-		ama = sma*log10(ama);
-		amb = smb*log10(amb);
-		c1 += abs(-1./ama+1./amb);
-//		c2 += abs(-ama+amb);
-//		c3 = max(c3, abs((ama-amb)/ama));
-	}
-
-	return c1;
+	return abs(ao1->mMoments.m00 - ao2->mMoments.m00);
+// Adapted from OpenCV's matchShapes (but I use central moments instead of Hu moments)
+//	double c1, c2, c3;
+//	c1 = c2 = c3 = 0;
+//	int sma, smb;
+//	for(int k=0; k<7; k++)
+//	{
+//		double ama = abs( ao1->centralMoms[k] );
+//		double amb = abs( ao2->centralMoms[k] );
+//		if(ama < 1.e-5 || amb < 1.e-5)
+//			continue;
+//		if(ao1->centralMoms[k] > 0)
+//			sma = 1;
+//		else if(ao1->centralMoms[k] < 0)
+//			sma = -1;
+//		else
+//			sma = 0;
+//		if(ao2->centralMoms[k] > 0)
+//			smb = 1;
+//		else if(ao2->centralMoms[k] < 0)
+//			smb = -1;
+//		else
+//			smb = 0;
+//
+//		ama = sma*log10(ama);
+//		amb = smb*log10(amb);
+//		c1 += abs(-1./ama+1./amb);
+////		c2 += abs(-ama+amb);
+////		c3 = max(c3, abs((ama-amb)/ama));
+//	}
+//
+//	return c1;
 }
 
 }
