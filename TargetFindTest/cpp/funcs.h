@@ -14,7 +14,7 @@
 #include "constants.h"
 
 #include "Time.h"
-#include "ActiveObject.h"
+#include "ActiveRegion.h"
 //#include "mser.h"
 
 namespace ICSL {
@@ -35,16 +35,16 @@ class TimeKeeper
 
 vector<vector<cv::Point>> findContours(const cv::Mat &img);
 
-vector<shared_ptr<ActiveObject>> objectify(const vector<vector<cv::Point>> &contours,
+vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
 										   const TNT::Array2D<double> Sn,
 										   const TNT::Array2D<double> SnInv,
 										   double varxi, double probNoCorr,
 										   const Time &curTime);
 
-void matchify(vector<shared_ptr<ActiveObject>> &activeObjects,
-			  const vector<shared_ptr<ActiveObject>> &curObjects,
-			  vector<Match> &goodMatches,
-			  vector<shared_ptr<ActiveObject>> &repeatObjects,
+void matchify(vector<shared_ptr<ActiveRegion>> &activeObjects,
+			  const vector<shared_ptr<ActiveRegion>> &curObjects,
+			  vector<RegionMatch> &goodMatches,
+			  vector<shared_ptr<ActiveRegion>> &repeatObjects,
 			  const TNT::Array2D<double> Sn,
 			  const TNT::Array2D<double> SnInv,
 			  double varxi, double probNoCorr,

@@ -338,7 +338,7 @@ class ImageTargetFind2Data : public IData
 {
 	public:
 	ImageTargetFind2Data() : IData() {};
-	vector<Match> matchedRegions;
+	vector<shared_ptr<ActiveRegion>> regions;
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
 

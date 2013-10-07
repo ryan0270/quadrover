@@ -24,28 +24,26 @@ class ActiveRegion
 	ActiveRegion();
 	ActiveRegion(std::vector<cv::Point> points);
 
-	cv::Point lastCenter;
-	ICSL::Quadrotor::Time lastFoundTime;
-	float life;
-	std::vector<cv::Point> contour;
-	cv::Moments mom;
-	double huMom[7];
-	double centralMoms[7];
-	int id;
-
-	TNT::Array2D<double> principalAxes;
-	vector<double> principalAxesEigVal;
-	
-
-	TNT::Array2D<double> expectedPos, posCov;
-
 	void copyData(const ActiveRegion &ao);
+	void markFound(const Time &time);
+	void addLife(float val);
+	void setPosCov(const TNT::Array2D<double> cov){mPosCov.inject(cov);}
+	void takeLife(float val);
+	void kill();
+	bool isAlive() const {return mLife > 0;}
+
+	cv::Point2f getLastFoundPos() const {return mLastFoundPos;}
+	const vector<cv::Point> getContour() const {return mContour;}
+	const TNT::Array2D<double> getPrincipalAxes() const {return mPrincipalAxes;}
+	const vector<double> getPrincipalAxesEigVal() const {return mPrincipalAxesEigVal;}
+	float getLife() const {return mLife;}
+	float getArea() const {return mMoments.m00;}
+	int getId() const {return mId;}
 
 	// assumes moments have already been calculated
 	void calcPrincipalAxes();
 
-	cv::Point2f meanPos;
-	void updatePosition(const TNT::Array2D<double> &mv, const TNT::Array2D<double> &Sv, 
+	void updatePositionDistribution(const TNT::Array2D<double> &mv, const TNT::Array2D<double> &Sv, 
 						double mz, double varz, 
 						double focalLength, const cv::Point2f &center,
 						const TNT::Array2D<double> &omega,
@@ -61,17 +59,27 @@ class ActiveRegion
 	static double calcShapeDistance(const shared_ptr<ActiveRegion> &ao1, const shared_ptr<ActiveRegion> &ao2);
 
 	static bool sortPredicate(const std::shared_ptr<ActiveRegion> &ao1, const std::shared_ptr<ActiveRegion> &ao2)
-	{ return ao1->life > ao2->life; }
+	{ return ao1->mLife > ao2->mLife; }
 
-	private:
-	static unsigned long lastID;
+	protected:
+	std::vector<cv::Point> mContour;
+	cv::Point2f mLastFoundPos;
+	ICSL::Quadrotor::Time mLastFoundTime;
+	float mLife;
+	cv::Moments mMoments;
+	int mId;
 
-	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
+	TNT::Array2D<double> mPrincipalAxes;
+	vector<double> mPrincipalAxesEigVal;
+	
+	TNT::Array2D<double> mExpectedPos, mPosCov;
 
 	constexpr static double maxLife = 20;
+	static unsigned long lastID;
+	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
 };
 
-class Match
+class RegionMatch
 {
 	public:
 	std::shared_ptr<ActiveRegion> aoPrev, aoCur;

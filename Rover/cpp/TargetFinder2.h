@@ -119,7 +119,7 @@ class TargetFinder2 : public CommManagerListener,
 				const Time &imageTime);
 
 		void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
-				vector<Match> &goodMatches,
+				vector<RegionMatch> &goodMatches,
 				vector<shared_ptr<ActiveRegion>> &repeatRegions,
 				const TNT::Array2D<double> Sn,
 				const TNT::Array2D<double> SnInv,
