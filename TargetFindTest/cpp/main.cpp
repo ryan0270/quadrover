@@ -57,7 +57,7 @@ int main(int argv, char* argc[])
 		case 4:
 			dataDir = "../dataSets/Oct3_2";
 			startImg = 989;
-			startImg += 150;
+//			startImg += 150;
 			endImg = 3850;
 			break;
 	}
