@@ -25,7 +25,7 @@
 #include "SensorManager.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
-#include "TargetFinder.h"
+#include "TargetFinder2.h"
 #include "VelocityEstimator.h"
 #include "Rotation.h"
 
@@ -152,7 +152,7 @@ int main(int argv, char* argc[])
 	QuadLogger mQuadLogger;
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
-	TargetFinder mTargetFinder;
+	TargetFinder2 mTargetFinder;
 //	SensorManager mSensorManager;
 	MotorInterface mMotorInterface;
 //	CommManager mCommManager;
@@ -256,14 +256,34 @@ int main(int argv, char* argc[])
 	} myFeatureFinderListener;
 	mFeatureFinder.addListener(&myFeatureFinderListener);
 
-	class MyTargetFinderListener : public TargetFinderListener
+//	class MyTargetFinderListener : public TargetFinderListener
+//	{
+//		public:
+//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//		{
+//			stringstream ss;
+//			ss << imgDir << "/annotated_target/img_" << imgCnt++ << ".bmp";
+////			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+////			imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated));
+//			cv::waitKey(1);
+//		};
+//
+//		int imgCnt;
+//		string imgDir;
+//
+//	} myTargetFinderListener;
+//	myTargetFinderListener.imgCnt = 0;
+//	myTargetFinderListener.imgDir = imgDir;
+//	mTargetFinder.addListener(&myTargetFinderListener);
+
+	class MyTargetFinder2Listener : public TargetFinder2Listener
 	{
 		public:
-		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+		void onTargetFound2(const shared_ptr<ImageTargetFindData> &data)
 		{
 			stringstream ss;
 			ss << imgDir << "/annotated_target/img_" << imgCnt++ << ".bmp";
-			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+//			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
 			imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated));
 			cv::waitKey(1);
 		};
@@ -271,10 +291,10 @@ int main(int argv, char* argc[])
 		int imgCnt;
 		string imgDir;
 
-	} myTargetFinderListener;
-	myTargetFinderListener.imgCnt = 0;
-	myTargetFinderListener.imgDir = imgDir;
-	mTargetFinder.addListener(&myTargetFinderListener);
+	} myTargetFinder2Listener;
+	myTargetFinder2Listener.imgCnt = 0;
+	myTargetFinder2Listener.imgDir = imgDir;
+	mTargetFinder.addListener(&myTargetFinder2Listener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -630,8 +650,8 @@ int main(int argv, char* argc[])
 							else
 								data->cameraMatrix = mCameraMatrix_640x480;
 							data->focalLength = data->cameraMatrix->at<double>(0,0);
-							data->centerX = data->cameraMatrix->at<double>(0,2);
-							data->centerY = data->cameraMatrix->at<double>(1,2);
+							data->center.x = data->cameraMatrix->at<double>(0,2);
+							data->center.y = data->cameraMatrix->at<double>(1,2);
 							data->distCoeffs = mCameraDistortionCoeffs;
 
 							for(int i=0; i<sensorManagerListeners.size(); i++)

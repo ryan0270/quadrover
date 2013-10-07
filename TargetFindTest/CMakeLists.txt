@@ -6,14 +6,14 @@ project (TargetFindTest CXX C)
 set (SRC ${SRC}
 	./cpp/funcs.cpp
 	./cpp/ActiveObject.cpp
-	./cpp/mser.cpp
+#	./cpp/mser.cpp
 	)
 
 # Headers
 set (H ${H}
 	./cpp/funcs.h
 	./cpp/ActiveObject.h
-	./cpp/mser.h
+#	./cpp/mser.h
 	${ROVER_DIR}/cpp/Time.h
 	${ROVER_DIR}/cpp/TNT_Utils.h
 	)

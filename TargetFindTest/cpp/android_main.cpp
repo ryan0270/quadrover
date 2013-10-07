@@ -270,8 +270,8 @@ void android_main(struct android_app* state)
 		case 0:
 			dataDir = "/sdcard/TargetFindTest/dataSets/Sep19";
 			startImg = 1360;
+			endImg = 2874;
 			endImg = 2600;
-			endImg = startImg+200;
 			break;
 	}
 
@@ -348,19 +348,15 @@ void android_main(struct android_app* state)
 	Log::alert("Starting run");
 	while(imgIter != imgList.end())
 	{
-Log::alert("--------------------------------------------------");
-Log::alert(String()+"imgCnt: "+imgCnt);
 		curTime.addTimeMS(33);
 		img = *(imgIter->second);
 
 Time start;
 		vector<vector<cv::Point>> allContours = findContours(img);
-Log::alert(String()+"numContours: "+allContours.size());
 
 TimeKeeper::times[0] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		
 		vector<shared_ptr<ActiveObject>> curObjects = objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
-Log::alert(String()+"numObjects: "+curObjects.size());
 
 TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		/////////////////// Get location priors for active objects ///////////////////////
@@ -383,20 +379,8 @@ TimeKeeper::times[2] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		vector<shared_ptr<ActiveObject>> repeatObjects;
 		matchify(activeObjects, curObjects, goodMatches, repeatObjects, Sn, SnInv, varxi, probNoCorr, curTime);
 		activeCnt += activeObjects.size();
-Log::alert(String()+"activeCnt: "+activeCnt);
 
 TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
-
-		for(int i=0; i<activeObjects.size(); i++)
-		{
-			shared_ptr<ActiveObject> ao = activeObjects[i];
-			String str;
-			str = str+ao->id+": \t";
-			str = str+ao->lastCenter.x+"x"+ao->lastCenter.y+"\t";
-			str = str+ao->mom.m00+"\t";
-			str = str+ao->life;
-			Log::alert(str);
-		}
 
 		imgIter++;
 		imgCnt++;

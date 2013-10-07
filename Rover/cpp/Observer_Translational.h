@@ -28,6 +28,9 @@
 #define ICSL_TARGETFINDER_LISTENER_ONLY
 #include "TargetFinder.h"
 #undef ICSL_TARGETFINDER_LISTENER_ONLY
+#define ICSL_TARGETFINDER2_LISTENER_ONLY
+#include "TargetFinder2.h"
+#undef ICSL_TARGETFINDER2_LISTENER_ONLY
 
 #include "toadlet/egg.h"
 
@@ -46,7 +49,8 @@ class Observer_Translational : public Observer_AngularListener,
 								public CommManagerListener,
 								public SensorManagerListener,
 								public VelocityEstimatorListener,
-								public TargetFinderListener
+								public TargetFinderListener,
+								public TargetFinder2Listener
 {
 	public:
 	Observer_Translational();
@@ -94,6 +98,9 @@ class Observer_Translational : public Observer_AngularListener,
 
 	// for TargetFinderListener
 	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
+
+	// for TargetFinder2Listener
+	void onTargetFound2(const shared_ptr<ImageTargetFindData> &data);
 
 	protected:
 	bool mRunning, mDone;

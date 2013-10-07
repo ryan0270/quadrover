@@ -178,7 +178,6 @@ class DataImage : public IData
 		imageFormat = IMG_FORMAT_BGR; 
 		image = shared_ptr<cv::Mat>(new cv::Mat());
 		cap = NULL;
-		centerX = centerY = 0;
 		focalLength = 0;
 		imageId= sNextImageID()++;
 	}
@@ -190,7 +189,7 @@ class DataImage : public IData
 	TNT::Array2D<double> angularVel;
 	ImageFormat imageFormat;
 	float focalLength;
-	float centerX, centerY;
+	cv::Point2f center;
 	shared_ptr<cv::VideoCapture> cap;
 	shared_ptr<cv::Mat> cameraMatrix;
 	shared_ptr<cv::Mat> distCoeffs;

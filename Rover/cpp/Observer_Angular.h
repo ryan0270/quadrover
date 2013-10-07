@@ -44,6 +44,9 @@ class Observer_AngularListener
 #define ICSL_TARGETFINDER_LISTENER_ONLY
 #include "TargetFinder.h"
 #undef ICSL_TARGETFINDER_LISTENER_ONLY
+#define ICSL_TARGETFINDER2_LISTENER_ONLY
+#include "TargetFinder2.h"
+#undef ICSL_TARGETFINDER2_LISTENER_ONLY
 
 namespace ICSL{
 namespace Quadrotor{
@@ -53,7 +56,8 @@ using namespace std;
 //class Observer_Angular : public InputDeviceListener
 class Observer_Angular : public CommManagerListener,
 						 public SensorManagerListener,
-						 public TargetFinderListener
+						 public TargetFinderListener,
+						 public TargetFinder2Listener
 {
 	public:
 	Observer_Angular();
@@ -106,6 +110,9 @@ class Observer_Angular : public CommManagerListener,
 
 	// for TargetFinderListener
 	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
+
+	// for TargetFinder2Listener
+	void onTargetFound2(const shared_ptr<ImageTargetFindData> &data);
 
 	protected:
 	bool mRunning, mDone;

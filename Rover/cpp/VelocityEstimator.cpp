@@ -140,8 +140,8 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	double dt = Time::calcDiffNS(oldTime, curTime)/1.0e9;
 
 	cv::Point2f center;
-	center.x = curFeatureData->imageData->centerX;
-	center.y = curFeatureData->imageData->centerY;
+	center.x = curFeatureData->imageData->center.x;
+	center.y = curFeatureData->imageData->center.y;
 	float focalLength = curFeatureData->imageData->focalLength;
 
 	// Get relevant state data

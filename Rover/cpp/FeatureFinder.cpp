@@ -113,8 +113,8 @@ void FeatureFinder::run()
 			if(points.size() > 0)
 			{
 				double f = imageData->focalLength;
-				double cx = imageData->centerX;
-				double cy = imageData->centerY;
+				double cx = imageData->center.x;
+				double cy = imageData->center.y;
 				cv::Point2f center(cx, cy);
 				cv::undistortPoints(points, points, *imageData->cameraMatrix, *imageData->distCoeffs);
 				for(int i=0; i<points.size(); i++)
