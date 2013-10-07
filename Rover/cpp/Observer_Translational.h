@@ -5,6 +5,7 @@
 #include <sched.h>
 #include <thread>
 #include <mutex>
+#include <unordered_map>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -21,6 +22,7 @@
 #include "Time.h"
 #include "QuadLogger.h"
 #include "Observer_Angular.h"
+#include "ActiveRegion.h"
 #include "Listeners.h"
 
 #include "toadlet/egg.h"
@@ -173,6 +175,11 @@ class Observer_Translational : public Observer_AngularListener,
 	Time applyData(list<shared_ptr<IData>> &events);
 
 	bool mIsViconCameraOffsetSet;
+
+	unordered_map<int, shared_ptr<ActiveRegion>> mRegionMap;
+	// the nominal position of each region when the quadrotor is
+	// at the "origin"
+	unordered_map<int, cv::Point2f> mRegionNominalPosMap;
 };
 
 } // namespace Quadrotor

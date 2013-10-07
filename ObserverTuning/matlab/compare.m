@@ -2,15 +2,18 @@ clear;
 disp('start chadding')
 
 %%
-log_ids
+
 
 %%
 % dataDir = '../dataSets/Sep8';
-dataDir = '../dataSets/Sep12';
+% dataDir = '../dataSets/Sep12';
 % dataDir = '../dataSets/Sep19';
 % dataDir = '../dataSets/Sep23';
+dataDir = '../dataSets/Oct3_2';
 viconFile = [dataDir '/pcData.txt'];
 viconData = importdata(viconFile,'\t',0);
+
+run([dataDir '/log_ids'])
 
 viconStateIndices = find(viconData(:,2) == 1);
 viconStateTime = viconData(viconStateIndices,1)'/1000;
@@ -69,6 +72,10 @@ targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_
 targetLocTime = phoneData(targetLocIndices,1)'/1000;
 targetLoc = phoneData(targetLocIndices,3:8)';
 
+% imageOffsetIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMAGE_OFFSET);
+% imageOffsetTime = phoneData(imageOffsetIndices,1)'/1000;
+% imageOffset = phoneData(imageOffsetIndices,4:5)';
+
 camPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_ESTIMATED_POS);
 camPosTime = phoneData(camPosIndices,1)'/1000;
 camPos = phoneData(camPosIndices,3:5)';
@@ -121,62 +128,62 @@ tranStateLabels = { 'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [
 
 %%
 if exist('angleState','var') && ~isempty(angleState)
-  	figure(1); clf;
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	
-	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
-	timeShift = 0.02;
-	shift = zeros(6,1);
-	for i=1:6
-		subplot(2,3,i);		
-		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(angleStateTime, angleState(i,:)); hold all
-		hold off
-		
-		xlabel('Time [s]')
-		ylabel(angleStateLabels(i));	
-	end
-
-% 	midPoint = round(length(angleStateTime)/2);
-% 	shift = mean(angleState(:,midPoint:end),2);
-% 	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
+%   	figure(1); clf;
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	
+% 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
+% 	timeShift = 0.02;
+% 	shift = zeros(6,1);
 % 	for i=1:6
-% 		subplot(2,3,i);
-% 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
-% 		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
+% 		subplot(2,3,i);		
+% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
+% 		plot(angleStateTime, angleState(i,:)); hold all
 % 		hold off
-% % 		if i <= 2
-% % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.6 0.6]);
-% % 		else
-% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
-% % 		end
-% 		grid on
-% 
+% 		
 % 		xlabel('Time [s]')
-% 		ylabel(angleStateLabels(i));
+% 		ylabel(angleStateLabels(i));	
 % 	end
-	
-	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
-	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
-				 0*find(angleStateTime(1,:) > 0.05,1,'first');
-				 0*find(angleStateTime > mapVelTime(1),1,'first')
-				 1]);
-	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
-	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
-	err = err-diag(mean(err,2))*ones(size(err));
-	rmsErr = rms(err')';
-	fprintf('Angle state rms err:\t');
-	for i=1:3
-		fprintf('%1.3f\t',rmsErr(i));
-	end
-	fprintf('\n')
-	fprintf('            max err:\t')
-	for i=1:3
-		fprintf('%1.3f\t',max(abs(err(i,:))));
-	end
-	fprintf('\n');
+% 
+% % 	midPoint = round(length(angleStateTime)/2);
+% % 	shift = mean(angleState(:,midPoint:end),2);
+% % 	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
+% % 	for i=1:6
+% % 		subplot(2,3,i);
+% % 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
+% % 		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
+% % 		hold off
+% % % 		if i <= 2
+% % % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.6 0.6]);
+% % % 		else
+% % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
+% % % 		end
+% % 		grid on
+% % 
+% % 		xlabel('Time [s]')
+% % 		ylabel(angleStateLabels(i));
+% % 	end
+% 	
+% 	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
+% 	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
+% 				 0*find(angleStateTime(1,:) > 0.05,1,'first');
+% 				 0*find(angleStateTime > mapVelTime(1),1,'first')
+% 				 1]);
+% 	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
+% 	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
+% 	err = err-diag(mean(err,2))*ones(size(err));
+% 	rmsErr = rms(err')';
+% 	fprintf('Angle state rms err:\t');
+% 	for i=1:3
+% 		fprintf('%1.3f\t',rmsErr(i));
+% 	end
+% 	fprintf('\n')
+% 	fprintf('            max err:\t')
+% 	for i=1:3
+% 		fprintf('%1.3f\t',max(abs(err(i,:))));
+% 	end
+% 	fprintf('\n');
 end
 
 %%
@@ -229,6 +236,7 @@ if exist('tranState','var') && ~isempty(tranState)
 	if ~isempty(mapVel)
 		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelTime-timeShift,[],'extrap')';
 		start = find(viconStateMAPInterp(9,:) > 0.2,1,'first');
+start = 1;
 		rmsErrHeight = rms(viconStateMAPInterp(9,start:end)-mapHeight(start:end));
 		rmsErrVel = rms(viconStateMAPInterp(10:12,start:end)' - mapVel(:,start:end)')';
 		fprintf('MAP vel rms err:\t');
@@ -332,6 +340,14 @@ end
 % 	hold off
 % end
 % legend('vicon','kf','cam');
+
+%%
+if exist('imageOffset','var') && ~isempty(imageOffset)
+	figure(8000);
+	plot(imageOffset(1,:), imageOffset(2,:));
+	xlabel('x');
+	ylabel('y');
+end
 
 
 %%
