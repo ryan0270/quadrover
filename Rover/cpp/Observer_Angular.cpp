@@ -1,7 +1,5 @@
 #include "Observer_Angular.h"
 
-#include <time.h>
-
 namespace ICSL{
 namespace Quadrotor{
 using namespace TNT;

@@ -10,7 +10,7 @@
 #include "TNT_Utils.h"
 #include "constants.h"
 #include "Rotation.h"
-#include "ActiveRegion.h"
+//#include "ActiveRegion.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -22,6 +22,8 @@ namespace Quadrotor {
 using namespace ICSL::Constants;
 using namespace std;
 using namespace toadlet::egg;
+
+class ActiveRegion;
 
 enum ImageFormat
 {

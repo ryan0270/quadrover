@@ -22,7 +22,6 @@
 #include "TranslationController.h"
 #include "AttitudeThrustController.h"
 #include "VideoMaker.h"
-//#include "SensorManager.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
 #include "TargetFinder2.h"
@@ -175,6 +174,7 @@ int main(int argv, char* argc[])
 	mAttitudeThrustController.initialize();
 	mTranslationController.addListener(&mAttitudeThrustController);
 	addCommManagerListener(&mAttitudeThrustController);
+	addCommManagerListener(&mAttitudeThrustController);
 
 	mObsvAngular.initialize();
 	mObsvAngular.setStartTime(startTime);
@@ -202,12 +202,13 @@ int main(int argv, char* argc[])
 	mTargetFinder.initialize();
 	mTargetFinder.setStartTime(startTime);
 	mTargetFinder.setQuadLogger(&mQuadLogger);
-	addSensorManagerListener(&mTargetFinder);
 	mTargetFinder.addListener(&mObsvAngular);
 	mTargetFinder.addListener(&mObsvTranslational);
 	mTargetFinder.addListener(&mTranslationController);
+	mTargetFinder.setObserverAngular(&mObsvAngular);
+	mTargetFinder.setObserverTranslational(&mObsvTranslational);
+	addSensorManagerListener(&mTargetFinder);
 	addCommManagerListener(&mTargetFinder);
-	mTranslationController.setObserverTranslational(&mObsvTranslational);
 	mTargetFinder.start();
 
 	mVelocityEstimator.initialize();

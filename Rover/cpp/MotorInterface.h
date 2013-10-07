@@ -26,12 +26,6 @@ enum
 	COMM_ARDUINO_HEIGHT=1,
 };
 
-//class MotorInterfaceListener
-//{
-//	public:
-//	virtual void onMotorWarmupDone()=0;
-//};
-
 class MotorInterface
 {
 	public:

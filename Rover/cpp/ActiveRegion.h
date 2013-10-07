@@ -14,18 +14,15 @@
 
 #include "Time.h"
 #include "constants.h"
-//#include "Observer_Translational.h"
 
 namespace ICSL{
+namespace Quadrotor{
 using namespace std;
-using namespace ICSL::Quadrotor;
 class ActiveRegion
 {
 	public:
 	ActiveRegion();
 	ActiveRegion(std::vector<cv::Point> points);
-
-//	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
 
 	void copyData(const ActiveRegion &ao);
 	void markFound(const Time &time);
@@ -35,10 +32,11 @@ class ActiveRegion
 	void kill();
 	bool isAlive() const {return mLife > 0;}
 
-	cv::Point2f getLastFoundPos() const {return mLastFoundPos;}
-	const vector<cv::Point> getContour() const {return mContour;}
-	const TNT::Array2D<double> getPrincipalAxes() const {return mPrincipalAxes;}
-	const vector<double> getPrincipalAxesEigVal() const {return mPrincipalAxesEigVal;}
+	const cv::Point2f &getLastFoundPos() const {return mLastFoundPos;}
+	const Time &getLastFoundTime() const {return mLastFoundTime;}
+	const vector<cv::Point> &getContour() const {return mContour;}
+	const TNT::Array2D<double> &getPrincipalAxes() const {return mPrincipalAxes;}
+	const vector<double> &getPrincipalAxesEigVal() const {return mPrincipalAxesEigVal;}
 	float getLife() const {return mLife;}
 	float getArea() const {return mMoments.m00;}
 	int getId() const {return mId;}
@@ -77,8 +75,6 @@ class ActiveRegion
 	
 	TNT::Array2D<double> mExpectedPos, mPosCov;
 
-//	Observer_Translational *mObsvTranslational;
-
 	constexpr static double maxLife = 20;
 	static unsigned long lastID;
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
@@ -91,5 +87,6 @@ class RegionMatch
 	float score;
 };
 
+}
 }
 #endif

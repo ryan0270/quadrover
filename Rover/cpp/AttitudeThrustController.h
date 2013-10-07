@@ -8,12 +8,7 @@
 
 #include "QuadLogger.h"
 #include "Time.h"
-//#include "CommManager.h"
-#include "TranslationController.h"
 #include "Listeners.h"
-//#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
-//#include "Observer_Angular.h"
-//#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "MotorInterface.h"
 #include "Rotation.h"
 
@@ -21,8 +16,6 @@
 
 namespace ICSL {
 namespace Quadrotor{
-
-//class AttitudeThrustControllerListener;
 
 class AttitudeThrustController : public CommManagerListener,
 								public TranslationControllerListener,
@@ -88,7 +81,7 @@ class AttitudeThrustController : public CommManagerListener,
 
 	int mThreadPriority, mScheduler;
 
-	Array2D<double> mDesAccel;
+	TNT::Array2D<double> mDesAccel;
 
 	SO3 mCurAtt, mDesAtt;
 	SO3 mMotorPlaneBias;

@@ -1,25 +1,3 @@
-// Separate this out to avoid some circular include problems
-//#ifndef ICSL_OBSERVER_ANGULAR_LISTENER
-//#define ICSL_OBSERVER_ANGULAR_LISTENER
-//#include <memory>
-//#include "Data.h"
-//#include "TNT/tnt.h"
-//
-//namespace ICSL{
-//namespace Quadrotor{
-//
-//using namespace std;
-//class Observer_AngularListener
-//{
-//	public:
-//	virtual ~Observer_AngularListener(){};
-//
-//	virtual void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)=0;
-//};
-//}}
-//#endif
-
-//#ifndef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #ifndef ICSL_OBSERVER_ANGULAR 
 #define ICSL_OBSERVER_ANGULAR 
 #include <memory>
@@ -36,18 +14,7 @@
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Time.h"
-//#include "CommManager.h"
 #include "Listeners.h"
-//#define ICSL_SENSORMANAGERLISTENER_ONLY
-//#include "SensorManager.h"
-//#undef ICSL_SENSORMANAGERLISTENER_ONLY
-//#include "Rotation.h"
-//#define ICSL_TARGETFINDER_LISTENER_ONLY
-//#include "TargetFinder.h"
-//#undef ICSL_TARGETFINDER_LISTENER_ONLY
-//#define ICSL_TARGETFINDER2_LISTENER_ONLY
-//#include "TargetFinder2.h"
-//#undef ICSL_TARGETFINDER2_LISTENER_ONLY
 
 namespace ICSL{
 namespace Quadrotor{
@@ -160,4 +127,3 @@ class Observer_Angular : public CommManagerListener,
 }
 
 #endif
-//#endif

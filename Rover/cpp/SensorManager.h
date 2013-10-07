@@ -1,22 +1,3 @@
-//#ifndef ICSL_SENSORMANAGERLISTENER
-//#define ICSL_SENSORMANAGERLISTENER
-//
-//#include <memory>
-//#include <Data.h>
-//namespace ICSL{
-//namespace Quadrotor{
-//using namespace std;
-//class SensorManagerListener
-//{
-//	public:
-//	virtual void onNewSensorUpdate(const shared_ptr<IData> &data)=0;
-//};
-//
-//}}
-//
-//#endif
-//
-//#if !defined ICSL_OBSERVER_SIMULATION// && !defined ICSL_SENSORMANAGERLISTENER_ONLY
 #ifndef ICSL_SENSOR_MANAGER
 #define ICSL_SENSOR_MANAGER
 
@@ -40,7 +21,6 @@
 #include "QuadLogger.h"
 #include "Time.h"
 #include "Observer_Angular.h"
-//#include "CommManager.h"
 #include "Listeners.h"
 
 #include <opencv2/core/core.hpp>
@@ -130,4 +110,3 @@ class SensorManager : public CommManagerListener
 } // namespace Quadrotor
 } // namespace ICSL
 #endif // ICSL_OBSERVER_SIMULATION
-//#endif
