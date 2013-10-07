@@ -335,7 +335,8 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 	vector<shared_ptr<ActiveRegion>> newObjects;
 	int N1 = mActiveRegions.size();
 	int N2 = curRegions.size();
-	vector<bool> matched(N2, false);
+	vector<bool> prevMatched(N1, false);
+	vector<bool> curMatched(N2, false);
 	for(int i=0; i<N1; i++)
 	{
 		if(N2 == 0 || C[i][N2] > 0.5)
@@ -347,14 +348,14 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		float maxScore = 0;
 		for(int j=0; j<N2; j++)
 		{
-			if(C[i][j] > maxScore && !matched[j])
+			if(C[i][j] > maxScore && !curMatched[j])
 			{
 				maxScore = C[i][j];
 				maxIndex =j;
 			}
 		}
 
-		matched[maxIndex] = true;
+		curMatched[maxIndex] = true;
 		aoCur = curRegions[maxIndex];
 
 		RegionMatch m;
@@ -368,9 +369,41 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		repeatRegions.push_back(aoPrev);
 	}
 
+	vector<int> dupIndices;
 	for(int j=0; j<curRegions.size(); j++)
-		if(!matched[j])
-			newObjects.push_back(curRegions[j]);
+		if(!curMatched[j])
+		{
+			// first check to see if we didn't match because there
+			// were too many similar regions
+			bool addMe = true;
+			if(C.dim1() > 0 && C.dim2() > 0 && C[N1][j] < 0.5)
+			{
+				// yup, now we should clear out the riff raff
+				for(int i=0; i<N1; i++)
+					if(C[i][j] > 0.1)
+					{
+						if(prevMatched[i]) // the dupe already found a good match so we shouldn't delete him
+							addMe = false;
+						else
+							dupIndices.push_back(i);
+					}
+			}
+
+			// Now add the new region which will be the 
+			// only remaining one
+			if(addMe)
+				newObjects.push_back(curRegions[j]);
+		}
+
+	// sort and remove repeats 
+	sort(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator endIter = unique(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator iter = dupIndices.begin();
+	while(iter != endIter)
+	{
+		mActiveRegions[(*iter)]->kill();
+		iter++;
+	}
 
 	for(int i=0; i<mActiveRegions.size(); i++)
 		mActiveRegions[i]->takeLife(1);
