@@ -4,17 +4,20 @@ project (TargetFindTest CXX C)
 
 # Source files
 set (SRC ${SRC}
-	./cpp/funcs.cpp
+	${ROVER_DIR}/cpp/TargetFinder2.cpp
 	${ROVER_DIR}/cpp/ActiveRegion.cpp
 	)
 
 # Headers
 set (H ${H}
-	./cpp/funcs.h
-	${ROVER_DIR}/cpp/ActiveRegion.h
+	${ROVER_DIR}/cpp/TargetFinder2.h
 	${ROVER_DIR}/cpp/Time.h
 	${ROVER_DIR}/cpp/TNT_Utils.h
+	${ROVER_DIR}/cpp/Listeners.h
 	)
+
+add_definitions(-DICSL_OBSERVER_SIMULATION)
+add_definitions(-DSCHED_NORMAL=0) # linux and android appear to have this defined on slightly different paths
 
 if(BUILD_ANDROID)
 	set (SRC ${SRC}

@@ -259,26 +259,6 @@ int main(int argv, char* argc[])
 	} myFeatureFinderListener;
 	mFeatureFinder.addListener(&myFeatureFinderListener);
 
-//	class MyTargetFinderListener : public TargetFinderListener
-//	{
-//		public:
-//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-//		{
-//			stringstream ss;
-//			ss << imgDir << "/annotated_target/img_" << imgCnt++ << ".bmp";
-////			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
-////			imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated));
-//			cv::waitKey(1);
-//		};
-//
-//		int imgCnt;
-//		string imgDir;
-//
-//	} myTargetFinderListener;
-//	myTargetFinderListener.imgCnt = 0;
-//	myTargetFinderListener.imgDir = imgDir;
-//	mTargetFinder.addListener(&myTargetFinderListener);
-
 	class MyTargetFinder2Listener : public TargetFinder2Listener
 	{
 		public:
