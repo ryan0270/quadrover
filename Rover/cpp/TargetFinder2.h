@@ -107,6 +107,7 @@ protected:
 	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 			vector<RegionMatch> &goodMatches,
 			vector<shared_ptr<ActiveRegion>> &repeatRegions,
+			vector<shared_ptr<ActiveRegion>> &newRegions,
 			const TNT::Array2D<double> Sn,
 			const TNT::Array2D<double> SnInv,
 			double varxi, double probNoCorr,

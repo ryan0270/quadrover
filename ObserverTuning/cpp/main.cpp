@@ -379,21 +379,6 @@ int main(int argv, char* argc[])
 	list<shared_ptr<IData>> dataList;
 	dataList.clear();
 
-//	double accelCal1X = 0.05;
-//	double accelCal1Y = 0.06;
-//	double accelCal1Z = 9.38;
-//	double accelCal2X = 0.06;
-//	double accelCal2Y = -0.16;
-//	double accelCal2Z = -10.10;
-//
-//	double accelScaleZ = 1.00;//0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
-//	double accelScaleX = 1.0;
-//	double accelScaleY = 1.0;
-//
-//	double accelOffX = 0.5*(accelCal1X+accelCal2X);
-//	double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
-//	double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
-
 	double accelOffX = -0.15;
 	double accelOffY = 0.08;
 	double accelOffZ = -0.4;
@@ -425,8 +410,8 @@ int main(int argv, char* argc[])
 	default_random_engine randGenerator;
 	normal_distribution<double> stdGaussDist(0,1);
 	Array2D<double> noiseStd(12,1,0.0);
-	noiseStd[6][0] = 0.010;
-	noiseStd[7][0] = 0.010;
+	noiseStd[6][0] = 0.000;
+	noiseStd[7][0] = 0.000;
 	noiseStd[8][0] = 0.010;
 
 	string line;

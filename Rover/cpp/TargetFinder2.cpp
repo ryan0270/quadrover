@@ -137,8 +137,8 @@ void TargetFinder2::run()
 			}
 
 			vector<RegionMatch> goodMatches;
-			vector<shared_ptr<ActiveRegion>> repeatRegions;
-			matchify(curRegions, goodMatches, repeatRegions, Sn, SnInv, varxi, probNoCorr, imageTime);
+			vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
+			matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi, probNoCorr, imageTime);
 
 			double procTime = procStart.getElapsedTimeNS()/1.0e9;
 			if(repeatRegions.size() > 0)
@@ -154,7 +154,8 @@ void TargetFinder2::run()
 
 				shared_ptr<ImageTargetFind2Data> data(new ImageTargetFind2Data());
 				data->type = DATA_TYPE_TARGET_FIND;
-				data->regions= repeatRegions;
+				data->repeatRegions= repeatRegions;
+				data->newRegions= newRegions;
 				data->imageData = imageData;
 				data->imageAnnotatedData = imageAnnotatedData;
 				data->timestamp.setTime(imageTime);
@@ -321,6 +322,7 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 			  vector<RegionMatch> &goodMatches,
 			  vector<shared_ptr<ActiveRegion>> &repeatRegions,
+			  vector<shared_ptr<ActiveRegion>> &newRegions,
 			  const TNT::Array2D<double> Sn,
 			  const TNT::Array2D<double> SnInv,
 			  double varxi, double probNoCorr,
@@ -331,7 +333,6 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 
 	///////////////////  make matches ///////////////////////
 	shared_ptr<ActiveRegion> aoPrev, aoCur;
-	vector<shared_ptr<ActiveRegion>> newObjects;
 	int N1 = mActiveRegions.size();
 	int N2 = curRegions.size();
 	vector<bool> prevMatched(N1, false);
@@ -391,7 +392,7 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 			// Now add the new region which will be the 
 			// only remaining one
 			if(addMe)
-				newObjects.push_back(curRegions[j]);
+				newRegions.push_back(curRegions[j]);
 		}
 
 	// sort and remove repeats 
@@ -412,8 +413,8 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		mActiveRegions.pop_back();
 
 	// TODO
-	for(int i=0; i<newObjects.size(); i++)
-		mActiveRegions.push_back(newObjects[i]);
+	for(int i=0; i<newRegions.size(); i++)
+		mActiveRegions.push_back(newRegions[i]);
 }
 
 } // namespace Quadrotor

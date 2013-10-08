@@ -812,35 +812,73 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	mMutex_kfData.lock();
 	const Array2D<double> state = IData::interpolate(data->timestamp, mStateBuffer);
 	mMutex_kfData.unlock();
-	if(data->regions.size() == 0 || state[2][0] < 1)
+	if(state[2][0] < 0.5 || !mUseIbvs)
 		return;
 
-// TODO: rotation compenstation here instead of below
-// TODO: Account for nominal pos changes due to height change
 	// Bookeeping
-	vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
-	for(int i=0; i<data->regions.size(); i++)
-		if( mRegionMap.find(data->regions[i]->getId()) != mRegionMap.end() )
-			repeatRegions.push_back(data->regions[i]);
+	vector<shared_ptr<ActiveRegion>> repeatRegions;
+	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
+
+	// need to make sure we actually know about all the repeat regions
+	for(int i=0; i<data->repeatRegions.size(); i++)
+		if( mRegionMap.count(data->repeatRegions[i]->getId()) > 0)
+			repeatRegions.push_back(data->repeatRegions[i]);
 		else
-			newRegions.push_back(data->regions[i]);
+			newRegions.push_back(data->repeatRegions[i]);
+
+	// attitude compenstated points
+	SO3 att = mObsvAngular->estimateAttAtTime(data->timestamp);//data->imageData->att;
+	SO3 rot = att*mRotCamToPhone;
+	double f = data->imageData->focalLength;
+	double cx = data->imageData->center.x;
+	double cy = data->imageData->center.y;
+	Array2D<double> p(3,1);
+	vector<cv::Point2f> repeatPoints(repeatRegions.size()), newPoints(newRegions.size());
+	for(int i=0; i<repeatPoints.size(); i++)
+	{
+		p[0][0] = repeatRegions[i]->getLastFoundPos().x - cx;
+		p[1][0] = repeatRegions[i]->getLastFoundPos().y - cy;
+		p[2][0] = f;
+		p = rot*p;
+		repeatPoints[i].x = p[0][0]*f/p[2][0]+cx;
+		repeatPoints[i].y = p[1][0]*f/p[2][0]+cy;
+	}
+	for(int i=0; i<newPoints.size(); i++)
+	{
+		p[0][0] = newRegions[i]->getLastFoundPos().x - cx;
+		p[1][0] = newRegions[i]->getLastFoundPos().y - cy;
+		p[2][0] = f;
+		p = rot*p;
+		newPoints[i].x = p[0][0]*f/p[2][0]+cx;
+		newPoints[i].y = p[1][0]*f/p[2][0]+cy;
+	}
 
 	// Find how much repeated regions have moved relative
 	// to their nominal position
 	cv::Point2f imageOffset(0,0);
-	if(repeatRegions.size() > 0)
+	if(repeatPoints.size() > 0)
 	{
-		for(int i=0; i<repeatRegions.size(); i++)
-			imageOffset += repeatRegions[i]->getLastFoundPos()-mRegionNominalPosMap[repeatRegions[i]->getId()];
-		imageOffset.x /= (float)repeatRegions.size();
-		imageOffset.y /= (float)repeatRegions.size();
+		for(int i=0; i<repeatPoints.size(); i++)
+		{
+			cv::Point2f nom = mRegionNominalPosMap[repeatRegions[i]->getId()];
+			// scale the nominal to the current height
+			nom.x /= state[2][0];
+			nom.y /= state[2][0];
+			imageOffset += repeatPoints[i]-nom;
+		}
+		imageOffset.x /= (float)repeatPoints.size();
+		imageOffset.y /= (float)repeatPoints.size();
 	}
 
-	// Set the nominal position for th new regions
-	for(int i=0; i<newRegions.size(); i++)
+	// Set the nominal position for the new regions
+	for(int i=0; i<newPoints.size(); i++)
 	{
 		mRegionMap[newRegions[i]->getId()] = newRegions[i];
-		mRegionNominalPosMap[newRegions[i]->getId()] = newRegions[i]->getLastFoundPos()-imageOffset;
+		cv::Point2f p= newPoints[i]-imageOffset;
+		// scale the nominal point to how it would appear at 1m
+		p.x *= state[2][0];
+		p.y *= state[2][0];
+		mRegionNominalPosMap[newRegions[i]->getId()] = p;
 	}
 
 	String logStr = String()+Time::calcDiffMS(mStartTime,data->timestamp)+"\t";
@@ -853,36 +891,21 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 
 	// Position estimation
 	bool resetViconOffset = false;
-	if(mUseIbvs)
+	if(!mHaveFirstCameraPos)
 	{
-		if(!mHaveFirstCameraPos)
-		{
-			mQuadLogger->addEntry(Time(), LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
-			resetViconOffset = true;
-		}
-		mHaveFirstCameraPos = true;
+		mQuadLogger->addEntry(Time(), LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
+		resetViconOffset = true;
 	}
+	mHaveFirstCameraPos = true;
 	mMutex_posTime.lock();
 	mLastCameraPosTime.setTime();
 	mMutex_posTime.unlock();
 
-	// rotation compensation
-	SO3 att = mObsvAngular->estimateAttAtTime(data->timestamp);//data->imageData->att;
-
-	double f = data->imageData->focalLength;
-	double cx = data->imageData->center.x;
-	double cy = data->imageData->center.y;
-	Array2D<double> p(3,1);
-	p[0][0] = imageOffset.x - cx;
-	p[1][0] = imageOffset.y - cy;
-	p[2][0] = f;
-	p = att*mRotCamToPhone*p;
-	p = -1.0*p; // to get our position instead of the target's
-
+	// Now estimate our 3D position
 	Array2D<double> pos(3,1);
 	pos[2][0] = state[2][0]-mViconCameraOffset[2][0];
-	pos[0][0] = p[0][0]/f*abs(pos[2][0]);
-	pos[1][0] = p[1][0]/f*abs(pos[2][0]);
+	pos[0][0] = (imageOffset.x-cx)/f*abs(pos[2][0]);
+	pos[1][0] = (imageOffset.y-cy)/f*abs(pos[2][0]);
 
 	if(resetViconOffset && !mIsViconCameraOffsetSet)
 	{
@@ -895,9 +918,9 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	posData->type = DATA_TYPE_CAMERA_POS;
 	posData->timestamp.setTime(data->imageData->timestamp);
 	posData->data = pos.copy();
-//	mMutex_events.lock();
-//	mNewEventsBuffer.push_back(posData);
-//	mMutex_events.unlock();
+	mMutex_events.lock();
+	mNewEventsBuffer.push_back(posData);
+	mMutex_events.unlock();
 
 	String str = String();
 	for(int i=0; i<pos.dim1(); i++)
