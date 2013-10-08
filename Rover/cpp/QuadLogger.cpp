@@ -181,7 +181,7 @@ void QuadLogger::generateMatlabHeader()
 {
 	FileStream::ptr logStream = FileStream::ptr(new FileStream(mDir+"/log_ids.m", FileStream::Open_BIT_WRITE));
 
-	if(!logStream->closed())
+	if(logStream != NULL)
 	{
 		String str;
 		str = String()+"LOG_ID_ACCEL="+LOG_ID_ACCEL+";\n"; logStream->write((tbyte*)str.c_str(),str.length());

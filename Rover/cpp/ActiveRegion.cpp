@@ -8,7 +8,7 @@ using namespace ICSL::Constants;
 using namespace toadlet::egg;
 
 unsigned long ActiveRegion::lastID = 0;
-
+std::mutex ActiveRegion::mutex_lastID;
 
 ActiveRegion::ActiveRegion() :
 	mExpectedPos(2,1,0.0),
@@ -17,7 +17,7 @@ ActiveRegion::ActiveRegion() :
 	mPrincipalAxesEigVal(2,0.0)
 {
 	mLife = 10;
-	this->mId = lastID++;
+	mutex_lastID.lock(); mId = lastID++; mutex_lastID.unlock();
 
 	// make sure this is pos def
 	mPosCov[0][0] = mPosCov[1][1] = 1;
@@ -31,7 +31,6 @@ ActiveRegion::ActiveRegion(std::vector<cv::Point> points) : ActiveRegion()
 	mLastFoundPos.y = mMoments.m01/mMoments.m00;
 	mExpectedPos[0][0] = mLastFoundPos.x;
 	mExpectedPos[1][0] = mLastFoundPos.y;
-
 	calcPrincipalAxes();
 }
 
@@ -43,6 +42,8 @@ void ActiveRegion::copyData(const ActiveRegion &ao)
 	mPrincipalAxes.inject(ao.mPrincipalAxes);
 	mPrincipalAxesEigVal[0] = ao.mPrincipalAxesEigVal[0];
 	mPrincipalAxesEigVal[1] = ao.mPrincipalAxesEigVal[1];
+	for(int i=0; i<ao.mNeighbors.size(); i++)
+		addNeighbor(ao.mNeighbors[i], true);
 }
 
 void ActiveRegion::markFound(const Time &time)
@@ -58,11 +59,85 @@ void ActiveRegion::addLife(float val)
 void ActiveRegion::takeLife(float val)
 {
 	mLife -= val;
+
+	if(mLife <= 0)
+		kill();
 }
 
 void ActiveRegion::kill()
 {
 	mLife = 0;
+	// need to copy this list first
+	// since when we go to remove neighbors
+	// it will modify my list
+	vector<shared_ptr<ActiveRegion>> nList = mNeighbors;
+	for(int i=0; i<nList.size(); i++)
+		nList[i]->removeNeigbor(mId, false);
+
+	mNeighbors.clear();
+}
+
+void ActiveRegion::addNeighbor(shared_ptr<ActiveRegion> n, bool doTwoWay)
+{
+	if(n->mLife <= 0)
+	{
+		Log::alert("dud");
+		return;
+	}
+	if(n->mId == mId)
+		return;
+
+	for(int i=0; i<mNeighbors.size(); i++)
+		if(n->mId == mNeighbors[i]->mId)
+		{
+			mNeighbors.push_back(n);
+			break;
+		}
+
+	if(doTwoWay)
+		n->addNeighbor(shared_from_this(), false);
+
+	// check for duds
+	bool haveDud = false;
+	for(int i=0; i<mNeighbors.size(); i++)
+		if(!mNeighbors[i]->isAlive())
+		{
+			haveDud = true;
+			break;
+		}
+	
+	if(haveDud || mNeighbors.size() > 50)
+	{
+		String str = "\n";
+		Log::alert("--------------------------------------------------");
+		for(int i=0; i<mNeighbors.size(); i++)
+		{
+			str = str+mNeighbors[i]->mId+"\t";
+			str = str+mNeighbors[i]->mLife+"\t";
+			str = str+"\n";
+		}
+		Log::alert(str);
+		Log::alert("//////////////////////////////////////////////////");
+	}
+}
+
+void ActiveRegion::removeNeigbor(int nid, bool doTwoWay)
+{
+	vector<shared_ptr<ActiveRegion>>::iterator iter;
+	iter = mNeighbors.begin();
+	bool found = false;
+	while(iter != mNeighbors.end() && !found)
+	{
+		if((*iter)->mId == nid)
+		{
+			shared_ptr<ActiveRegion> n = *iter;
+			mNeighbors.erase(iter);
+			if(doTwoWay)
+				n->removeNeigbor(mId, false);
+			found = true;
+		}
+		iter++;
+	}
 }
 
 // from http://en.wikipedia.org/wiki/Image_moment

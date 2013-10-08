@@ -43,6 +43,7 @@ void TargetFinder2::initialize()
 
 void TargetFinder2::run()
 {
+#ifndef ICSL_OBSERVER_SIMULATION
 	mFinished = false;
 	mRunning = true;
 
@@ -182,6 +183,7 @@ void TargetFinder2::run()
 	}
 
 	mFinished = true;
+#endif
 }
 
 void TargetFinder2::drawTarget(cv::Mat &image,
@@ -199,23 +201,31 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 
 	for(int i=0; i<curRegions.size(); i++)
 	{
-		shared_ptr<ActiveRegion> obj = curRegions[i];
-		cv::Point2f cen = obj->getLastFoundPos();
-		cv::Point2f p1, p2;
-		const Array2D<double> principalAxes = obj->getPrincipalAxes();
-		const vector<double> principalAxesEigVal = obj->getPrincipalAxesEigVal();
-		double ratio = principalAxesEigVal[0]/principalAxesEigVal[1];
-		if(ratio > 2)
-		{
-			p1.x = cen.x + 10*principalAxes[0][0] * principalAxesEigVal[0];
-			p1.y = cen.y + 10*principalAxes[1][0] * principalAxesEigVal[0];
-			p2.x = cen.x + 10*principalAxes[0][1] * principalAxesEigVal[1];
-			p2.y = cen.y + 10*principalAxes[1][1] * principalAxesEigVal[1];
-
-			line(image,cen,p1,cv::Scalar(0,255,255),1);
-			line(image,cen,p2,cv::Scalar(255,0,255),1);
-		}
+		const vector<shared_ptr<ActiveRegion>> neighbors = curRegions[i]->getNeighbors();
+		for(int j=0; j<neighbors.size(); j++)
+			if(curRegions[i]->getId() < neighbors[j]->getId())
+				line(image, curRegions[i]->getLastFoundPos(), neighbors[j]->getLastFoundPos(), cv::Scalar(0,255,255), 1);
 	}
+
+//	for(int i=0; i<curRegions.size(); i++)
+//	{
+//		shared_ptr<ActiveRegion> obj = curRegions[i];
+//		cv::Point2f cen = obj->getLastFoundPos();
+//		cv::Point2f p1, p2;
+//		const Array2D<double> principalAxes = obj->getPrincipalAxes();
+//		const vector<double> principalAxesEigVal = obj->getPrincipalAxesEigVal();
+//		double ratio = principalAxesEigVal[0]/principalAxesEigVal[1];
+//		if(ratio > 2)
+//		{
+//			p1.x = cen.x + 10*principalAxes[0][0] * principalAxesEigVal[0];
+//			p1.y = cen.y + 10*principalAxes[1][0] * principalAxesEigVal[0];
+//			p2.x = cen.x + 10*principalAxes[0][1] * principalAxesEigVal[1];
+//			p2.y = cen.y + 10*principalAxes[1][1] * principalAxesEigVal[1];
+//
+//			line(image,cen,p1,cv::Scalar(0,255,255),1);
+//			line(image,cen,p2,cv::Scalar(255,0,255),1);
+//		}
+//	}
 }
 
 
@@ -304,7 +314,10 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 	for(int i=0; i<tempList.size(); i++)
 	{
 		if(!isStillGood[i])
+		{
+			tempList[i]->kill();
 			continue;
+		}
 		vector<int> confusionList;
 		for(int j=i+1; j<tempList.size(); j++)
 			if(ssC[i][j] > 0.2)
@@ -315,6 +328,10 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 
 		curRegions.push_back(tempList[i]);
 	}
+
+	for(int i=0; i<curRegions.size(); i++)
+		for(int j=i+1; j<curRegions.size(); j++)
+			curRegions[i]->addNeighbor(curRegions[j], true);
 
 	return curRegions;
 }
@@ -367,6 +384,7 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		aoPrev->markFound(imageTime);
 		aoPrev->addLife(2);
 		repeatRegions.push_back(aoPrev);
+		aoCur->kill();
 	}
 
 	vector<int> dupIndices;
@@ -388,11 +406,12 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 							dupIndices.push_back(i);
 					}
 			}
-
 			// Now add the new region which will be the 
 			// only remaining one
 			if(addMe)
 				newRegions.push_back(curRegions[j]);
+			else
+				curRegions[j]->kill();
 		}
 
 	// sort and remove repeats 

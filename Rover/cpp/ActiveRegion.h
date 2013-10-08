@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <iostream>
+#include <mutex>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -18,7 +19,7 @@
 namespace ICSL{
 namespace Quadrotor{
 using namespace std;
-class ActiveRegion
+class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 {
 	public:
 	ActiveRegion();
@@ -31,6 +32,8 @@ class ActiveRegion
 	void takeLife(float val);
 	void kill();
 	bool isAlive() const {return mLife > 0;}
+	void addNeighbor(shared_ptr<ActiveRegion> n, bool doTwoWay);
+	void removeNeigbor(int nid, bool doTwoWay);
 
 	const cv::Point2f &getLastFoundPos() const {return mLastFoundPos;}
 	const Time &getLastFoundTime() const {return mLastFoundTime;}
@@ -40,6 +43,7 @@ class ActiveRegion
 	float getLife() const {return mLife;}
 	float getArea() const {return mMoments.m00;}
 	int getId() const {return mId;}
+	const vector<shared_ptr<ActiveRegion>> &getNeighbors() const {return mNeighbors;}
 
 	// assumes moments have already been calculated
 	void calcPrincipalAxes();
@@ -62,6 +66,7 @@ class ActiveRegion
 	static bool sortPredicate(const std::shared_ptr<ActiveRegion> &ao1, const std::shared_ptr<ActiveRegion> &ao2)
 	{ return ao1->mLife > ao2->mLife; }
 
+
 	protected:
 	std::vector<cv::Point> mContour;
 	cv::Point2f mLastFoundPos;
@@ -75,8 +80,11 @@ class ActiveRegion
 	
 	TNT::Array2D<double> mExpectedPos, mPosCov;
 
+	vector<shared_ptr<ActiveRegion>> mNeighbors;
+
 	constexpr static double maxLife = 20;
 	static unsigned long lastID;
+	static std::mutex mutex_lastID;
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
 };
 

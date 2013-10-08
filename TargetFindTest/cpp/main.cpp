@@ -15,8 +15,8 @@
 #include "TNT_Utils.h"
 
 #include "Time.h"
+#include "TargetFinder2.h"
 #include "ActiveRegion.h"
-#include "funcs.h"
 
 int main(int argv, char* argc[])
 {
@@ -129,12 +129,11 @@ int main(int argv, char* argc[])
 	double varxi = pow(500,2);
 	double probNoCorr = 0.0000001;
 
+	TargetFinder2 targetFinder;
+
 	int keypress = 0;
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
-	cv::Mat img(240,320, CV_8UC3), oldImg(240,320,CV_8UC3);
-	TimeKeeper::times.resize(100);
-	for(int i=0; i<TimeKeeper::times.size(); i++)
-		TimeKeeper::times[i] = 0;
+	cv::Mat img(240,320, CV_8UC3), oldImg(240,320,CV_8UC3), imgGray;
 	int activeCnt = 0;
 	int imgCnt = 0;
 	Time curTime;
@@ -142,15 +141,13 @@ int main(int argv, char* argc[])
 	{
 		curTime.addTimeMS(33);
 		img = *(imgIter->second);
+		cvtColor(img,imgGray,CV_BGR2GRAY);
 
 Time start;
-		vector<vector<cv::Point>> allContours = findContours(img);
+		vector<vector<cv::Point>> allContours = targetFinder.findContours(imgGray);
 
-TimeKeeper::times[0] += start.getElapsedTimeNS()/1.0e6; start.setTime();
-		
-		vector<shared_ptr<ActiveRegion>> curRegions = objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
+		vector<shared_ptr<ActiveRegion>> curRegions = targetFinder.objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
 
-TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		/////////////////// Get location priors for active regions ///////////////////////
 		Array2D<double> mv(3,1,0.0);
 		Array2D<double> Sv = 0.2*0.2*createIdentity((double)3);
@@ -159,20 +156,21 @@ TimeKeeper::times[1] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		double f = mCameraMatrix_640x480->at<double>(0,0);
 		Array2D<double> omega(3,1,0.0);
 
+		activeRegions = targetFinder.getActiveRegions();
+
 		for(int i=0; i<activeRegions.size(); i++)
 		{
 			shared_ptr<ActiveRegion> ao = activeRegions[i];
 			ao->updatePositionDistribution(mv, Sv, mz, sz*sz, f, center, omega, curTime);
 		}
 
-TimeKeeper::times[2] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 		/////////////////// make matches ///////////////////////
 		vector<RegionMatch> goodMatches;
-		vector<shared_ptr<ActiveRegion>> repeatRegions;
-		matchify(activeRegions, curRegions, goodMatches, repeatRegions, Sn, SnInv, varxi, probNoCorr, curTime);
+		vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
+		targetFinder.matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi, probNoCorr, curTime);
+		activeRegions = targetFinder.getActiveRegions();
 		activeCnt += activeRegions.size();
 
-TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 
 		imshow("chad",oldImg);
 
@@ -225,17 +223,17 @@ TimeKeeper::times[3] += start.getElapsedTimeNS()/1.0e6; start.setTime();
 			line(dblImg,goodMatches[i].aoPrev->getLastFoundPos(), goodMatches[i].aoCur->getLastFoundPos()+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
-		keypress = cv::waitKey(0) % 256;
+		keypress = cv::waitKey(1) % 256;
 
 		imgIter++;
 		imgCnt++;
 	}
 
-	for(int i=0; i<TimeKeeper::times.size(); i++)
-		if(TimeKeeper::times[i] != 0)
-			Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
-	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,4)/imgCnt);
-	Log::alert(String()+"num regions:\t" + activeCnt/imgCnt);
+//	for(int i=0; i<TimeKeeper::times.size(); i++)
+//		if(TimeKeeper::times[i] != 0)
+//			Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
+//	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,4)/imgCnt);
+//	Log::alert(String()+"num regions:\t" + activeCnt/imgCnt);
 
     return 0;
 }

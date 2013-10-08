@@ -56,6 +56,25 @@ public:
 	// CommManagerListener functions
 	void onNewCommMotorOn(){mIsMotorOn = true;}
 	void onNewCommMotorOff(){mIsMotorOn = false;}
+
+	vector<vector<cv::Point>> findContours(const cv::Mat &image);
+
+	vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
+			const TNT::Array2D<double> Sn,
+			const TNT::Array2D<double> SnInv,
+			double varxi, double probNoCorr,
+			const Time &imageTime);
+
+	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
+			vector<RegionMatch> &goodMatches,
+			vector<shared_ptr<ActiveRegion>> &repeatRegions,
+			vector<shared_ptr<ActiveRegion>> &newRegions,
+			const TNT::Array2D<double> Sn,
+			const TNT::Array2D<double> SnInv,
+			double varxi, double probNoCorr,
+			const Time &imageTime);
+
+	vector<shared_ptr<ActiveRegion>> &getActiveRegions(){return mActiveRegions;}
 	
 	// SensorManagerListener
 	void onNewSensorUpdate(const shared_ptr<IData> &data);
@@ -96,22 +115,22 @@ protected:
 	Observer_Angular *mObsvAngular;
 	Observer_Translational *mObsvTranslational;
 	vector<shared_ptr<ActiveRegion>> mActiveRegions;
-	vector<vector<cv::Point>> findContours(const cv::Mat &image);
-
-	vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
-			const TNT::Array2D<double> Sn,
-			const TNT::Array2D<double> SnInv,
-			double varxi, double probNoCorr,
-			const Time &imageTime);
-
-	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
-			vector<RegionMatch> &goodMatches,
-			vector<shared_ptr<ActiveRegion>> &repeatRegions,
-			vector<shared_ptr<ActiveRegion>> &newRegions,
-			const TNT::Array2D<double> Sn,
-			const TNT::Array2D<double> SnInv,
-			double varxi, double probNoCorr,
-			const Time &imageTime);
+//	vector<vector<cv::Point>> findContours(const cv::Mat &image);
+//
+//	vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
+//			const TNT::Array2D<double> Sn,
+//			const TNT::Array2D<double> SnInv,
+//			double varxi, double probNoCorr,
+//			const Time &imageTime);
+//
+//	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
+//			vector<RegionMatch> &goodMatches,
+//			vector<shared_ptr<ActiveRegion>> &repeatRegions,
+//			vector<shared_ptr<ActiveRegion>> &newRegions,
+//			const TNT::Array2D<double> Sn,
+//			const TNT::Array2D<double> SnInv,
+//			double varxi, double probNoCorr,
+//			const Time &imageTime);
 };
 
 } // namespace Quadrotor
