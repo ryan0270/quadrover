@@ -43,7 +43,7 @@ void TargetFinder2::initialize()
 
 void TargetFinder2::run()
 {
-#ifndef ICSL_OBSERVER_SIMULATION
+#ifndef ICSL_TARGETFIND_SIMULATION
 	mFinished = false;
 	mRunning = true;
 
@@ -199,12 +199,38 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 	cv::drawContours(image, curContours, -1, cv::Scalar(255,0,0), 2);
 	cv::drawContours(image, repeatContours, -1, cv::Scalar(0,0,255), 2);
 
+	cv::Point p1, p2;
 	for(int i=0; i<curRegions.size(); i++)
 	{
 		const vector<shared_ptr<ActiveRegion>> neighbors = curRegions[i]->getNeighbors();
 		for(int j=0; j<neighbors.size(); j++)
 			if(curRegions[i]->getId() < neighbors[j]->getId())
-				line(image, curRegions[i]->getLastFoundPos(), neighbors[j]->getLastFoundPos(), cv::Scalar(0,255,255), 1);
+			{
+//				p1 = curRegions[i]->getLastFoundPos();
+//				p2 = neighbors[j]->getLastFoundPos();
+				p1.x = curRegions[i]->getExpectedPos()[0][0];
+				p1.y = curRegions[i]->getExpectedPos()[1][0];
+				p2.x = neighbors[j]->getExpectedPos()[0][0];
+				p2.y = neighbors[j]->getExpectedPos()[1][0];
+
+				line(image, p1, p2, cv::Scalar(0,255,255), 1);
+			}
+	}
+	for(int i=0; i<repeatRegions.size(); i++)
+	{
+		const vector<shared_ptr<ActiveRegion>> neighbors = repeatRegions[i]->getNeighbors();
+		for(int j=0; j<neighbors.size(); j++)
+			if(repeatRegions[i]->getId() < neighbors[j]->getId())
+			{
+//				p1 = repeatRegions[i]->getLastFoundPos();
+//				p2 = neighbors[j]->getLastFoundPos();
+				p1.x = repeatRegions[i]->getExpectedPos()[0][0];
+				p1.y = repeatRegions[i]->getExpectedPos()[1][0];
+				p2.x = neighbors[j]->getExpectedPos()[0][0];
+				p2.y = neighbors[j]->getExpectedPos()[1][0];
+
+				line(image, p1, p2, cv::Scalar(0,255,255), 1);
+			}
 	}
 
 //	for(int i=0; i<curRegions.size(); i++)
@@ -258,6 +284,12 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 	for(int i=0; i<regions.size(); i++)
 	{
 		cv::Rect boundRect = boundingRect( cv::Mat(regions[i]) );
+		// reject regions on the border since they will change, but perhaps not enough to 
+		// prevent matches
+		if(boundRect.x == 0 || boundRect.y == 0 ||
+			boundRect.x+boundRect.width == image.cols || boundRect.y+boundRect.height == image.rows )
+			continue;
+
 		boundRect.x = max(0, boundRect.x-border);
 		boundRect.y = max(0, boundRect.y-border);
 		boundRect.width = min(image.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
@@ -266,6 +298,7 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 		mask(boundRect) = cv::Scalar(0);
 		uchar *row;
 		int step = mask.step;
+		bool isBorderRegion = false;
 		for(int j=0; j<regions[i].size(); j++)
 		{
 			int x = regions[i][j].x;

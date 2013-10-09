@@ -186,25 +186,7 @@ Time start;
 		/////////////////// draw principal axes ///////////////////////
 		cv::Mat axisImg;
 		img.copyTo(axisImg);
-		for(int i=0; i<curRegions.size(); i++)
-		{
-			shared_ptr<ActiveRegion> obj = curRegions[i];
-			cv::Point2f cen = obj->getLastFoundPos();
-			cv::Point2f p1, p2;
-			const Array2D<double> principalAxes = obj->getPrincipalAxes();
-			const vector<double> principalAxesEigVal = obj->getPrincipalAxesEigVal();
-			double ratio = principalAxesEigVal[0]/principalAxesEigVal[1];
-			if(ratio > 2)
-			{
-				p1.x = cen.x + 10*principalAxes[0][0] * principalAxesEigVal[0];
-				p1.y = cen.y + 10*principalAxes[1][0] * principalAxesEigVal[0];
-				p2.x = cen.x + 10*principalAxes[0][1] * principalAxesEigVal[1];
-				p2.y = cen.y + 10*principalAxes[1][1] * principalAxesEigVal[1];
-
-				line(axisImg,cen,p1,cv::Scalar(0,255,255),1);
-				line(axisImg,cen,p2,cv::Scalar(255,0,255),1);
-			}
-		}
+		targetFinder.drawTarget(axisImg, curRegions, repeatRegions); 
 
 		imshow("bob",axisImg);
 		vector<vector<cv::Point>> repeatContours(repeatRegions.size());
@@ -223,7 +205,7 @@ Time start;
 			line(dblImg,goodMatches[i].aoPrev->getLastFoundPos(), goodMatches[i].aoCur->getLastFoundPos()+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
-		keypress = cv::waitKey(1) % 256;
+		keypress = cv::waitKey(0) % 256;
 
 		imgIter++;
 		imgCnt++;

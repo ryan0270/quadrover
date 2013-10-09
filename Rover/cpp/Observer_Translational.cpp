@@ -826,8 +826,10 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		else
 			newRegions.push_back(data->repeatRegions[i]);
 
-	// attitude compenstated points
-	SO3 att = mObsvAngular->estimateAttAtTime(data->timestamp);//data->imageData->att;
+	// adjust for attitude
+	// adjust for cam to phone
+	// adjust to image center
+	SO3 att = data->imageData->att;
 	SO3 rot = att*mRotCamToPhone;
 	double f = data->imageData->focalLength;
 	double cx = data->imageData->center.x;
@@ -840,8 +842,8 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		p[1][0] = repeatRegions[i]->getLastFoundPos().y - cy;
 		p[2][0] = f;
 		p = rot*p;
-		repeatPoints[i].x = p[0][0]*f/p[2][0]+cx;
-		repeatPoints[i].y = p[1][0]*f/p[2][0]+cy;
+		repeatPoints[i].x = p[0][0]*abs(f/p[2][0]);
+		repeatPoints[i].y = p[1][0]*abs(f/p[2][0]);
 	}
 	for(int i=0; i<newPoints.size(); i++)
 	{
@@ -849,8 +851,8 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		p[1][0] = newRegions[i]->getLastFoundPos().y - cy;
 		p[2][0] = f;
 		p = rot*p;
-		newPoints[i].x = p[0][0]*f/p[2][0]+cx;
-		newPoints[i].y = p[1][0]*f/p[2][0]+cy;
+		newPoints[i].x = p[0][0]*abs(f/p[2][0]);
+		newPoints[i].y = p[1][0]*abs(f/p[2][0]);
 	}
 
 	// Find how much repeated regions have moved relative
@@ -902,10 +904,11 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	mMutex_posTime.unlock();
 
 	// Now estimate our 3D position
+	imageOffset *= -1; // switch to the quad's position instead of image's position
 	Array2D<double> pos(3,1);
 	pos[2][0] = state[2][0]-mViconCameraOffset[2][0];
-	pos[0][0] = (imageOffset.x-cx)/f*abs(pos[2][0]);
-	pos[1][0] = (imageOffset.y-cy)/f*abs(pos[2][0]);
+	pos[0][0] = imageOffset.x/f*abs(pos[2][0]);
+	pos[1][0] = imageOffset.y/f*abs(pos[2][0]);
 
 	if(resetViconOffset && !mIsViconCameraOffsetSet)
 	{
@@ -928,8 +931,8 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, str, LOG_FLAG_CAM_RESULTS);
 
 	// check for dead regions
-	vector<int> deadKeys;
-	unordered_map<int, shared_ptr<ActiveRegion>>::const_iterator regionIter;
+	vector<size_t> deadKeys;
+	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
 	regionIter = mRegionMap.begin();
 	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
 	{
@@ -1187,7 +1190,6 @@ Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 				}
 				break;
 			case DATA_TYPE_VICON_POS:
-				//doMeasUpdateKF_posOnly(static_pointer_cast<DataVector<double>>(*eventIter)->data, mPosMeasCov, mStateKF, mErrCovKF);
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
 					Array2D<double> meas(2,1);

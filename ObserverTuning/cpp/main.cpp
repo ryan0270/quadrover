@@ -295,11 +295,11 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommNominalMag(nomMag);
 
 		Collection<float> measVar;
+		measVar.push_back(0.0001*2*2*2*2);
+		measVar.push_back(0.0001*2*2*2*2);
 		measVar.push_back(0.0001);
-		measVar.push_back(0.0001);
-		measVar.push_back(0.0001);
-		measVar.push_back(0.001/2);
-		measVar.push_back(0.001/2);
+		measVar.push_back(0.001);
+		measVar.push_back(0.001);
 		measVar.push_back(1/2.0);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
@@ -379,7 +379,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 30e3;
+	int endTimeDelta = 40e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz

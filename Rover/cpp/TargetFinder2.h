@@ -75,6 +75,9 @@ public:
 			const Time &imageTime);
 
 	vector<shared_ptr<ActiveRegion>> &getActiveRegions(){return mActiveRegions;}
+	static void drawTarget(cv::Mat &image,
+						   const vector<shared_ptr<ActiveRegion>> &curRegions,
+						   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
 	
 	// SensorManagerListener
 	void onNewSensorUpdate(const shared_ptr<IData> &data);
@@ -107,9 +110,9 @@ protected:
 
 	int mThreadPriority, mScheduler;
 
-	static void drawTarget(cv::Mat &image,
-						   const vector<shared_ptr<ActiveRegion>> &curRegions,
-						   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
+//	static void drawTarget(cv::Mat &image,
+//						   const vector<shared_ptr<ActiveRegion>> &curRegions,
+//						   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
 
 	// for new targetfinder
 	Observer_Angular *mObsvAngular;

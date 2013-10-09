@@ -16,7 +16,7 @@ set (H ${H}
 	${ROVER_DIR}/cpp/Listeners.h
 	)
 
-add_definitions(-DICSL_OBSERVER_SIMULATION)
+add_definitions(-DICSL_TARGETFIND_SIMULATION)
 add_definitions(-DSCHED_NORMAL=0) # linux and android appear to have this defined on slightly different paths
 
 if(BUILD_ANDROID)
