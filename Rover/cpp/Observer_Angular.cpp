@@ -237,7 +237,10 @@ void Observer_Angular::doInnovationUpdate(double dt,
 //	else
 //		accel.inject(mLastGoodAccel);
 	if(abs(accel[2][0]-GRAVITY) > 6)
-		accel[2][0] = GRAVITY;
+//		accel[2][0] = GRAVITY;
+		accel[2][0] = mLastGoodAccel[2][0];
+	else
+		mLastGoodAccel.inject(accel);
 
 	// orthogonalize the directions (see Hua et al (2011) - Nonlinear attitude estimation with measurement decoupling and anti-windpu gyro-bias compensation)
 	uB = 1.0/norm2(accel)*accel;
@@ -257,7 +260,7 @@ void Observer_Angular::doInnovationUpdate(double dt,
 		double k = mExtraDirsWeight.back();
 		dMeas = mExtraDirsMeasured.back();
 		dInertial = mExtraDirsInertial.back();
-		mInnovation += k*cross(dMeas, transR*dInertial);
+		mInnovation[2][0] += k*(cross(dMeas, transR*dInertial))[2][0];
 
 		mExtraDirsWeight.pop_back();
 		mExtraDirsMeasured.pop_back();
@@ -555,6 +558,10 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	if(mNominalDirMap.size() == 0 && (data->repeatRegions.size() + data->newRegions.size()) < 5)
 		return; // don't set my initial nominal angle yet
 
+	mMutex_targetFindTime.lock();
+	mLastTargetFindTime.setTime();
+	mMutex_targetFindTime.unlock();
+
 	// Bookeeping
 	vector<shared_ptr<ActiveRegion>> repeatRegions;
 	repeatRegions.reserve(data->repeatRegions.size());
@@ -576,7 +583,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	regions.insert(regions.end(), repeatRegions.begin(), repeatRegions.end());
 	regions.insert(regions.end(), newRegions.begin(), newRegions.end());
 
-	// now go through and see what pairs we already know about
+	// go through and see what pairs we already know about
 	vector<pair<size_t,size_t>> repeatPairs, newPairs;
 	vector<pair<cv::Point2f, cv::Point2f>> repeatPairPoints, newPairPoints;
 	for(int i=0; i<regions.size(); i++)
@@ -605,32 +612,37 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			}
 		}
 
+	// add measurements for the pairs we've seen before
 	cv::Point2f p1, p2;
 	Array2D<double> dirMeas(3,1);
+	Array2D<double> dirNom(3,1);
+	float weight = 1.0/(2*ActiveRegion::MAX_LIFE)*2;
+	float angleSum = 0;
 	for(int i=0; i<repeatPairs.size(); i++)
 	{
-//Log::alert("s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-");
 		p1 = repeatPairPoints[i].first;
 		p2 = repeatPairPoints[i].second;
 
 		dirMeas[0][0] = p2.x-p1.x;
 		dirMeas[1][0] = p2.y-p1.y;
 		dirMeas[2][0] = 0;
-		dirMeas = 1.0/norm2(dirMeas)*dirMeas;
-//printArray("dirMeas:\t",dirMeas);
-		dirMeas = matmult(mRotCamToPhone, dirMeas);
+		dirMeas.inject(1.0/norm2(dirMeas)*dirMeas);
+		dirMeas.inject(matmult(mRotCamToPhone, dirMeas));
 
-		Array2D<double> dirNom = mNominalDirMap[repeatPairs[i]];
-//printArray("dirNom:\t",dirNom);
-//printArray("dirMeas:\t",dirMeas);
+		dirNom.inject(mNominalDirMap[repeatPairs[i]]);
 
-		float weight = 1;
-		addDirectionMeasurement(dirMeas, dirNom, weight);
+		float curAngle = atan2(dirMeas[1][0], dirMeas[0][0]);
+		float nomAngle = atan2(dirNom[1][0], dirNom[0][0]);
+		angleSum += curAngle-nomAngle;
+
+		float s1 = mRegionMap[repeatPairs[i].first]->getLife();
+		float s2 = mRegionMap[repeatPairs[i].second]->getLife();
+		addDirectionMeasurement(dirMeas, dirNom, weight*(s1+s2));
 	}
 
-	// add new pairs
+	// set nominal directions for the known pairs
 	SO3 att = data->imageData->att;
-	SO3 rot = /*att**/SO3(mRotCamToPhone);
+	SO3 rot = att*SO3(mRotCamToPhone);
 	double f = data->imageData->focalLength;
 	double cx = data->imageData->center.x;
 	double cy = data->imageData->center.y;
@@ -648,25 +660,30 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		r1[1][0] = p1.y - cy;
 		r1[2][0] = f;
 		r1 = rot*r1;
-		p1.x = r1[0][0]*abs(f/r1[2][0])+cx;
-		p1.y = r1[1][0]*abs(f/r1[2][0])+cy;
+		p1.x = r1[0][0]*abs(f/r1[2][0]);
+		p1.y = r1[1][0]*abs(f/r1[2][0]);
 
 		r2[0][0] = p2.x - cx;
 		r2[1][0] = p2.y - cy;
 		r2[2][0] = f;
 		r2 = rot*r2;
-		p2.x = r2[0][0]*abs(f/r2[2][0])+cx;
-		p2.y = r2[1][0]*abs(f/r2[2][0])+cy;
+		p2.x = r2[0][0]*abs(f/r2[2][0]);
+		p2.y = r2[1][0]*abs(f/r2[2][0]);
 
 		Array2D<double> dir(3,1);
 		dir[0][0] = p2.x-p1.x;
 		dir[1][0] = p2.y-p1.y;
 		dir[2][0] = 0;
 		dir = 1.0/norm2(dir)*dir;
-		mNominalDirMap[newPairs[i]] = dir;
+		mNominalDirMap[newPairs[i]] = dir.copy();
+
+//		float curAngle = atan2(r2[1][0]-r1[1][0], r2[0][0]-r1[0][0]);
+//		float nomAngle = curAngle-angleSum;
+//		dir[0][0] = cos(nomAngle);
+//		dir[1][0] = sin(nomAngle);
+//		dir[2][0] = 0;
+//		mNominalDirMap[newPairs[i]] = dir.copy();
 	}
-
-
 
 	// check for dead regions
 	vector<size_t> deadKeys;
@@ -689,54 +706,6 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		mNominalDirMap.erase( removeIters[i] );
 	for(int i=0; i<deadKeys.size(); i++)
 		mRegionMap.erase( deadKeys[i] );
-
-//	if(data->target == NULL)
-//		return;
-//
-//	mMutex_targetFindTime.lock();
-//	mLastTargetFindTime.setTime();
-//	mMutex_targetFindTime.unlock();
-//
-//	cv::Point2f p0 = data->target->squareData[0]->contour[0];
-//	cv::Point2f p1 = data->target->squareData[0]->contour[1];
-//	cv::Point2f p2 = data->target->squareData[0]->contour[2];
-//
-//	// long edge of target
-//	Array2D<double> measDir1(3,1);
-//	measDir1[0][0] = p1.x-p0.x;
-//	measDir1[1][0] = p1.y-p0.y;
-//	measDir1[2][0] = 0;
-//	measDir1 = 1.0/norm2(measDir1)*measDir1;
-//	measDir1 = matmult(mRotCamToPhone, measDir1);
-//
-//	Array2D<double> nomDir1(3,1);
-//	nomDir1[0][0] = -1;
-//	nomDir1[1][0] = 1;
-//	nomDir1[2][0] = 0;
-//	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
-//
-//	// short edge of target
-//	Array2D<double> measDir2(3,1);
-//	measDir2[0][0] = p2.x-p1.x;
-//	measDir2[1][0] = p2.y-p1.y;
-//	measDir2[2][0] = 0;
-//	measDir2 = 1.0/norm2(measDir2)*measDir2;
-//	measDir2 = matmult(mRotCamToPhone, measDir2);
-//
-//	Array2D<double> nomDir2(3,1);
-//	nomDir2[0][0] = 1;
-//	nomDir2[1][0] = 1;
-//	nomDir2[2][0] = 0;
-//	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
-//
-//	mMutex_data.lock();
-//	mExtraDirsMeasured.push_back(measDir1.copy());
-//	mExtraDirsMeasured.push_back(measDir2.copy());
-//	mExtraDirsInertial.push_back(nomDir1.copy());
-//	mExtraDirsInertial.push_back(nomDir2.copy());
-//	mExtraDirsWeight.push_back(2*2);
-//	mExtraDirsWeight.push_back(2*2);
-//	mMutex_data.unlock();
 }
 
 void Observer_Angular::onNewCommObserverReset()

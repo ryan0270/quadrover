@@ -860,16 +860,21 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	cv::Point2f imageOffset(0,0);
 	if(repeatPoints.size() > 0)
 	{
+		float lifeSum = 0;
+		float life;
 		for(int i=0; i<repeatPoints.size(); i++)
 		{
 			cv::Point2f nom = mRegionNominalPosMap[repeatRegions[i]->getId()];
 			// scale the nominal to the current height
 			nom.x /= state[2][0];
 			nom.y /= state[2][0];
-			imageOffset += repeatPoints[i]-nom;
+
+			life = repeatRegions[i]->getLife();
+			imageOffset += life*(repeatPoints[i]-nom);
+			lifeSum += life;
 		}
-		imageOffset.x /= (float)repeatPoints.size();
-		imageOffset.y /= (float)repeatPoints.size();
+		imageOffset.x /= lifeSum;
+		imageOffset.y /= lifeSum;
 	}
 
 	// Set the nominal position for the new regions

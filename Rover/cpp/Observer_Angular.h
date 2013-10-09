@@ -136,6 +136,8 @@ class Observer_Angular : public CommManagerListener,
 	// the nominal direction vector between the pair of regions
 	// identified in the key
 	unordered_map<pair<size_t, size_t>, TNT::Array2D<double>, KeyHasher> mNominalDirMap;
+
+	SO3 mStartAtt;
 };
 
 }
