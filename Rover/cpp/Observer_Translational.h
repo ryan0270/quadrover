@@ -176,10 +176,10 @@ class Observer_Translational : public Observer_AngularListener,
 
 	bool mIsViconCameraOffsetSet;
 
-	unordered_map<int, shared_ptr<ActiveRegion>> mRegionMap;
+	unordered_map<size_t, shared_ptr<ActiveRegion>> mRegionMap;
 	// the nominal position of each region when the quadrotor is
 	// at the "origin"
-	unordered_map<int, cv::Point2f> mRegionNominalPosMap;
+	unordered_map<size_t, cv::Point2f> mRegionNominalPosMap;
 };
 
 } // namespace Quadrotor

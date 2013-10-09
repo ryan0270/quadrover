@@ -500,6 +500,7 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 
 void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 {
+Log::alert("I should be here (observer angular)");
 	if(data->target == NULL)
 		return;
 
@@ -551,6 +552,144 @@ void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data
 
 void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 {
+	if(mNominalDirMap.size() == 0 && (data->repeatRegions.size() + data->newRegions.size()) < 5)
+		return; // don't set my initial nominal angle yet
+
+	// Bookeeping
+	vector<shared_ptr<ActiveRegion>> repeatRegions;
+	repeatRegions.reserve(data->repeatRegions.size());
+	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
+
+	// need to make sure we actually know about all the repeat regions
+	for(int i=0; i<data->repeatRegions.size(); i++)
+		if( mRegionMap.count(data->repeatRegions[i]->getId()) > 0)
+			repeatRegions.push_back(data->repeatRegions[i]);
+		else
+			newRegions.push_back(data->repeatRegions[i]);
+
+	for(int i=0; i<newRegions.size(); i++)
+		mRegionMap[newRegions[i]->getId()] = newRegions[i];
+
+	// assemble everything into one vector
+	vector<shared_ptr<ActiveRegion>> regions;
+	regions.reserve(repeatRegions.size()+newRegions.size());
+	regions.insert(regions.end(), repeatRegions.begin(), repeatRegions.end());
+	regions.insert(regions.end(), newRegions.begin(), newRegions.end());
+
+	// now go through and see what pairs we already know about
+	vector<pair<size_t,size_t>> repeatPairs, newPairs;
+	vector<pair<cv::Point2f, cv::Point2f>> repeatPairPoints, newPairPoints;
+	for(int i=0; i<regions.size(); i++)
+		for(int j=i+1; j<regions.size(); j++)
+		{
+			int id1 = min(regions[i]->getId(), regions[j]->getId());
+			int id2 = max(regions[i]->getId(), regions[j]->getId());
+
+			pair<size_t,size_t> pr(id1, id2);
+			cv::Point2f pt1 = mRegionMap[id1]->getLastFoundPos();
+			cv::Point2f pt2 = mRegionMap[id2]->getLastFoundPos();
+			if(mNominalDirMap.count(pr) > 0)
+			{
+				repeatPairs.push_back(pr);
+				repeatPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
+			}
+			else
+			{
+				double d = cv::norm(pt1-pt2);
+				// avoid keeping pairs that are too close together
+				if(d > 20)
+				{
+					newPairs.push_back(pr);
+					newPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
+				}
+			}
+		}
+
+	cv::Point2f p1, p2;
+	Array2D<double> dirMeas(3,1);
+	for(int i=0; i<repeatPairs.size(); i++)
+	{
+//Log::alert("s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-s-");
+		p1 = repeatPairPoints[i].first;
+		p2 = repeatPairPoints[i].second;
+
+		dirMeas[0][0] = p2.x-p1.x;
+		dirMeas[1][0] = p2.y-p1.y;
+		dirMeas[2][0] = 0;
+		dirMeas = 1.0/norm2(dirMeas)*dirMeas;
+//printArray("dirMeas:\t",dirMeas);
+		dirMeas = matmult(mRotCamToPhone, dirMeas);
+
+		Array2D<double> dirNom = mNominalDirMap[repeatPairs[i]];
+//printArray("dirNom:\t",dirNom);
+//printArray("dirMeas:\t",dirMeas);
+
+		float weight = 1;
+		addDirectionMeasurement(dirMeas, dirNom, weight);
+	}
+
+	// add new pairs
+	SO3 att = data->imageData->att;
+	SO3 rot = /*att**/SO3(mRotCamToPhone);
+	double f = data->imageData->focalLength;
+	double cx = data->imageData->center.x;
+	double cy = data->imageData->center.y;
+	Array2D<double> r1(3,1), r2(3,1);
+	for(int i=0; i<newPairs.size(); i++)
+	{
+		p1 = newPairPoints[i].first;
+		p2 = newPairPoints[i].second;
+		
+		// rotation compensation
+		// Right now we are assuming that the points are on horizontal planes
+		// In the future, I also need to consider whether or not this is creating
+		// a feedback loop, sinc the result will later be used to estimate the attitude
+		r1[0][0] = p1.x - cx;
+		r1[1][0] = p1.y - cy;
+		r1[2][0] = f;
+		r1 = rot*r1;
+		p1.x = r1[0][0]*abs(f/r1[2][0])+cx;
+		p1.y = r1[1][0]*abs(f/r1[2][0])+cy;
+
+		r2[0][0] = p2.x - cx;
+		r2[1][0] = p2.y - cy;
+		r2[2][0] = f;
+		r2 = rot*r2;
+		p2.x = r2[0][0]*abs(f/r2[2][0])+cx;
+		p2.y = r2[1][0]*abs(f/r2[2][0])+cy;
+
+		Array2D<double> dir(3,1);
+		dir[0][0] = p2.x-p1.x;
+		dir[1][0] = p2.y-p1.y;
+		dir[2][0] = 0;
+		dir = 1.0/norm2(dir)*dir;
+		mNominalDirMap[newPairs[i]] = dir;
+	}
+
+
+
+	// check for dead regions
+	vector<size_t> deadKeys;
+	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
+	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
+	{
+		if( regionIter->second->getLife() <= 0)
+			deadKeys.push_back(regionIter->second->getId());
+	}
+	sort(deadKeys.begin(), deadKeys.end());
+
+	unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator angleIter;
+	vector<unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator> removeIters;
+	for(angleIter = mNominalDirMap.begin(); angleIter != mNominalDirMap.end(); angleIter++)
+		if( binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.first) ||
+			binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.second) )
+			removeIters.push_back(angleIter);
+
+	for(int i=0; i<removeIters.size(); i++)
+		mNominalDirMap.erase( removeIters[i] );
+	for(int i=0; i<deadKeys.size(); i++)
+		mRegionMap.erase( deadKeys[i] );
+
 //	if(data->target == NULL)
 //		return;
 //

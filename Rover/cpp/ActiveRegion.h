@@ -36,6 +36,7 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 	void removeNeigbor(int nid, bool doTwoWay);
 
 	const cv::Point2f &getLastFoundPos() const {return mLastFoundPos;}
+	const TNT::Array2D<double> getExpectedPos() const {return mExpectedPos;}
 	const Time &getLastFoundTime() const {return mLastFoundTime;}
 	const vector<cv::Point> &getContour() const {return mContour;}
 	const TNT::Array2D<double> &getPrincipalAxes() const {return mPrincipalAxes;}
@@ -83,7 +84,7 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 	vector<shared_ptr<ActiveRegion>> mNeighbors;
 
 	constexpr static double maxLife = 20;
-	static unsigned long lastID;
+	static size_t lastID;
 	static std::mutex mutex_lastID;
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
 };

@@ -188,63 +188,63 @@ end
 
 %%
 if exist('tranState','var') && ~isempty(tranState)
-%   	figure(2); clf;
-% % 	set(gcf,'Units','Inches');
-% % 	curPos = get(gcf,'Position'); figSize = [6 4];
-% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 	mask = find( (viconStateTime > tranStateTime(1)) .* (viconStateTime <= tranStateTime(end) ) );
-% 	timeShift = 0.0;
-% 	for i=1:6
-% 		subplot(2,3,i);		
-% 		plot(viconStateTime(mask)+timeShift, viconState(i+6,mask)); hold all
-% 		plot(tranStateTime, tranState(i,:)); hold all
-% 		if i<=2
-% 			plot(camPosTime,camPos(i,:),'.'); hold all
+  	figure(2); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	mask = find( (viconStateTime > tranStateTime(1)) .* (viconStateTime <= tranStateTime(end) ) );
+	timeShift = 0.0;
+	for i=1:6
+		subplot(2,3,i);		
+		plot(viconStateTime(mask)+timeShift, viconState(i+6,mask)); hold all
+		plot(tranStateTime, tranState(i,:)); hold all
+		if i<=2
+			plot(camPosTime,camPos(i,:),'.'); hold all
+		end
+% 		if i == 3 && ~isempty(mapHeight)
+% 			plot(mapHeightTime, mapHeight,'.'); hold all
+% 		elseif i>3 && ~isempty(mapVel)
+% 			plot(mapVelTime, mapVel(i-3,:), '.'); hold all
 % 		end
-% % 		if i == 3 && ~isempty(mapHeight)
-% % 			plot(mapHeightTime, mapHeight,'.'); hold all
-% % 		elseif i>3 && ~isempty(mapVel)
-% % 			plot(mapVelTime, mapVel(i-3,:), '.'); hold all
-% % 		end
-% 		hold off
-% % 		axis([tranStateTime(1) tranStateTime(end) -0.4 0.4]);
-% % 		ax = axis;
-% % 		for j=1:length(targetAcqTime)
-% % 			line([targetAcqTime(j) targetAcqTime(j)],[ax(3) ax(4)],'Color','k','LineStyle','-');
-% % 		end
-% % 		for j=1:length(targetLostTime)
-% % 			line([targetLostTime(j) targetLostTime(j)],[ax(3) ax(4)],'Color','k','LineStyle','--');
-% % 		end
-% 
-% 		ax = axis; axis([tranStateTime(1) tranStateTime(end) ax(3) ax(4)]);
-% 
-% 		xlabel('Time [s]')
-% 		ylabel(tranStateLabels(i));
-% 	end	
-% 	
-% 	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime-timeShift,[],'extrap')';
-% 	start = max([find(tranStateTime > 22,1,'first');
-% 				 find(abs(tranState(3,:)) > 0.2,1,'first');
-% 				 find(tranStateTime > mapVelTime(1),1,'first')]);
-% 	rmsErr = rms(viconStateTranInterp(7:12,start:end)'-tranState(:,start:end)')';
-% 	fprintf('Tran state rms err:\t');
-% 	for i=1:6
-% 		fprintf('%1.3f\t',rmsErr(i));
-% 	end
-% 	fprintf('\n');
-% 	
-% 	if ~isempty(mapVel)
-% 		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelTime-timeShift,[],'extrap')';
-% 		start = find(viconStateMAPInterp(9,:) > 0.2,1,'first');
-% 		rmsErrHeight = rms(viconStateMAPInterp(9,start:end)-mapHeight(start:end));
-% 		rmsErrVel = rms(viconStateMAPInterp(10:12,start:end)' - mapVel(:,start:end)')';
-% 		fprintf('MAP vel rms err:\t');
-% 		fprintf('---\t---\t%1.3f\t',rmsErrHeight);
-% 		for i=1:3
-% 			fprintf('%1.3f\t',rmsErrVel(i));
+		hold off
+% 		axis([tranStateTime(1) tranStateTime(end) -0.4 0.4]);
+% 		ax = axis;
+% 		for j=1:length(targetAcqTime)
+% 			line([targetAcqTime(j) targetAcqTime(j)],[ax(3) ax(4)],'Color','k','LineStyle','-');
 % 		end
-% 		fprintf('\n');
-% 	end
+% 		for j=1:length(targetLostTime)
+% 			line([targetLostTime(j) targetLostTime(j)],[ax(3) ax(4)],'Color','k','LineStyle','--');
+% 		end
+
+		ax = axis; axis([tranStateTime(1) tranStateTime(end) ax(3) ax(4)]);
+
+		xlabel('Time [s]')
+		ylabel(tranStateLabels(i));
+	end	
+	
+	viconStateTranInterp = interp1(viconStateTime, viconState', tranStateTime-timeShift,[],'extrap')';
+	start = max([find(tranStateTime > 22,1,'first');
+				 find(abs(tranState(3,:)) > 0.5,1,'first');
+				 find(tranStateTime > mapVelTime(1),1,'first')]);
+	rmsErr = rms(viconStateTranInterp(7:12,start:end)'-tranState(:,start:end)')';
+	fprintf('Tran state rms err:\t');
+	for i=1:6
+		fprintf('%1.3f\t',rmsErr(i));
+	end
+	fprintf('\n');
+	
+	if ~isempty(mapVel)
+		viconStateMAPInterp = interp1(viconStateTime, viconState', mapVelTime-timeShift,[],'extrap')';
+		start = find(viconStateMAPInterp(9,:) > 0.5,1,'first');
+		rmsErrHeight = rms(viconStateMAPInterp(9,start:end)-mapHeight(start:end));
+		rmsErrVel = rms(viconStateMAPInterp(10:12,start:end)' - mapVel(:,start:end)')';
+		fprintf('MAP vel rms err:\t');
+		fprintf('---\t---\t%1.3f\t',rmsErrHeight);
+		for i=1:3
+			fprintf('%1.3f\t',rmsErrVel(i));
+		end
+		fprintf('\n');
+	end
 end
 
 %%

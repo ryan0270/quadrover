@@ -71,8 +71,8 @@ void ActiveRegion::kill()
 	// since when we go to remove neighbors
 	// it will modify my list
 	vector<shared_ptr<ActiveRegion>> nList = mNeighbors;
-	for(int i=0; i<nList.size(); i++)
-		nList[i]->removeNeigbor(mId, false);
+	for(int i=0; i<mNeighbors.size(); i++)
+		mNeighbors[i]->removeNeigbor(mId, false);
 
 	mNeighbors.clear();
 }
@@ -85,14 +85,24 @@ void ActiveRegion::addNeighbor(shared_ptr<ActiveRegion> n, bool doTwoWay)
 		return;
 	}
 	if(n->mId == mId)
+	{
+		Log::alert("adding myself");
 		return;
+	}
 
+	bool found = false;
 	for(int i=0; i<mNeighbors.size(); i++)
 		if(n->mId == mNeighbors[i]->mId)
 		{
-			mNeighbors.push_back(n);
+			found = true;
 			break;
 		}
+
+	if(!found)
+	{
+		mNeighbors.push_back(n);
+//Log::alert(String()+"Connecting " + mId + " and "+n->mId);
+	}
 
 	if(doTwoWay)
 		n->addNeighbor(shared_from_this(), false);

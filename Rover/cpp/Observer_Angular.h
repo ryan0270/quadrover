@@ -4,6 +4,8 @@
 #include <sched.h>
 #include <thread>
 #include <mutex>
+#include <unordered_map>
+#include <functional>
 
 #include <toadlet/egg.h>
 #include "TNT_Utils.h"
@@ -14,6 +16,7 @@
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Time.h"
+#include "ActiveRegion.h"
 #include "Listeners.h"
 
 namespace ICSL{
@@ -21,7 +24,6 @@ namespace Quadrotor{
 
 using namespace std;
 
-//class Observer_Angular : public InputDeviceListener
 class Observer_Angular : public CommManagerListener,
 						 public SensorManagerListener,
 						 public TargetFinderListener,
@@ -121,6 +123,19 @@ class Observer_Angular : public CommManagerListener,
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
 	TNT::Array2D<double> mLastGoodAccel;
+
+	// adapted from http://stackoverflow.com/questions/17016175/c-unordered-map-using-a-custom-class-type-as-the-key
+	class KeyHasher
+	{
+		public:
+		size_t operator()(const pair<size_t, size_t> &p) const
+		{ return hash<size_t>()(p.first) ^ (hash<size_t>()(p.second << 1) >> 1); }
+	};
+
+	unordered_map<size_t, shared_ptr<ActiveRegion>> mRegionMap;
+	// the nominal direction vector between the pair of regions
+	// identified in the key
+	unordered_map<pair<size_t, size_t>, TNT::Array2D<double>, KeyHasher> mNominalDirMap;
 };
 
 }
