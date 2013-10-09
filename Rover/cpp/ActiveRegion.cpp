@@ -7,6 +7,7 @@ using namespace TNT;
 using namespace ICSL::Constants;
 using namespace toadlet::egg;
 
+float ActiveRegion::MAX_LIFE=40;
 unsigned long ActiveRegion::lastID = 0;
 std::mutex ActiveRegion::mutex_lastID;
 
@@ -53,7 +54,7 @@ void ActiveRegion::markFound(const Time &time)
 
 void ActiveRegion::addLife(float val)
 {
-	mLife = min(21.f, mLife+val);
+	mLife = min(MAX_LIFE, mLife+val);
 }
 
 void ActiveRegion::takeLife(float val)

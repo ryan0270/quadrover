@@ -67,6 +67,7 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 	static bool sortPredicate(const std::shared_ptr<ActiveRegion> &ao1, const std::shared_ptr<ActiveRegion> &ao2)
 	{ return ao1->mLife > ao2->mLife; }
 
+	static float MAX_LIFE;
 
 	protected:
 	std::vector<cv::Point> mContour;
@@ -83,7 +84,6 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 
 	vector<shared_ptr<ActiveRegion>> mNeighbors;
 
-	constexpr static double maxLife = 20;
 	static size_t lastID;
 	static std::mutex mutex_lastID;
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
