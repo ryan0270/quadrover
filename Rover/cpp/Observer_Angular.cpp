@@ -51,6 +51,8 @@ Observer_Angular::Observer_Angular() :
 	mLastGoodAccel[0][0] = 0;
 	mLastGoodAccel[1][0] = 0;
 	mLastGoodAccel[2][0] = 1;
+
+	mYawOffset = 0;
 }
 
 Observer_Angular::~Observer_Angular()
@@ -260,6 +262,14 @@ void Observer_Angular::doInnovationUpdate(double dt,
 		double k = mExtraDirsWeight.back();
 		dMeas = mExtraDirsMeasured.back();
 		dInertial = mExtraDirsInertial.back();
+		Array2D<double> dir = cross(dMeas, transR*dInertial);
+//if(mExtraDirsMeasured.size() > 5)
+//{
+//	printArray("dMeas: ", dMeas);
+//	printArray("   d2: ", transR*dInertial);
+//	printArray("  dir: ", dir);
+//	int chad = 0;
+//}
 		mInnovation[2][0] += k*(cross(dMeas, transR*dInertial))[2][0];
 
 		mExtraDirsWeight.pop_back();
@@ -320,7 +330,6 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 
 	for(int i=0; i<mListeners.size(); i++)
 		mListeners[i]->onObserver_AngularUpdated(rotData, velData);
-//		mListeners[i]->onObserver_AngularUpdated(attData, velData);
 
 	String logStr=String()+Time::calcDiffMS(mStartTime,attData->timestamp)+"\t";
 	for(int i=0; i<attData->data.dim1(); i++)
@@ -555,8 +564,11 @@ Log::alert("I should be here (observer angular)");
 
 void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 {
-	if(mNominalDirMap.size() == 0 && (data->repeatRegions.size() + data->newRegions.size()) < 5)
+	if(mNominalDirMap.size() == 0 )
 		return; // don't set my initial nominal angle yet
+
+	if(data->repeatRegions.size() + data->newRegions.size() < 10)
+		return; // I want more regions for a good measurment
 
 	mMutex_targetFindTime.lock();
 	mLastTargetFindTime.setTime();
@@ -612,12 +624,31 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			}
 		}
 
+	// For rotation compensation
+	SO3 att = data->imageData->att;
+	SO3 rot = att*SO3(mRotCamToPhone);
+	Array2D<double> euler = att.getAnglesZYX();
+//	SO3 attYX = SO3( createRotMat_ZYX(0.0, euler[1][0], euler[0][0]));
+	SO3 attYX = SO3( createRotMat(0,euler[0][0])*createRotMat(1,euler[1][0]) );
+	SO3 rotYX = attYX*SO3(mRotCamToPhone);
+	double f = data->imageData->focalLength;
+	double cx = data->imageData->center.x;
+	double cy = data->imageData->center.y;
+
 	// add measurements for the pairs we've seen before
 	cv::Point2f p1, p2;
 	Array2D<double> dirMeas(3,1);
 	Array2D<double> dirNom(3,1);
-	float weight = 1.0/(2*ActiveRegion::MAX_LIFE)*2;
-	float angleSum = 0;
+//	float weight = 1.0e-6/(2*ActiveRegion::MAX_LIFE)*10;
+//	double angleOffset = 0;
+	double weightSum = 0;
+	double minOffset = PI;
+	double maxOffset = -PI;
+	Array2D<double> r1(3,1), r2(3,1);
+	vector<Array2D<double>> dirMeasList(repeatPairs.size(),Array2D<double>(3,1));
+	vector<Array2D<double>> dirNomList(repeatPairs.size(),Array2D<double>(3,1));
+	vector<double>  weightList(repeatPairs.size());
+	vector<double> offsets(repeatPairs.size());
 	for(int i=0; i<repeatPairs.size(); i++)
 	{
 		p1 = repeatPairPoints[i].first;
@@ -631,22 +662,85 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 
 		dirNom.inject(mNominalDirMap[repeatPairs[i]]);
 
-		float curAngle = atan2(dirMeas[1][0], dirMeas[0][0]);
-		float nomAngle = atan2(dirNom[1][0], dirNom[0][0]);
-		angleSum += curAngle-nomAngle;
-
 		float s1 = mRegionMap[repeatPairs[i].first]->getLife();
 		float s2 = mRegionMap[repeatPairs[i].second]->getLife();
-		addDirectionMeasurement(dirMeas, dirNom, weight*(s1+s2));
+		dirMeasList[i].inject(dirMeas);
+		dirNomList[i].inject(dirNom);
+		weightList[i] = s1+s2;
+//		addDirectionMeasurement(dirMeas, dirNom, weight*(s1+s2));
+
+		// rotation compensation
+		r1[0][0] = p1.x - cx;
+		r1[1][0] = p1.y - cy;
+		r1[2][0] = f;
+//		r1 = rot*r1;
+		r1 = rotYX*r1;
+//		r1 = matmult(mRotCamToPhone, r1);
+		p1.x = r1[0][0];
+		p1.y = r1[1][0];
+
+		r2[0][0] = p2.x - cx;
+		r2[1][0] = p2.y - cy;
+		r2[2][0] = f;
+//		r2 = rot*r2;
+		r2 = rotYX*r2;
+//		r2 = matmult(mRotCamToPhone, r2);
+		p2.x = r2[0][0];
+		p2.y = r2[1][0];
+
+//		double curAngle = atan2(dirMeas[1][0], dirMeas[0][0]);
+		double curAngle = atan2(p2.y-p1.y, p2.x-p1.x);
+		double nomAngle = atan2(dirNom[1][0], dirNom[0][0]);
+		while( curAngle-nomAngle >= PI) curAngle -= 2*PI;
+		while( curAngle-nomAngle < -PI) curAngle += 2*PI;
+//		angleOffset += (s1+s2)*(curAngle-nomAngle);
+		weightSum += s1+s2;
+		offsets[i] = curAngle-nomAngle;
+	}
+
+	// Find the median offset for outlier rejection
+	double angleOffset = 0;
+	if(offsets.size() > 0)
+	{
+		vector<double> tempOffsets = offsets;
+		size_t medLoc = tempOffsets.size()/2;
+		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
+		double medOffset = tempOffsets[medLoc];
+
+		// Now remove outliers
+		float weight = 1e-6*10*10*10*10*10*2;
+		int numOutliers = 0;
+		int numInliers = 0;
+		for(int i=0; i<offsets.size(); i++)
+		{
+			if( abs(offsets[i]-medOffset) < 0.2 )
+			{
+				addDirectionMeasurement(dirMeasList[i], dirNomList[i], weight);
+				angleOffset += offsets[i];
+				minOffset = min(minOffset, offsets[i]);
+				maxOffset = max(maxOffset, offsets[i]);
+				numInliers++;
+			}
+			else // Remove this pair from history
+			{
+				mNominalDirMap.erase(repeatPairs[i]);
+				numOutliers++;
+			}
+		}
+
+if( numOutliers > 0)
+	Log::alert(String()+"numOutliers: " + numOutliers + " \tnumInliers: " + numInliers);
+		angleOffset /= repeatPairs.size();
+//if(mStartTime.getElapsedTimeMS() > 60e3)
+//	Log::alert(String()+"range: " + (maxOffset-minOffset) + " \tmin offset: " + minOffset + " \tmax offset: " + maxOffset);
+//if(maxOffset-minOffset > 0.5)
+//	int ctop = 1;
 	}
 
 	// set nominal directions for the known pairs
-	SO3 att = data->imageData->att;
-	SO3 rot = att*SO3(mRotCamToPhone);
-	double f = data->imageData->focalLength;
-	double cx = data->imageData->center.x;
-	double cy = data->imageData->center.y;
-	Array2D<double> r1(3,1), r2(3,1);
+	if(mNominalDirMap.size() == 0)
+		angleOffset = -euler[2][0];
+	Array2D<double> dir(3,1);
 	for(int i=0; i<newPairs.size(); i++)
 	{
 		p1 = newPairPoints[i].first;
@@ -659,40 +753,43 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		r1[0][0] = p1.x - cx;
 		r1[1][0] = p1.y - cy;
 		r1[2][0] = f;
-		r1 = rot*r1;
-		p1.x = r1[0][0]*abs(f/r1[2][0]);
-		p1.y = r1[1][0]*abs(f/r1[2][0]);
+//		r1 = rot*r1;
+		r1 = rotYX*r1;
+//		r1 = matmult(mRotCamToPhone, r1);
+		p1.x = r1[0][0];
+		p1.y = r1[1][0];
 
 		r2[0][0] = p2.x - cx;
 		r2[1][0] = p2.y - cy;
 		r2[2][0] = f;
-		r2 = rot*r2;
-		p2.x = r2[0][0]*abs(f/r2[2][0]);
-		p2.y = r2[1][0]*abs(f/r2[2][0]);
+//		r2 = rot*r2;
+		r2 = rotYX*r2;
+//		r2 = matmult(mRotCamToPhone, r2);
+		p2.x = r2[0][0];
+		p2.y = r2[1][0];
 
-		Array2D<double> dir(3,1);
-		dir[0][0] = p2.x-p1.x;
-		dir[1][0] = p2.y-p1.y;
-		dir[2][0] = 0;
-		dir = 1.0/norm2(dir)*dir;
-		mNominalDirMap[newPairs[i]] = dir.copy();
-
-//		float curAngle = atan2(r2[1][0]-r1[1][0], r2[0][0]-r1[0][0]);
-//		float nomAngle = curAngle-angleSum;
-//		dir[0][0] = cos(nomAngle);
-//		dir[1][0] = sin(nomAngle);
+//		dir[0][0] = p2.x-p1.x;
+//		dir[1][0] = p2.y-p1.y;
 //		dir[2][0] = 0;
-//		mNominalDirMap[newPairs[i]] = dir.copy();
+//		dir = 1.0/norm2(dir)*dir;
+
+		double curAngle = atan2(r2[1][0]-r1[1][0], r2[0][0]-r1[0][0]);
+		double nomAngle = curAngle-angleOffset;
+// Yaw offset when vision measurements start
+// nomAngle += 0.15;
+		dir[0][0] = cos(nomAngle);
+		dir[1][0] = sin(nomAngle);
+		dir[2][0] = 0;
+
+		mNominalDirMap[newPairs[i]] = dir.copy();
 	}
 
 	// check for dead regions
 	vector<size_t> deadKeys;
 	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
 	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
-	{
 		if( regionIter->second->getLife() <= 0)
 			deadKeys.push_back(regionIter->second->getId());
-	}
 	sort(deadKeys.begin(), deadKeys.end());
 
 	unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator angleIter;

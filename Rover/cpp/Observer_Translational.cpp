@@ -842,8 +842,8 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		p[1][0] = repeatRegions[i]->getLastFoundPos().y - cy;
 		p[2][0] = f;
 		p = rot*p;
-		repeatPoints[i].x = p[0][0]*abs(f/p[2][0]);
-		repeatPoints[i].y = p[1][0]*abs(f/p[2][0]);
+		repeatPoints[i].x = p[0][0];//*abs(f/p[2][0]);
+		repeatPoints[i].y = p[1][0];//*abs(f/p[2][0]);
 	}
 	for(int i=0; i<newPoints.size(); i++)
 	{
@@ -851,8 +851,8 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		p[1][0] = newRegions[i]->getLastFoundPos().y - cy;
 		p[2][0] = f;
 		p = rot*p;
-		newPoints[i].x = p[0][0]*abs(f/p[2][0]);
-		newPoints[i].y = p[1][0]*abs(f/p[2][0]);
+		newPoints[i].x = p[0][0];//*abs(f/p[2][0]);
+		newPoints[i].y = p[1][0];//*abs(f/p[2][0]);
 	}
 
 	// Find how much repeated regions have moved relative
