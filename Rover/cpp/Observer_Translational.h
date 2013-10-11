@@ -51,7 +51,7 @@ class Observer_Translational : public Observer_AngularListener,
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 	void setRotViconToPhone(const TNT::Array2D<double> &rot){mRotViconToPhone.inject(rot);}
 
-	void addListener(Observer_TranslationalListener *listener){mListeners.push_back(listener);}
+	void addListener(Observer_TranslationalListener *listener){mMutex_listeners.lock(); mListeners.push_back(listener); mMutex_listeners.unlock();}
 
 	TNT::Array2D<double> estimateStateAtTime(const Time &t);
 	TNT::Array2D<double> estimateErrCovAtTime(const Time &t);
@@ -102,6 +102,7 @@ class Observer_Translational : public Observer_AngularListener,
 	QuadLogger *mQuadLogger;
 
 	toadlet::egg::Collection<Observer_TranslationalListener*> mListeners;
+	std::mutex mMutex_listeners;
 
 	// for the translational Kalman Filter
 	TNT::Array2D<double> mMeasCov, mPosMeasCov, mVelMeasCov; 

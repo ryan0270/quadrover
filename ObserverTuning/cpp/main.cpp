@@ -298,18 +298,18 @@ int main(int argv, char* argc[])
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
-		measVar.push_back(0.001*10);
-		measVar.push_back(0.001*10);
-		measVar.push_back(1/2.0);
+		measVar.push_back(0.01);
+		measVar.push_back(0.01);
+		measVar.push_back(0.01);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
 		Collection<float> dynVar;
 		dynVar.push_back(0.05);
 		dynVar.push_back(0.05);
 		dynVar.push_back(0.05);
-		dynVar.push_back(5);
-		dynVar.push_back(5);
 		dynVar.push_back(10);
+		dynVar.push_back(10);
+		dynVar.push_back(20);
 		dynVar.push_back(0.01); // accel bias
 		dynVar.push_back(0.01);
 		dynVar.push_back(0.01);
@@ -348,6 +348,10 @@ int main(int argv, char* argc[])
 		velGains[1] = 1;
 		velGains[2] = 1;
 		commManagerListeners[i]->onNewCommIbvsGains(posGains, velGains);
+
+		Collection<float> desState(12,0.0);
+		desState[8] = 1;
+		commManagerListeners[i]->onNewCommDesState(desState);
 	}
 
 	mQuadLogger.setMask(logMask);
@@ -379,7 +383,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 600e3;
+	int endTimeDelta = 500e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz

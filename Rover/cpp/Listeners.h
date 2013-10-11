@@ -31,6 +31,7 @@ class Observer_TranslationalListener
 	virtual ~Observer_TranslationalListener(){};
 
 	virtual void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel)=0;
+	virtual void onObserver_TranslationalImageProcessed(const shared_ptr<ImageTranslationData> &data){};
 };
 
 class TranslationControllerListener
