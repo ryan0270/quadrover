@@ -283,8 +283,8 @@ int main(int argv, char* argc[])
 	// Now to set parameters like they would have been online
 	for(int i=0; i<commManagerListeners.size(); i++)
 	{
-		double gainP = 0.25*2;
-		double gainI = 0.00075/10;
+		double gainP = 0.5;
+		double gainI = 0.0001;
 		double accelWeight = 1;
 		double magWeight = 0;
 		Collection<float> nomMag;
@@ -295,20 +295,20 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommNominalMag(nomMag);
 
 		Collection<float> measVar;
-		measVar.push_back(0.0001*2*2*2*2);
-		measVar.push_back(0.0001*2*2*2*2);
 		measVar.push_back(0.0001);
-		measVar.push_back(0.001);
-		measVar.push_back(0.001);
+		measVar.push_back(0.0001);
+		measVar.push_back(0.0001);
+		measVar.push_back(0.001*10);
+		measVar.push_back(0.001*10);
 		measVar.push_back(1/2.0);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
 		Collection<float> dynVar;
-		dynVar.push_back(1.0/2/2/2/2);
-		dynVar.push_back(1.0/2/2/2/2);
-		dynVar.push_back(1.0/2/2/2/2);
-		dynVar.push_back(10*2);
-		dynVar.push_back(10*2);
+		dynVar.push_back(0.05);
+		dynVar.push_back(0.05);
+		dynVar.push_back(0.05);
+		dynVar.push_back(5);
+		dynVar.push_back(5);
 		dynVar.push_back(10);
 		dynVar.push_back(0.01); // accel bias
 		dynVar.push_back(0.01);

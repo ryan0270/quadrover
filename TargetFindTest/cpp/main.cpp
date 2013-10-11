@@ -126,7 +126,8 @@ int main(int argv, char* argc[])
 	Array2D<double> SnInv(2,2,0.0);
 	SnInv[0][0] = 1.0/Sn[0][0];
 	SnInv[1][1] = 1.0/Sn[1][1];
-	double varxi = pow(500,2);
+//	double varxi = pow(500,2);
+	double varxi_ratio = 0.1;
 	double probNoCorr = 0.0000001;
 
 	TargetFinder2 targetFinder;
@@ -139,6 +140,7 @@ int main(int argv, char* argc[])
 	Time curTime;
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
+Log::alert(String()+"imgCnt: "+imgCnt);
 		curTime.addTimeMS(33);
 		img = *(imgIter->second);
 		cvtColor(img,imgGray,CV_BGR2GRAY);
@@ -146,11 +148,11 @@ int main(int argv, char* argc[])
 Time start;
 		vector<vector<cv::Point>> allContours = targetFinder.findContours(imgGray);
 
-		vector<shared_ptr<ActiveRegion>> curRegions = targetFinder.objectify(allContours,Sn,SnInv,varxi,probNoCorr,curTime);
+		vector<shared_ptr<ActiveRegion>> curRegions = targetFinder.objectify(allContours,Sn,SnInv,varxi_ratio,probNoCorr,curTime);
 
 		/////////////////// Get location priors for active regions ///////////////////////
 		Array2D<double> mv(3,1,0.0);
-		Array2D<double> Sv = 0.2*0.2*createIdentity((double)3);
+		Array2D<double> Sv = 0.1*0.1*createIdentity((double)3);
 		double mz = 1;
 		double sz = 0.05;
 		double f = mCameraMatrix_640x480->at<double>(0,0);
@@ -167,7 +169,7 @@ Time start;
 		/////////////////// make matches ///////////////////////
 		vector<RegionMatch> goodMatches;
 		vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
-		targetFinder.matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi, probNoCorr, curTime);
+		targetFinder.matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi_ratio, probNoCorr, curTime);
 		activeRegions = targetFinder.getActiveRegions();
 		activeCnt += activeRegions.size();
 
@@ -202,7 +204,7 @@ Time start;
 		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
 		cv::Point2f offset(321,0);
 		for(int i=0; i<goodMatches.size(); i++)
-			line(dblImg,goodMatches[i].aoPrev->getLastFoundPos(), goodMatches[i].aoCur->getLastFoundPos()+offset, cv::Scalar(0,255,0), 2);
+			line(dblImg,goodMatches[i].aoPrev->getPrevFoundPos(), goodMatches[i].aoCur->getFoundPos()+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
 		keypress = cv::waitKey(0) % 256;

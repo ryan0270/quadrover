@@ -55,7 +55,8 @@ void TargetFinder2::run()
 	Array2D<double> SnInv(2,2,0.0);
 	SnInv[0][0] = 1.0/Sn[0][0];
 	SnInv[1][1] = 1.0/Sn[1][1];
-	double varxi = pow(500,2);
+//	double varxi = pow(300,2);
+	double varxi_ratio = 0.2;
 	double probNoCorr = 0.0000001;
 
 	shared_ptr<RectGroup> target;
@@ -99,7 +100,7 @@ void TargetFinder2::run()
 			imageTime.setTime(imageData->timestamp);
 
 			vector<vector<cv::Point>> allContours = findContours(*imageData->imageGray);
-			vector<shared_ptr<ActiveRegion>> curRegions = objectify(allContours,Sn,SnInv,varxi,probNoCorr,imageTime);
+			vector<shared_ptr<ActiveRegion>> curRegions = objectify(allContours,Sn,SnInv,varxi_ratio,probNoCorr,imageTime);
 
 			double f = imageData->focalLength;
 			cv::Point2f center = imageData->center;
@@ -139,7 +140,7 @@ void TargetFinder2::run()
 
 			vector<RegionMatch> goodMatches;
 			vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
-			matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi, probNoCorr, imageTime);
+			matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi_ratio, probNoCorr, imageTime);
 
 			double procTime = procStart.getElapsedTimeNS()/1.0e9;
 			if(repeatRegions.size() > 0)
@@ -206,8 +207,8 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 		for(int j=0; j<neighbors.size(); j++)
 			if(curRegions[i]->getId() < neighbors[j]->getId())
 			{
-//				p1 = curRegions[i]->getLastFoundPos();
-//				p2 = neighbors[j]->getLastFoundPos();
+//				p1 = curRegions[i]->getFoundPos();
+//				p2 = neighbors[j]->getFoundPos();
 				p1.x = curRegions[i]->getExpectedPos()[0][0];
 				p1.y = curRegions[i]->getExpectedPos()[1][0];
 				p2.x = neighbors[j]->getExpectedPos()[0][0];
@@ -222,8 +223,8 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 		for(int j=0; j<neighbors.size(); j++)
 			if(repeatRegions[i]->getId() < neighbors[j]->getId())
 			{
-//				p1 = repeatRegions[i]->getLastFoundPos();
-//				p2 = neighbors[j]->getLastFoundPos();
+//				p1 = repeatRegions[i]->getFoundPos();
+//				p2 = neighbors[j]->getFoundPos();
 				p1.x = repeatRegions[i]->getExpectedPos()[0][0];
 				p1.y = repeatRegions[i]->getExpectedPos()[1][0];
 				p2.x = neighbors[j]->getExpectedPos()[0][0];
@@ -236,7 +237,7 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 //	for(int i=0; i<curRegions.size(); i++)
 //	{
 //		shared_ptr<ActiveRegion> obj = curRegions[i];
-//		cv::Point2f cen = obj->getLastFoundPos();
+//		cv::Point2f cen = obj->getFoundPos();
 //		cv::Point2f p1, p2;
 //		const Array2D<double> principalAxes = obj->getPrincipalAxes();
 //		const vector<double> principalAxesEigVal = obj->getPrincipalAxesEigVal();
@@ -320,7 +321,7 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv::Point>> &contours,
 										   const TNT::Array2D<double> Sn,
 										   const TNT::Array2D<double> SnInv,
-										   double varxi, double probNoCorr,
+										   double varxi_ratio, double probNoCorr,
 										   const Time &imageTime)
 {
 	/////////////////// make objects of the new contours ///////////////////////
@@ -337,7 +338,7 @@ vector<shared_ptr<ActiveRegion>> TargetFinder2::objectify(const vector<vector<cv
 	// Ideally, I would do this on all of the active objects at the end of the loop
 	// but I still need to work out the math for that. Doing it here, I can take
 	// advantage of everything having the same covariance
-	Array2D<double> ssC = ActiveRegion::calcCorrespondence(curRegions, curRegions, 0.5*Sn, 2.0*SnInv, varxi, 0);
+	Array2D<double> ssC = ActiveRegion::calcCorrespondence(curRegions, curRegions, 0.5*Sn, 2.0*SnInv, varxi_ratio, 0);
 
 	// Now keep only things that don't have confusion
 	// if there is confusion, only keep one
@@ -375,11 +376,11 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 			  vector<shared_ptr<ActiveRegion>> &newRegions,
 			  const TNT::Array2D<double> Sn,
 			  const TNT::Array2D<double> SnInv,
-			  double varxi, double probNoCorr,
+			  double varxi_ratio, double probNoCorr,
 			  const Time &imageTime)
 {
 	/////////////////// Establish correspondence based on postiion ///////////////////////
-	Array2D<double> C = ActiveRegion::calcCorrespondence(mActiveRegions, curRegions, Sn, SnInv, varxi, probNoCorr);
+	Array2D<double> C = ActiveRegion::calcCorrespondence(mActiveRegions, curRegions, Sn, SnInv, varxi_ratio, probNoCorr);
 
 	///////////////////  make matches ///////////////////////
 	shared_ptr<ActiveRegion> aoPrev, aoCur;
@@ -387,9 +388,10 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 	int N2 = curRegions.size();
 	vector<bool> prevMatched(N1, false);
 	vector<bool> curMatched(N2, false);
+	vector<cv::Point2f> offsets;
 	for(int i=0; i<N1; i++)
 	{
-		if(N2 == 0 || C[i][N2] > 0.5)
+		if(N2 == 0 || C[i][N2] > 0.4)
 			continue; // this object probably doesn't have a partner
 
 		aoPrev = mActiveRegions[i];
@@ -408,6 +410,16 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		curMatched[maxIndex] = true;
 		aoCur = curRegions[maxIndex];
 
+		cv::Point offset = aoCur->getFoundPos()-aoPrev->getFoundPos();
+		offsets.push_back(offset);
+//String str = "\n********************\n";
+//str = str+"  ID: "+aoPrev->getId()+"\t"+aoCur->getId()+"\n";
+//str = str+" Pos: "+(int)aoPrev->getFoundPos().x+" x "+(int)aoPrev->getFoundPos().y+"\t";
+//str = str+(int)aoCur->getFoundPos().x+" x "+(int)aoCur->getFoundPos().y+"\n";
+//str = str+"Area: "+(int)aoPrev->getArea()+"\t"+(int)aoCur->getArea();
+//str = str+"\n////////////////////";
+//Log::alert(str);
+
 		RegionMatch m;
 		m.aoPrev = aoPrev;
 		m.aoCur = aoCur;
@@ -419,6 +431,16 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		repeatRegions.push_back(aoPrev);
 		aoCur->kill();
 	}
+
+//Log::alert("--------------------------------------------------");
+//double maxOffset = 0;
+//for(int i=0; i<offsets.size(); i++)
+//{
+//	maxOffset = max(maxOffset,cv::norm(offsets[i]));
+//	Log::alert(String()+offsets[i].x+"\t"+offsets[i].y);
+//}
+//if(maxOffset > 20)
+//	printArray("C:\n",C);
 
 	vector<int> dupIndices;
 	for(int j=0; j<curRegions.size(); j++)

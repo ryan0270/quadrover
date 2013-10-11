@@ -180,6 +180,8 @@ class Observer_Translational : public Observer_AngularListener,
 	// the nominal position of each region when the quadrotor is
 	// at the "origin"
 	unordered_map<size_t, cv::Point2f> mRegionNominalPosMap;
+
+	cv::Point2f mLastImageOffset;
 };
 
 } // namespace Quadrotor
