@@ -63,8 +63,8 @@ enum DataType
 	DATA_TYPE_SO3,
 	DATA_TYPE_HEIGHT,
 	DATA_TYPE_TARGET_FIND,
-};
-
+	DATA_TYPE_IMAGE_TRANSLATION,
+}; 
 template<class T> class Data;
 template<class T> class DataVector; 
 template<class T> class SO3Data;
@@ -329,6 +329,14 @@ class ImageTargetFind2Data : public IData
 
 	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
 	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
+};
+
+class ImageTranslationData : public IData
+{
+	public:
+	ImageTranslationData() : IData() {type = DATA_TYPE_IMAGE_TRANSLATION;}
+	shared_ptr<ImageTargetFind2Data> imageTargetFind2Data;
+	vector<cv::Point2f> goodPoints; // location of found points, already adjusted for current attitude and image offset
 };
 
 template <class T>

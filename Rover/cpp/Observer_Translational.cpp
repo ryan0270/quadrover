@@ -256,8 +256,10 @@ void Observer_Translational::run()
 
 		mMutex_kfData.unlock();
 
+		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onObserver_TranslationalUpdated(pos, vel);
+		mMutex_listeners.unlock();
 
 		t = loopTime.getElapsedTimeUS();
 		if(t < targetPeriodUS)
@@ -877,14 +879,14 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 			life = repeatRegions[i]->getLife();
 			offsetsX[i] = repeatPoints[i].x-nom.x;
 			offsetsY[i] = repeatPoints[i].y-nom.y;
-//			imageOffset += life*(repeatPoints[i]-nom);
-//			lifeSum += life;
 		}
-//		imageOffset.x /= lifeSum;
-//		imageOffset.y /= lifeSum;
 	}
 
 	// Outlier rejection
+	int numInliers = 0;
+	int numOutliers = 0;
+	vector<cv::Point2f> goodPoints;
+	goodPoints.reserve(repeatPoints.size());
 	if(offsetsX.size() > 0)
 	{
 		cv::Point2f medOffset;
@@ -897,14 +899,15 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		medOffset.y = tempOffsets[medLoc];
 
 		// Now keep only offsets close to the median
-		int numInliers = 0;
-		int numOutliers = 0;
 		for(int i=0; i<offsetsX.size(); i++)
 			if( abs(offsetsX[i]-medOffset.x) < 10 && abs(offsetsY[i]-medOffset.y) < 10 )
 			{
 				numInliers++;
 				imageOffset.x += offsetsX[i];
 				imageOffset.y += offsetsY[i];
+				goodPoints.push_back(repeatPoints[i]);
+				goodPoints.back().x += offsetsX[i];
+				goodPoints.back().y += offsetsY[i];
 			}
 			else
 			{
@@ -925,6 +928,20 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 			Log::alert(String() + "lot of outliers: " + numOutliers + " vs. "+ numInliers);
 			imageOffset = mLastImageOffset;
 		}
+	}
+
+	// Report the results (for the translation controller)
+	// I don't know if I like this way of doing this, but I'll use it for now
+	if(goodPoints.size() > 0)
+	{
+		shared_ptr<ImageTranslationData> xlateData(new ImageTranslationData());
+		xlateData->timestamp.setTime(data->timestamp);
+		xlateData->imageTargetFind2Data = data;
+		xlateData->goodPoints.swap(goodPoints);
+		mMutex_listeners.lock();
+		for(int i=0; i<mListeners.size(); i++)
+			mListeners[i]->onObserver_TranslationalImageProcessed(xlateData);
+		mMutex_listeners.unlock();
 	}
 		
 	// Set the nominal position for the new regions

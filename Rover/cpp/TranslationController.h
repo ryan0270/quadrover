@@ -64,6 +64,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 
 	// for Observer_TranslationalListener
 	void onObserver_TranslationalUpdated(const TNT::Array2D<double> &pos, const TNT::Array2D<double> &vel);
+	void onObserver_TranslationalImageProcessed(const shared_ptr<ImageTranslationData> &data);
 
 	// for MotorInterfaceListener
 	void onMotorWarmupDone(){reset();Log::alert("Tran Controller Received motor warmup done");}
@@ -103,6 +104,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
 
 	TNT::Array2D<double> calcControlIBVS();
+	TNT::Array2D<double> calcControlIBVS2();
 	TNT::Array2D<double> mIbvsPosGains, mIbvsVelGains;
 	std::mutex mMutex_gains;
 
@@ -112,6 +114,8 @@ class TranslationController : 	public Observer_TranslationalListener,
 	int mThreadPriority, mScheduler;
 
 	shared_ptr<ImageTargetFindData> mTargetData;
+	shared_ptr<ImageTargetFind2Data> mTarget2Data;
+	shared_ptr<ImageTranslationData> mTargetTranslationData;
 	std::mutex mMutex_target;
 
 	SO3 mRotPhoneToCam, mRotCamToPhone;
