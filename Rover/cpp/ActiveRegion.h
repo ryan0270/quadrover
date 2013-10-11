@@ -35,7 +35,8 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 	void addNeighbor(shared_ptr<ActiveRegion> n, bool doTwoWay);
 	void removeNeigbor(int nid, bool doTwoWay);
 
-	const cv::Point2f &getLastFoundPos() const {return mLastFoundPos;}
+	const cv::Point2f &getFoundPos() const {return mFoundPos;}
+	const cv::Point2f &getPrevFoundPos() const {return mPrevFoundPos;}
 	const TNT::Array2D<double> getExpectedPos() const {return mExpectedPos;}
 	const Time &getLastFoundTime() const {return mLastFoundTime;}
 	const vector<cv::Point> &getContour() const {return mContour;}
@@ -71,7 +72,7 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 
 	protected:
 	std::vector<cv::Point> mContour;
-	cv::Point2f mLastFoundPos;
+	cv::Point2f mFoundPos, mPrevFoundPos;
 	ICSL::Quadrotor::Time mLastFoundTime;
 	float mLife;
 	cv::Moments mMoments;

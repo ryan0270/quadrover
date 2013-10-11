@@ -815,6 +815,9 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	if(state[2][0] < 0.5 || !mUseIbvs)
 		return;
 
+	if( data->repeatRegions.size() + data->newRegions.size() < 5)
+		return;
+
 	// Bookeeping
 	vector<shared_ptr<ActiveRegion>> repeatRegions;
 	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
@@ -838,26 +841,28 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	vector<cv::Point2f> repeatPoints(repeatRegions.size()), newPoints(newRegions.size());
 	for(int i=0; i<repeatPoints.size(); i++)
 	{
-		p[0][0] = repeatRegions[i]->getLastFoundPos().x - cx;
-		p[1][0] = repeatRegions[i]->getLastFoundPos().y - cy;
+		p[0][0] = repeatRegions[i]->getFoundPos().x - cx;
+		p[1][0] = repeatRegions[i]->getFoundPos().y - cy;
 		p[2][0] = f;
 		p = rot*p;
-		repeatPoints[i].x = p[0][0];//*abs(f/p[2][0]);
-		repeatPoints[i].y = p[1][0];//*abs(f/p[2][0]);
+		repeatPoints[i].x = p[0][0];
+		repeatPoints[i].y = p[1][0];
 	}
 	for(int i=0; i<newPoints.size(); i++)
 	{
-		p[0][0] = newRegions[i]->getLastFoundPos().x - cx;
-		p[1][0] = newRegions[i]->getLastFoundPos().y - cy;
+		p[0][0] = newRegions[i]->getFoundPos().x - cx;
+		p[1][0] = newRegions[i]->getFoundPos().y - cy;
 		p[2][0] = f;
 		p = rot*p;
-		newPoints[i].x = p[0][0];//*abs(f/p[2][0]);
-		newPoints[i].y = p[1][0];//*abs(f/p[2][0]);
+		newPoints[i].x = p[0][0];
+		newPoints[i].y = p[1][0];
 	}
 
 	// Find how much repeated regions have moved relative
 	// to their nominal position
 	cv::Point2f imageOffset(0,0);
+	vector<float> offsetsX(repeatPoints.size());
+	vector<float> offsetsY(repeatPoints.size());
 	if(repeatPoints.size() > 0)
 	{
 		float lifeSum = 0;
@@ -870,13 +875,58 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 			nom.y /= state[2][0];
 
 			life = repeatRegions[i]->getLife();
-			imageOffset += life*(repeatPoints[i]-nom);
-			lifeSum += life;
+			offsetsX[i] = repeatPoints[i].x-nom.x;
+			offsetsY[i] = repeatPoints[i].y-nom.y;
+//			imageOffset += life*(repeatPoints[i]-nom);
+//			lifeSum += life;
 		}
-		imageOffset.x /= lifeSum;
-		imageOffset.y /= lifeSum;
+//		imageOffset.x /= lifeSum;
+//		imageOffset.y /= lifeSum;
 	}
 
+	// Outlier rejection
+	if(offsetsX.size() > 0)
+	{
+		cv::Point2f medOffset;
+		vector<float> tempOffsets = offsetsX;
+		size_t medLoc = tempOffsets.size()/2;
+		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
+		medOffset.x = tempOffsets[medLoc];
+		tempOffsets = offsetsY;
+		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
+		medOffset.y = tempOffsets[medLoc];
+
+		// Now keep only offsets close to the median
+		int numInliers = 0;
+		int numOutliers = 0;
+		for(int i=0; i<offsetsX.size(); i++)
+			if( abs(offsetsX[i]-medOffset.x) < 10 && abs(offsetsY[i]-medOffset.y) < 10 )
+			{
+				numInliers++;
+				imageOffset.x += offsetsX[i];
+				imageOffset.y += offsetsY[i];
+			}
+			else
+			{
+				// remove the offending region from my memory
+				// remember that offsets is ordered the same as repeateRegions
+				mRegionNominalPosMap.erase(repeatRegions[i]->getId());
+				newPoints.push_back(repeatPoints[i]);
+				newRegions.push_back(repeatRegions[i]);
+				numOutliers++;
+			}
+		if(numInliers > 0) // it's still possible to have zero if X and Y inliers don't match
+			imageOffset = 1.0/numInliers*imageOffset;
+
+		if(numOutliers < max(1.0, 1.0/3*numInliers))
+			mLastImageOffset = imageOffset;
+		else
+		{
+			Log::alert(String() + "lot of outliers: " + numOutliers + " vs. "+ numInliers);
+			imageOffset = mLastImageOffset;
+		}
+	}
+		
 	// Set the nominal position for the new regions
 	for(int i=0; i<newPoints.size(); i++)
 	{

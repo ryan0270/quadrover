@@ -62,7 +62,7 @@ public:
 	vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
 			const TNT::Array2D<double> Sn,
 			const TNT::Array2D<double> SnInv,
-			double varxi, double probNoCorr,
+			double varxi_ratio, double probNoCorr,
 			const Time &imageTime);
 
 	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
@@ -71,7 +71,7 @@ public:
 			vector<shared_ptr<ActiveRegion>> &newRegions,
 			const TNT::Array2D<double> Sn,
 			const TNT::Array2D<double> SnInv,
-			double varxi, double probNoCorr,
+			double varxi_ratio, double probNoCorr,
 			const Time &imageTime);
 
 	vector<shared_ptr<ActiveRegion>> &getActiveRegions(){return mActiveRegions;}
@@ -110,30 +110,10 @@ protected:
 
 	int mThreadPriority, mScheduler;
 
-//	static void drawTarget(cv::Mat &image,
-//						   const vector<shared_ptr<ActiveRegion>> &curRegions,
-//						   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
-
 	// for new targetfinder
 	Observer_Angular *mObsvAngular;
 	Observer_Translational *mObsvTranslational;
 	vector<shared_ptr<ActiveRegion>> mActiveRegions;
-//	vector<vector<cv::Point>> findContours(const cv::Mat &image);
-//
-//	vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
-//			const TNT::Array2D<double> Sn,
-//			const TNT::Array2D<double> SnInv,
-//			double varxi, double probNoCorr,
-//			const Time &imageTime);
-//
-//	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
-//			vector<RegionMatch> &goodMatches,
-//			vector<shared_ptr<ActiveRegion>> &repeatRegions,
-//			vector<shared_ptr<ActiveRegion>> &newRegions,
-//			const TNT::Array2D<double> Sn,
-//			const TNT::Array2D<double> SnInv,
-//			double varxi, double probNoCorr,
-//			const Time &imageTime);
 };
 
 } // namespace Quadrotor

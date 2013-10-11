@@ -605,8 +605,8 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			int id2 = max(regions[i]->getId(), regions[j]->getId());
 
 			pair<size_t,size_t> pr(id1, id2);
-			cv::Point2f pt1 = mRegionMap[id1]->getLastFoundPos();
-			cv::Point2f pt2 = mRegionMap[id2]->getLastFoundPos();
+			cv::Point2f pt1 = mRegionMap[id1]->getFoundPos();
+			cv::Point2f pt2 = mRegionMap[id2]->getFoundPos();
 			if(mNominalDirMap.count(pr) > 0)
 			{
 				repeatPairs.push_back(pr);

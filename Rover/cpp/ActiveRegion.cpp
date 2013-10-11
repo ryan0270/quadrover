@@ -28,10 +28,10 @@ ActiveRegion::ActiveRegion(std::vector<cv::Point> points) : ActiveRegion()
 {
 	mContour = points;
 	mMoments = cv::moments(points);
-	mLastFoundPos.x = mMoments.m10/mMoments.m00;
-	mLastFoundPos.y = mMoments.m01/mMoments.m00;
-	mExpectedPos[0][0] = mLastFoundPos.x;
-	mExpectedPos[1][0] = mLastFoundPos.y;
+	mFoundPos.x = mMoments.m10/mMoments.m00;
+	mFoundPos.y = mMoments.m01/mMoments.m00;
+	mExpectedPos[0][0] = mFoundPos.x;
+	mExpectedPos[1][0] = mFoundPos.y;
 	calcPrincipalAxes();
 }
 
@@ -39,7 +39,8 @@ void ActiveRegion::copyData(const ActiveRegion &ao)
 {
 	mContour.assign(ao.mContour.begin(), ao.mContour.end());
 	mMoments = ao.mMoments;
-	mLastFoundPos = ao.mLastFoundPos;
+	mPrevFoundPos = mFoundPos;
+	mFoundPos = ao.mFoundPos;
 	mPrincipalAxes.inject(ao.mPrincipalAxes);
 	mPrincipalAxesEigVal[0] = ao.mPrincipalAxesEigVal[0];
 	mPrincipalAxesEigVal[1] = ao.mPrincipalAxesEigVal[1];
@@ -254,8 +255,8 @@ void ActiveRegion::updatePositionDistribution(const Array2D<double> &mv, const A
 		mz2Inv = 1.0/mz/mz+sz*sz/pow(mz,4);
 	}
 
-	double x = mLastFoundPos.x-center.x;
-	double y = mLastFoundPos.y-center.y;
+	double x = mFoundPos.x-center.x;
+	double y = mFoundPos.y-center.y;
 	double dt = Time::calcDiffNS(mLastFoundTime, curTime)/1.0e9;
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
@@ -296,7 +297,7 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 												 const vector<shared_ptr<ActiveRegion>> &curObjectList,
 												 const Array2D<double> &Sn1,
 												 const Array2D<double> &SnInv1,
-												 double varxi,
+												 double varxi_ratio,
 												 double probNoCorr)
 {
 	int N1 = prevObjectList.size();
@@ -401,8 +402,8 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 	double x, y, fC, f;
 	for(int j=0; j<N2; j++)
 	{
-		x = curObjectList[j]->mLastFoundPos.x;
-		y = curObjectList[j]->mLastFoundPos.y;
+		x = curObjectList[j]->mFoundPos.x;
+		y = curObjectList[j]->mFoundPos.y;
 		for(int i=0; i<N1; i++)
 		{
 			md.inject(prevObjectList[i]->mExpectedPos);
@@ -414,15 +415,15 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 	}
 
 	double dxi, pxi;
-	double pxi_coeff = 1.0/sqrt(2.0*PI*varxi);
+//	double pxi_coeff = 1.0/sqrt(2.0*PI*varxi);
 	Array2D<double> mq(2,1), SnInvmq(2,1), ma(2,1), temp1(2,1);
 	double scale = 1e6;
 	for(int idx=0; idx<chad.size(); idx++)
 	{
 		int i=chad[idx].first;
 		int j=chad[idx].second;
-		mq[0][0] = curObjectList[j]->mLastFoundPos.x;
-		mq[1][0] = curObjectList[j]->mLastFoundPos.y;
+		mq[0][0] = curObjectList[j]->mFoundPos.x;
+		mq[1][0] = curObjectList[j]->mFoundPos.y;
 
 		SnInvmq[0][0] = SnInv[0][0]*mq[0][0]; // assumes Sn diagonal
 		SnInvmq[1][0] = SnInv[1][1]*mq[1][0];
@@ -441,6 +442,8 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 			+ fBList[i] + fC;
 
 		// shape distribution
+		double varxi = pow(varxi_ratio*prevObjectList[i]->getArea(),2);
+		double pxi_coeff = 1.0/sqrt(2.0*PI*varxi);
 		dxi = calcShapeDistance(prevObjectList[i], curObjectList[j]);
 		pxi = pxi_coeff*exp(-0.5*dxi*dxi/varxi);
 		C[i][j] = scale*pxi*coeffList[i]*exp(-0.5*f);
@@ -450,7 +453,6 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 		C[N1][j] = scale*probNoCorr;
 
 	C[N1][N2] = 0;
-
 
 	// Scale colums to unit sum
 	for(int j=0; j<N2; j++)
@@ -495,6 +497,8 @@ Array2D<double> ActiveRegion::calcCorrespondence(const vector<shared_ptr<ActiveR
 			colSum += C[i][j];
 		C[N1][j] = 1-colSum;
 	}
+
+//printArray("C:\n",C);
 
 	return C;
 }
