@@ -58,7 +58,7 @@ void TargetFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-//			&& mIsMotorOn
+			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();

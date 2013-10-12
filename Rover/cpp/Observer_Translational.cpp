@@ -109,7 +109,8 @@ void Observer_Translational::run()
 	Time loopTime;
 	toadlet::uint64 t;
 	list<shared_ptr<IData>> events;
-	float targetRate = 100; // hz
+//	float targetRate = 100; // hz
+	float targetRate = 50; // hz
 	float targetPeriodUS = 1.0f/targetRate*1.0e6;
 	String logString;
 	SO3 att;

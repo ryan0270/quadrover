@@ -69,7 +69,7 @@ void TargetFinder2::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-//			&& mIsMotorOn
+			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -200,58 +200,34 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 	cv::drawContours(image, curContours, -1, cv::Scalar(255,0,0), 2);
 	cv::drawContours(image, repeatContours, -1, cv::Scalar(0,0,255), 2);
 
-	cv::Point p1, p2;
-	for(int i=0; i<curRegions.size(); i++)
-	{
-		const vector<shared_ptr<ActiveRegion>> neighbors = curRegions[i]->getNeighbors();
-		for(int j=0; j<neighbors.size(); j++)
-			if(curRegions[i]->getId() < neighbors[j]->getId())
-			{
-//				p1 = curRegions[i]->getFoundPos();
-//				p2 = neighbors[j]->getFoundPos();
-				p1.x = curRegions[i]->getExpectedPos()[0][0];
-				p1.y = curRegions[i]->getExpectedPos()[1][0];
-				p2.x = neighbors[j]->getExpectedPos()[0][0];
-				p2.y = neighbors[j]->getExpectedPos()[1][0];
-
-				line(image, p1, p2, cv::Scalar(0,255,255), 1);
-			}
-	}
-	for(int i=0; i<repeatRegions.size(); i++)
-	{
-		const vector<shared_ptr<ActiveRegion>> neighbors = repeatRegions[i]->getNeighbors();
-		for(int j=0; j<neighbors.size(); j++)
-			if(repeatRegions[i]->getId() < neighbors[j]->getId())
-			{
-//				p1 = repeatRegions[i]->getFoundPos();
-//				p2 = neighbors[j]->getFoundPos();
-				p1.x = repeatRegions[i]->getExpectedPos()[0][0];
-				p1.y = repeatRegions[i]->getExpectedPos()[1][0];
-				p2.x = neighbors[j]->getExpectedPos()[0][0];
-				p2.y = neighbors[j]->getExpectedPos()[1][0];
-
-				line(image, p1, p2, cv::Scalar(0,255,255), 1);
-			}
-	}
-
+//	cv::Point p1, p2;
 //	for(int i=0; i<curRegions.size(); i++)
 //	{
-//		shared_ptr<ActiveRegion> obj = curRegions[i];
-//		cv::Point2f cen = obj->getFoundPos();
-//		cv::Point2f p1, p2;
-//		const Array2D<double> principalAxes = obj->getPrincipalAxes();
-//		const vector<double> principalAxesEigVal = obj->getPrincipalAxesEigVal();
-//		double ratio = principalAxesEigVal[0]/principalAxesEigVal[1];
-//		if(ratio > 2)
-//		{
-//			p1.x = cen.x + 10*principalAxes[0][0] * principalAxesEigVal[0];
-//			p1.y = cen.y + 10*principalAxes[1][0] * principalAxesEigVal[0];
-//			p2.x = cen.x + 10*principalAxes[0][1] * principalAxesEigVal[1];
-//			p2.y = cen.y + 10*principalAxes[1][1] * principalAxesEigVal[1];
+//		const vector<shared_ptr<ActiveRegion>> neighbors = curRegions[i]->getNeighbors();
+//		for(int j=0; j<neighbors.size(); j++)
+//			if(curRegions[i]->getId() < neighbors[j]->getId())
+//			{
+//				p1.x = curRegions[i]->getExpectedPos()[0][0];
+//				p1.y = curRegions[i]->getExpectedPos()[1][0];
+//				p2.x = neighbors[j]->getExpectedPos()[0][0];
+//				p2.y = neighbors[j]->getExpectedPos()[1][0];
 //
-//			line(image,cen,p1,cv::Scalar(0,255,255),1);
-//			line(image,cen,p2,cv::Scalar(255,0,255),1);
-//		}
+//				line(image, p1, p2, cv::Scalar(0,255,255), 1);
+//			}
+//	}
+//	for(int i=0; i<repeatRegions.size(); i++)
+//	{
+//		const vector<shared_ptr<ActiveRegion>> neighbors = repeatRegions[i]->getNeighbors();
+//		for(int j=0; j<neighbors.size(); j++)
+//			if(repeatRegions[i]->getId() < neighbors[j]->getId())
+//			{
+//				p1.x = repeatRegions[i]->getExpectedPos()[0][0];
+//				p1.y = repeatRegions[i]->getExpectedPos()[1][0];
+//				p2.x = neighbors[j]->getExpectedPos()[0][0];
+//				p2.y = neighbors[j]->getExpectedPos()[1][0];
+//
+//				line(image, p1, p2, cv::Scalar(0,255,255), 1);
+//			}
 //	}
 }
 

@@ -271,16 +271,17 @@ end
 %%
 if exist('velCmd','var') && ~isempty(velCmd)
 	figure(6601); clf; set(gcf,'name','Velocity cmd');
-	set(gcf,'Units','Inches');
-	curPos = get(gcf,'Position'); figSize = [8 6];
-	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [8 6];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 	mask1 = find( (tranStateTime > velCmdTime(1)) .* (tranStateTime < velCmdTime(end)) );
 	mask2 = find( (viconStateTime > velCmdTime(1)) .* (viconStateTime < velCmdTime(end)) );
 	for i=1:3
 		subplot(3,1,i)
 		plot(velCmdTime, velCmd(i,:),'.');hold all
 		plot(viconStateTime(mask2), viconState(i+9,mask2),'LineWidth',3); hold all
-		plot(tranStateTime(mask1), tranState(i+3,mask1),'.','MarkerSize',2); hold all
+% 		plot(tranStateTime(mask1), tranState(i+3,mask1),'.','MarkerSize',2); hold all
+		plot(tranStateTime(mask1), tranState(i+3,mask1)); hold all
 		hold off
 		ax = axis;
 		line([ax(1) ax(2)],[0 0],'Color','k','LineStyle','--');

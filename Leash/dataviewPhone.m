@@ -67,9 +67,9 @@ motorCmd = phoneData(motorIndices,3:6)';
 cntlCalcTime = phoneData(motorIndices,8)'/1000;
 motor_dt = mean(diff(motorTime));
 
-% targetFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_TARGET_FIND);
-% targetFindTimeTime = phoneData(targetFindTimeIndices,1)'/1000;
-% targetFindTime = phoneData(targetFindTimeIndices,3)';
+targetFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_TARGET_FIND);
+targetFindTimeTime = phoneData(targetFindTimeIndices,1)'/1000;
+targetFindTime = phoneData(targetFindTimeIndices,3)';
 % 
 % mapVelCalcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL_CALC_TIME);
 % mapVelCalcTimeTime = phoneData(mapVelCalcTimeIndices,1)'/1000;
@@ -143,10 +143,10 @@ phoneTemp = phoneData(phoneTempIndices,3:6)';
 % attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
 % attInnovation = phoneData(attInnovationIndices,3:5)';
 % 
-% targetFindProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_PROC_TIME);
-% targetFindProcTimeTime = phoneData(targetFindProcTimeIndices,1)'/1000;
-% targetFindProcTime = phoneData(targetFindProcTimeIndices,3)';
-% 
+targetFindProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_PROC_TIME);
+targetFindProcTimeTime = phoneData(targetFindProcTimeIndices,1)'/1000;
+targetFindProcTime = phoneData(targetFindProcTimeIndices,3)';
+
 % targetLocIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_CENTERS);
 % targetLocTime = phoneData(targetLocIndices,1)'/1000;
 % targetLoc = phoneData(targetLocIndices,3:8)';
@@ -195,9 +195,9 @@ stateLabels = {'Roll [rad]' 'Pitch [rad]' 'Yaw [rad]' 'Roll Rate [rad/s]' 'Pitch
               'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [m/s]'};
 if exist('state','var') && ~isempty(state)
     baseFigState = 10;
-    figure(baseFigState); set(gcf,'Units','Inches');
-    curPos = get(gcf,'Position'); figSize = [8 6];
-    set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+%     figure(baseFigState); set(gcf,'Units','Inches');
+%     curPos = get(gcf,'Position'); figSize = [8 6];
+%     set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
     figure(baseFigState+0)
     for i=1:3
 %         subplot(4,3,i)
@@ -209,8 +209,8 @@ if exist('state','var') && ~isempty(state)
         xlabel('Time [s]');
         ylabel(stateLabels(i));
 
-%     	ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)])
-		ax = axis; axis([30 120 ax(3) ax(4)])
+    	ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)])
+% 		ax = axis; axis([30 120 ax(3) ax(4)])
     % 	if i == 4 || i == 5
     % 		axis([0 40 -.75 .75]);
     % 	elseif i == 6
@@ -220,8 +220,7 @@ if exist('state','var') && ~isempty(state)
     legend('Commanded','Measured');
 end
 
-return
- 
+
 %%
 % gyroBiasLabels = {'roll [rad]', 'pitch [rad]', 'yaw [rad]'};
 % if exist('gyroBias','var') && ~isempty(gyroBias)
@@ -480,7 +479,7 @@ end
 %%
 if exist('targetFindProcTime','var') && ~isempty(targetFindProcTime)
 	figure(6000); clf; set(gcf,'Name','Target Find Proc Time');
-	plot(targetFindProcTimeTime, targetFindProcTime*1000);
+	plot(targetFindProcTimeTime, targetFindProcTime*1000,'.');
 	xlabel('Time [s]');
 	ylabel('Target Find Time [ms]');
 	title(sprintf('Mean find time: %1.2fms', mean(targetFindProcTime*1000)));
