@@ -71,7 +71,9 @@ void VideoMaker::run()
 
 void VideoMaker::onNewSensorUpdate(const shared_ptr<IData> &data)
 {
-	if(data->type == DATA_TYPE_IMAGE && mMotorOn)
+	if(data->type == DATA_TYPE_IMAGE
+			&& mMotorOn
+			)
 	{
 		shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);
 		mMutex_imageQueue.lock();
