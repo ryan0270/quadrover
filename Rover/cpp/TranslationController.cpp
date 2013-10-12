@@ -76,7 +76,7 @@ using namespace TNT;
 				calcControl();
 			}
 
-			System::msleep(10);
+			System::msleep(20);
 		}
 
 		mDone = true;
