@@ -48,7 +48,8 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
-public class RoverService extends Service {
+public class RoverService extends Service
+{
 //	private ServiceHandler mServiceHandler;
 	private final static String ME = "RoverService";
 
@@ -234,25 +235,28 @@ public class RoverService extends Service {
 //			camParams.setPreviewSize(640,480);
 			camParams.setPreviewSize(320,240);
 
-			//	List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
-			//	int[] fps = fpsList.get(fpsList.size()-1);
+			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
+			for(int i=0; i<fpsList.size(); i++)
+			{
+				int[] fps = fpsList.get(i);
+				Log.i(ME, "Supported fps: " + String.valueOf(fpsList.get(i)[0]) + ", " + String.valueOf(fpsList.get(i)[1]));
+			}
 			//	camParams.setPreviewFpsRange((fps[0]), fps[1]);
 			camParams.setPreviewFpsRange(30000, 30000);
-//			if(camParams.getVideoStabilization())
-//			{
-//				Log.i(ME, "I have video stabilization");
-				camParams.setVideoStabilization(true);
-//			}
-//			else
-//				Log.i(ME, "I don't have video stabilization");
+			// I'm not sure if this overwrites the ISO, or other, settings
+// 			camParams.setVideoStabilization(true);
+			if(camParams.getVideoStabilization())
+				Log.i(ME, "I have video stabilization");
+			else
+				Log.i(ME, "I don't have video stabilization");
 
 			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
 			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
 
 //			camParams.setExposureCompensation( camParams.getMaxExposureCompensation() );
 
-			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO );
-
+//			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO );
+			camParams.setFocusMode( Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
 //			camParams.setSceneMode( Camera.Parameters.SCENE_MODE_SPORTS );
 
 			// iso 100, 200, 400, 800

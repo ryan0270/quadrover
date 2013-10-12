@@ -134,6 +134,7 @@ protected:
 
 	double mPressure, mPhoneTemp;
 
+	shared_ptr<DataImage> mImageData;
 //	shared_ptr<ImageMatchData> mImageMatchData;
 	shared_ptr<ImageFeatureData> mFeatureData;
 //	shared_ptr<ImageTargetFindData> mTargetData;

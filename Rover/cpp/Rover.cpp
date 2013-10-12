@@ -33,6 +33,7 @@ Rover::Rover() :
 	mPressure = 0;
 	mPhoneTemp = 0;
 
+	mImageData = NULL;
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
 	mTargetData2 = NULL;
@@ -616,10 +617,13 @@ void Rover::onNewSensorUpdate(const shared_ptr<IData> &data)
 	switch(data->type)
 	{
 		case DATA_TYPE_PRESSURE:
-			mPressure = static_pointer_cast<Data<double> >(data)->data;
+			mPressure = static_pointer_cast<Data<double>>(data)->data;
 			break;
 		case DATA_TYPE_PHONE_TEMP:
-			mPhoneTemp = static_pointer_cast<DataPhoneTemp<double> >(data)->secTemp;
+			mPhoneTemp = static_pointer_cast<DataPhoneTemp<double>>(data)->secTemp;
+			break;
+		case DATA_TYPE_IMAGE:
+			mImageData = static_pointer_cast<DataImage>(data);
 			break;
 	}
 }
@@ -648,6 +652,8 @@ void Rover::copyImageData(cv::Mat *m)
 		mTargetData2->imageAnnotatedData->imageAnnotated->copyTo(*m);
 	else if(mFeatureData != NULL)
 		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
+	else if(mImageData != NULL)
+		mImageData->image->copyTo(*m);
 	mMutex_vision.unlock();
 }
 

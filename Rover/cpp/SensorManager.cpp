@@ -110,8 +110,8 @@ void SensorManager::initialize()
 
 	// Now try load camera calibration params
 	cv::FileStorage fs;
-//		String filename = "sdcard/RoverService/s4Calib_640x480.yml";
-	String filename = "sdcard/RoverService/s3Calib_640x480.yml";
+	String filename = "sdcard/RoverService/s4Calib_640x480.yml";
+//	String filename = "sdcard/RoverService/s3Calib_640x480.yml";
 	fs.open(filename.c_str(), cv::FileStorage::READ);
 	if( fs.isOpened() )
 	{
@@ -125,16 +125,26 @@ void SensorManager::initialize()
 		str = str+"\n\t"+"centerX: " + mCameraMatrix_640x480->at<double>(0,2);
 		str = str+"\n\t"+"centerY: " + mCameraMatrix_640x480->at<double>(1,2);
 		Log::alert(str);
-
-		mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
-		mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
-		(*mCameraMatrix_320x240) = (*mCameraMatrix_320x240)*0.5;
 	}
 	else
 	{
+		mCameraMatrix_640x480 = shared_ptr<cv::Mat>(new cv::Mat(3,3,CV_64F));
+		mCameraMatrix_640x480->at<double>(0,0) = 580; // focal length of my s4
+		mCameraMatrix_640x480->at<double>(0,1) = 0;
+		mCameraMatrix_640x480->at<double>(0,2) = 320;
+		mCameraMatrix_640x480->at<double>(1,0) = 0;
+		mCameraMatrix_640x480->at<double>(1,1) = 517;
+		mCameraMatrix_640x480->at<double>(1,2) = 240;
+		mCameraMatrix_640x480->at<double>(2,0) = 0;
+		mCameraMatrix_640x480->at<double>(2,1) = 0;
+		mCameraMatrix_640x480->at<double>(2,2) = 1;
 		Log::alert("Failed to open " + filename);
 	}
 	fs.release();
+
+	mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
+	mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
+	(*mCameraMatrix_320x240) = (*mCameraMatrix_320x240)*0.5;
 }
 
 void SensorManager::shutdown()
