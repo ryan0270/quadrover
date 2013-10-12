@@ -174,7 +174,6 @@ int main(int argv, char* argc[])
 	mAttitudeThrustController.initialize();
 	mTranslationController.addListener(&mAttitudeThrustController);
 	addCommManagerListener(&mAttitudeThrustController);
-	addCommManagerListener(&mAttitudeThrustController);
 
 	mObsvAngular.initialize();
 	mObsvAngular.setStartTime(startTime);

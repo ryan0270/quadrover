@@ -18,9 +18,7 @@
 #include "constants.h"
 #include "Common.h"
 #include "Data.h"
-#define ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Angular.h"
-#undef ICSL_OBSERVER_ANGULAR_LISTENER_ONLY
 #include "Observer_Translational.h"
 #include "QuadLogger.h"
 #include "CommManager.h"
@@ -31,8 +29,10 @@
 #include "VideoMaker.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
-#include "TargetFinder.h"
+//#include "TargetFinder.h"
+#include "TargetFinder2.h"
 #include "VelocityEstimator.h"
+#include "Listeners.h"
 
 namespace ICSL {
 namespace Quadrotor {
@@ -40,7 +40,7 @@ class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public SensorManagerListener,
 				 public FeatureFinderListener,
-				 public TargetFinderListener
+				 public TargetFinder2Listener
 {
 public:
 	Rover();
@@ -91,7 +91,10 @@ public:
 	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
 	// for TargetFinderListener
-	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
+//	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
+
+	// for TargetFinder2Listener
+	void onTargetFound2(shared_ptr<ImageTargetFind2Data> const &data);
 
 protected:
 	CommManager mCommManager;
@@ -118,7 +121,8 @@ protected:
 
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
-	TargetFinder mTargetFinder;
+//	TargetFinder mTargetFinder;
+	TargetFinder2 mTargetFinder2;
 
 	SensorManager mSensorManager;
 
@@ -132,7 +136,8 @@ protected:
 
 //	shared_ptr<ImageMatchData> mImageMatchData;
 	shared_ptr<ImageFeatureData> mFeatureData;
-	shared_ptr<ImageTargetFindData> mTargetData;
+//	shared_ptr<ImageTargetFindData> mTargetData;
+	shared_ptr<ImageTargetFind2Data> mTargetData2;
 
 	VideoMaker mVideoMaker;
 	

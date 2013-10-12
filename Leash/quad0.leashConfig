@@ -56,15 +56,15 @@
          <z>0.000100</z>
          <xVel>0.010000</xVel>
          <yVel>0.010000</yVel>
-         <zVel>0.500000</zVel>
+         <zVel>0.010000</zVel>
       </MeasVar>
       <DynVar>
-         <x>0.062500</x>
-         <y>0.062500</y>
-         <z>0.062500</z>
-         <xVel>20.000000</xVel>
-         <yVel>20.000000</yVel>
-         <zVel>10.000000</zVel>
+         <x>0.050000</x>
+         <y>0.050000</y>
+         <z>0.050000</z>
+         <xVel>10.000000</xVel>
+         <yVel>10.000000</yVel>
+         <zVel>20.000000</zVel>
       </DynVar>
       <AccelBias>
          <x>-0.150000</x>
