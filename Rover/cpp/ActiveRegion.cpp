@@ -8,7 +8,7 @@ using namespace ICSL::Constants;
 using namespace toadlet::egg;
 
 float ActiveRegion::MAX_LIFE=20;
-unsigned long ActiveRegion::lastID = 0;
+size_t ActiveRegion::lastID = 0;
 std::mutex ActiveRegion::mutex_lastID;
 
 ActiveRegion::ActiveRegion() :

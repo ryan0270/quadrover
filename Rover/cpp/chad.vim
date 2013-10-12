@@ -76,7 +76,12 @@ badd +1 VideoMaker.h
 badd +1 VideoMaker.cpp
 badd +1 Rotation.h
 badd +1 Rotation.cpp
-args Rover.h Rover.cpp Observer_Angular.h Observer_Angular.cpp Observer_Translational.h Observer_Translational.cpp AttitudeThrustController.h AttitudeThrustController.cpp TranslationController.h TranslationController.cpp MotorInterface.h MotorInterface.cpp CommManager.h CommManager.cpp SensorManager.h SensorManager.cpp
+badd +1 TargetFinder2.h
+badd +1 TargetFinder2.cpp
+badd +1 ActiveRegion.h
+badd +1 ActiveRegion.cpp
+badd +1 Listeners.h
+args Rover.h Rover.cpp
 edit Rover.cpp
 set splitbelow splitright
 wincmd _ | wincmd |
