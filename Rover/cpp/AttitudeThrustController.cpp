@@ -83,6 +83,7 @@ using namespace TNT;
 		SO3 curMotorAtt = mCurAtt;
 		Array2D<double> curEuler = curMotorAtt.getAnglesZYX();
 		double c = cos(curEuler[2][0]); double s = sin(curEuler[2][0]);
+//c = 1; // don't try to compenstate for yaw error
 		double x =  mDesAccel[0][0]*c+mDesAccel[1][0]*s;
 		double y = -mDesAccel[0][0]*s+mDesAccel[1][0]*c;
 		double desRoll  = -asin(y/n);

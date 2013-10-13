@@ -912,7 +912,7 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 			}
 			else
 			{
-				// remove the offending region from my memory
+				// remove the offending region from memory
 				// remember that offsets is ordered the same as repeateRegions
 				mRegionNominalPosMap.erase(repeatRegions[i]->getId());
 				newPoints.push_back(repeatPoints[i]);
@@ -922,7 +922,7 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		if(numInliers > 0) // it's still possible to have zero if X and Y inliers don't match
 			imageOffset = 1.0/numInliers*imageOffset;
 
-		if(numOutliers < max(1.0, 1.0/3*numInliers))
+		if(numOutliers <= max(1.0, 1.0/3*numInliers))
 			mLastImageOffset = imageOffset;
 		else
 		{
