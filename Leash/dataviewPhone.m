@@ -569,13 +569,14 @@ if exist('imageOffset','var') && ~isempty(imageOffset)
 % 	set(gcf,'Units','Inches');
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	plot(imageOffsetTime, imageOffset');hold all
-	ax = axis;
-	plot([ax(1) ax(2)],[0 0],'k--'); hold all
+	plot(imageOffset(1,:), imageOffset(2,:)); hold all
+	plot(imageOffset(1,1), imageOffset(2,1),'r+'); hold all
+	plot(imageOffset(1,end), imageOffset(2,end),'r.'); hold all
+% 	ax = axis;
+% 	plot([ax(1) ax(2)],[0 0],'k--'); hold all
 	hold off
-	xlabel('Time [s]');
-	ylabel('Motor Plane Bias')
-	legend('x','y','z');
+	xlabel('x');
+	ylabel('y')
 end
 
 

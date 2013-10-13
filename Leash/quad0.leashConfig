@@ -100,9 +100,9 @@
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
       <North>-30.000000</North>
-      <East>20.000000</East>
-      <South>-30.000000</South>
-      <West>40.000000</West>
+      <East>30.000000</East>
+      <South>-50.000000</South>
+      <West>50.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
