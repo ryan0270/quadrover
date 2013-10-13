@@ -118,10 +118,10 @@ void ActiveRegion::addNeighbor(shared_ptr<ActiveRegion> n, bool doTwoWay)
 			break;
 		}
 	
-	if(haveDud || mNeighbors.size() > 50)
+	if(haveDud)// || mNeighbors.size() > 50)
 	{
 		String str = "\n";
-		Log::alert("--------------------------------------------------");
+		Log::alert("------------------------- Have a dud -------------------------");
 		for(int i=0; i<mNeighbors.size(); i++)
 		{
 			str = str+mNeighbors[i]->mId+"\t";

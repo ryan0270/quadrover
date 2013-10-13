@@ -243,34 +243,38 @@ void TargetFinder2::onNewSensorUpdate(const shared_ptr<IData> &data)
 
 vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 {
+	cv::Mat pyrImage;
+	resize(image, pyrImage, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
+
 	int delta = 5*2;
-	int minArea = 1.0/pow(10,2)*240*320;
-	int maxArea = 1.0/pow(2,2)*240*320;
+	int minArea = 1.0/pow(10,2)*pyrImage.rows*pyrImage.cols;
+	int maxArea = 1.0/pow(2,2)*pyrImage.rows*pyrImage.cols;
 	double maxVariation = 0.25; // smaller reduces number of regions
 	double minDiversity = 0.4; // smaller increase the number of regions
 	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
 	vector<vector<cv::Point>> regions;
-	mserDetector(image, regions);
+	mserDetector(pyrImage, regions);
 
 	// preallocate
-	cv::Mat mask(image.rows,image.cols,CV_8UC1, cv::Scalar(0));
+	cv::Mat mask(pyrImage.rows,pyrImage.cols,CV_8UC1, cv::Scalar(0));
 
 	/////////////////// Find contours ///////////////////////
 	vector<vector<cv::Point>> allContours;
+	vector<vector<cv::Point>> contours;
+	cv::Rect boundRect;
 	int border = 2;
 	for(int i=0; i<regions.size(); i++)
 	{
-		cv::Rect boundRect = boundingRect( cv::Mat(regions[i]) );
+		boundRect = boundingRect( cv::Mat(regions[i]) );
 		// reject regions on the border since they will change, but perhaps not enough to 
 		// prevent matches
 		if(boundRect.x == 0 || boundRect.y == 0 ||
-			boundRect.x+boundRect.width == image.cols || boundRect.y+boundRect.height == image.rows )
-			continue;
+			boundRect.x+boundRect.width == pyrImage.cols || boundRect.y+boundRect.height == pyrImage.rows )
 
 		boundRect.x = max(0, boundRect.x-border);
 		boundRect.y = max(0, boundRect.y-border);
-		boundRect.width = min(image.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
-		boundRect.height= min(image.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
+		boundRect.width = min(pyrImage.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
+		boundRect.height= min(pyrImage.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
 		cv::Point corner(boundRect.x, boundRect.y);
 		mask(boundRect) = cv::Scalar(0);
 		uchar *row;
@@ -283,13 +287,20 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 			mask.at<uchar>(y,x) = 255;
 		}
 
-		vector<vector<cv::Point>> contours;
 		cv::findContours(mask(boundRect), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, corner);
 
 		for(int i=0; i<contours.size(); i++)
+		{
 			if(cv::contourArea(contours[i]) >= minArea)
 				allContours.push_back(contours[i]);
+		}
 	}
+
+
+	// scale the contours back to the original image size
+	for(int i=0; i<allContours.size(); i++)
+		for(int j=0; j<allContours[i].size(); j++)
+			allContours[i][j] *= 2;
 
 	return allContours;
 }
@@ -388,13 +399,6 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 
 		cv::Point offset = aoCur->getFoundPos()-aoPrev->getFoundPos();
 		offsets.push_back(offset);
-//String str = "\n********************\n";
-//str = str+"  ID: "+aoPrev->getId()+"\t"+aoCur->getId()+"\n";
-//str = str+" Pos: "+(int)aoPrev->getFoundPos().x+" x "+(int)aoPrev->getFoundPos().y+"\t";
-//str = str+(int)aoCur->getFoundPos().x+" x "+(int)aoCur->getFoundPos().y+"\n";
-//str = str+"Area: "+(int)aoPrev->getArea()+"\t"+(int)aoCur->getArea();
-//str = str+"\n////////////////////";
-//Log::alert(str);
 
 		RegionMatch m;
 		m.aoPrev = aoPrev;
@@ -407,16 +411,6 @@ void TargetFinder2::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
 		repeatRegions.push_back(aoPrev);
 		aoCur->kill();
 	}
-
-//Log::alert("--------------------------------------------------");
-//double maxOffset = 0;
-//for(int i=0; i<offsets.size(); i++)
-//{
-//	maxOffset = max(maxOffset,cv::norm(offsets[i]));
-//	Log::alert(String()+offsets[i].x+"\t"+offsets[i].y);
-//}
-//if(maxOffset > 20)
-//	printArray("C:\n",C);
 
 	vector<int> dupIndices;
 	for(int j=0; j<curRegions.size(); j++)
