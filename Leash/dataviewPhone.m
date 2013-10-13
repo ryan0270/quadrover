@@ -75,10 +75,10 @@ targetFindTime = phoneData(targetFindTimeIndices,3)';
 % mapVelCalcTimeTime = phoneData(mapVelCalcTimeIndices,1)'/1000;
 % mapVelCalcTime = phoneData(mapVelCalcTimeIndices,3)';
 % 
-% velCalcDelayTotalTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW_VELOCITY_DELAY);
-% velCalcDelayTotalTimeTime = phoneData(velCalcDelayTotalTimeIndices,1)'/1000;
-% velCalcDelayTotalTime = phoneData(velCalcDelayTotalTimeIndices,3)';
-% 
+velCalcDelayTotalTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW_VELOCITY_DELAY);
+velCalcDelayTotalTimeTime = phoneData(velCalcDelayTotalTimeIndices,1)'/1000;
+velCalcDelayTotalTime = phoneData(velCalcDelayTotalTimeIndices,3)';
+
 % featureFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FEATURE_FIND_TIME);
 % featureFindTimeTime = phoneData(featureFindTimeIndices,1)'/1000;
 % featureFindTime = phoneData(featureFindTimeIndices,3)';
@@ -163,9 +163,9 @@ velCmd = phoneData(velCmdIndices,3:5)';
 % accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
 % accelCmd = phoneData(accelCmdIndices,3:5)';
 
-motorPlaneBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MOTOR_PLANE_BIAS);
-motorPlaneBiasTime = phoneData(motorPlaneBiasIndices,1)'/1000;
-motorPlaneBias = phoneData(motorPlaneBiasIndices,3:5)';
+imageOffsetIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMAGE_OFFSET);
+imageOffsetTime = phoneData(imageOffsetIndices,1)'/1000;
+imageOffset = phoneData(imageOffsetIndices,4:5)';
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
@@ -564,12 +564,12 @@ if exist('accelCmd','var') && ~isempty(accelCmd)
 end
 
 %%
-if exist('motorPlaneBias','var') && ~isempty(motorPlaneBias)
+if exist('imageOffset','var') && ~isempty(imageOffset)
 	figure(6600); clf
 % 	set(gcf,'Units','Inches');
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	plot(motorPlaneBiasTime, motorPlaneBias');hold all
+	plot(imageOffsetTime, imageOffset');hold all
 	ax = axis;
 	plot([ax(1) ax(2)],[0 0],'k--'); hold all
 	hold off

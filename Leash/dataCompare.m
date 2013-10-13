@@ -113,6 +113,7 @@ sonarHeightIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_SONAR
 sonarHeightTime = phoneData(sonarHeightIndices,1)'/1000;
 sonarHeight = phoneData(sonarHeightIndices,4)';
 
+
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
 RotQuadToPhone = createRotMat(3,-pi/4)*...
@@ -170,6 +171,9 @@ if exist('state','var') && ~isempty(state)
 		
 		plot(viconStateTime(mask), viconState(i,mask)); hold all
 		plot(stateTime, state(i,:)+offset(i)); hold all
+		if i == 7 || i == 8
+			plot(cameraPosTime,cameraPos(i-6,:),'.'); hold all
+		end
 		if i == 9
 			chad = interp1(tranStateTime,tranState',sonarHeightTime)';
 			mask = find(abs(chad(3,:)-sonarHeight) < 0.1);

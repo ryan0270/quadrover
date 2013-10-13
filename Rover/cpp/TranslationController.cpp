@@ -365,13 +365,14 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		}
 
 		// project onto unit sphere
+		// Remeber that points is already in phone coords
 		vector<Array2D<double>> spherePoints;
 		Array2D<double> p(3,1), moment(3,1,0.0);
 		for(int i=0; i<points.size(); i++)
 		{
 			p[0][0] = points[i].x;
 			p[1][0] = points[i].y;
-			p[2][0] = f;
+			p[2][0] = -f;
 
 			// Get it on the unit sphere
 			p.inject(1.0/norm2(p)*p);
@@ -379,7 +380,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 			moment += p;
 		}
 		moment = 1.0/norm2(moment)*moment;
-		moment = mRotCamToPhone*moment;
+//		moment = mRotCamToPhone*moment;
 
 		Array2D<double> desDir(3,1);
 		desDir[0][0] = 0;

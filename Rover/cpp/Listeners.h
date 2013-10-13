@@ -96,8 +96,8 @@ class CommManagerListener
 
 	virtual void onNewCommMotorOn(){};
 	virtual void onNewCommMotorOff(){};
-//	virtual void const onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float yawPID[3]){};
-	virtual void const onNewCommMotorTrim(int trim[4]){};
+//	virtual void onNewCommGainPID(float const rollPID[3], float const pitchPID[3], float yawPID[3]){};
+	virtual void onNewCommMotorTrim(const int trim[4]){};
 	virtual void onNewCommObserverReset(){};
 	virtual void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight){};
 	virtual void onNewCommTimeSync(int time){};
