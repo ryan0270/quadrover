@@ -280,7 +280,7 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 		uchar *row;
 		int step = mask.step;
 		bool isBorderRegion = false;
-		for(int j=0; j<regions[i].size(); j++)
+		for(int j=0; j<regions[i].size(); j++) 
 		{
 			int x = regions[i][j].x;
 			int y = regions[i][j].y;
