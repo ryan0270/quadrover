@@ -184,16 +184,19 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 													 double minDistance,
 													 int fastThreshold)
 {
+	cv::Mat pyrImage;
+	cv::resize(image, pyrImage, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
+	minDistance /= 2;
 	vector<cv::KeyPoint> tempKp1;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
 	int maxKp = 1000;
 	int gridRows = 3;
 	int gridCols = 3;
 	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
-	detector.detect(image, tempKp1);
-//	FAST(image, tempKp1, fastFeatureThreshold, true);
+	detector.detect(pyrImage, tempKp1);
+//	FAST(pyrImage, tempKp1, fastFeatureThreshold, true);
 	int blockSize = 5;
-	eigenValResponses(image, tempKp1, blockSize);
+	eigenValResponses(pyrImage, tempKp1, blockSize);
 
 	double maxScore = -0xFFFFFFF;
 	for(int i=0; i<tempKp1.size(); i++)
@@ -208,8 +211,8 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 
 	// group keyPoints into grid
 	const int cellSize = minDistance+0.5;
-	const int nGridX= (image.cols+cellSize-1)/cellSize;
-	const int nGridY= (image.rows+cellSize-1)/cellSize;
+	const int nGridX= (pyrImage.cols+cellSize-1)/cellSize;
+	const int nGridY= (pyrImage.rows+cellSize-1)/cellSize;
 
 	vector<vector<int> > grids(nGridX*nGridY); // stores index of keykeyPoints in each grid
 	vector<int> gridId(tempKp.size());
@@ -313,6 +316,10 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 
 	vector<cv::Point2f> points;
 	cv::KeyPoint::convert(keyPoints, points);
+
+	// resize points back to original image
+	for(int i=0; i<points.size(); i++)
+		points[i] *= 2;
 
 	return points;
 }
