@@ -52,8 +52,6 @@ Observer_Angular::Observer_Angular() :
 	mLastGoodAccel[0][0] = 0;
 	mLastGoodAccel[1][0] = 0;
 	mLastGoodAccel[2][0] = 1;
-
-	mYawOffset = 0;
 }
 
 Observer_Angular::~Observer_Angular()
@@ -253,35 +251,23 @@ void Observer_Angular::doInnovationUpdate(double dt,
 	vI = cross(-1.0*uI, mMagDirNom);
 	vI = 1.0/norm2(vI)*vI;
 
-	Array2D<double> oldInnovation = mInnovation.copy();
 	SO3 transR = mCurAttitude.inv();
 	mInnovation = mAccelWeight*cross(uB, transR*uI);
 	mInnovation += mMagWeight*cross(vB, transR*vI); 
 	mMutex_visionInnovation.lock();
-//	mInnovation[2][0] += mVisionInnovation[2][0];
-	mInnovation[2][0] = mVisionInnovation[2][0];
+	mInnovation[2][0] += mVisionInnovation[2][0];
 	mMutex_visionInnovation.unlock();
 
 	// add any extra measurements that may have come in
+	// Right now this should just be coming from Vicon
 	while(mExtraDirsMeasured.size() > 0)
 	{
 		double k = mExtraDirsWeight.back();
 		dMeas = mExtraDirsMeasured.back();
 		dInertial = mExtraDirsInertial.back();
 		Array2D<double> dir = cross(dMeas, transR*dInertial);
-//		mInnovation += k*cross(dMeas, transR*dInertial);
-		mInnovation[2][0] += k*(cross(dMeas, transR*dInertial))[2][0];
+		mInnovation += k*cross(dMeas, transR*dInertial);
 
-//if(mExtraDirsMeasured.size() == 1)
-//{
-//	Log::alert("--------------------------------------------------");
-//	Array2D<double> chad = 1.0*cross(dMeas, transR*dInertial);
-//	printArray("    dMeas: ", dMeas);
-//	printArray("dInertial: ", dInertial);
-//	printArray("   cross1: ", 1.0*cross(dMeas, dInertial));
-//	printArray("      dir: ", chad);
-//	int bob=0;
-//}
 		mExtraDirsWeight.pop_back();
 		mExtraDirsMeasured.pop_back();
 		mExtraDirsInertial.pop_back();
@@ -571,19 +557,48 @@ Log::alert("I should be here (observer angular)");
 	mMutex_data.unlock();
 }
 
+// This function is way too long, I should probably split it up sometime
 void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 {
 	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 5)
 		return; // don't set my initial nominal angle yet
 
-//	if(data->repeatRegions.size() + data->newRegions.size() < 3)
-//		return; // I want more regions for a good measurment
-
 	mMutex_targetFindTime.lock();
 	mLastTargetFindTime.setTime();
 	mMutex_targetFindTime.unlock();
 
-	// Bookeeping
+	//////////////////////////// Bookeeping ///////////////////////////////////////////
+	// check for dead regions
+	vector<size_t> deadKeys;
+	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
+	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
+		if( regionIter->second->getLife() <= 0)
+			deadKeys.push_back(regionIter->second->getId());
+	sort(deadKeys.begin(), deadKeys.end());
+
+	unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator angleIter;
+	vector<unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator> removeIters;
+	for(angleIter = mNominalDirMap.begin(); angleIter != mNominalDirMap.end(); angleIter++)
+		if( binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.first) ||
+			binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.second) )
+			removeIters.push_back(angleIter);
+
+
+	unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator timeIter;
+	vector<unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator> removeTimeIters;
+	for(timeIter = mNominalDirCreateTime.begin(); timeIter != mNominalDirCreateTime.end(); timeIter++)
+		if( binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.first) ||
+			binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.second) )
+			removeTimeIters.push_back(timeIter);
+
+	for(int i=0; i<removeIters.size(); i++)
+		mNominalDirMap.erase( removeIters[i] );
+	for(int i=0; i<removeTimeIters.size(); i++)
+		mNominalDirCreateTime.erase( removeTimeIters[i] );
+	for(int i=0; i<deadKeys.size(); i++)
+		mRegionMap.erase( deadKeys[i] );
+
+	// add new stuff
 	vector<shared_ptr<ActiveRegion>> repeatRegions;
 	repeatRegions.reserve(data->repeatRegions.size());
 	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
@@ -639,24 +654,20 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	SO3 R_x( createRotMat(0, euler[0][0]) );
 	SO3 R_y( createRotMat(1, euler[1][0]) );
 	SO3 R_z( createRotMat(2, euler[2][0]) );
-//	SO3 attYX = R_y*R_x;
-//	SO3 attYX = R_x*R_y;
-	SO3 attYX;
+//	SO3 attYX = R_x*R_y; // This is was Daewan had in his paper but I don't think it's right
+	SO3 attYX = R_y*R_x; // R_y*R_x*R_x'*R_y'*R_z'*P = R_z'*P
 	SO3 rotYX = attYX*SO3(mRotCamToPhone);
 	double f = data->imageData->focalLength;
 	double cx = data->imageData->center.x;
 	double cy = data->imageData->center.y;
 
-	// add measurements for the pairs we've seen before
+	//////////////////////////// add measurements for the pairs we've seen before ///////////////////////////////////////////
 	cv::Point2f p1, p2;
 	Array2D<double> dirMeas(3,1);
 	Array2D<double> dirNom(3,1);
-	double minOffset = PI;
-	double maxOffset = -PI;
 	Array2D<double> r1(3,1), r2(3,1);
 	vector<Array2D<double>> dirMeasList(repeatPairs.size(),Array2D<double>(3,1));
 	vector<Array2D<double>> dirNomList(repeatPairs.size(),Array2D<double>(3,1));
-	vector<double>  weightList(repeatPairs.size());
 	vector<double> offsets(repeatPairs.size());
 	for(int i=0; i<repeatPairs.size(); i++)
 	{
@@ -671,11 +682,8 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 
 		dirNom.inject(mNominalDirMap[repeatPairs[i]]);
 
-		float s1 = mRegionMap[repeatPairs[i].first]->getLife();
-		float s2 = mRegionMap[repeatPairs[i].second]->getLife();
 		dirMeasList[i].inject(dirMeas);
 		dirNomList[i].inject(dirNom);
-		weightList[i] = s1+s2;
 
 		// rotation compensation
 		r1[0][0] = p1.x - cx;
@@ -687,8 +695,6 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		r2[2][0] = f;
 
 		Array2D<double> delta = rotYX*(r2-r1);
-//printArray("delta: ",1.0/norm2(r2-r1)*(r2-r1));
-//printArray("  nom: ",dirNom);
 		double curAngle = atan2(delta[1][0], delta[0][0]);
 		double nomAngle = atan2(dirNom[1][0], dirNom[0][0]);
 		while( curAngle-nomAngle >= PI) curAngle -= 2*PI;
@@ -722,14 +728,14 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			if( abs(tempOffsets[i]-medOffset) < 0.1 )
 			{
 				double s = mNominalDirCreateTime[repeatPairs[i]].getElapsedTimeMS();
-				totalLife += s;
-				lifeList.push_back(s);
+				double e = s;
+//				double e = exp(-10*pow(tempOffsets[i]+euler[2][0],2));
+				totalLife += e;
+				lifeList.push_back(e);
 				dirMeasList.push_back(tempDirMeasList[i].copy());
 				dirNomList.push_back(tempDirNomList[i].copy());
 				angleOffset += s*tempOffsets[i];
 				offsets.push_back(offsets[i]);
-				minOffset = min(minOffset, tempOffsets[i]);
-				maxOffset = max(maxOffset, tempOffsets[i]);
 				numInliers++;
 
 				if(s > kingLife)
@@ -747,11 +753,10 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		}
 
 		angleOffset = offsets[kingIndex];
-//		angleOffset /= totalLife;
 
-		if( abs(angleOffset + euler[2][0]) < 0.1 )
+		if( abs(angleOffset + euler[2][0]) < 0.1 ) // sanity check to make sure we don't have a bad batch
 		{
-			double weight = 1.0e-3*10*10*2;
+			double weight = 0.2;
 			Array2D<double> innovation(3,1,0.0);
 			for(int i=0; i<dirMeasList.size(); i++)
 			{
@@ -765,10 +770,16 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		}
 		else
 		{
-//			Log::alert(String()+"Rejecting strange angle offset: "+angleOffset+" vs euler: "+euler[2][0]);
+// TODO: WHY IS THIS ALWAYS BIASED THE SAME DIRECTION?
+			Log::alert(String()+"Rejecting strange angle offset: "+angleOffset+" vs euler: "+euler[2][0] + "\t--- sum: " + (angleOffset+euler[2][0]) + "\t--- medOffset: " + medOffset);
 			angleOffset = -euler[2][0];
+			mMutex_visionInnovation.lock();
+			mVisionInnovation[0][0] = 0;
+			mVisionInnovation[1][0] = 0;
+			mVisionInnovation[2][0] = 0;
+			mMutex_visionInnovation.unlock();
+//			return;
 		}
-
 	}
 
 	// If we don't have any repeats just use the current angle
@@ -780,14 +791,12 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	}
 	else if(dirMeasList.size() == 0)
 	{
-		Log::alert("nothing here");
+		Log::alert(String()+"nothing here. mNominalDirMap.size() = "+(int)mNominalDirMap.size());
 		angleOffset = -euler[2][0];
+//		return;
 	}
 
-//angleOffset = mYawOffset;
-//Log::alert(String()+"angleOffset: " + angleOffset);
-
-	// set nominal directions for the known pairs
+	/////////////////////////////////////////// set nominal directions for the known pairs ///////////////////////////////////////////
 	Array2D<double> dir(3,1);
 	SO3 rot2( createRotMat(2,angleOffset) );
 	for(int i=0; i<newPairs.size(); i++)
@@ -807,41 +816,10 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		Array2D<double> delta =r2-r1;
 		delta = 1.0/norm2(delta)*delta;
 		dir = rot2.inv()*rotYX*delta;
-//printArray("adding nom: ", dir);
-//Log::alert(String()+"\tangle offset -- curAngle: "+ atan2(delta[1][0], delta[0][0]) + " vs: " + atan2(dir[1][0], dir[0][0]));
+
 		mNominalDirMap[newPairs[i]] = dir.copy();
 		mNominalDirCreateTime[newPairs[i]] = data->imageData->timestamp;
 	}
-
-	// check for dead regions
-	vector<size_t> deadKeys;
-	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
-	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
-		if( regionIter->second->getLife() <= 0)
-			deadKeys.push_back(regionIter->second->getId());
-	sort(deadKeys.begin(), deadKeys.end());
-
-	unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator angleIter;
-	vector<unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator> removeIters;
-	for(angleIter = mNominalDirMap.begin(); angleIter != mNominalDirMap.end(); angleIter++)
-		if( binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.first) ||
-			binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.second) )
-			removeIters.push_back(angleIter);
-
-
-	unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator timeIter;
-	vector<unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator> removeTimeIters;
-	for(timeIter = mNominalDirCreateTime.begin(); timeIter != mNominalDirCreateTime.end(); timeIter++)
-		if( binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.first) ||
-			binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.second) )
-			removeTimeIters.push_back(timeIter);
-
-	for(int i=0; i<removeIters.size(); i++)
-		mNominalDirMap.erase( removeIters[i] );
-	for(int i=0; i<removeTimeIters.size(); i++)
-		mNominalDirCreateTime.erase( removeTimeIters[i] );
-	for(int i=0; i<deadKeys.size(); i++)
-		mRegionMap.erase( deadKeys[i] );
 }
 
 void Observer_Angular::onNewCommObserverReset()
@@ -890,16 +868,11 @@ void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
 
 void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 {
-	mYawOffset = -data[2];
-
 	mMutex_targetFindTime.lock();
 	Time lastTargetFindTime(mLastTargetFindTime);
 	mMutex_targetFindTime.unlock();
 	if(/*mIsDoingIbvs &&*/ lastTargetFindTime.getElapsedTimeMS() < 1e3)
 		return;
-
-if(mStartTime.getElapsedTimeMS() > 40e3)
-	Log::alert("Shouldn'be using vicon");
 
 	Array2D<double> nomDir(3,1);
 	nomDir[0][0] = 1;

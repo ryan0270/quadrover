@@ -80,9 +80,9 @@ camPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_EST
 camPosTime = phoneData(camPosIndices,1)'/1000;
 camPos = phoneData(camPosIndices,3:5)';
 
-attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
-attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
-attInnovation = phoneData(attInnovationIndices,3:5)';
+% attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+% attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+% attInnovation = phoneData(attInnovationIndices,3:5)';
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);

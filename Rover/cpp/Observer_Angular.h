@@ -138,8 +138,6 @@ class Observer_Angular : public CommManagerListener,
 	// identified in the key
 	unordered_map<pair<size_t, size_t>, TNT::Array2D<double>, KeyHasher> mNominalDirMap;
 	unordered_map<pair<size_t, size_t>, Time, KeyHasher> mNominalDirCreateTime;
-
-	double mYawOffset;
 };
 
 }
