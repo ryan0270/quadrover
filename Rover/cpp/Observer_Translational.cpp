@@ -811,6 +811,9 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 
 void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 {
+	if(data == NULL || data->repeatRegions.size() + data->newRegions.size() == 0)
+		return;
+
 	// Now estimate the pos
 	mMutex_kfData.lock();
 	const Array2D<double> state = IData::interpolate(data->timestamp, mStateBuffer);

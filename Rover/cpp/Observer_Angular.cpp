@@ -13,7 +13,8 @@ Observer_Angular::Observer_Angular() :
 	mCurVel(3,1,0.0),
 	mRotCamToPhone(3,3,0.0),
 	mRotPhoneToCam(3,3,0.0),
-	mLastGoodAccel(3,1)
+	mLastGoodAccel(3,1),
+	mVisionInnovation(3,1,0.0)
 {
 	mNewAccelReady = mNewGyroReady = mNewMagReady = false;
 	mRunning = false;;
@@ -252,9 +253,14 @@ void Observer_Angular::doInnovationUpdate(double dt,
 	vI = cross(-1.0*uI, mMagDirNom);
 	vI = 1.0/norm2(vI)*vI;
 
+	Array2D<double> oldInnovation = mInnovation.copy();
 	SO3 transR = mCurAttitude.inv();
 	mInnovation = mAccelWeight*cross(uB, transR*uI);
-	mInnovation += mMagWeight*cross(vB, transR*vI);
+	mInnovation += mMagWeight*cross(vB, transR*vI); 
+	mMutex_visionInnovation.lock();
+//	mInnovation[2][0] += mVisionInnovation[2][0];
+	mInnovation[2][0] = mVisionInnovation[2][0];
+	mMutex_visionInnovation.unlock();
 
 	// add any extra measurements that may have come in
 	while(mExtraDirsMeasured.size() > 0)
@@ -263,22 +269,25 @@ void Observer_Angular::doInnovationUpdate(double dt,
 		dMeas = mExtraDirsMeasured.back();
 		dInertial = mExtraDirsInertial.back();
 		Array2D<double> dir = cross(dMeas, transR*dInertial);
-//if(mExtraDirsMeasured.size() > 5)
-//{
-//	printArray("dMeas: ", dMeas);
-//	printArray("   d2: ", transR*dInertial);
-//	printArray("  dir: ", dir);
-//	int chad = 0;
-//}
+//		mInnovation += k*cross(dMeas, transR*dInertial);
 		mInnovation[2][0] += k*(cross(dMeas, transR*dInertial))[2][0];
 
+//if(mExtraDirsMeasured.size() == 1)
+//{
+//	Log::alert("--------------------------------------------------");
+//	Array2D<double> chad = 1.0*cross(dMeas, transR*dInertial);
+//	printArray("    dMeas: ", dMeas);
+//	printArray("dInertial: ", dInertial);
+//	printArray("   cross1: ", 1.0*cross(dMeas, dInertial));
+//	printArray("      dir: ", chad);
+//	int bob=0;
+//}
 		mExtraDirsWeight.pop_back();
 		mExtraDirsMeasured.pop_back();
 		mExtraDirsInertial.pop_back();
 	}
 
-	for(int i=0; i<mGyroBias.dim1(); i++)
-		mGyroBias[i][0] += -dt*mGainI*mInnovation[i][0];
+	mGyroBias += dt*mGainI*mInnovation;
 
 	for(int i=0; i<mGyroBias.dim1(); i++)
 		logString1 = logString1+mGyroBias[i][0] + "\t";
@@ -564,11 +573,11 @@ Log::alert("I should be here (observer angular)");
 
 void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 {
-	if(mNominalDirMap.size() == 0 )
+	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 5)
 		return; // don't set my initial nominal angle yet
 
-	if(data->repeatRegions.size() + data->newRegions.size() < 10)
-		return; // I want more regions for a good measurment
+//	if(data->repeatRegions.size() + data->newRegions.size() < 3)
+//		return; // I want more regions for a good measurment
 
 	mMutex_targetFindTime.lock();
 	mLastTargetFindTime.setTime();
@@ -616,7 +625,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			{
 				double d = cv::norm(pt1-pt2);
 				// avoid keeping pairs that are too close together
-				if(d > 20)
+				if(d > 40)
 				{
 					newPairs.push_back(pr);
 					newPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
@@ -626,10 +635,13 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 
 	// For rotation compensation
 	SO3 att = data->imageData->att;
-	SO3 rot = att*SO3(mRotCamToPhone);
 	Array2D<double> euler = att.getAnglesZYX();
-//	SO3 attYX = SO3( createRotMat_ZYX(0.0, euler[1][0], euler[0][0]));
-	SO3 attYX = SO3( createRotMat(0,euler[0][0])*createRotMat(1,euler[1][0]) );
+	SO3 R_x( createRotMat(0, euler[0][0]) );
+	SO3 R_y( createRotMat(1, euler[1][0]) );
+	SO3 R_z( createRotMat(2, euler[2][0]) );
+//	SO3 attYX = R_y*R_x;
+//	SO3 attYX = R_x*R_y;
+	SO3 attYX;
 	SO3 rotYX = attYX*SO3(mRotCamToPhone);
 	double f = data->imageData->focalLength;
 	double cx = data->imageData->center.x;
@@ -639,9 +651,6 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	cv::Point2f p1, p2;
 	Array2D<double> dirMeas(3,1);
 	Array2D<double> dirNom(3,1);
-//	float weight = 1.0e-6/(2*ActiveRegion::MAX_LIFE)*10;
-//	double angleOffset = 0;
-	double weightSum = 0;
 	double minOffset = PI;
 	double maxOffset = -PI;
 	Array2D<double> r1(3,1), r2(3,1);
@@ -667,34 +676,23 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		dirMeasList[i].inject(dirMeas);
 		dirNomList[i].inject(dirNom);
 		weightList[i] = s1+s2;
-//		addDirectionMeasurement(dirMeas, dirNom, weight*(s1+s2));
 
 		// rotation compensation
 		r1[0][0] = p1.x - cx;
 		r1[1][0] = p1.y - cy;
 		r1[2][0] = f;
-//		r1 = rot*r1;
-		r1 = rotYX*r1;
-//		r1 = matmult(mRotCamToPhone, r1);
-		p1.x = r1[0][0];
-		p1.y = r1[1][0];
 
 		r2[0][0] = p2.x - cx;
 		r2[1][0] = p2.y - cy;
 		r2[2][0] = f;
-//		r2 = rot*r2;
-		r2 = rotYX*r2;
-//		r2 = matmult(mRotCamToPhone, r2);
-		p2.x = r2[0][0];
-		p2.y = r2[1][0];
 
-//		double curAngle = atan2(dirMeas[1][0], dirMeas[0][0]);
-		double curAngle = atan2(p2.y-p1.y, p2.x-p1.x);
+		Array2D<double> delta = rotYX*(r2-r1);
+//printArray("delta: ",1.0/norm2(r2-r1)*(r2-r1));
+//printArray("  nom: ",dirNom);
+		double curAngle = atan2(delta[1][0], delta[0][0]);
 		double nomAngle = atan2(dirNom[1][0], dirNom[0][0]);
 		while( curAngle-nomAngle >= PI) curAngle -= 2*PI;
 		while( curAngle-nomAngle < -PI) curAngle += 2*PI;
-//		angleOffset += (s1+s2)*(curAngle-nomAngle);
-		weightSum += s1+s2;
 		offsets[i] = curAngle-nomAngle;
 	}
 
@@ -708,39 +706,90 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		double medOffset = tempOffsets[medLoc];
 
 		// Now remove outliers
-		float weight = 1e-6*10*10*10*10*10*2;
 		int numOutliers = 0;
 		int numInliers = 0;
-		for(int i=0; i<offsets.size(); i++)
+		vector<Array2D<double>> tempDirMeasList, tempDirNomList;
+		tempDirMeasList.swap(dirMeasList);
+		tempDirNomList.swap(dirNomList);
+		tempOffsets.clear();
+		tempOffsets.swap(offsets);
+		vector<double> lifeList;
+		double totalLife = 0;
+		int kingIndex = -1;
+		int kingLife = -1;
+		for(int i=0; i<tempOffsets.size(); i++)
 		{
-			if( abs(offsets[i]-medOffset) < 0.2 )
+			if( abs(tempOffsets[i]-medOffset) < 0.1 )
 			{
-				addDirectionMeasurement(dirMeasList[i], dirNomList[i], weight);
-				angleOffset += offsets[i];
-				minOffset = min(minOffset, offsets[i]);
-				maxOffset = max(maxOffset, offsets[i]);
+				double s = mNominalDirCreateTime[repeatPairs[i]].getElapsedTimeMS();
+				totalLife += s;
+				lifeList.push_back(s);
+				dirMeasList.push_back(tempDirMeasList[i].copy());
+				dirNomList.push_back(tempDirNomList[i].copy());
+				angleOffset += s*tempOffsets[i];
+				offsets.push_back(offsets[i]);
+				minOffset = min(minOffset, tempOffsets[i]);
+				maxOffset = max(maxOffset, tempOffsets[i]);
 				numInliers++;
+
+				if(s > kingLife)
+				{
+					kingIndex = offsets.size()-1;
+					kingLife = s;
+				}
 			}
 			else // Remove this pair from history
 			{
 				mNominalDirMap.erase(repeatPairs[i]);
+				mNominalDirCreateTime.erase(repeatPairs[i]);
 				numOutliers++;
 			}
 		}
 
-if( numOutliers > 0)
-	Log::alert(String()+"numOutliers: " + numOutliers + " \tnumInliers: " + numInliers);
-		angleOffset /= repeatPairs.size();
-//if(mStartTime.getElapsedTimeMS() > 60e3)
-//	Log::alert(String()+"range: " + (maxOffset-minOffset) + " \tmin offset: " + minOffset + " \tmax offset: " + maxOffset);
-//if(maxOffset-minOffset > 0.5)
-//	int ctop = 1;
+		angleOffset = offsets[kingIndex];
+//		angleOffset /= totalLife;
+
+		if( abs(angleOffset + euler[2][0]) < 0.1 )
+		{
+			double weight = 1.0e-3*10*10*2;
+			Array2D<double> innovation(3,1,0.0);
+			for(int i=0; i<dirMeasList.size(); i++)
+			{
+				double w = weight*lifeList[i]/totalLife;
+				innovation += w*cross(dirMeasList[i], att.inv()*dirNomList[i]);
+			}
+
+			mMutex_visionInnovation.lock();
+			mVisionInnovation.inject(innovation);
+			mMutex_visionInnovation.unlock();
+		}
+		else
+		{
+//			Log::alert(String()+"Rejecting strange angle offset: "+angleOffset+" vs euler: "+euler[2][0]);
+			angleOffset = -euler[2][0];
+		}
+
 	}
 
-	// set nominal directions for the known pairs
+	// If we don't have any repeats just use the current angle
+	// estimate
 	if(mNominalDirMap.size() == 0)
+	{
+		Log::alert("Nothing to start with");
 		angleOffset = -euler[2][0];
+	}
+	else if(dirMeasList.size() == 0)
+	{
+		Log::alert("nothing here");
+		angleOffset = -euler[2][0];
+	}
+
+//angleOffset = mYawOffset;
+//Log::alert(String()+"angleOffset: " + angleOffset);
+
+	// set nominal directions for the known pairs
 	Array2D<double> dir(3,1);
+	SO3 rot2( createRotMat(2,angleOffset) );
 	for(int i=0; i<newPairs.size(); i++)
 	{
 		p1 = newPairPoints[i].first;
@@ -748,40 +797,20 @@ if( numOutliers > 0)
 		
 		// rotation compensation
 		// Right now we are assuming that the points are on horizontal planes
-		// In the future, I also need to consider whether or not this is creating
-		// a feedback loop, sinc the result will later be used to estimate the attitude
 		r1[0][0] = p1.x - cx;
 		r1[1][0] = p1.y - cy;
 		r1[2][0] = f;
-//		r1 = rot*r1;
-		r1 = rotYX*r1;
-//		r1 = matmult(mRotCamToPhone, r1);
-		p1.x = r1[0][0];
-		p1.y = r1[1][0];
 
 		r2[0][0] = p2.x - cx;
 		r2[1][0] = p2.y - cy;
 		r2[2][0] = f;
-//		r2 = rot*r2;
-		r2 = rotYX*r2;
-//		r2 = matmult(mRotCamToPhone, r2);
-		p2.x = r2[0][0];
-		p2.y = r2[1][0];
-
-//		dir[0][0] = p2.x-p1.x;
-//		dir[1][0] = p2.y-p1.y;
-//		dir[2][0] = 0;
-//		dir = 1.0/norm2(dir)*dir;
-
-		double curAngle = atan2(r2[1][0]-r1[1][0], r2[0][0]-r1[0][0]);
-		double nomAngle = curAngle-angleOffset;
-// Yaw offset when vision measurements start
-// nomAngle += 0.15;
-		dir[0][0] = cos(nomAngle);
-		dir[1][0] = sin(nomAngle);
-		dir[2][0] = 0;
-
+		Array2D<double> delta =r2-r1;
+		delta = 1.0/norm2(delta)*delta;
+		dir = rot2.inv()*rotYX*delta;
+//printArray("adding nom: ", dir);
+//Log::alert(String()+"\tangle offset -- curAngle: "+ atan2(delta[1][0], delta[0][0]) + " vs: " + atan2(dir[1][0], dir[0][0]));
 		mNominalDirMap[newPairs[i]] = dir.copy();
+		mNominalDirCreateTime[newPairs[i]] = data->imageData->timestamp;
 	}
 
 	// check for dead regions
@@ -799,8 +828,18 @@ if( numOutliers > 0)
 			binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.second) )
 			removeIters.push_back(angleIter);
 
+
+	unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator timeIter;
+	vector<unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator> removeTimeIters;
+	for(timeIter = mNominalDirCreateTime.begin(); timeIter != mNominalDirCreateTime.end(); timeIter++)
+		if( binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.first) ||
+			binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.second) )
+			removeTimeIters.push_back(timeIter);
+
 	for(int i=0; i<removeIters.size(); i++)
 		mNominalDirMap.erase( removeIters[i] );
+	for(int i=0; i<removeTimeIters.size(); i++)
+		mNominalDirCreateTime.erase( removeTimeIters[i] );
 	for(int i=0; i<deadKeys.size(); i++)
 		mRegionMap.erase( deadKeys[i] );
 }
@@ -851,11 +890,16 @@ void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
 
 void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 {
+	mYawOffset = -data[2];
+
 	mMutex_targetFindTime.lock();
 	Time lastTargetFindTime(mLastTargetFindTime);
 	mMutex_targetFindTime.unlock();
 	if(/*mIsDoingIbvs &&*/ lastTargetFindTime.getElapsedTimeMS() < 1e3)
 		return;
+
+if(mStartTime.getElapsedTimeMS() > 40e3)
+	Log::alert("Shouldn'be using vicon");
 
 	Array2D<double> nomDir(3,1);
 	nomDir[0][0] = 1;
@@ -863,7 +907,7 @@ void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 	nomDir[2][0] = 0;
 	nomDir = 1.0/norm2(nomDir)*nomDir;
 
-	double viconYaw = data[2];
+	double viconYaw = -data[2];
 	mMutex_data.lock();
 	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
 	mMutex_data.unlock();
@@ -874,8 +918,8 @@ void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 	// roll and pitch estimate such that they will cancel out when
 	// I go to calculated the innovation and am left with (mostly) 
 	// just yaw.
-	Array2D<double> R = createRotMat_ZYX(viconYaw, -curAngles[1][0], -curAngles[0][0]);
-	Array2D<double> measDir = matmult(R,nomDir);
+	Array2D<double> R = createRotMat_ZYX(viconYaw, curAngles[1][0], curAngles[0][0]);
+	Array2D<double> measDir = matmult(transpose(R),nomDir);
 
 	mMutex_data.lock();
 	mExtraDirsMeasured.push_back(measDir.copy());

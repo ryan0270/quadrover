@@ -7,7 +7,7 @@ using namespace TNT;
 using namespace ICSL::Constants;
 using namespace toadlet::egg;
 
-float ActiveRegion::MAX_LIFE=20;
+float ActiveRegion::MAX_LIFE=100;
 size_t ActiveRegion::lastID = 0;
 std::mutex ActiveRegion::mutex_lastID;
 

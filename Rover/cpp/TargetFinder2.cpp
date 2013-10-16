@@ -143,10 +143,11 @@ void TargetFinder2::run()
 			matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi_ratio, probNoCorr, imageTime);
 
 			double procTime = procStart.getElapsedTimeNS()/1.0e9;
-			if(repeatRegions.size() > 0)
+//			if(repeatRegions.size() > 0 || newRegions.size() > 0)
 			{
 				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 				imageData->image->copyTo(*imageAnnotated);
+if(repeatRegions.size() > 0 || newRegions.size() > 0)
 				drawTarget(*imageAnnotated, curRegions, repeatRegions);
 
 				shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
@@ -164,16 +165,6 @@ void TargetFinder2::run()
 
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onTargetFound2(data);
-
-//				logString = String();
-//				for(int i=0; i<target->squareData.size(); i++)
-//					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
-//				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_CENTERS, logString, LOG_FLAG_CAM_RESULTS);
-//
-//				logString = String();
-//				for(int i=0; i<target->squareData.size(); i++)
-//					logString = logString+target->squareData[i]->area+"\t";
-//				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_AREAS,logString, LOG_FLAG_CAM_RESULTS);
 
 				logString = String()+procTime;
 				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
@@ -270,6 +261,7 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 		// prevent matches
 		if(boundRect.x == 0 || boundRect.y == 0 ||
 			boundRect.x+boundRect.width == pyrImage.cols || boundRect.y+boundRect.height == pyrImage.rows )
+			continue;
 
 		boundRect.x = max(0, boundRect.x-border);
 		boundRect.y = max(0, boundRect.y-border);

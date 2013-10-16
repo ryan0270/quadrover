@@ -584,6 +584,9 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 
 	void TranslationController::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 	{
+		if(data == NULL || (data->repeatRegions.size() + data->newRegions.size()) == 0)
+			return;
+
 		mMutex_target.lock();
 		mTarget2Data = data;
 		mMutex_target.unlock();
