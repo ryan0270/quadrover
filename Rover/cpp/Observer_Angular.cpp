@@ -754,32 +754,60 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 
 		angleOffset = offsets[kingIndex];
 
-		if( abs(angleOffset + euler[2][0]) < 0.1 ) // sanity check to make sure we don't have a bad batch
+		if( abs(medOffset+euler[2][0]) < 0.1)
 		{
+			Array2D<double> dirMeas(3,1), dirNom(3,1,0.0);
+			dirNom[1][0] = 1;
+			dirNom[0][0] = 0;
+			dirNom[0][0] = 0;
+
+			Array2D<double> R = createRotMat_ZYX(-medOffset, euler[1][0], euler[0][0]);
+			dirMeas = matmult(transpose(R), dirNom);
+
 			double weight = 0.2;
-			Array2D<double> innovation(3,1,0.0);
-			for(int i=0; i<dirMeasList.size(); i++)
-			{
-				double w = weight*lifeList[i]/totalLife;
-				innovation += w*cross(dirMeasList[i], att.inv()*dirNomList[i]);
-			}
+			Array2D<double> innovation = weight*cross(dirMeas, att.inv()*dirNom);
+			angleOffset = medOffset;
+
 
 			mMutex_visionInnovation.lock();
-			mVisionInnovation.inject(innovation);
+			mVisionInnovation[0][0] = 0;
+			mVisionInnovation[1][0] = 0;
+			mVisionInnovation[2][0] = weight*(medOffset+euler[2][0]);
 			mMutex_visionInnovation.unlock();
 		}
 		else
 		{
-// TODO: WHY IS THIS ALWAYS BIASED THE SAME DIRECTION?
-			Log::alert(String()+"Rejecting strange angle offset: "+angleOffset+" vs euler: "+euler[2][0] + "\t--- sum: " + (angleOffset+euler[2][0]) + "\t--- medOffset: " + medOffset);
 			angleOffset = -euler[2][0];
 			mMutex_visionInnovation.lock();
 			mVisionInnovation[0][0] = 0;
 			mVisionInnovation[1][0] = 0;
 			mVisionInnovation[2][0] = 0;
 			mMutex_visionInnovation.unlock();
-//			return;
 		}
+
+//		if( abs(angleOffset + euler[2][0]) < 0.1 ) // sanity check to make sure we don't have a bad batch
+//		{
+//			double weight = 0.2;
+//			Array2D<double> innovation(3,1,0.0);
+//			for(int i=0; i<dirMeasList.size(); i++)
+//			{
+//				double w = weight*lifeList[i]/totalLife;
+//				innovation += w*cross(dirMeasList[i], att.inv()*dirNomList[i]);
+//			}
+//
+//		}
+//		else
+//		{
+//// TODO: WHY IS THIS ALWAYS BIASED THE SAME DIRECTION?
+//			Log::alert(String()+"Rejecting strange angle offset: "+angleOffset+" vs euler: "+euler[2][0] + "\t--- sum: " + (angleOffset+euler[2][0]) + "\t--- medOffset: " + medOffset);
+//			angleOffset = -euler[2][0];
+//			mMutex_visionInnovation.lock();
+//			mVisionInnovation[0][0] = 0;
+//			mVisionInnovation[1][0] = 0;
+//			mVisionInnovation[2][0] = 0;
+//			mMutex_visionInnovation.unlock();
+////			return;
+//		}
 	}
 
 	// If we don't have any repeats just use the current angle
