@@ -78,6 +78,11 @@ int main(int argv, char* argc[])
 			startImg = 989;
 			endImg = 3850;
 			break;
+		case 5:
+			dataDir = "../dataSets/Oct13";
+			startImg = 4029;
+			endImg = 6546;
+			break;
 	}
 
 	string imgDir;
@@ -232,7 +237,7 @@ int main(int argv, char* argc[])
 	logMask |= LOG_FLAG_STATE_DES;
 //	logMask |= LOG_FLAG_MOTORS;
 	logMask |= LOG_FLAG_OBSV_UPDATE;
-//	logMask |= LOG_FLAG_OBSV_BIAS;
+	logMask |= LOG_FLAG_OBSV_BIAS;
 //	logMask |= LOG_FLAG_MAGNOMETER;
 //	logMask |= LOG_FLAG_ACCEL;
 //	logMask |= LOG_FLAG_GYRO;
@@ -264,8 +269,8 @@ int main(int argv, char* argc[])
 		void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 		{
 			stringstream ss;
-			ss << imgDir << "/annotated_target/img_" << imgCnt++ << ".bmp";
-//			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
+			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
 			imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated));
 			cv::waitKey(1);
 		};
@@ -382,7 +387,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 500e3;
+	int endTimeDelta = 400e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz

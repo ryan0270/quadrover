@@ -46,6 +46,7 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 	float getArea() const {return mMoments.m00;}
 	int getId() const {return mId;}
 	const vector<shared_ptr<ActiveRegion>> &getNeighbors() const {return mNeighbors;}
+	const Time &getCreateTime() const {return mCreateTime;}
 
 	// assumes moments have already been calculated
 	void calcPrincipalAxes();
@@ -73,7 +74,7 @@ class ActiveRegion : public enable_shared_from_this<ActiveRegion>
 	protected:
 	std::vector<cv::Point> mContour;
 	cv::Point2f mFoundPos, mPrevFoundPos;
-	ICSL::Quadrotor::Time mLastFoundTime;
+	ICSL::Quadrotor::Time mLastFoundTime, mCreateTime;;
 	float mLife;
 	cv::Moments mMoments;
 	int mId;

@@ -29,7 +29,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 4;
+	int dataSet = 5;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -57,8 +57,12 @@ int main(int argv, char* argc[])
 		case 4:
 			dataDir = "../dataSets/Oct3_2";
 			startImg = 989;
-//			startImg += 150;
 			endImg = 3850;
+			break;
+		case 5:
+			dataDir = "../dataSets/Oct13";
+			startImg = 4029;
+			endImg = 6546;
 			break;
 	}
 
@@ -197,9 +201,9 @@ Time start;
 			repeatContours[i] = repeatRegions[i]->getContour();
 		cv::drawContours(img, repeatContours, -1, cv::Scalar(0,0,255), 2);
 
-//		stringstream name;
-//		name << imgDir << "/annotated/img_" << imgCnt << ".bmp";
-//		imwrite(name.str().c_str(),img);
+		stringstream name;
+		name << imgDir << "/annotated/img_" << imgCnt << ".bmp";
+		imwrite(name.str().c_str(),img);
 
 		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
 		cv::Point2f offset(321,0);
@@ -207,7 +211,7 @@ Time start;
 			line(dblImg,goodMatches[i].aoPrev->getPrevFoundPos(), goodMatches[i].aoCur->getFoundPos()+offset, cv::Scalar(0,255,0), 2);
 		imshow("tom",dblImg);
 
-		keypress = cv::waitKey(0) % 256;
+		keypress = cv::waitKey(1) % 256;
 
 		imgIter++;
 		imgCnt++;

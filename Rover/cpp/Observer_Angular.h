@@ -90,7 +90,8 @@ class Observer_Angular : public CommManagerListener,
 	bool mDoingBurnIn;
 	double mGainP, mGainI;
 	double mAccelWeight, mMagWeight;
-	TNT::Array2D<double> mGyroBias, mInnovation;
+	TNT::Array2D<double> mGyroBias;
+	TNT::Array2D<double> mInnovation, mVisionInnovation;
 	TNT::Array2D<double> mCurVel;
 	SO3 mCurAttitude;
 	shared_ptr<DataVector<double>>  mAccelData, mGyroData, mMagData; // use this for copying data from SensorManager updates
@@ -105,7 +106,7 @@ class Observer_Angular : public CommManagerListener,
 
 	Time mStartTime;
 	int mBurnCount;
-	std::mutex mMutex_data, mMutex_cache;
+	std::mutex mMutex_data, mMutex_cache, mMutex_visionInnovation;
 
 	toadlet::egg::Collection<Observer_AngularListener*> mListeners;
 
@@ -136,6 +137,7 @@ class Observer_Angular : public CommManagerListener,
 	// the nominal direction vector between the pair of regions
 	// identified in the key
 	unordered_map<pair<size_t, size_t>, TNT::Array2D<double>, KeyHasher> mNominalDirMap;
+	unordered_map<pair<size_t, size_t>, Time, KeyHasher> mNominalDirCreateTime;
 
 	double mYawOffset;
 };

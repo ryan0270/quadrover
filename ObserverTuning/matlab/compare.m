@@ -34,11 +34,11 @@ angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_AT
 angleStateTime = phoneData(angleStateIndices,1)'/1000;
 angleState = phoneData(angleStateIndices,4:9)';
 
-tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
-tranStateTime = phoneData(tranStateIndices,1)'/1000;
-tranState = phoneData(tranStateIndices,3:8)';
-accelBiasTime = tranStateTime;
-accelBias = phoneData(tranStateIndices,9:11)';
+% tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
+% tranStateTime = phoneData(tranStateIndices,1)'/1000;
+% tranState = phoneData(tranStateIndices,3:8)';
+% accelBiasTime = tranStateTime;
+% accelBias = phoneData(tranStateIndices,9:11)';
 % 
 % attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
 % attBiasTime = phoneData(attBiasIndices,1)'/1000;
@@ -79,6 +79,10 @@ targetLoc = phoneData(targetLocIndices,3:8)';
 camPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_ESTIMATED_POS);
 camPosTime = phoneData(camPosIndices,1)'/1000;
 camPos = phoneData(camPosIndices,3:5)';
+
+attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+attInnovation = phoneData(attInnovationIndices,3:5)';
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
@@ -170,6 +174,7 @@ if exist('angleState','var') && ~isempty(angleState)
 				 0*find(angleStateTime(1,:) > 0.05,1,'first');
 				 0*find(angleStateTime > mapVelTime(1),1,'first')
 				 1]);
+start = 1;			 
 	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
 	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
 	err = err-diag(mean(err,2))*ones(size(err));
@@ -346,6 +351,17 @@ if exist('imageOffset','var') && ~isempty(imageOffset)
 	plot(imageOffset(1,:), imageOffset(2,:));
 	xlabel('x');
 	ylabel('y');
+end
+
+%%
+if exist('attInnovation','var') && ~isempty(attInnovation)
+	figure(8907348);
+	for i=1:3
+		subplot(1,3,i)
+		plot(attInnovationTime, attInnovation(i,:));
+		xlabel('Time');
+		ylabel('Innovation');
+	end
 end
 
 
