@@ -7,9 +7,9 @@ disp('start chadding')
 %%
 % dataDir = '../dataSets/Sep8';
 % dataDir = '../dataSets/Sep12';
-% dataDir = '../dataSets/Sep19';
+dataDir = '../dataSets/Sep19';
 % dataDir = '../dataSets/Sep23';
-dataDir = '../dataSets/Oct3_2';
+% dataDir = '../dataSets/Oct3_2';
 viconFile = [dataDir '/pcData.txt'];
 viconData = importdata(viconFile,'\t',0);
 
@@ -80,9 +80,9 @@ camPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_EST
 camPosTime = phoneData(camPosIndices,1)'/1000;
 camPos = phoneData(camPosIndices,3:5)';
 
-% attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
-% attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
-% attInnovation = phoneData(attInnovationIndices,3:5)';
+attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+attInnovation = phoneData(attInnovationIndices,3:5)';
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
