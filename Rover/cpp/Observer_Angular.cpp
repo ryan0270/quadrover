@@ -112,6 +112,8 @@ void Observer_Angular::run()
 	gyroData = accelData = magData = NULL;
 	Array2D<double> lastInnovation(3,1,0.0);
 	double gyroDT;
+//	int burnTotal = 2000;
+	int burnTotal = 1000;
 	while(mRunning)
 	{
 		if(mNewGyroReady)
@@ -121,7 +123,7 @@ void Observer_Angular::run()
 			mMutex_cache.unlock();
 
 			mMutex_data.lock();
-			if(mDoingBurnIn && mBurnCount < 2000)
+			if(mDoingBurnIn && mBurnCount < burnTotal)
 			{
 				if(gyroData != NULL)
 				{
@@ -135,7 +137,7 @@ void Observer_Angular::run()
 //				if(magData != NULL) {magData->lock(); magSum += magData->data; magData->unlock();}
 //				if(accelData != NULL) {accelData->lock(); accelSum += accelData->data; accelData->unlock();}
 				mBurnCount++;
-				if(mBurnCount == 2000)
+				if(mBurnCount == burnTotal)
 				{
 					mDoingBurnIn = false;
 					mGyroBias.inject(1.0/mBurnCount*gyroSum);
@@ -507,7 +509,7 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 
 void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 {
-Log::alert("I should be here (observer angular)");
+Log::alert("I shouldn't be here (observer angular)");
 	if(data->target == NULL)
 		return;
 
@@ -813,13 +815,10 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	// If we don't have any repeats just use the current angle
 	// estimate
 	if(mNominalDirMap.size() == 0)
-	{
-		Log::alert("Nothing to start with");
 		angleOffset = -euler[2][0];
-	}
 	else if(dirMeasList.size() == 0)
 	{
-		Log::alert(String()+"nothing here. mNominalDirMap.size() = "+(int)mNominalDirMap.size());
+//		Log::alert(String()+"nothing here. mNominalDirMap.size() = "+(int)mNominalDirMap.size());
 		angleOffset = -euler[2][0];
 //		return;
 	}

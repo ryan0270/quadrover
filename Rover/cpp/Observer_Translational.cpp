@@ -535,10 +535,11 @@ void Observer_Translational::onNewCommStateVicon(const Collection<float> &data)
 
 	if(!mHaveFirstVicon)
 	{
+		double sonarOffset = -0.1;
 		mMutex_kfData.lock();
 		mStateKF[0][0] = pos[0][0];
 		mStateKF[1][0] = pos[1][0];
-		mStateKF[2][0] = pos[2][0];
+		mStateKF[2][0] = pos[2][0]+sonarOffset;
 
 		mStateBuffer.clear();
 		mErrCovKFBuffer.clear();

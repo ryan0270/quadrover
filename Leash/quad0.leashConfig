@@ -2,13 +2,13 @@
 <Controller>
    <Translation>
       <P>
-         <x>4.000000</x>
-         <y>4.000000</y>
+         <x>1.000000</x>
+         <y>1.000000</y>
          <z>3.000000</z>
       </P>
       <D>
-         <x>4.000000</x>
-         <y>4.000000</y>
+         <x>2.000000</x>
+         <y>2.000000</y>
          <z>3.000000</z>
       </D>
       <I>
@@ -37,13 +37,13 @@
    </IBVS>
    <Attitude>
       <P>
-         <x>0.500000</x>
-         <y>0.500000</y>
+         <x>0.200000</x>
+         <y>0.200000</y>
          <z>1.000000</z>
       </P>
       <D>
-         <x>0.200000</x>
-         <y>0.200000</y>
+         <x>0.100000</x>
+         <y>0.100000</y>
          <z>1.000000</z>
       </D>
    </Attitude>
@@ -99,10 +99,10 @@
    <MotorArmLength>0.200000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
-      <North>-30.000000</North>
-      <East>30.000000</East>
-      <South>-50.000000</South>
-      <West>50.000000</West>
+      <North>-40.000000</North>
+      <East>75.000000</East>
+      <South>-120.000000</South>
+      <West>75.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
@@ -114,7 +114,7 @@
    <MeasurementCov>15.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
-<LogMask>5083</LogMask>
+<LogMask>5087</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
-<IP>192.168.100.107</IP>
+<IP>192.168.100.130</IP>
 <Port>13120</Port>
