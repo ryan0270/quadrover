@@ -37,7 +37,7 @@ using namespace TNT;
 
 		mDesAccel[2][0] = GRAVITY;
 
-		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.045), createRotMat(0,-0.015) ) );
+		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.0), createRotMat(0,-0.0) ) );
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
@@ -105,20 +105,14 @@ using namespace TNT;
 		rotErr[1][0] = rotMatErr_AS[0][2];
 		rotErr[2][0] = rotMatErr_AS[1][0];
 
-		// HACK HACK HACk
-		Array2D<double> offset(3,1);
-		offset[0][0] = 0;
-		offset[1][0] = 0.02;
-		offset[2][0] = -0.02;
-	
 		mMutex_data.lock();
-		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*mCurAngularVel+offset;
+		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*mCurAngularVel;
 		double cmdRoll = torque[0][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdPitch = torque[1][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdYaw = torque[2][0]/mTorqueScaling/4.0;
 		double cmdThrust = mThrust/mForceScaling/4.0;
 		mMutex_data.unlock();
-
+		
 		double cmds[4];
 		bool sane = false;
 		int cnt = 0;
@@ -162,9 +156,6 @@ using namespace TNT;
 
 			cnt++;
 		}
-				
-//		for(int i=0; i<4; i++)
-//			cmds[i] = min((double)(1 << 11), max(0.0, cmds[i]));
 
 		Collection<uint16> motorCmds(4);
 		if(mPcIsConnected)

@@ -194,8 +194,8 @@ void SensorManager::run()
 //		double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
 //		double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
 
-	double accelOffX = -0.15;
-	double accelOffY = 0.08;
+	double accelOffX = -0.08;
+	double accelOffY = -0.15;
 	double accelOffZ = -0.4;
 
 	Array2D<double> accelCalibrated(3,1), gyroCalibrated(3,1), magCalibrated(3,1);

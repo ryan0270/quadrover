@@ -355,27 +355,27 @@ public class RoverService extends Service
 
 	public Bitmap getImage()
 	{
-		if(pcIsConnected())
+//		if(pcIsConnected())
 			return null;
 
-		try{
-			if(mImage == null)
-				mImage = new Mat(240,320,CvType.CV_8UC3);
-//				mImage = new Mat(480,640,CvType.CV_8UC3);
-
-			if( getImage(mImage.getNativeObjAddr()) )
-				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
-			else
-				return null;
-			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
-				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
-			Utils.matToBitmap(mImage, mBmp);
-		} catch(Exception e){
-			Log.e(ME,e.toString());
-			mImage = null;
-			mBmp = null;
-		}
-		return mBmp;
+//		try{
+//			if(mImage == null)
+//				mImage = new Mat(240,320,CvType.CV_8UC3);
+////				mImage = new Mat(480,640,CvType.CV_8UC3);
+//
+//			if( getImage(mImage.getNativeObjAddr()) )
+//				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
+//			else
+//				return null;
+//			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
+//				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
+//			Utils.matToBitmap(mImage, mBmp);
+//		} catch(Exception e){
+//			Log.e(ME,e.toString());
+//			mImage = null;
+//			mBmp = null;
+//		}
+//		return mBmp;
 	}
 
 	public void openAccessory(UsbAccessory accessory)
@@ -557,8 +557,14 @@ public class RoverService extends Service
 		public void run()
 		{
 			mRunning = true;
+			long lastTime = System.nanoTime();
+			long curTime;
 			while(mRunning)
 			{
+				curTime = System.nanoTime();
+//				if(curTime-lastTime > 4e6)
+//					Log.i(ME, "Long time: " + String.valueOf((int)((curTime-lastTime)/1.e6 + 0.5)));
+				lastTime = curTime;
 
 				int[] cmds = getMotorCmds();
 				if(cmds.length == 4)
