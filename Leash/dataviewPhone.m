@@ -79,9 +79,9 @@ velCalcDelayTotalTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LO
 velCalcDelayTotalTimeTime = phoneData(velCalcDelayTotalTimeIndices,1)'/1000;
 velCalcDelayTotalTime = phoneData(velCalcDelayTotalTimeIndices,3)';
 
-% featureFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FEATURE_FIND_TIME);
-% featureFindTimeTime = phoneData(featureFindTimeIndices,1)'/1000;
-% featureFindTime = phoneData(featureFindTimeIndices,3)';
+featureFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FEATURE_FIND_TIME);
+featureFindTimeTime = phoneData(featureFindTimeIndices,1)'/1000;
+featureFindTime = phoneData(featureFindTimeIndices,3)';
 
 % gyroBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO_BIAS);
 % gyroBiasTime = phoneData(gyroBiasIndices,1)'/1000;
@@ -174,7 +174,7 @@ if exist('cpuUsage','var') && ~isempty(cpuUsage)
 	xlabel('Time [s]');
 	ylabel('Usage ratio');
 % 	legend('total','cpu0','cpu1','cpu2','cpu2')
-	axis([cpuUsageTime(1) cpuUsageTime(end) 0 1])
+% 	axis([cpuUsageTime(1) cpuUsageTime(end) 0 1])
 end
 
 %%
@@ -260,9 +260,9 @@ if exist('mag','var') && ~isempty(mag)
     labelsMag = {'Mag x [\muT]' 'Mag y [\muT]' 'Mag z [\muT]'};
 
     figure(baseFigMag+5);
-    set(gcf,'Units','Inches');
-    curPos = get(gcf,'Position'); figSize = [6 4];
-    set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+%     set(gcf,'Units','Inches');
+%     curPos = get(gcf,'Position'); figSize = [6 4];
+%     set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
     resetIndex = [];
     for i=1:3
         subplot(3,1,i)
@@ -354,12 +354,12 @@ if ~isempty(motorCmd)
 end
 
 %%
-% if exist('featureFindTime','var') && ~isempty(featureFindTime)
-% 	figure(601);
-% 	plot(featureFindTimeTime, featureFindTime*1000);
-% 	xlabel('Time [s]');
-% 	ylabel('Feature find time [ms]');
-% end
+if exist('featureFindTime','var') && ~isempty(featureFindTime)
+	figure(601);
+	plot(featureFindTimeTime, featureFindTime*1000,'.');
+	xlabel('Time [s]');
+	ylabel('Feature find time [ms]');
+end
 
 %%
 % if exist('mapVelCalcTime','var') && ~isempty(mapVelCalcTime)
