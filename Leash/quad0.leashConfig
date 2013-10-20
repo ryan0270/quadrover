@@ -4,12 +4,12 @@
       <P>
          <x>0.000000</x>
          <y>0.000000</y>
-         <z>1.000000</z>
+         <z>3.000000</z>
       </P>
       <D>
          <x>0.000000</x>
          <y>0.000000</y>
-         <z>1.000000</z>
+         <z>3.000000</z>
       </D>
       <I>
          <x>0.000000</x>
@@ -37,14 +37,14 @@
    </IBVS>
    <Attitude>
       <P>
-         <x>0.000000</x>
-         <y>0.000000</y>
-         <z>0.000000</z>
+         <x>0.250000</x>
+         <y>0.250000</y>
+         <z>1.000000</z>
       </P>
       <D>
-         <x>0.100000</x>
-         <y>0.100000</y>
-         <z>0.100000</z>
+         <x>0.150000</x>
+         <y>0.150000</y>
+         <z>2.000000</z>
       </D>
    </Attitude>
 </Controller>
@@ -99,10 +99,10 @@
    <MotorArmLength>0.200000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
-      <North>-40.000000</North>
-      <East>70.000000</East>
-      <South>-80.000000</South>
-      <West>50.000000</West>
+      <North>-60.000000</North>
+      <East>90.000000</East>
+      <South>-100.000000</South>
+      <West>70.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
