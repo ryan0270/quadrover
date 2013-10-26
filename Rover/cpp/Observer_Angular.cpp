@@ -296,7 +296,7 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 
 	mMutex_data.lock();
 //	gyroData->lock();
-	mCurVel.inject(gyroData->data - mGyroBias);
+	mCurVel.inject(gyroData->dataCalibrated - mGyroBias);
 	Time gyroTime( gyroData->timestamp);
 //	gyroData->unlock();
 	Array2D<double> gyro = mCurVel+mGainP*mInnovation;
