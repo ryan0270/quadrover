@@ -337,6 +337,7 @@ class ImageTranslationData : public IData
 	ImageTranslationData() : IData() {type = DATA_TYPE_IMAGE_TRANSLATION;}
 	shared_ptr<ImageTargetFind2Data> imageTargetFind2Data;
 	vector<cv::Point2f> goodPoints; // location of found points, already adjusted for current attitude and image offset
+	vector<cv::Point2f> nominalPoints; // nominal location of the respective found points
 };
 
 template <class T>

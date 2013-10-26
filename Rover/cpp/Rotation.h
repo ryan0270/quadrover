@@ -145,8 +145,6 @@ inline SO3 operator*(const SO3 &lhs, SO3 rhs)
 	return rhs;
 }
 
-// TODO: Probably faster to do direct quaternion multiplication
-// but I'm not sure the exact math for that yet
 template <class T>
 inline TNT::Array2D<T> operator*(const SO3 &lhs, const TNT::Array2D<T> &v)
 {

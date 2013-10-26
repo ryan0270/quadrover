@@ -112,8 +112,8 @@ void Observer_Angular::run()
 	gyroData = accelData = magData = NULL;
 	Array2D<double> lastInnovation(3,1,0.0);
 	double gyroDT;
-//	int burnTotal = 2000;
-	int burnTotal = 1000;
+	int burnTotal = 2000;
+//	int burnTotal = 1000;
 	while(mRunning)
 	{
 		if(mNewGyroReady)

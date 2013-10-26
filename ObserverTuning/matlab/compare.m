@@ -52,9 +52,9 @@ mapVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
 mapVelTime = phoneData(mapVelIndices,1)'/1000;
 mapVel = phoneData(mapVelIndices,3:5)';
 
-% velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
-% velCmdTime = phoneData(velCmdIndices,1)'/1000;
-% velCmd = phoneData(velCmdIndices,3:5)';
+velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
+velCmdTime = phoneData(velCmdIndices,1)'/1000;
+velCmd = phoneData(velCmdIndices,3:5)';
 
 accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CMD);
 accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
@@ -80,9 +80,9 @@ camPosIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_EST
 camPosTime = phoneData(camPosIndices,1)'/1000;
 camPos = phoneData(camPosIndices,3:5)';
 
-attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
-attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
-attInnovation = phoneData(attInnovationIndices,3:5)';
+% attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+% attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+% attInnovation = phoneData(attInnovationIndices,3:5)';
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
@@ -286,7 +286,7 @@ end
 
 %%
 if exist('velCmd','var') && ~isempty(velCmd)
-	figure(6); clf
+	figure(685); clf
 % 	set(gcf,'Units','Inches');
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);

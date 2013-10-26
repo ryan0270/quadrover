@@ -870,6 +870,7 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	cv::Point2f imageOffset(0,0);
 	vector<float> offsetsX(repeatPoints.size());
 	vector<float> offsetsY(repeatPoints.size());
+	vector<cv::Point2f> nominalPoints(repeatPoints.size());
 	if(repeatPoints.size() > 0)
 	{
 		float lifeSum = 0;
@@ -884,14 +885,17 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 			life = repeatRegions[i]->getLife();
 			offsetsX[i] = repeatPoints[i].x-nom.x;
 			offsetsY[i] = repeatPoints[i].y-nom.y;
+
+			nominalPoints[i] = nom;
 		}
 	}
 
 	// Outlier rejection
 	int numInliers = 0;
 	int numOutliers = 0;
-	vector<cv::Point2f> goodPoints;
+	vector<cv::Point2f> goodPoints, tempNominalPoints;
 	goodPoints.reserve(repeatPoints.size());
+	tempNominalPoints.swap(nominalPoints);
 	if(offsetsX.size() > 0)
 	{
 		cv::Point2f medOffset;
@@ -913,6 +917,8 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 				goodPoints.push_back(repeatPoints[i]);
 				goodPoints.back().x += offsetsX[i];
 				goodPoints.back().y += offsetsY[i];
+
+				nominalPoints.push_back(tempNominalPoints[i]);
 			}
 			else
 			{
@@ -943,6 +949,7 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		xlateData->timestamp.setTime(data->timestamp);
 		xlateData->imageTargetFind2Data = data;
 		xlateData->goodPoints.swap(goodPoints);
+		xlateData->nominalPoints.swap(nominalPoints);
 		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onObserver_TranslationalImageProcessed(xlateData);

@@ -382,11 +382,23 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		moment = 1.0/norm2(moment)*moment;
 //		moment = mRotCamToPhone*moment;
 
-		Array2D<double> desDir(3,1);
-		desDir[0][0] = 0;
-		desDir[1][0] = 0;
-		desDir[2][0] = -1;
-		Array2D<double> desMoment = desDir;
+		Array2D<double> desMoment(3,1,0.0), temp(3,1);
+		vector<cv::Point2f> nominalPoints = xlateData->nominalPoints;
+		for(int i=0; i<nominalPoints.size(); i++)
+		{
+			temp[0][0] = nominalPoints[i].x;
+			temp[1][0] = nominalPoints[i].y;
+			temp[2][0] = -f;
+
+			desMoment += 1.0/norm2(temp)*temp;
+		}
+		desMoment = 1.0/norm2(desMoment)*desMoment;
+
+//		Array2D<double> desDir(3,1);
+//		desDir[0][0] = 0;
+//		desDir[1][0] = 0;
+//		desDir[2][0] = -1;
+//		Array2D<double> desMoment = desDir;
 
 		mMutex_state.lock();
 		Array2D<double> curState = mCurState.copy();
