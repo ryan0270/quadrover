@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mkdir -p video 
+adb pull /mnt/sdcard/RoverService/video/ video/
