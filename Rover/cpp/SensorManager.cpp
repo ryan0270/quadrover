@@ -198,6 +198,8 @@ void SensorManager::run()
 	double accelOffY = -0.15;
 	double accelOffZ = -0.4;
 
+	double gyroScale[] = {0.9, 0.97, 0.95};
+
 	Array2D<double> accelCalibrated(3,1), gyroCalibrated(3,1), magCalibrated(3,1);
 
 	mDone = false;
@@ -263,7 +265,10 @@ void SensorManager::run()
 						data->type = DATA_TYPE_GYRO;
 						static_pointer_cast<DataVector<double> >(data)->data = mLastGyro.copy();
 // TODO: Apply gyro bias estimate for the calibrated data
-						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = mLastGyro.copy();
+						gyroCalibrated.inject(mLastGyro);
+//						for(int i=0; i<3; i++)
+//							gyroCalibrated[i][0] /= gyroScale[i];
+						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = gyroCalibrated.copy();
 						mMutex_data.unlock();
 					}
 					break;
@@ -378,9 +383,6 @@ void SensorManager::runHeightMonitor()
 //			}
 //
 //			// simulate a 20Hz update rate for now
-//			// in the future this will be small but
-//			// mNewHeightAvailable is the flag for new
-//			// data
 //			System::msleep(50);
 //		}
 }
