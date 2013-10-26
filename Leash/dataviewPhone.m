@@ -159,9 +159,9 @@ velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
 velCmdTime = phoneData(velCmdIndices,1)'/1000;
 velCmd = phoneData(velCmdIndices,3:5)';
 
-% accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CMD);
-% accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
-% accelCmd = phoneData(accelCmdIndices,3:5)';
+accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CMD);
+accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
+accelCmd = phoneData(accelCmdIndices,3:5)';
 
 imageOffsetIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMAGE_OFFSET);
 imageOffsetTime = phoneData(imageOffsetIndices,1)'/1000;
@@ -565,7 +565,7 @@ end
 
 %%
 if exist('imageOffset','var') && ~isempty(imageOffset)
-	figure(6600); clf
+	figure(6700); clf
 % 	set(gcf,'Units','Inches');
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);

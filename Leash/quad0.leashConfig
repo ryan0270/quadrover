@@ -25,8 +25,8 @@
    </Translation>
    <IBVS>
       <P>
-         <x>1.000000</x>
-         <y>1.000000</y>
+         <x>0.750000</x>
+         <y>0.750000</y>
          <z>2.000000</z>
       </P>
       <D>
@@ -100,9 +100,9 @@
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
       <North>-30.000000</North>
-      <East>60.000000</East>
+      <East>50.000000</East>
       <South>-70.000000</South>
-      <West>40.000000</West>
+      <West>50.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
