@@ -815,7 +815,6 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	if(data == NULL || data->repeatRegions.size() + data->newRegions.size() == 0)
 		return;
 
-	// Now estimate the pos
 	mMutex_kfData.lock();
 	const Array2D<double> state = IData::interpolate(data->timestamp, mStateBuffer);
 	mMutex_kfData.unlock();
@@ -825,7 +824,24 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	if( data->repeatRegions.size() + data->newRegions.size() < 5)
 		return;
 
-	// Bookeeping
+	///////////////////////////////// Bookeeping /////////////////////////////////////////
+	// check for dead regions
+	vector<size_t> deadKeys;
+	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
+	regionIter = mRegionMap.begin();
+	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
+	{
+		if( regionIter->second->getLife() <= 0)
+			deadKeys.push_back(regionIter->second->getId());
+	}
+
+	for(int i=0; i<deadKeys.size(); i++)
+	{
+		mRegionNominalPosMap.erase( deadKeys[i] );
+		mRegionMap.erase( deadKeys[i] );
+	}
+
+	///////////////////////////////// Bookeeping /////////////////////////////////////////
 	vector<shared_ptr<ActiveRegion>> repeatRegions;
 	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
 
@@ -901,10 +917,15 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		cv::Point2f medOffset;
 		vector<float> tempOffsetsX = offsetsX;
 		size_t medLoc = tempOffsetsX.size()/2;
-		nth_element(tempOffsetsX.begin(), tempOffsetsX.begin()+medLoc, tempOffsetsX.end());
+//		nth_element(tempOffsetsX.begin(), tempOffsetsX.begin()+medLoc, tempOffsetsX.end());
+// nth_element is giving me problems here so sort for now
+		sort(tempOffsetsX.begin(), tempOffsetsX.end());
 		medOffset.x = tempOffsetsX[medLoc];
+
 		vector<float> tempOffsetsY = offsetsY;
-		nth_element(tempOffsetsY.begin(), tempOffsetsY.begin()+medLoc, tempOffsetsY.end());
+//		nth_element(tempOffsetsY.begin(), tempOffsetsY.begin()+medLoc, tempOffsetsY.end());
+// nth_element is giving me problems here so sort for now
+		sort(tempOffsetsY.begin(), tempOffsetsY.end());
 		medOffset.y = tempOffsetsY[medLoc];
 
 		// Now keep only offsets close to the median
@@ -957,14 +978,15 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	}
 		
 	// Set the nominal position for the new regions
+	cv::Point2f newPoint;
 	for(int i=0; i<newPoints.size(); i++)
 	{
 		mRegionMap[newRegions[i]->getId()] = newRegions[i];
-		cv::Point2f p= newPoints[i]-imageOffset;
+		newPoint = newPoints[i]-imageOffset;
 		// scale the nominal point to how it would appear at 1m
-		p.x *= state[2][0];
-		p.y *= state[2][0];
-		mRegionNominalPosMap[newRegions[i]->getId()] = p;
+		newPoint.x *= state[2][0];
+		newPoint.y *= state[2][0];
+		mRegionNominalPosMap[newRegions[i]->getId()] = newPoint;
 	}
 
 	String logStr = String()+Time::calcDiffMS(mStartTime,data->timestamp)+"\t";
@@ -1013,22 +1035,6 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	for(int i=0; i<pos.dim1(); i++)
 		str = str+pos[i][0]+"\t";
 	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, str, LOG_FLAG_CAM_RESULTS);
-
-	// check for dead regions
-	vector<size_t> deadKeys;
-	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
-	regionIter = mRegionMap.begin();
-	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
-	{
-		if( regionIter->second->getLife() <= 0)
-			deadKeys.push_back(regionIter->second->getId());
-	}
-
-	for(int i=0; i<deadKeys.size(); i++)
-	{
-		mRegionNominalPosMap.erase( deadKeys[i] );
-		mRegionMap.erase( deadKeys[i] );
-	}
 }
 
 Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
