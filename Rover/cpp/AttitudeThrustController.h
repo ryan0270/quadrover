@@ -6,6 +6,8 @@
 
 #include "TNT/tnt.h"
 
+#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
+
 #include "QuadLogger.h"
 #include "Time.h"
 #include "Listeners.h"
@@ -85,6 +87,9 @@ class AttitudeThrustController : public CommManagerListener,
 
 	SO3 mCurAtt, mDesAtt;
 	SO3 mMotorPlaneBias;
+
+	// For the reference model
+	ICSL::SystemModelLinear mRefSys;
 };
 
 } // namespace Quadrotor

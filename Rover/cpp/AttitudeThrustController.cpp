@@ -38,6 +38,21 @@ using namespace TNT;
 		mDesAccel[2][0] = GRAVITY;
 
 		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.0), createRotMat(0,-0.0) ) );
+
+		double damping = 1;
+		double naturalFreq = 10;
+		Array2D<double> A(6,6,0.0);
+		A[0][3] = A[1][4] = A[2][5] = 1;
+		A[3][0] = A[4][1] = A[5][2] = -naturalFreq*naturalFreq;
+		A[3][3] = A[4][4] = A[5][5] = -2*damping*naturalFreq;
+
+		Array2D<double> B(6,3,0.0);
+		B[3][0] = B[4][1] = B[5][2] = 1;
+
+		mRefSys.setA(A);
+		mRefSys.setB(B);
+		mRefSys.setC(createIdentity((double)6));
+		mRefSys.setD(Array2D<double>(6,3,0.0));
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
