@@ -5,6 +5,8 @@
 namespace ICSL{
 using namespace std;
 using namespace TNT;
+using namespace toadlet;
+using namespace toadlet::egg;
 	SystemModelLinear::SystemModelLinear() : mA(0,0), mB(0,0), mC(0,0), mD(0,0)
 	{
 	}

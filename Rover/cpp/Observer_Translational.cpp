@@ -899,13 +899,13 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	if(offsetsX.size() > 0)
 	{
 		cv::Point2f medOffset;
-		vector<float> tempOffsets = offsetsX;
-		size_t medLoc = tempOffsets.size()/2;
-		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
-		medOffset.x = tempOffsets[medLoc];
-		tempOffsets = offsetsY;
-		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
-		medOffset.y = tempOffsets[medLoc];
+		vector<float> tempOffsetsX = offsetsX;
+		size_t medLoc = tempOffsetsX.size()/2;
+		nth_element(tempOffsetsX.begin(), tempOffsetsX.begin()+medLoc, tempOffsetsX.end());
+		medOffset.x = tempOffsetsX[medLoc];
+		vector<float> tempOffsetsY = offsetsY;
+		nth_element(tempOffsetsY.begin(), tempOffsetsY.begin()+medLoc, tempOffsetsY.end());
+		medOffset.y = tempOffsetsY[medLoc];
 
 		// Now keep only offsets close to the median
 		for(int i=0; i<offsetsX.size(); i++)

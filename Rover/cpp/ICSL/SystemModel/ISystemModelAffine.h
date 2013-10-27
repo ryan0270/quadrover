@@ -3,6 +3,8 @@
 #include <string>
 #include "TNT/tnt.h"
 
+#include "toadlet/egg.h"
+
 #include "TNT_Utils.h"
 
 #include "ISystemModel.h"
@@ -39,11 +41,11 @@ using namespace TNT;
 			deriv = f+matmult(g,curActuation);
 
 			if(f.dim1() == 0 || f.dim2() == 0)
-				Log::alert("calcStateDerivative: Drift vector failed to calculate");
+				toadlet::egg::Log::alert("calcStateDerivative: Drift vector failed to calculate");
 			if(g.dim1() == 0 || g.dim2() == 0)
-				Log::alert("calcStateDerivative: Actuator gain matrix failed to calculate");
+				toadlet::egg::Log::alert("calcStateDerivative: Actuator gain matrix failed to calculate");
 			if(deriv.dim1() == 0 || deriv.dim2() == 0)
-				Log::alert("calcStateDerivative: Derivative failed to calculate");
+				toadlet::egg::Log::alert("calcStateDerivative: Derivative failed to calculate");
 
 			mMutex_DataAccess.unlock();
 			return deriv;
