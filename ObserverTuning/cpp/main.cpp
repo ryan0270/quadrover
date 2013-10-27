@@ -34,8 +34,8 @@
 #include <opencv2/features2d/features2d.hpp>
 
 // yeah, I'm too lazy to avoid making this global at the moment
-Collection<ICSL::Quadrotor::CommManagerListener *> commManagerListeners;
-Collection<ICSL::Quadrotor::SensorManagerListener *> sensorManagerListeners;
+toadlet::egg::Collection<ICSL::Quadrotor::CommManagerListener *> commManagerListeners;
+toadlet::egg::Collection<ICSL::Quadrotor::SensorManagerListener *> sensorManagerListeners;
 void addSensorManagerListener(ICSL::Quadrotor::SensorManagerListener *l){sensorManagerListeners.push_back(l);}
 void addCommManagerListener(ICSL::Quadrotor::CommManagerListener *l){commManagerListeners.push_back(l);}
 

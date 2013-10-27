@@ -70,7 +70,6 @@ set (H ${H}
 	${ROVER_DIR}/cpp/FeatureFinder.h
 	${ROVER_DIR}/cpp/TranslationController.h
 	${ROVER_DIR}/cpp/AttitudeThrustController.h
-	${ROVER_DIR}/cpp/AttitudeThrustControllerListener.h
 	${ROVER_DIR}/cpp/ActiveRegion.h
 	${ROVER_DIR}/cpp/MotorInterface.h
 	${ROVER_DIR}/cpp/Listeners.h

@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "TNT/tnt.h"
-#include "toadlet/toadlet.h"
+#include "toadlet/egg.h"
 
 #include "ICSL/SystemModel/ISystemModelAffine.h"
 
@@ -60,7 +60,7 @@ using namespace TNT;
 			const Array2D<double> getD(){return mD;};
 
 			bool loadFromFile(string file);
-			int serialize(vector<tbyte> &serial);
+			int serialize(vector<toadlet::tbyte> &serial);
 			void deserialize(toadlet::egg::Collection<unsigned char> const &serial);
 
 			bool isInitialized(){return mA.dim1()>0 && mB.dim1()>0 && mC.dim1()>0 && mD.dim1()>0;};
