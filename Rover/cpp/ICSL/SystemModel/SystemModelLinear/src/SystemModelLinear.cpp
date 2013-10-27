@@ -33,6 +33,7 @@ using namespace toadlet::egg;
 			Log::alert("SystemModelLinear::setA - Matrix must be square");
 
 		mNumStates = mat.dim2();
+		mCurState = Array2D<double>(mNumStates,1,0.0);
 		mA = mat.copy();
 	}
 

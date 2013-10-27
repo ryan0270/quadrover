@@ -2,9 +2,6 @@ clear;
 disp('start chadding')
 
 %%
-
-
-%%
 % dataDir = '../dataSets/Sep8';
 % dataDir = '../dataSets/Sep12';
 dataDir = '../dataSets/Sep19';
@@ -52,9 +49,9 @@ mapVelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL);
 mapVelTime = phoneData(mapVelIndices,1)'/1000;
 mapVel = phoneData(mapVelIndices,3:5)';
 
-velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
-velCmdTime = phoneData(velCmdIndices,1)'/1000;
-velCmd = phoneData(velCmdIndices,3:5)';
+% velCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VEL_CMD);
+% velCmdTime = phoneData(velCmdIndices,1)'/1000;
+% velCmd = phoneData(velCmdIndices,3:5)';
 
 accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CMD);
 accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
@@ -83,6 +80,20 @@ camPos = phoneData(camPosIndices,3:5)';
 % attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
 % attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
 % attInnovation = phoneData(attInnovationIndices,3:5)';
+
+% torqueCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TORQUE_CMD);
+% torqueCmdTime = phoneData(torqueCmdIndices,1)'/1000;
+% torqueCmd = phoneData(torqueCmdIndices,3:6)';
+
+angleRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_REF_ATTITUDE_SYSTEM_STATE);
+angleRefTime = phoneData(angleRefIndices,1)'/1000;
+angleRef = phoneData(angleRefIndices,3:8)';
+
+angleStateRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_DES_ATT);
+angleStateRefTime = phoneData(angleStateRefIndices,1)'/1000;
+angleStateRef = phoneData(angleStateRefIndices,3:8)';
+
+
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
@@ -132,63 +143,63 @@ tranStateLabels = { 'x [m]' 'y [m]' 'z [m]' 'x vel [m/s]' 'y vel [m/s]' 'z vel [
 
 %%
 if exist('angleState','var') && ~isempty(angleState)
-  	figure(1); clf;
-% 	set(gcf,'Units','Inches');
-% 	curPos = get(gcf,'Position'); figSize = [6 4];
-% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-	
-	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
-	timeShift = 0.02;
-	shift = zeros(6,1);
-	for i=1:6
-		subplot(2,3,i);		
-		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(angleStateTime, angleState(i,:)); hold all
-		hold off
-		
-		xlabel('Time [s]')
-		ylabel(angleStateLabels(i));	
-	end
-
-% 	midPoint = round(length(angleStateTime)/2);
-% 	shift = mean(angleState(:,midPoint:end),2);
-% 	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
+%   	figure(1); clf;
+% % 	set(gcf,'Units','Inches');
+% % 	curPos = get(gcf,'Position'); figSize = [6 4];
+% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+% 	
+% 	mask = find( (viconStateTime > angleStateTime(1)) .* (viconStateTime <= angleStateTime(end) ) );
+% 	timeShift = 0.02;
+% 	shift = zeros(6,1);
 % 	for i=1:6
-% 		subplot(2,3,i);
-% 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
-% 		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
+% 		subplot(2,3,i);		
+% 		plot(viconStateTime(mask), viconState(i,mask)); hold all
+% 		plot(angleStateTime, angleState(i,:)); hold all
 % 		hold off
-% % 		if i <= 2
-% % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.6 0.6]);
-% % 		else
-% 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
-% % 		end
-% 		grid on
-% 
+% 		
 % 		xlabel('Time [s]')
-% 		ylabel(angleStateLabels(i));
+% 		ylabel(angleStateLabels(i));	
 % 	end
-	
-	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
-	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
-				 0*find(angleStateTime(1,:) > 0.05,1,'first');
-				 0*find(angleStateTime > mapVelTime(1),1,'first')
-				 1]);
-start = 1;			 
-	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
-	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
-	err = err-diag(mean(err,2))*ones(size(err));
-	rmsErr = rms(err')';
-	fprintf('Angle state rms err:\t');
-	for i=1:3
-		fprintf('%1.3f\t',rmsErr(i));
-	end
-	fprintf('\n')
-	fprintf('            max err:\t')
-	for i=1:3
-		fprintf('%1.3f\t',max(abs(err(i,:))));
-	end
-	fprintf('\n');
+% 
+% % 	midPoint = round(length(angleStateTime)/2);
+% % 	shift = mean(angleState(:,midPoint:end),2);
+% % 	mask2 = mask( viconStateTime(mask) >= angleStateTime(midPoint) );	
+% % 	for i=1:6
+% % 		subplot(2,3,i);
+% % 		plot(viconStateTime(mask)-timeShift, viconState(i,mask)-mean(viconState(i,mask2))); hold all
+% % 		plot(angleStateTime, angleState(i,:)-shift(i)); hold all
+% % 		hold off
+% % % 		if i <= 2
+% % % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) -0.6 0.6]);
+% % % 		else
+% % 			ax = axis; axis([angleStateTime(1) angleStateTime(end) ax(3) ax(4)]);
+% % % 		end
+% % 		grid on
+% % 
+% % 		xlabel('Time [s]')
+% % 		ylabel(angleStateLabels(i));
+% % 	end
+% 	
+% 	viconStateAngleInterp = interp1(viconStateTime, viconState', angleStateTime+timeShift,[],'extrap')';
+% 	start = max([find(angleStateTime > angleStateTime(1)+15,1,'first');
+% 				 0*find(angleStateTime(1,:) > 0.05,1,'first');
+% 				 0*find(angleStateTime > mapVelTime(1),1,'first')
+% 				 1]);
+% start = 1;			 
+% 	stop = find(angleStateTime < angleStateTime(end)-5,1,'last');
+% 	err = viconStateAngleInterp(1:3,start:stop)-angleState(1:3,start:stop);
+% 	err = err-diag(mean(err,2))*ones(size(err));
+% 	rmsErr = rms(err')';
+% 	fprintf('Angle state rms err:\t');
+% 	for i=1:3
+% 		fprintf('%1.3f\t',rmsErr(i));
+% 	end
+% 	fprintf('\n')
+% 	fprintf('            max err:\t')
+% 	for i=1:3
+% 		fprintf('%1.3f\t',max(abs(err(i,:))));
+% 	end
+% 	fprintf('\n');
 end
 
 %%
@@ -362,6 +373,36 @@ if exist('attInnovation','var') && ~isempty(attInnovation)
 		xlabel('Time');
 		ylabel('Innovation');
 	end
+end
+
+%%
+if exist('torqueCmd','var') && ~isempty(torqueCmd)
+	figure(9000);
+	plot(torqueCmdTime, torqueCmd(1:3,:));
+	xlabel('Time [s]');
+	ylabel('Torque cmd [Nm/s]');
+end
+
+%%
+if exist('angleStateRef','var') && ~isempty(angleStateRef)
+% 	figure(9001); clf
+% 	plot(angleStateRefTime, angleStateRef(1:3,:));
+% 	xlabel('Time [s]');
+% 	ylabel('Ref');
+end
+
+%%
+if exist('angleRef','var') && ~isempty(angleRef)
+	figure(9005);clf
+	for i=1:6
+		subplot(2,3,i)
+		plot(angleStateRefTime, angleStateRef(i,:)); hold all
+		plot(angleStateTime, angleState(i,:)); hold all
+		plot(angleRefTime, angleRef(i,:)); hold all
+		xlabel('Time [s]');
+		ylabel(angleStateLabels{i});
+	end
+	legend('Cmd','Actual','Ref')
 end
 
 

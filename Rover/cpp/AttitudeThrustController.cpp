@@ -40,19 +40,20 @@ using namespace TNT;
 		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.0), createRotMat(0,-0.0) ) );
 
 		double damping = 1;
-		double naturalFreq = 10;
+		double naturalFreq = 30;
 		Array2D<double> A(6,6,0.0);
 		A[0][3] = A[1][4] = A[2][5] = 1;
 		A[3][0] = A[4][1] = A[5][2] = -naturalFreq*naturalFreq;
 		A[3][3] = A[4][4] = A[5][5] = -2*damping*naturalFreq;
 
 		Array2D<double> B(6,3,0.0);
-		B[3][0] = B[4][1] = B[5][2] = 1;
+		B[3][0] = B[4][1] = B[5][2] = naturalFreq*naturalFreq;
 
 		mRefSys.setA(A);
 		mRefSys.setB(B);
 		mRefSys.setC(createIdentity((double)6));
 		mRefSys.setD(Array2D<double>(6,3,0.0));
+		mRefSys.reset();
 	}
 	
 	AttitudeThrustController::~AttitudeThrustController()
@@ -93,6 +94,9 @@ using namespace TNT;
 	
 	void AttitudeThrustController::calcControl()
 	{
+		double dt = mLastControlTime.getElapsedTimeNS()/1.0e9;
+		mLastControlTime.setTime();
+
 		mMutex_data.lock();
 		double n= norm2(mDesAccel);
 		SO3 curMotorAtt = mCurAtt;
@@ -109,9 +113,21 @@ using namespace TNT;
 		mDesAtt *= mMotorPlaneBias;
 		mThrust = mMass*mDesAccel[2][0]/cos(curEuler[0][0])/cos(curEuler[1][0]);
 
+		// Simulate the reference system
+		Array2D<double> desVector, curVector;
+		double desTheta, curTheta;
+		mDesAtt.getAngleAxis(desTheta, desVector);
+		curMotorAtt.getAngleAxis(curTheta, curVector);
+		desVector = desTheta*desVector;
+//		curVector = curTheta*curVector;
+		Array2D<double> refState= mRefSys.simulateEuler(desVector, dt);
+		Array2D<double> refVector = 0*desVector+submat(refState,0,2,0,0);
+		SO3_LieAlgebra lie(refVector);
+		SO3 refAtt = lie.integrate(1);
+		Array2D<double> refEuler = refAtt.getAnglesZYX();
+
 		SO3 attErr = mDesAtt.inv()*curMotorAtt;
 		Array2D<double> curStateAngular = stackVertical(curEuler,mCurAngularVel);
-		mMutex_data.unlock();
 	
 		Array2D<double> rotMatErr = attErr.getRotMat();
 		Array2D<double> rotMatErr_AS = rotMatErr-transpose(rotMatErr);
@@ -120,7 +136,6 @@ using namespace TNT;
 		rotErr[1][0] = rotMatErr_AS[0][2];
 		rotErr[2][0] = rotMatErr_AS[1][0];
 
-		mMutex_data.lock();
 		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*mCurAngularVel;
 		double cmdRoll = torque[0][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdPitch = torque[1][0]/mForceScaling/mMotorArmLength/4.0;
@@ -201,15 +216,27 @@ using namespace TNT;
 		{
 			String logStr;
 			logStr = String();
+			logStr = logStr+cmdRoll+"\t"+cmdPitch+"\t"+cmdYaw+"\t"+cmdThrust;
+			mQuadLogger->addEntry(LOG_ID_TORQUE_CMD, logStr, LOG_FLAG_MOTORS);
+
+			logStr = String();
 			for(int i=0; i<4; i++)
 				logStr= logStr+cmds[i] + "\t";
-			mQuadLogger->addEntry(Time(),LOG_ID_MOTOR_CMDS,logStr,LOG_FLAG_MOTORS);
+			mQuadLogger->addEntry(LOG_ID_MOTOR_CMDS,logStr,LOG_FLAG_MOTORS);
 
 			logStr =String();
 			logStr = logStr+desRoll+"\t"+desPitch+"\t"+desYaw+"\t";
 			for(int i=0; i<3; i++)
 				logStr = logStr+"0\t";
-			mQuadLogger->addEntry(Time(),LOG_ID_DES_ATT,logStr,LOG_FLAG_STATE_DES);
+			mQuadLogger->addEntry(LOG_ID_DES_ATT,logStr,LOG_FLAG_STATE_DES);
+
+			logStr = String();
+			for(int i=0; i<refEuler.dim1(); i++)
+				logStr = logStr+refEuler[i][0]+"\t";
+			for(int i=3; i<refState.dim1(); i++)
+				logStr = logStr+refState[i][0]+"\t";
+			mQuadLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, logStr, LOG_FLAG_STATE_DES);
+
 		}
 	}
 	
@@ -258,6 +285,7 @@ using namespace TNT;
 		mMutex_motorInterface.lock();
 		mMotorInterface->enableMotors(true);
 		mMutex_motorInterface.unlock();
+		mRefSys.reset();
 	}
 	
 	void AttitudeThrustController::onCommConnectionLost()

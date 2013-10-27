@@ -235,7 +235,7 @@ int main(int argv, char* argc[])
 	logMask = LOG_FLAG_PC_UPDATES ;
 	logMask |= LOG_FLAG_STATE;
 	logMask |= LOG_FLAG_STATE_DES;
-//	logMask |= LOG_FLAG_MOTORS;
+	logMask |= LOG_FLAG_MOTORS;
 	logMask |= LOG_FLAG_OBSV_UPDATE;
 	logMask |= LOG_FLAG_OBSV_BIAS;
 //	logMask |= LOG_FLAG_MAGNOMETER;
@@ -356,6 +356,20 @@ int main(int argv, char* argc[])
 		Collection<float> desState(12,0.0);
 		desState[8] = 1;
 		commManagerListeners[i]->onNewCommDesState(desState);
+
+		commManagerListeners[i]->onNewCommForceGain(0.0022);
+		commManagerListeners[i]->onNewCommTorqueGain(0.0005);
+		commManagerListeners[i]->onNewCommMass(1.2);
+
+		Collection<float> attCntlGains;
+		attCntlGains.push_back(0.2);
+		attCntlGains.push_back(0.2);
+		attCntlGains.push_back(0.2);
+		attCntlGains.push_back(0.2);
+		attCntlGains.push_back(0.2);
+		attCntlGains.push_back(0.2);
+		commManagerListeners[i]->onNewCommAttitudeGains(attCntlGains);
+
 	}
 
 	mQuadLogger.setMask(logMask);
@@ -387,7 +401,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 40e3;
+	int endTimeDelta = 20e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -456,6 +470,7 @@ int main(int argv, char* argc[])
 
 				mQuadLogger.start();
 				mObsvTranslational.start();
+				mAttitudeThrustController.start();
 				mTranslationController.start();
 				cout << "Time: " << time << endl;
 			}
