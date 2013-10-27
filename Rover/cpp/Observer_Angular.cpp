@@ -710,7 +710,8 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	{
 		vector<double> tempOffsets = offsets;
 		size_t medLoc = tempOffsets.size()/2;
-		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
+//		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
+		sort(tempOffsets.begin(), tempOffsets.end());
 		double medOffset = tempOffsets[medLoc];
 
 		// Now remove outliers

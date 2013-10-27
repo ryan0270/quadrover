@@ -11,7 +11,7 @@ QuadLogger::QuadLogger()
 	mFilename = "quadLog.txt";
 	mLogStream = NULL;
 	mTypeMask = 0;
-	mTypeMask = LOG_FLAG_PC_UPDATES ;
+	mTypeMask |= LOG_FLAG_PC_UPDATES ;
 	mTypeMask |= LOG_FLAG_STATE;
 //	mTypeMask |= LOG_FLAG_STATE_DES;
 //	mTypeMask |= LOG_FLAG_MOTORS;
@@ -236,6 +236,8 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_SONAR_HEIGHT="+LOG_ID_SONAR_HEIGHT+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_MOTOR_PLANE_BIAS="+LOG_ID_MOTOR_PLANE_BIAS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_IMAGE_OFFSET="+LOG_ID_IMAGE_OFFSET+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_TORQUE_CMD="+LOG_ID_TORQUE_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_REF_ATTITUDE_SYSTEM_STATE="+LOG_ID_REF_ATTITUDE_SYSTEM_STATE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}
