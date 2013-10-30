@@ -39,7 +39,7 @@ using namespace TNT;
 
 		mMotorPlaneBias.setRotMat( matmult(createRotMat(1,-0.0), createRotMat(0,-0.0) ) );
 
-		double damping = 1;
+		double damping = 1.2;
 		double naturalFreq = 30;
 		Array2D<double> A(6,6,0.0);
 		A[0][3] = A[1][4] = A[2][5] = 1;
@@ -111,6 +111,8 @@ using namespace TNT;
 
 		mDesAtt.setRotMat(createRotMat_ZYX(desYaw,desPitch,desRoll));
 		mDesAtt *= mMotorPlaneBias;
+
+		//TODO: this should be based on the reference model
 		mThrust = mMass*mDesAccel[2][0]/cos(curEuler[0][0])/cos(curEuler[1][0]);
 
 		// Simulate the reference system
@@ -120,13 +122,18 @@ using namespace TNT;
 		curMotorAtt.getAngleAxis(curTheta, curVector);
 		desVector = desTheta*desVector;
 //		curVector = curTheta*curVector;
-		Array2D<double> refState= mRefSys.simulateEuler(desVector, dt);
-		Array2D<double> refVector = 0*desVector+submat(refState,0,2,0,0);
+		Array2D<double> refState = mRefSys.simulateEuler(desVector, dt);
+//		Array2D<double> refState = mRefSys.simulateRK4(desVector, dt);
+		Array2D<double> refVector = submat(refState,0,2,0,0);
 		SO3_LieAlgebra lie(refVector);
 		SO3 refAtt = lie.integrate(1);
-		Array2D<double> refEuler = refAtt.getAnglesZYX();
+		Array2D<double> refRate = submat(refState,3,5,0,0);
 
-		SO3 attErr = mDesAtt.inv()*curMotorAtt;
+		Array2D<double> accel(3,1,0.0);
+		accel = submat(matmult(mRefSys.getA(),refState)+matmult(mRefSys.getB(),desVector),3,5,0,0);
+
+//		SO3 attErr = mDesAtt.inv()*curMotorAtt;
+		SO3 attErr = refAtt.inv()*curMotorAtt;
 		Array2D<double> curStateAngular = stackVertical(curEuler,mCurAngularVel);
 	
 		Array2D<double> rotMatErr = attErr.getRotMat();
@@ -136,7 +143,11 @@ using namespace TNT;
 		rotErr[1][0] = rotMatErr_AS[0][2];
 		rotErr[2][0] = rotMatErr_AS[1][0];
 
-		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*mCurAngularVel;
+		Array2D<double> inertia(3,1);
+		inertia[0][0] = 0.005;
+		inertia[1][0] = 0.005;
+		inertia[2][0] = 0.020;
+		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*(mCurAngularVel-refRate)+inertia*accel;
 		double cmdRoll = torque[0][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdPitch = torque[1][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdYaw = torque[2][0]/mTorqueScaling/4.0;
@@ -146,7 +157,7 @@ using namespace TNT;
 		double cmds[4];
 		bool sane = false;
 		int cnt = 0;
-		while(!sane && cnt < 1000)
+		while(!sane && cnt < 10)
 		{
 			cmds[0] = cmdThrust-cmdRoll-cmdPitch+cmdYaw;
 			cmds[1] = cmdThrust-cmdRoll+cmdPitch-cmdYaw;
@@ -230,11 +241,12 @@ using namespace TNT;
 				logStr = logStr+"0\t";
 			mQuadLogger->addEntry(LOG_ID_DES_ATT,logStr,LOG_FLAG_STATE_DES);
 
+			Array2D<double> refEuler = refAtt.getAnglesZYX();
 			logStr = String();
 			for(int i=0; i<refEuler.dim1(); i++)
 				logStr = logStr+refEuler[i][0]+"\t";
-			for(int i=3; i<refState.dim1(); i++)
-				logStr = logStr+refState[i][0]+"\t";
+			for(int i=0; i<refRate.dim1(); i++)
+				logStr = logStr+refRate[i][0]+"\t";
 			mQuadLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, logStr, LOG_FLAG_STATE_DES);
 
 		}

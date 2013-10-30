@@ -163,9 +163,18 @@ accelCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL_CM
 accelCmdTime = phoneData(accelCmdIndices,1)'/1000;
 accelCmd = phoneData(accelCmdIndices,3:5)';
 
-imageOffsetIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMAGE_OFFSET);
-imageOffsetTime = phoneData(imageOffsetIndices,1)'/1000;
-imageOffset = phoneData(imageOffsetIndices,4:5)';
+% imageOffsetIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMAGE_OFFSET);
+% imageOffsetTime = phoneData(imageOffsetIndices,1)'/1000;
+% imageOffset = phoneData(imageOffsetIndices,4:5)';
+
+torqueCmdIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TORQUE_CMD);
+torqueCmdTime = phoneData(torqueCmdIndices,1)'/1000;
+torqueCmd = phoneData(torqueCmdIndices,3:6)';
+
+angleRefModelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_REF_ATTITUDE_SYSTEM_STATE);
+angleRefModelTime = phoneData(angleRefModelIndices,1)'/1000;
+angleRefModel = phoneData(angleRefModelIndices,3:8)';
+
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
@@ -198,14 +207,14 @@ if exist('state','var') && ~isempty(state)
 %     figure(baseFigState); set(gcf,'Units','Inches');
 %     curPos = get(gcf,'Position'); figSize = [8 6];
 %     set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-    figure(baseFigState+0)
-    for i=1:3
+    figure(baseFigState+0); clf
+    for i=1:6
 %         subplot(4,3,i)
-		subplot(3,1,i);
-		if ~isempty(stateRef)
-			plot(stateRefTime, stateRef(i,:)); hold all
-		end
-        plot(stateTime,state(i,:),'LineWidth',2); hold off
+		subplot(2,3,i);
+		plot(stateRefTime, stateRef(i,:)); hold all
+        plot(stateTime,state(i,:),'LineWidth',2); hold all
+		plot(angleRefModelTime, angleRefModel(i,:)); hold all
+		hold off
         xlabel('Time [s]');
         ylabel(stateLabels(i));
 
@@ -218,6 +227,22 @@ if exist('state','var') && ~isempty(state)
     % 	end
     end
     legend('Commanded','Measured');
+end
+
+%%
+if exist('torqueCmd','var') && ~isempty(torqueCmd)
+	torqueLabels = {'Roll torque [Nm]','Pitch torque[Nm]','Yaw torque [Nm]'};
+	figure(768); clf
+	for i=1:3
+		subplot(3,1,i)
+		plot(torqueCmdTime, torqueCmd(i,:)'); hold all
+		axis([torqueCmdTime(1) torqueCmdTime(end) -100 100]);
+		ax = axis;
+		plot([ax(1) ax(2)],[0 0],'--k'); hold all
+		hold off
+		xlabel('Time [s]');
+		ylabel(torqueLabels(i));
+	end
 end
 
 
