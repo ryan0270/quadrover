@@ -117,7 +117,7 @@ using namespace TNT;
 			mMutex_state.unlock();
 
 //			accelCmd = calcControlIBVS();
-			accelCmd = calcControlIBVS2();
+			accelCmd = calcControlIBVS2(error, dt);
 
 			// fake the system controller so when we switch back to 
 			// it the integrator is still valid
@@ -153,18 +153,14 @@ using namespace TNT;
 	{
 		Array2D<double> accelCmd(3,1);
 		mMutex_data.lock();
-		for(int i=0; i<3; i++)
-			mErrInt[i][0] = constrain(mErrInt[i][0]+dt*error[i][0],-mErrIntLimit[i][0],mErrIntLimit[i][0]);
+		if(mDesState[2][0] > 0.2) // don't build up the integrator when we're sitting still on the ground
+			for(int i=0; i<3; i++)
+				mErrInt[i][0] = constrain(mErrInt[i][0]+dt*error[i][0],-mErrIntLimit[i][0],mErrIntLimit[i][0]);
 
-		Array2D<double> tempI(3,1,0.0);
-		mMutex_state.lock();
-		if(mDesState[2][0] > 0.2) // don't build up the integrator when we're sitting still
-			tempI.inject(mGainI);
-		mMutex_state.unlock();
 		for(int i=0; i<3; i++)
 			accelCmd[i][0] =	-mGainP[i][0]*error[i][0]
 								-mGainD[i][0]*error[i+3][0]
-								-tempI[i][0]*mErrInt[i][0]
+								-mGainI[i][0]*mErrInt[i][0]
 								+mDesAccel[i][0];
 		accelCmd[2][0] += GRAVITY;
 		mMutex_data.unlock();
@@ -325,7 +321,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 //		return accelCmd;
 	}
 
-	Array2D<double> TranslationController::calcControlIBVS2()
+	Array2D<double> TranslationController::calcControlIBVS2(Array2D<double> &error, double dt)
 	{
 		mMutex_target.lock();
 		shared_ptr<ImageTranslationData> xlateData= mTargetTranslationData;
@@ -333,7 +329,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		
 		// Predict the target's current position based on kinematics
 		vector<cv::Point2f> points = xlateData->goodPoints;
-		double dt = xlateData->timestamp.getElapsedTimeNS()/1.0e9;
+		double dtImg = xlateData->timestamp.getElapsedTimeNS()/1.0e9;
 		double f = xlateData->imageTargetFind2Data->imageData->focalLength;
 		Array2D<double> vel(3,1);
 		double z;
@@ -358,7 +354,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 			Lv[0][0] = -f; Lv[0][1] = 0;  Lv[0][2] = points[i].x;
 			Lv[1][0] = 0;  Lv[1][1] = -f; Lv[1][2] = points[i].y;
 
-			delta.inject(dt/z*matmult(Lv,vel));
+			delta.inject(dtImg/z*matmult(Lv,vel));
 
 			points[i].x += delta[0][0];
 			points[i].y += delta[1][0];
@@ -409,8 +405,8 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		Array2D<double> velGains = mIbvsVelGains;
 		mMutex_gains.unlock();
 
-//		Array2D<double> visionErr = curState[2][0]*moment-desState[2][0]*desMoment;
-		Array2D<double> visionErr = curState[2][0]*(moment-desMoment);
+		Array2D<double> visionErr = curState[2][0]*moment-desState[2][0]*desMoment;
+//		Array2D<double> visionErr = curState[2][0]*(moment-desMoment);
 
 		Array2D<double> desVel = posGains*visionErr; // remember that * is element-wise
 
@@ -429,24 +425,17 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 
 		Array2D<double> accelCmd = -1.0*velGains*velErr;
 
+		// A bit of safety
 		accelCmd[0][0] = min(2.0, max(-2.0, accelCmd[0][0]));
 		accelCmd[1][0] = min(2.0, max(-2.0, accelCmd[1][0]));
 
-		accelCmd[2][0] += GRAVITY;
-
-		// Assume the PID integrated err holds the necessary
-		// acceleration offset
+		// Run the z integrator just like the PID controller
 		mMutex_data.lock();
-		accelCmd[2][0] -= mGainI[2][0]*mErrInt[2][0];
+		mErrInt[2][0] = min(mErrIntLimit[2][0], max(-mErrIntLimit[2][0], mErrInt[2][0]+dt*(curState[2][0]-desState[2][0])));
+		accelCmd[2][0] = -posGains[2][0]*error[2][0]-velGains[2][0]*error[5][0]-mGainI[2][0]*mErrInt[2][0];
 		mMutex_data.unlock();
 
-//Log::alert("--------------------------------------------------");
-//Log::alert(String()+"target center:\t"+targetData->target->meanCenter.x+"\t"+targetData->target->meanCenter.y);
-//printArray("moment:\t",moment);
-//printArray("desMoment:\t",desMoment);
-//printArray("desMoment2:\t",desMoment2);
-//printArray("desVel:\t",desVel);
-//printArray("accelCmd:\t",accelCmd);
+		accelCmd[2][0] += GRAVITY;
 
 		mLastController = Controller::IBVS;
 		return accelCmd;

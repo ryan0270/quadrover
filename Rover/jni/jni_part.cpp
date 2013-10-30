@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#include "toadlet/egg.h"
+
 #include "../cpp/Rover.h"
 #include <opencv2/core/core.hpp>
 #include "../cpp/TNT/tnt.h"
@@ -32,7 +34,7 @@ JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_setLogDir(JNIEnv* env, j
 		return;
 
 	const char *str = env->GetStringUTFChars(jdir, NULL);
-	String dir(str);
+	toadlet::egg::String dir(str);
 	rover->setLogDir(dir);
 	env->ReleaseStringUTFChars(jdir, str);
 }
@@ -139,7 +141,7 @@ JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getMotorCmds(JNIEnv
 	if(rover == NULL)
 		return env->NewIntArray(0);
 
-	std::vector<uint16> cmds = rover->getMotorCmds();
+	std::vector<toadlet::uint16> cmds = rover->getMotorCmds();
 	jintArray jval = env->NewIntArray(cmds.size());
 	jint *elem = env->GetIntArrayElements(jval,0);
 	for(int i=0; i<cmds.size(); i++)

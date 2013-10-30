@@ -104,7 +104,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
 
 	TNT::Array2D<double> calcControlIBVS();
-	TNT::Array2D<double> calcControlIBVS2();
+	TNT::Array2D<double> calcControlIBVS2(TNT::Array2D<double> &error, double dt);
 	TNT::Array2D<double> mIbvsPosGains, mIbvsVelGains;
 	std::mutex mMutex_gains;
 
