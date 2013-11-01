@@ -467,6 +467,8 @@ public class RoverService extends Service
 		public void run()
 		{
 			mRunning = true;
+			Thread me = Thread.currentThread();
+			me.setPriority(Thread.MAX_PRIORITY-2);
 			while(mRunning)
 			{
 				if(mInputStream != null)
@@ -557,20 +559,24 @@ public class RoverService extends Service
 		public void run()
 		{
 			mRunning = true;
+
+			Thread me = Thread.currentThread();
+			me.setPriority(Thread.MAX_PRIORITY);
+
 			long lastTime = System.nanoTime();
 			long curTime;
 			while(mRunning)
 			{
 				curTime = System.nanoTime();
-//				if(curTime-lastTime > 4e6)
-//					Log.i(ME, "Long time: " + String.valueOf((int)((curTime-lastTime)/1.e6 + 0.5)));
+				if(curTime-lastTime > 20e6)
+					Log.i(ME, "Long time: " + String.valueOf((int)((curTime-lastTime)/1.e6 + 0.5)));
 				lastTime = curTime;
 
 				int[] cmds = getMotorCmds();
 				if(cmds.length == 4)
 					sendMotorCommands(cmds[0], cmds[1], cmds[2], cmds[3]);
 
-				try{ Thread.sleep(3); }
+				try{ Thread.sleep(5); }
 				catch(Exception e){ Log.e(ME,"Caught sleeping"); }
 			}
 

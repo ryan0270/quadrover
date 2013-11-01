@@ -691,7 +691,7 @@ void Observer_Translational::onNewSensorUpdate(const shared_ptr<IData> &data)
 				shared_ptr<DataVector<double>> accelData(new DataVector<double>());
 				accelData->type = DATA_TYPE_RAW_ACCEL;
 				accelData->timestamp = data->timestamp;
-				accelData->data = accel;
+				accelData->data = accel.copy();
 
 				mMutex_events.lock();
 				mNewEventsBuffer.push_back(accelData);

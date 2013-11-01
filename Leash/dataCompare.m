@@ -176,8 +176,8 @@ if exist('state','var') && ~isempty(state)
 		end
 		if i == 9
 			chad = interp1(tranStateTime,tranState',sonarHeightTime)';
-			mask = find(abs(chad(3,:)-sonarHeight) < 0.1);
-			plot(sonarHeightTime(mask), sonarHeight(mask)+0.1, 'm.');
+			mask2 = find(abs(chad(3,:)-sonarHeight) < 0.1);
+			plot(sonarHeightTime(mask2), sonarHeight(mask2)+0.1, 'm.');
 		end
 		if i > 9
 			plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
