@@ -562,7 +562,7 @@ void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data
 // This function is way too long, I should probably split it up sometime
 void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 {
-	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 5)
+	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 10)
 		return; // don't set my initial nominal angle yet
 
 	mMutex_targetFindTime.lock();
@@ -642,7 +642,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			{
 				double d = cv::norm(pt1-pt2);
 				// avoid keeping pairs that are too close together
-				if(d > 40)
+				if(d > 20)
 				{
 					newPairs.push_back(pr);
 					newPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
@@ -780,6 +780,12 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		}
 		else
 		{
+Log::alert(String()+mStartTime.getElapsedTimeMS()+" -- Bad bunch");
+			for(int i=0; i<repeatPairs.size(); i++)
+			{
+				mNominalDirMap.erase(repeatPairs[i]);
+				mNominalDirCreateTime.erase(repeatPairs[i]);
+			}
 			angleOffset = -euler[2][0];
 			mMutex_visionInnovation.lock();
 			mVisionInnovation[0][0] = 0;
@@ -871,7 +877,7 @@ void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 	mMutex_targetFindTime.lock();
 	Time lastTargetFindTime(mLastTargetFindTime);
 	mMutex_targetFindTime.unlock();
-	if(/*mIsDoingIbvs &&*/ lastTargetFindTime.getElapsedTimeMS() < 1e3)
+	if(mIsDoingIbvs)// && lastTargetFindTime.getElapsedTimeMS() < 1e3)
 		return;
 
 	Array2D<double> nomDir(3,1);

@@ -250,7 +250,7 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 	resize(image, pyrImage, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
 
 	int delta = 5*2;
-	int minArea = 1.0/pow(20,2)*pyrImage.rows*pyrImage.cols;
+	int minArea = 1.0/pow(15,2)*pyrImage.rows*pyrImage.cols;
 	int maxArea = 1.0/pow(2,2)*pyrImage.rows*pyrImage.cols;
 	double maxVariation = 0.25; // smaller reduces number of regions
 	double minDiversity = 0.4; // smaller increase the number of regions
