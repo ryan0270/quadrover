@@ -57,9 +57,9 @@ opticFlowVelTime = phoneData(opticFlowVelIndices,1)'/1000;
 opticFlowVel = phoneData(opticFlowVelIndices,3:5)';
 opticFlowLag = phoneData(opticFlowVelIndices,6)';
 
-viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
-viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
-viconReceive = phoneData(viconReceiveIndices,3:14)';
+% viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
+% viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
+% viconReceive = phoneData(viconReceiveIndices,3:14)';
 
 attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
 attBiasTime = phoneData(attBiasIndices,1)'/1000;

@@ -213,7 +213,7 @@ if exist('state','var') && ~isempty(state)
 		subplot(2,3,i);
 		plot(stateRefTime, stateRef(i,:)); hold all
         plot(stateTime,state(i,:),'LineWidth',2); hold all
-		plot(angleRefModelTime, angleRefModel(i,:)); hold all
+% 		plot(angleRefModelTime, angleRefModel(i,:)); hold all
 		hold off
         xlabel('Time [s]');
         ylabel(stateLabels(i));

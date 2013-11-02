@@ -27,18 +27,18 @@
       <P>
          <x>0.750000</x>
          <y>0.750000</y>
-         <z>2.500000</z>
+         <z>2.000000</z>
       </P>
       <D>
-         <x>2.500000</x>
-         <y>2.500000</y>
-         <z>2.500000</z>
+         <x>2.000000</x>
+         <y>2.000000</y>
+         <z>2.000000</z>
       </D>
    </IBVS>
    <Attitude>
       <P>
-         <x>0.450000</x>
-         <y>0.450000</y>
+         <x>0.400000</x>
+         <y>0.400000</y>
          <z>1.000000</z>
       </P>
       <D>
@@ -54,9 +54,9 @@
          <x>0.000100</x>
          <y>0.000100</y>
          <z>0.000100</z>
-         <xVel>0.010000</xVel>
-         <yVel>0.010000</yVel>
-         <zVel>0.010000</zVel>
+         <xVel>0.015000</xVel>
+         <yVel>0.015000</yVel>
+         <zVel>0.015000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.050000</x>
@@ -111,7 +111,7 @@
    <FASTThreshold>20.000000</FASTThreshold>
    <PointCntTarget>30.000000</PointCntTarget>
    <FASTAdaptRate>0.050000</FASTAdaptRate>
-   <MeasurementCov>15.000000</MeasurementCov>
+   <MeasurementCov>50.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
 <LogMask>5087</LogMask>

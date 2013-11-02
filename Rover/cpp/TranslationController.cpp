@@ -390,12 +390,6 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		}
 		desMoment = 1.0/norm2(desMoment)*desMoment;
 
-//		Array2D<double> desDir(3,1);
-//		desDir[0][0] = 0;
-//		desDir[1][0] = 0;
-//		desDir[2][0] = -1;
-//		Array2D<double> desMoment = desDir;
-
 		mMutex_state.lock();
 		Array2D<double> curState = mCurState.copy();
 		Array2D<double> desState = mDesState.copy();
@@ -408,10 +402,11 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		Array2D<double> visionErr = curState[2][0]*moment-desState[2][0]*desMoment;
 //		Array2D<double> visionErr = curState[2][0]*(moment-desMoment);
 
-		Array2D<double> desVel = posGains*visionErr; // remember that * is element-wise
+		Array2D<double> desVel(3,1,0.0);
+//		Array2D<double> desVel = posGains*visionErr; // remember that * is element-wise
 
 		// use real height for z vel
-		desVel[2][0] = -mIbvsPosGains[2][0]*(curState[2][0]-desState[2][0]);
+//		desVel[2][0] = -mIbvsPosGains[2][0]*(curState[2][0]-desState[2][0]);
 
 		String logString;
 		for(int i=0; i<desVel.dim1(); i++)
@@ -423,7 +418,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		velErr[1][0] = curState[4][0]-(desState[4][0]+desVel[1][0]);
 		velErr[2][0] = curState[5][0]-(desState[5][0]+desVel[2][0]);
 
-		Array2D<double> accelCmd = -1.0*velGains*velErr;
+		Array2D<double> accelCmd = posGains*visionErr-velGains*velErr;
 
 		// A bit of safety
 		accelCmd[0][0] = min(2.0, max(-2.0, accelCmd[0][0]));

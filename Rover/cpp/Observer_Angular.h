@@ -74,6 +74,7 @@ class Observer_Angular : public CommManagerListener,
 	void onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight);
 	void onNewCommNominalMag(const toadlet::egg::Collection<float> &nomMag);
 	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
+	void onNewCommUseIbvs(bool useIbvs){mIsDoingIbvs = useIbvs;}
 	
 	// for SensorManagerListener
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
