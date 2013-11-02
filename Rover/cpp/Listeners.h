@@ -83,9 +83,15 @@ class VelocityEstimatorListener
 class TargetFinder2Listener
 {
 	public:
-		virtual ~TargetFinder2Listener(){};
+	virtual ~TargetFinder2Listener(){};
 
-		virtual void onTargetFound2(const std::shared_ptr<ImageTargetFind2Data> &data)=0;
+	virtual void onTargetFound2(const std::shared_ptr<ImageTargetFind2Data> &data)=0;
+};
+
+class RegionFinderListener
+{
+	public:
+	virtual void onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data)=0;
 };
 
 class CommManagerListener

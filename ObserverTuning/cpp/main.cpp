@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <random>
+#include <list>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -39,6 +40,8 @@ toadlet::egg::Collection<ICSL::Quadrotor::SensorManagerListener *> sensorManager
 void addSensorManagerListener(ICSL::Quadrotor::SensorManagerListener *l){sensorManagerListeners.push_back(l);}
 void addCommManagerListener(ICSL::Quadrotor::CommManagerListener *l){commManagerListeners.push_back(l);}
 
+std::list<std::string> loadLogFile(std::string filename);
+
 int main(int argv, char* argc[])
 {
 	using namespace ICSL;
@@ -49,7 +52,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 2;
+	int dataSet = 6;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -83,6 +86,11 @@ int main(int argv, char* argc[])
 			startImg = 4029;
 			endImg = 6546;
 			break;
+		case 6:
+			dataDir = "../dataSets/Nov1";
+			startImg = 11045;
+			endImg = 13250;
+			break;
 	}
 
 	string imgDir;
@@ -93,7 +101,7 @@ int main(int argv, char* argc[])
 	list<pair<int, shared_ptr<cv::Mat>>> imgList;
 	int imgId = startImg;
 	int numImages;
-	numImages = endImg-startImg;;
+	numImages = endImg-startImg-1;
 	for(int i=0; i<numImages; i++)
 	{
 //		cout << "Loading image " << i << ": " << imgId << endl;
@@ -101,8 +109,10 @@ int main(int argv, char* argc[])
 		while(img.data == NULL)
 		{
 			stringstream ss;
-			ss << "image_" << ++imgId << ".bmp";
+			ss << "image_" << imgId++ << ".bmp";
 			img = cv::imread(imgDir+"/"+ss.str());
+			if(img.data == NULL)
+				cout << "missing " << imgDir+"/"+ss.str() << endl;
 		}
 
 		shared_ptr<cv::Mat> pImg(new cv::Mat);
@@ -209,6 +219,9 @@ int main(int argv, char* argc[])
 	mTargetFinder.addListener(&mObsvAngular);
 	mTargetFinder.addListener(&mObsvTranslational);
 	mTargetFinder.addListener(&mTranslationController);
+//	mTargetFinder.addListener(&mVelocityEstimator);
+	mTargetFinder.addRegionListener(&mVelocityEstimator);
+	mTargetFinder.addRegionListener(&mFeatureFinder);
 	mTargetFinder.setObserverAngular(&mObsvAngular);
 	mTargetFinder.setObserverTranslational(&mObsvTranslational);
 	addSensorManagerListener(&mTargetFinder);
@@ -270,7 +283,7 @@ int main(int argv, char* argc[])
 		{
 			stringstream ss;
 			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
-			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+//			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
 			imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated));
 			cv::waitKey(1);
 		};
@@ -302,8 +315,8 @@ int main(int argv, char* argc[])
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
 		measVar.push_back(0.0001);
-		measVar.push_back(0.01);
-		measVar.push_back(0.01);
+		measVar.push_back(0.01*2);
+		measVar.push_back(0.01*2);
 		measVar.push_back(0.01);
 		commManagerListeners[i]->onNewCommKalmanMeasVar(measVar);
 
@@ -330,7 +343,7 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommVisionFeatureFindPointCntTarget(50);
 		commManagerListeners[i]->onNewCommVisionFeatureFindFASTAdaptRate(0.05);
 
-		commManagerListeners[i]->onNewCommVelEstMeasCov(30.0/2);
+		commManagerListeners[i]->onNewCommVelEstMeasCov(2*pow(5,2));
 		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005);
 
 		SystemModelLinear sys;
@@ -401,7 +414,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 20e3;
+	int endTimeDelta = 400e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -416,13 +429,14 @@ int main(int argv, char* argc[])
 	noiseStd[7][0] = 0.000;
 	noiseStd[8][0] = 0.010;
 
-	string line;
-	string dataFilename = dataDir+"/phoneLog.txt";
-	ifstream file(dataFilename.c_str());
-	if(file.is_open())
+//	string line;
+//	string dataFilename = dataDir+"/phoneLog.txt";
+//	ifstream file(dataFilename.c_str());
+	list<string> lines = loadLogFile(dataDir+"/phoneLog.txt");
+//	if(file.is_open())
 	{
-		getline(file, line); // first line is a throw-away
-		getline(file, line); // second line is also a throw-away
+//		getline(file, line); // first line is a throw-away
+//		getline(file, line); // second line is also a throw-away
 
 		for(int i=0; i<commManagerListeners.size(); i++)
 			commManagerListeners[i]->onNewCommMotorOn();
@@ -442,12 +456,15 @@ int main(int argv, char* argc[])
 			System::usleep(700);
 		}
 
+		list<string>::const_iterator lineIter = lines.begin();
 		list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imageIter = imgList.begin();
 		toadlet::uint64 lastDispTimeMS;
-		while(file.good() && startTime.getElapsedTimeMS()< firstTime+endTimeDelta)
+//		while(file.good() && startTime.getElapsedTimeMS()< firstTime+endTimeDelta)
+		while(lineIter != lines.end() && startTime.getElapsedTimeMS() < firstTime+endTimeDelta)
 		{
-			getline(file, line);
-			stringstream ss(line);
+//			getline(file, line);
+//			stringstream ss(line);
+			stringstream ss(*lineIter);
 			double time;
 			int type;
 			ss >> time >> type;
@@ -504,8 +521,8 @@ int main(int argv, char* argc[])
 				lastHeightUpdateTime.setTime();
 				shared_ptr<HeightData<double>> heightData(new HeightData<double>);
 				heightData->type = DATA_TYPE_HEIGHT;
-				heightData->heightRaw = height;
-				heightData->height = height;
+				heightData->heightRaw = height-0.1;
+				heightData->height = height-0.1;
 
 				for(int i=0; i<sensorManagerListeners.size(); i++)
 					sensorManagerListeners[i]->onNewSensorUpdate(heightData);
@@ -617,7 +634,7 @@ int main(int argv, char* argc[])
 //							cout << "We've got some image chad going on here.\t";
 //							cout << "imageIter->firt = " << imageIter->first << "\t";
 //							cout << "imgId = " << imgId << endl;
-							continue;
+							break;
 						}
 						while(imageIter != imgList.end() && imageIter->first < imgId)
 							imageIter++;
@@ -650,13 +667,17 @@ int main(int argv, char* argc[])
 						}
 					}
 					break;
+				default:
+					cout << "Unknown data type: " << type << endl;
 			}
+
+			lineIter++;
 		}
 
-		file.close();
+//		file.close();
 	}
-	else
-		cout << "File: " << dataFilename << " not found" << endl;
+//	else
+//		cout << "File: " << dataFilename << " not found" << endl;
 
 	mQuadLogger.shutdown();
 	mTranslationController.shutdown();
@@ -672,4 +693,42 @@ int main(int argv, char* argc[])
 	mMotorInterface.shutdown();
 
     return 0;
+}
+
+std::list<std::string> loadLogFile(std::string filename)
+{
+	using namespace std;
+	using namespace ICSL::Quadrotor;
+
+	string line;
+	list<string> lines;
+	ifstream file(filename.c_str());
+	if(file.is_open())
+	{
+		getline(file, line); // first line is a throw-away
+		getline(file, line); // second line is also a throw-away
+		
+		while(file.good())
+		{
+			getline(file, line);
+			stringstream ss(line);
+			double time;
+			int type;
+			ss >> time >> type;
+
+			if(type == LOG_ID_ACCEL ||
+			   type == LOG_ID_GYRO ||
+			   type == LOG_ID_MAGNOMETER ||
+			   type == LOG_ID_RECEIVE_VICON ||
+			   type == LOG_ID_IMAGE)
+				lines.push_back(line);
+		}
+
+		file.close();
+	}
+	else
+		cout << "Failed to open file: " << filename << endl;
+
+	cout << "Loaded " << lines.size() << " lines" << endl;
+	return lines;
 }

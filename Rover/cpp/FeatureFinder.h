@@ -22,6 +22,7 @@
 namespace ICSL {
 namespace Quadrotor {
 class FeatureFinder : public CommManagerListener,
+					  public RegionFinderListener, // if we're finding good regions don't look for points
 						public SensorManagerListener
 {
 	public:
@@ -61,6 +62,9 @@ class FeatureFinder : public CommManagerListener,
 		// SensorManagerListener
 		void onNewSensorUpdate(const shared_ptr<IData> &data);
 
+		// RegionFinderListener
+		void onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data);
+
 	protected:
 		bool mUseIbvs;
 		bool mRunning, mFinished;
@@ -88,7 +92,6 @@ class FeatureFinder : public CommManagerListener,
 
 		void run();
 
-
 		int mThreadPriority, mScheduler;
 
 		static vector<cv::Point2f> findFeaturePoints(const cv::Mat &image, 
@@ -98,6 +101,8 @@ class FeatureFinder : public CommManagerListener,
 		static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
 		static void drawPoints(const vector<cv::Point2f> &points, cv::Mat &img);
 
+		Time mLastRegionFindTime;
+		std::mutex mMutex_regionFindTime;
 };
 
 } // namespace Quadrotor

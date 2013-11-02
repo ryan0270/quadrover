@@ -29,7 +29,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 5;
+	int dataSet = 6;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -63,6 +63,11 @@ int main(int argv, char* argc[])
 			dataDir = "../dataSets/Oct13";
 			startImg = 4029;
 			endImg = 6546;
+			break;
+		case 6:
+			dataDir = "../dataSets/Nov1";
+			startImg = 11045;
+			endImg = 13250;
 			break;
 	}
 
@@ -144,7 +149,7 @@ int main(int argv, char* argc[])
 	Time curTime;
 	while(keypress != (int)'q' && imgIter != imgList.end())
 	{
-Log::alert(String()+"imgCnt: "+imgCnt);
+//Log::alert(String()+"imgCnt: "+imgCnt);
 		curTime.addTimeMS(33);
 		img = *(imgIter->second);
 		cvtColor(img,imgGray,CV_BGR2GRAY);
