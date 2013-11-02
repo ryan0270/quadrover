@@ -30,6 +30,8 @@ FeatureFinder::FeatureFinder()
 	mFASTThreshold = 30;
 	mPointCntTarget = 30;
 	mFASTAdaptRate = 0.01;
+
+	mLastRegionFindTime.setTimeMS(0);
 }
 
 void FeatureFinder::shutdown()
@@ -84,17 +86,15 @@ void FeatureFinder::run()
 	{
 		if(mNewImageReady
 			&& mIsMotorOn
+			&& mLastRegionFindTime.getElapsedTimeMS() > 100
 			)
 		{
 			procStart.setTime();
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
-			try{
-				imageData->image->copyTo(curImage);
-				imageData->imageGray->copyTo(curImageGray);
-			}
-			catch(...) {Log::alert("copyTo error in FeatureFinder 1");}
+			imageData->image->copyTo(curImage);
+			imageData->imageGray->copyTo(curImageGray);
 
 			if(mHaveUpdatedSettings)
 			{
@@ -443,6 +443,16 @@ void FeatureFinder::onNewCommVisionFeatureFindFASTAdaptRate(float r)
 
 	mHaveUpdatedSettings = true;
 	Log::alert(String()+"Feature finder FAST adapt rate set to " + r);
+}
+
+void FeatureFinder::onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data)
+{
+	if(data->regionLocs.size() > 5)
+	{
+		mMutex_regionFindTime.lock();
+		mLastRegionFindTime.setTime();
+		mMutex_regionFindTime.unlock();
+	}
 }
 
 } // namespace Quadrotor

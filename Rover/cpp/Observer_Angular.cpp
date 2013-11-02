@@ -509,54 +509,54 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 
 void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 {
-Log::alert("I shouldn't be here (observer angular)");
-	if(data->target == NULL)
-		return;
-
-	mMutex_targetFindTime.lock();
-	mLastTargetFindTime.setTime();
-	mMutex_targetFindTime.unlock();
-
-	cv::Point2f p0 = data->target->squareData[0]->contour[0];
-	cv::Point2f p1 = data->target->squareData[0]->contour[1];
-	cv::Point2f p2 = data->target->squareData[0]->contour[2];
-
-	// long edge of target
-	Array2D<double> measDir1(3,1);
-	measDir1[0][0] = p1.x-p0.x;
-	measDir1[1][0] = p1.y-p0.y;
-	measDir1[2][0] = 0;
-	measDir1 = 1.0/norm2(measDir1)*measDir1;
-	measDir1 = matmult(mRotCamToPhone, measDir1);
-
-	Array2D<double> nomDir1(3,1);
-	nomDir1[0][0] = -1;
-	nomDir1[1][0] = 1;
-	nomDir1[2][0] = 0;
-	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
-
-	// short edge of target
-	Array2D<double> measDir2(3,1);
-	measDir2[0][0] = p2.x-p1.x;
-	measDir2[1][0] = p2.y-p1.y;
-	measDir2[2][0] = 0;
-	measDir2 = 1.0/norm2(measDir2)*measDir2;
-	measDir2 = matmult(mRotCamToPhone, measDir2);
-
-	Array2D<double> nomDir2(3,1);
-	nomDir2[0][0] = 1;
-	nomDir2[1][0] = 1;
-	nomDir2[2][0] = 0;
-	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
-
-	mMutex_data.lock();
-	mExtraDirsMeasured.push_back(measDir1.copy());
-	mExtraDirsMeasured.push_back(measDir2.copy());
-	mExtraDirsInertial.push_back(nomDir1.copy());
-	mExtraDirsInertial.push_back(nomDir2.copy());
-	mExtraDirsWeight.push_back(2*2);
-	mExtraDirsWeight.push_back(2*2);
-	mMutex_data.unlock();
+//Log::alert("I shouldn't be here (observer angular)");
+//	if(data->target == NULL)
+//		return;
+//
+//	mMutex_targetFindTime.lock();
+//	mLastTargetFindTime.setTime();
+//	mMutex_targetFindTime.unlock();
+//
+//	cv::Point2f p0 = data->target->squareData[0]->contour[0];
+//	cv::Point2f p1 = data->target->squareData[0]->contour[1];
+//	cv::Point2f p2 = data->target->squareData[0]->contour[2];
+//
+//	// long edge of target
+//	Array2D<double> measDir1(3,1);
+//	measDir1[0][0] = p1.x-p0.x;
+//	measDir1[1][0] = p1.y-p0.y;
+//	measDir1[2][0] = 0;
+//	measDir1 = 1.0/norm2(measDir1)*measDir1;
+//	measDir1 = matmult(mRotCamToPhone, measDir1);
+//
+//	Array2D<double> nomDir1(3,1);
+//	nomDir1[0][0] = -1;
+//	nomDir1[1][0] = 1;
+//	nomDir1[2][0] = 0;
+//	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
+//
+//	// short edge of target
+//	Array2D<double> measDir2(3,1);
+//	measDir2[0][0] = p2.x-p1.x;
+//	measDir2[1][0] = p2.y-p1.y;
+//	measDir2[2][0] = 0;
+//	measDir2 = 1.0/norm2(measDir2)*measDir2;
+//	measDir2 = matmult(mRotCamToPhone, measDir2);
+//
+//	Array2D<double> nomDir2(3,1);
+//	nomDir2[0][0] = 1;
+//	nomDir2[1][0] = 1;
+//	nomDir2[2][0] = 0;
+//	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
+//
+//	mMutex_data.lock();
+//	mExtraDirsMeasured.push_back(measDir1.copy());
+//	mExtraDirsMeasured.push_back(measDir2.copy());
+//	mExtraDirsInertial.push_back(nomDir1.copy());
+//	mExtraDirsInertial.push_back(nomDir2.copy());
+//	mExtraDirsWeight.push_back(2*2);
+//	mExtraDirsWeight.push_back(2*2);
+//	mMutex_data.unlock();
 }
 
 // This function is way too long, I should probably split it up sometime
@@ -656,7 +656,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	SO3 R_x( createRotMat(0, euler[0][0]) );
 	SO3 R_y( createRotMat(1, euler[1][0]) );
 	SO3 R_z( createRotMat(2, euler[2][0]) );
-//	SO3 attYX = R_x*R_y; // This is was Daewan had in his paper but I don't think it's right
+//	SO3 attYX = R_x*R_y; // This is what Daewan had in his paper but I don't think it's right
 	SO3 attYX = R_y*R_x; // R_y*R_x*R_x'*R_y'*R_z'*P = R_z'*P
 	SO3 rotYX = attYX*SO3(mRotCamToPhone);
 	double f = data->imageData->focalLength;
@@ -757,7 +757,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 
 		angleOffset = offsets[kingIndex];
 
-		if( abs(medOffset+euler[2][0]) < 0.1)
+		if( abs(medOffset+euler[2][0]) < 0.2)
 		{
 			Array2D<double> dirMeas(3,1), dirNom(3,1,0.0);
 			dirNom[1][0] = 1;
@@ -787,30 +787,6 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			mVisionInnovation[2][0] = 0;
 			mMutex_visionInnovation.unlock();
 		}
-
-//		if( abs(angleOffset + euler[2][0]) < 0.1 ) // sanity check to make sure we don't have a bad batch
-//		{
-//			double weight = 0.2;
-//			Array2D<double> innovation(3,1,0.0);
-//			for(int i=0; i<dirMeasList.size(); i++)
-//			{
-//				double w = weight*lifeList[i]/totalLife;
-//				innovation += w*cross(dirMeasList[i], att.inv()*dirNomList[i]);
-//			}
-//
-//		}
-//		else
-//		{
-//// TODO: WHY IS THIS ALWAYS BIASED THE SAME DIRECTION?
-//			Log::alert(String()+"Rejecting strange angle offset: "+angleOffset+" vs euler: "+euler[2][0] + "\t--- sum: " + (angleOffset+euler[2][0]) + "\t--- medOffset: " + medOffset);
-//			angleOffset = -euler[2][0];
-//			mMutex_visionInnovation.lock();
-//			mVisionInnovation[0][0] = 0;
-//			mVisionInnovation[1][0] = 0;
-//			mVisionInnovation[2][0] = 0;
-//			mMutex_visionInnovation.unlock();
-////			return;
-//		}
 	}
 
 	// If we don't have any repeats just use the current angle
@@ -818,11 +794,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	if(mNominalDirMap.size() == 0)
 		angleOffset = -euler[2][0];
 	else if(dirMeasList.size() == 0)
-	{
-//		Log::alert(String()+"nothing here. mNominalDirMap.size() = "+(int)mNominalDirMap.size());
 		angleOffset = -euler[2][0];
-//		return;
-	}
 
 	/////////////////////////////////////////// set nominal directions for the known pairs ///////////////////////////////////////////
 	Array2D<double> dir(3,1);

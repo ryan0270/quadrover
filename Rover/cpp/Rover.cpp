@@ -129,6 +129,9 @@ void Rover::initialize()
 	mTargetFinder2.addListener(&mObsvAngular);
 	mTargetFinder2.addListener(&mObsvTranslational);
 	mTargetFinder2.addListener(&mTranslationController);
+//	mTargetFinder2.addListener(&mVelocityEstimator);
+	mTargetFinder2.addRegionListener(&mVelocityEstimator);
+	mTargetFinder2.addRegionListener(&mFeatureFinder);
 	mSensorManager.addListener(&mTargetFinder2);
 	mCommManager.addListener(&mTargetFinder2);
 

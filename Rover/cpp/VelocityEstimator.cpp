@@ -14,9 +14,11 @@ VelocityEstimator::VelocityEstimator() :
 	mRunning = false;
 
 	mNewImageDataAvailable = false;
+	mNewRegionDataAvailable = false;
 	mLastImageFeatureData = NULL;
+	mLastRegionData = NULL;
 
-	mMeasCov = 2*5*5;
+	mMeasCov = 2*pow(5,2);
 	mProbNoCorr = 0.1;
 
 	mLastDelayTimeUS = 0;
@@ -52,14 +54,18 @@ void VelocityEstimator::run()
 
 	shared_ptr<ImageFeatureData> oldImageFeatureData, curImageFeatureData;
 	oldImageFeatureData = curImageFeatureData = NULL;
+	shared_ptr<ImageRegionLocData> oldRegionData, curRegionData;
+	oldRegionData = curRegionData = NULL;
 	Time procTimer;
 	double procTime, delayTime;
 	Array2D<double> velEst(3,1,0.0);
 	double heightEst = 0.05;;
 	String logString;
 	float measCov, probNoCorr;
+	Time curTime;
 	while(mRunning)
 	{
+		bool success = false;
 		if(mNewImageDataAvailable)
 		{
 			procTimer.setTime();
@@ -69,6 +75,8 @@ void VelocityEstimator::run()
 			curImageFeatureData = mLastImageFeatureData;
 			mNewImageDataAvailable = false;
 			mMutex_data.unlock();
+
+			curTime.setTime(curImageFeatureData->imageData->timestamp);
 			
 			if(oldImageFeatureData != NULL && oldImageFeatureData->featurePoints.size() > 5 && curImageFeatureData->featurePoints.size() > 5)
 			{
@@ -77,46 +85,72 @@ void VelocityEstimator::run()
 				probNoCorr = mProbNoCorr;
 				mMutex_params.unlock();
 
-				bool success = doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
+				success = doVelocityEstimate(oldImageFeatureData, curImageFeatureData, velEst, heightEst, measCov, probNoCorr);
+			}
 
-				if(success)
-				{
-					shared_ptr<DataVector<double>> velData(new DataVector<double>());
-					velData->data = velEst.copy();
-					velData->type = DATA_TYPE_MAP_VEL;
-					velData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
+			procTime = procTimer.getElapsedTimeNS()/1.0e9;
+		}
+		else if(mNewRegionDataAvailable) // we want to do only one of these on any given pass
+		{
+			procTimer.setTime();
 
-					shared_ptr<Data<double>> heightData(new Data<double>());
-					heightData->data = heightEst;
-					heightData->type = DATA_TYPE_MAP_HEIGHT;
-					heightData->timestamp.setTime(curImageFeatureData->imageData->timestamp);
+			mMutex_data.lock();
+			oldRegionData = curRegionData;
+			curRegionData = mLastRegionData;
+			mNewRegionDataAvailable = false;
+			mMutex_data.unlock();
 
-					for(int i=0; i<mListeners.size(); i++)
-						mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
+			curTime.setTime(curRegionData->imageData->timestamp);
+			
+			if(oldRegionData != NULL && oldRegionData->regionLocs.size() > 5 &&
+			   curRegionData->regionLocs.size() > 5)
+			{
+				mMutex_params.lock();
+				measCov = mMeasCov;
+				probNoCorr = mProbNoCorr;
+				mMutex_params.unlock();
 
-					procTime = procTimer.getElapsedTimeNS()/1.0e9;
-					delayTime = curImageFeatureData->imageData->timestamp.getElapsedTimeNS()/1.0e9;
-					mMutex_data.lock();
-					mLastDelayTimeUS = delayTime*1.0e6;
-					mMutex_data.unlock();
+				success = doVelocityEstimate(oldRegionData, curRegionData, velEst, heightEst, measCov, probNoCorr);
+			}
 
-					if(mQuadLogger != NULL)
-					{
-						logString = String();
-						for(int i=0; i<velEst.dim1(); i++)
-							logString = logString + velEst[i][0] + "\t";
-						mQuadLogger->addEntry(LOG_ID_MAP_VEL,logString,LOG_FLAG_CAM_RESULTS);
+			procTime = procTimer.getElapsedTimeNS()/1.0e9;
+		}
 
-						logString = String() + heightEst;
-						mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT,logString,LOG_FLAG_CAM_RESULTS);
+		if(success)
+		{
+			shared_ptr<DataVector<double>> velData(new DataVector<double>());
+			velData->data = velEst.copy();
+			velData->type = DATA_TYPE_MAP_VEL;
+			velData->timestamp.setTime(curTime);
 
-						logString = String()+procTime;
-						mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME,logString,LOG_FLAG_CAM_RESULTS);
+			shared_ptr<Data<double>> heightData(new Data<double>());
+			heightData->data = heightEst;
+			heightData->type = DATA_TYPE_MAP_HEIGHT;
+			heightData->timestamp.setTime(curTime);
 
-						logString = String()+ delayTime;
-						mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
-					}
-				}
+			for(int i=0; i<mListeners.size(); i++)
+				mListeners[i]->onVelocityEstimator_newEstimate(velData, heightData);
+
+			delayTime = curTime.getElapsedTimeNS()/1.0e9;
+			mMutex_data.lock();
+			mLastDelayTimeUS = delayTime*1.0e6;
+			mMutex_data.unlock();
+
+			if(mQuadLogger != NULL)
+			{
+				logString = String();
+				for(int i=0; i<velEst.dim1(); i++)
+					logString = logString + velEst[i][0] + "\t";
+				mQuadLogger->addEntry(LOG_ID_MAP_VEL,logString,LOG_FLAG_CAM_RESULTS);
+
+				logString = String() + heightEst;
+				mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT,logString,LOG_FLAG_CAM_RESULTS);
+
+				logString = String()+procTime;
+				mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME,logString,LOG_FLAG_CAM_RESULTS);
+
+				logString = String()+ delayTime;
+				mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
 			}
 		}
 
@@ -221,11 +255,113 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	return true;
 }
 
+// TODO: combine this with the above to be one function that just operates on locations
+bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageRegionLocData> oldRegionData,
+										   const shared_ptr<ImageRegionLocData> curRegionData,
+										   Array2D<double> &velEst, 
+										   double &heightEst,
+										   double visionMeasCov,
+										   double probNoCorr) const
+{
+	Time oldTime = oldRegionData->imageData->timestamp;
+	Time curTime = curRegionData->imageData->timestamp;
+	double dt = Time::calcDiffNS(oldTime, curTime)/1.0e9;
+
+	cv::Point2f center;
+	center.x = curRegionData->imageData->center.x;
+	center.y = curRegionData->imageData->center.y;
+	float focalLength = curRegionData->imageData->focalLength;
+
+	// Get relevant state data
+	Array2D<double> oldState = mObsvTranslational->estimateStateAtTime(oldTime);
+	SO3 attOld = oldRegionData->imageData->att;
+
+	Array2D<double> curState = mObsvTranslational->estimateStateAtTime(curTime);
+	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
+	SO3 attCur = curRegionData->imageData->att;
+
+	SO3 attChange = attCur*attOld.inv();
+	double theta;
+	Array2D<double> axis;
+	attChange.getAngleAxis(theta, axis);
+	Array2D<double> omega = theta/dt*axis;
+
+	// Ignore this case since it means we're probably sitting on the ground
+	if(oldState[2][0] <= 0)
+		return false; 
+	curState = submat(curState,0,5,0,0);
+	curErrCov = submat(curErrCov,0,5,0,5);
+
+	// Rotate data to cam coords
+	omega.inject( matmult( mRotPhoneToCam, omega ));
+	Array2D<double> mRotPhoneToCam2 = blkdiag(mRotPhoneToCam, mRotPhoneToCam);
+	Array2D<double> mRotCamToPhone2 = blkdiag(mRotCamToPhone, mRotCamToPhone);
+	curState = matmult( mRotPhoneToCam2, curState);
+	curErrCov = matmult( mRotPhoneToCam2, matmult(curErrCov, mRotCamToPhone2));
+
+	// get prior distributions
+	vector<cv::Point2f> oldPoints(oldRegionData->regionLocs.size());
+	for(int i=0; i<oldPoints.size(); i++)
+		oldPoints[i] = oldRegionData->regionLocs[i]-center;
+
+	vector<cv::Point2f> curPoints(curRegionData->regionLocs.size());
+	for(int i=0; i<curPoints.size(); i++)
+		curPoints[i] = curRegionData->regionLocs[i]-center;
+	Array2D<double> mv = submat(curState,3,5,0,0);
+	Array2D<double> Sv = submat(curErrCov,3,5,3,5);
+	double mz = max(-curState[2][0], 0.130);
+	double sz = sqrt(curErrCov[2][2]);
+
+	double camOffset = 0;
+	mz -= camOffset;
+
+	Array2D<double> Sn(2,2,0.0), SnInv(2,2,0.0);
+	Sn[0][0] = Sn[1][1] = visionMeasCov;
+	SnInv[0][0] = SnInv[1][1] = 1.0/Sn[0][0];
+
+	vector<pair<Array2D<double>, Array2D<double>>> priorDistList(oldPoints.size());
+	priorDistList = calcPriorDistributions(oldPoints, mv, Sv, mz, sz*sz, focalLength, dt, omega);
+
+	// Make soft point correspondences
+	Array2D<double> C = calcCorrespondence(priorDistList, curPoints, Sn, SnInv, probNoCorr);
+
+	double numMatches = 0;
+	for(int i=0; i<C.dim1()-1; i++)
+		for(int j=0; j<C.dim2()-1; j++)
+			numMatches += C[i][j];
+	{
+		String str = String()+numMatches;
+		mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES,str, LOG_FLAG_CAM_RESULTS);
+	}
+	
+	// Find map vel
+	Array2D<double> vel(3,1), covVel(3,3);
+	double z;
+	computeMAPEstimate(vel, covVel, z, oldPoints, curPoints, C, mv, Sv, mz, sz*sz, Sn, focalLength, dt, omega);
+	z += camOffset;
+
+	vel = matmult(mRotCamToPhone, vel);
+	covVel = matmult(mRotCamToPhone, matmult(covVel, mRotPhoneToCam));
+
+	velEst.inject(vel);
+	heightEst = z;
+
+	return true;
+}
+
 void VelocityEstimator::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 {
 	mMutex_data.lock();
 	mLastImageFeatureData = data;
 	mNewImageDataAvailable = true;
+	mMutex_data.unlock();
+}
+
+void VelocityEstimator::onRegionsFound(const shared_ptr<ImageRegionLocData> &data)
+{
+	mMutex_data.lock();
+	mLastRegionData= data;
+	mNewRegionDataAvailable = true;
 	mMutex_data.unlock();
 }
 

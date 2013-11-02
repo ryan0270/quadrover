@@ -51,7 +51,7 @@ void TargetFinder2::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
-	Array2D<double> Sn = 10*10*createIdentity((double)2);
+	Array2D<double> Sn = pow(5,2)*createIdentity((double)2);
 	Array2D<double> SnInv(2,2,0.0);
 	SnInv[0][0] = 1.0/Sn[0][0];
 	SnInv[1][1] = 1.0/Sn[1][1];
@@ -101,6 +101,16 @@ void TargetFinder2::run()
 
 			vector<vector<cv::Point>> allContours = findContours(*imageData->imageGray);
 			vector<shared_ptr<ActiveRegion>> curRegions = objectify(allContours,Sn,SnInv,varxi_ratio,probNoCorr,imageTime);
+			{ // special announcement of region centroids only
+				shared_ptr<ImageRegionLocData> regionData(new ImageRegionLocData());
+				regionData->imageData = imageData;
+				regionData->timestamp.setTime(imageTime);
+				regionData->regionLocs.resize(curRegions.size());
+				for(int i=0; i<curRegions.size(); i++)
+					regionData->regionLocs[i] = curRegions[i]->getFoundPos();
+				for(int i=0; i<mRegionListeners.size(); i++)
+					mRegionListeners[i]->onRegionsFound(regionData);
+			}
 
 			double f = imageData->focalLength;
 			cv::Point2f center = imageData->center;
@@ -147,7 +157,6 @@ void TargetFinder2::run()
 			{
 				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 				imageData->image->copyTo(*imageAnnotated);
-if(repeatRegions.size() > 0 || newRegions.size() > 0)
 				drawTarget(*imageAnnotated, curRegions, repeatRegions);
 
 				shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
@@ -182,6 +191,9 @@ void TargetFinder2::drawTarget(cv::Mat &image,
 							   const vector<shared_ptr<ActiveRegion>> &curRegions,
 							   const vector<shared_ptr<ActiveRegion>> &repeatRegions)
 {
+	if(curRegions.size() == 0 && repeatRegions.size() == 0)
+		return;
+
 	vector<vector<cv::Point>> curContours(curRegions.size()), repeatContours(repeatRegions.size());
 	for(int i=0; i<curRegions.size(); i++)
 		curContours[i] = curRegions[i]->getContour();
@@ -238,7 +250,7 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 	resize(image, pyrImage, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
 
 	int delta = 5*2;
-	int minArea = 1.0/pow(10,2)*pyrImage.rows*pyrImage.cols;
+	int minArea = 1.0/pow(20,2)*pyrImage.rows*pyrImage.cols;
 	int maxArea = 1.0/pow(2,2)*pyrImage.rows*pyrImage.cols;
 	double maxVariation = 0.25; // smaller reduces number of regions
 	double minDiversity = 0.4; // smaller increase the number of regions

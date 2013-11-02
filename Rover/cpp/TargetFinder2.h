@@ -52,6 +52,7 @@ public:
 	toadlet::egg::Collection<int> getVisionParams();
 
 	void addListener(TargetFinder2Listener *listener){mListeners.push_back(listener);}
+	void addRegionListener(RegionFinderListener *listener){mRegionListeners.push_back(listener);}
 
 	// CommManagerListener functions
 	void onNewCommMotorOn(){mIsMotorOn = true;}
@@ -105,6 +106,7 @@ protected:
 	std::mutex mMutex_params;
 
 	toadlet::egg::Collection<TargetFinder2Listener*> mListeners;
+	toadlet::egg::Collection<RegionFinderListener*> mRegionListeners;
 
 	void run();
 

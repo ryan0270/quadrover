@@ -64,6 +64,7 @@ enum DataType
 	DATA_TYPE_HEIGHT,
 	DATA_TYPE_TARGET_FIND,
 	DATA_TYPE_IMAGE_TRANSLATION,
+	DATA_TYPE_REGION_LOCS,
 }; 
 template<class T> class Data;
 template<class T> class DataVector; 
@@ -329,6 +330,18 @@ class ImageTargetFind2Data : public IData
 
 	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
 	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
+};
+
+class ImageRegionLocData : public IData
+{
+	public:
+	ImageRegionLocData() : IData() {type = DATA_TYPE_REGION_LOCS;};
+	vector<cv::Point2f> regionLocs; // a bit of a hack since pointing to the region doesn't work. It always updates it's current position and I need the previous position
+	shared_ptr<DataImage> imageData;
+//	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
+
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock();}// if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock();}// if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 };
 
 class ImageTranslationData : public IData

@@ -27,6 +27,7 @@ namespace Quadrotor {
 using namespace TNT;
 
 class VelocityEstimator : public FeatureFinderListener,
+						  public RegionFinderListener,
 						  public CommManagerListener
 {
 	public:
@@ -56,6 +57,9 @@ class VelocityEstimator : public FeatureFinderListener,
 	// for FeatureFinderListener
 	void onFeaturesFound(const shared_ptr<ImageFeatureData> &data);
 
+	// for RegionFinderListener 
+	void onRegionsFound(const shared_ptr<ImageRegionLocData> &data);
+
 	protected:
 	bool mRunning, mDone;
 	int mThreadPriority, mScheduler;
@@ -65,8 +69,9 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	Collection<VelocityEstimatorListener*> mListeners;
 
-	bool mNewImageDataAvailable;
+	bool mNewImageDataAvailable, mNewRegionDataAvailable;
 	shared_ptr<ImageFeatureData> mLastImageFeatureData;
+	shared_ptr<ImageRegionLocData> mLastRegionData;
 
 	std::mutex mMutex_imageData, mMutex_data, mMutex_params;
 
@@ -80,6 +85,12 @@ class VelocityEstimator : public FeatureFinderListener,
 							const shared_ptr<ImageFeatureData> curFeatureData,
 							TNT::Array2D<double> &velEstOUT,
 							double &heightEstOUT,
+							double visionMeasCov,
+							double probNoCorr) const;
+	bool doVelocityEstimate(const shared_ptr<ImageRegionLocData> oldRegionData,
+						    const shared_ptr<ImageRegionLocData> curRegionData,
+							Array2D<double> &velEst, 
+							double &heightEst,
 							double visionMeasCov,
 							double probNoCorr) const;
 
