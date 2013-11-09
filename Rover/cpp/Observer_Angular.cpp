@@ -257,7 +257,7 @@ void Observer_Angular::doInnovationUpdate(double dt,
 	mInnovation = mAccelWeight*cross(uB, transR*uI);
 	mInnovation += mMagWeight*cross(vB, transR*vI); 
 	mMutex_visionInnovation.lock();
-	mInnovation[2][0] += mVisionInnovation[2][0];
+	mInnovation += mVisionInnovation;
 	mMutex_visionInnovation.unlock();
 
 	// add any extra measurements that may have come in
@@ -757,7 +757,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 
 		angleOffset = offsets[kingIndex];
 
-		if( abs(medOffset+euler[2][0]) < 0.2)
+		if( abs(medOffset+euler[2][0]) < 0.1)
 		{
 			Array2D<double> dirMeas(3,1), dirNom(3,1,0.0);
 			dirNom[1][0] = 1;
@@ -767,15 +767,16 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			Array2D<double> R = createRotMat_ZYX(-medOffset, euler[1][0], euler[0][0]);
 			dirMeas = matmult(transpose(R), dirNom);
 
-			double weight = 0.2;
+			double weight = 5;
 			Array2D<double> innovation = weight*cross(dirMeas, att.inv()*dirNom);
 			angleOffset = medOffset;
 
 
 			mMutex_visionInnovation.lock();
+//			mVisionInnovation.inject(innovation);
 			mVisionInnovation[0][0] = 0;
 			mVisionInnovation[1][0] = 0;
-			mVisionInnovation[2][0] = weight*(medOffset+euler[2][0]);
+			mVisionInnovation[2][0] = innovation[2][0];
 			mMutex_visionInnovation.unlock();
 		}
 		else
@@ -826,6 +827,11 @@ Log::alert(String()+mStartTime.getElapsedTimeMS()+" -- Bad bunch");
 		mNominalDirMap[newPairs[i]] = dir.copy();
 		mNominalDirCreateTime[newPairs[i]] = data->imageData->timestamp;
 	}
+
+	String str;
+	for(int i=0; i<mVisionInnovation.dim1(); i++)
+		str = str+mVisionInnovation[i][0]+"\t";
+	mQuadLogger->addEntry(LOG_ID_VISION_INNOVATION, str, LOG_FLAG_OBSV_BIAS);
 }
 
 void Observer_Angular::onNewCommObserverReset()

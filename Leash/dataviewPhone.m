@@ -175,6 +175,10 @@ angleRefModelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_REF
 angleRefModelTime = phoneData(angleRefModelIndices,1)'/1000;
 angleRefModel = phoneData(angleRefModelIndices,3:8)';
 
+visionInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VISION_INNOVATION);
+visionInnovationTime = phoneData(visionInnovationIndices,1)'/1000;
+visionInnovation = phoneData(visionInnovationIndices,3:5)';
+
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
@@ -603,6 +607,17 @@ if exist('imageOffset','var') && ~isempty(imageOffset)
 	xlabel('x');
 	ylabel('y')
 end
+
+%%
+if exist('visionInnovation','var') && ~isempty(visionInnovation)
+	figure(12000); clf
+	plot(visionInnovationTime, visionInnovation); hold all
+	hold off
+	xlabel('Time [s]');
+	ylabel('Innovation');
+	legend('x','y','z');
+end
+
 
 
 %%

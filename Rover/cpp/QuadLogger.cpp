@@ -238,6 +238,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_IMAGE_OFFSET="+LOG_ID_IMAGE_OFFSET+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_TORQUE_CMD="+LOG_ID_TORQUE_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_REF_ATTITUDE_SYSTEM_STATE="+LOG_ID_REF_ATTITUDE_SYSTEM_STATE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_VISION_INNOVATION="+LOG_ID_VISION_INNOVATION+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}
