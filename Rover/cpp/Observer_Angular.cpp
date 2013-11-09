@@ -767,7 +767,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 			Array2D<double> R = createRotMat_ZYX(-medOffset, euler[1][0], euler[0][0]);
 			dirMeas = matmult(transpose(R), dirNom);
 
-			double weight = 5;
+			double weight = 5*2;
 			Array2D<double> innovation = weight*cross(dirMeas, att.inv()*dirNom);
 			angleOffset = medOffset;
 
