@@ -200,7 +200,7 @@ void SensorManager::run()
 //	double accelOffZ = -0.3;
 
 	// For S4
-	double accelOffX =  0.02;
+	double accelOffX =  0.02+0.1;
 	double accelOffY = -0.28;
 	double accelOffZ = -0.31;
 
