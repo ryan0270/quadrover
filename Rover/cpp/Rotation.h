@@ -124,7 +124,7 @@ class SO3
 	TNT::Array2D<double> getAnglesZYX() const;
 	Quaternion getQuaternion() const {return mQuaternion;}
 
-	void getAngleAxis(double &angle, TNT::Array2D<double> &axis){mQuaternion.getAngleAxis1(angle, axis);}
+	void getAngleAxis(double &angle, TNT::Array2D<double> &axis) const {mQuaternion.getAngleAxis1(angle, axis);}
 
 	bool isIdentity() const;
 

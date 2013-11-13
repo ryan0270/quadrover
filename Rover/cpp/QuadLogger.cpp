@@ -86,7 +86,7 @@ void QuadLogger::run()
 		if(size > 0)
 			t.setTime(mLogQueue.front()->timestamp);
 		mMutex_logQueue.unlock();
-		while(size > 0 && !mPaused && t.getElapsedTimeMS() > 1.0e3)
+		while(size > 0 && !mPaused && t.getElapsedTimeMS() > 1.0e3 && mRunning)
 		{
 			mMutex_logQueue.lock();
 			entry  = mLogQueue.front();
@@ -191,6 +191,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_IMAGE="+LOG_ID_IMAGE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_PHONE_TEMP="+LOG_ID_PHONE_TEMP+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_CPU_USAGE="+LOG_ID_CPU_USAGE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_CPU_FREQ="+LOG_ID_CPU_FREQ+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_TIME_SYNC="+LOG_ID_TIME_SYNC+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_GYRO_BIAS="+LOG_ID_GYRO_BIAS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_SET_YAW_ZERO="+LOG_ID_SET_YAW_ZERO+";\n"; logStream->write((tbyte*)str.c_str(),str.length());

@@ -89,7 +89,9 @@ class AttitudeThrustController : public CommManagerListener,
 	SO3 mMotorPlaneBias;
 
 	// For the reference model
-	ICSL::SystemModelLinear mRefSys;
+	Array2D<double> mRefState;
+//	double mRefDamping, mRefNaturalFreq;
+	double mRefB, mRefC;
 };
 
 } // namespace Quadrotor
