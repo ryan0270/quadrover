@@ -239,7 +239,7 @@ void Observer_Angular::doInnovationUpdate(double dt,
 //		mLastGoodAccel.inject(accel);
 //	else
 //		accel.inject(mLastGoodAccel);
-	if(abs(accel[2][0]-GRAVITY) > 6)
+	if(abs(accel[2][0]-GRAVITY) > 4)
 //		accel[2][0] = GRAVITY;
 		accel[2][0] = mLastGoodAccel[2][0];
 	else

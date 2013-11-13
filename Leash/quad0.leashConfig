@@ -30,20 +30,20 @@
          <z>2.000000</z>
       </P>
       <D>
-         <x>2.500000</x>
-         <y>2.500000</y>
+         <x>2.000000</x>
+         <y>2.000000</y>
          <z>2.000000</z>
       </D>
    </IBVS>
    <Attitude>
       <P>
-         <x>0.500000</x>
-         <y>0.500000</y>
+         <x>0.400000</x>
+         <y>0.400000</y>
          <z>1.000000</z>
       </P>
       <D>
-         <x>0.200000</x>
-         <y>0.200000</y>
+         <x>0.150000</x>
+         <y>0.150000</y>
          <z>1.500000</z>
       </D>
    </Attitude>
@@ -99,9 +99,9 @@
    <MotorArmLength>0.250000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
-      <North>-30.000000</North>
+      <North>-25.000000</North>
       <East>45.000000</East>
-      <South>-70.000000</South>
+      <South>-75.000000</South>
       <West>55.000000</West>
    </MotorTrim>
 </Hardware>

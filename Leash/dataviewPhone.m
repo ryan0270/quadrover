@@ -187,9 +187,10 @@ visionInnovation = phoneData(visionInnovationIndices,3:5)';
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
 	figure(2000); set(gcf,'Name','CPU Usage')
-	plot(cpuUsageTime,cpuUsage(1,:)');
+	[ax, h1, h2] = plotyy(cpuUsageTime,cpuUsage(1,:)', cpuFreqTime, cpuFreq);
 	xlabel('Time [s]');
-	ylabel('Usage ratio');
+	ylabel(ax(1),'Usage ratio');
+	ylabel(ax(2),'CPU freq');
 % 	legend('total','cpu0','cpu1','cpu2','cpu2')
 % 	axis([cpuUsageTime(1) cpuUsageTime(end) 0 1])
 end
