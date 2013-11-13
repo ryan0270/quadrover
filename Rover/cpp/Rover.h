@@ -145,6 +145,8 @@ protected:
 	MotorInterface mMotorInterface;
 
 	int mThreadPriority, mScheduler;
+
+	int getCpuFreq();
 }; // class Rover
 
 } // namespace Quadrotor

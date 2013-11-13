@@ -1,4 +1,4 @@
-clear
+ clear
 disp('start chadding')
 
 %% script defining phone log ids
@@ -94,6 +94,10 @@ featureFindTime = phoneData(featureFindTimeIndices,3)';
 % forceScalingIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_FORCE_GAIN);
 % forceScalingTime = phoneData(forceScalingIndices,1)'/1000;
 % forceScaling = phoneData(forceScalingIndices,3)';
+
+cpuFreqIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_FREQ);
+cpuFreqTime = phoneData(cpuFreqIndices,1)'/1000;
+cpuFreq = phoneData(cpuFreqIndices,3)';
 
 cpuUsageIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CPU_USAGE);
 cpuUsageTime = phoneData(cpuUsageIndices,1)'/1000;
@@ -217,7 +221,7 @@ if exist('state','var') && ~isempty(state)
 		subplot(2,3,i);
 		plot(stateRefTime, stateRef(i,:)); hold all
         plot(stateTime,state(i,:),'LineWidth',2); hold all
-% 		plot(angleRefModelTime, angleRefModel(i,:)); hold all
+		plot(angleRefModelTime, angleRefModel(i,:)); hold all
 		hold off
         xlabel('Time [s]');
         ylabel(stateLabels(i));

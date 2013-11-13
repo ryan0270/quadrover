@@ -220,6 +220,9 @@ void Rover::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
+	double freq, freqAcc, freqCnt;
+	freq = freqAcc = freqCnt = 0;
+
 	thread dataSendTh, imageSendTh;
 	while(mRunning) 
 	{
@@ -237,6 +240,10 @@ void Rover::run()
 			imageSendTh.detach();
 			mLastImageSendTime.setTime();
 		}
+
+		freq = getCpuFreq();
+		freqAcc += (freq/1.0e6);
+		freqCnt++;
 
 		if(mLastCpuUsageTime.getElapsedTimeMS() > 1000)
 		{
@@ -280,6 +287,12 @@ void Rover::run()
 				mQuadLogger.addEntry(Time(), LOG_ID_CPU_USAGE, str,LOG_FLAG_PC_UPDATES);
 			}
 			cpuUsagePrev.inject(cpuUsageCur);
+
+			// also log cpu freq
+			String str = String()+freqAcc/freqCnt;
+			mQuadLogger.addEntry(LOG_ID_CPU_FREQ, str, LOG_FLAG_PC_UPDATES);
+			freqCnt = 0;
+			freqAcc = 0;
 		}
 
 		System::msleep(10);
@@ -777,6 +790,25 @@ Array2D<int> Rover::getCpuUsage(int numCpuCores)
 	}
 
 	return data;
+}
+
+int Rover::getCpuFreq()
+{
+	int freq=0;
+	string filename = "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq";
+	ifstream file(filename.c_str());
+	if(file.is_open())
+	{
+		string line;
+		getline(file,line);
+		file.close();
+
+		stringstream(line) >> freq;
+	}
+	else
+		Log::alert(String()+"Failed to open " +filename.c_str());
+
+	return freq;
 }
 
 } // namespace Quadrotor

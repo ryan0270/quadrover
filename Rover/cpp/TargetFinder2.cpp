@@ -247,10 +247,11 @@ void TargetFinder2::onNewSensorUpdate(const shared_ptr<IData> &data)
 vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 {
 	cv::Mat pyrImage;
-	resize(image, pyrImage, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
+	double pyrScale = 0.5;
+	resize(image, pyrImage, cv::Size(), pyrScale, pyrScale, cv::INTER_AREA);
 
 	int delta = 5*2;
-	int minArea = 1.0/pow(10,2)*pyrImage.rows*pyrImage.cols;
+	int minArea = 1.0/pow(15,2)*pyrImage.rows*pyrImage.cols;
 	int maxArea = 1.0/pow(2,2)*pyrImage.rows*pyrImage.cols;
 	double maxVariation = 0.25; // smaller reduces number of regions
 	double minDiversity = 0.4; // smaller increase the number of regions
@@ -283,7 +284,6 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 		mask(boundRect) = cv::Scalar(0);
 		uchar *row;
 		int step = mask.step;
-		bool isBorderRegion = false;
 		for(int j=0; j<regions[i].size(); j++) 
 		{
 			int x = regions[i][j].x;
@@ -304,7 +304,7 @@ vector<vector<cv::Point>> TargetFinder2::findContours(const cv::Mat &image)
 	// scale the contours back to the original image size
 	for(int i=0; i<allContours.size(); i++)
 		for(int j=0; j<allContours[i].size(); j++)
-			allContours[i][j] *= 2;
+			allContours[i][j] *= 1.0/pyrScale;
 
 	return allContours;
 }
