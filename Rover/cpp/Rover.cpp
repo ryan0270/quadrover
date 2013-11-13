@@ -235,10 +235,10 @@ void Rover::run()
 		}
 		if(!mImageIsSending && mLastImageSendTime.getElapsedTimeMS() > 200)
 		{
-			mImageIsSending = true;
-			imageSendTh = thread(&Rover::transmitImage, this);
-			imageSendTh.detach();
-			mLastImageSendTime.setTime();
+//			mImageIsSending = true;
+//			imageSendTh = thread(&Rover::transmitImage, this);
+//			imageSendTh.detach();
+//			mLastImageSendTime.setTime();
 		}
 
 		freq = getCpuFreq();

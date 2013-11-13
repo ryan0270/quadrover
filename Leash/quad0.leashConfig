@@ -54,9 +54,9 @@
          <x>0.000100</x>
          <y>0.000100</y>
          <z>0.000100</z>
-         <xVel>0.010000</xVel>
-         <yVel>0.010000</yVel>
-         <zVel>0.010000</zVel>
+         <xVel>0.008000</xVel>
+         <yVel>0.008000</yVel>
+         <zVel>0.008000</zVel>
       </MeasVar>
       <DynVar>
          <x>0.050000</x>
@@ -99,10 +99,10 @@
    <MotorArmLength>0.250000</MotorArmLength>
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
-      <North>-30.000000</North>
-      <East>45.000000</East>
-      <South>-70.000000</South>
-      <West>55.000000</West>
+      <North>-35.000000</North>
+      <East>40.000000</East>
+      <South>-65.000000</South>
+      <West>60.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
@@ -114,7 +114,7 @@
    <MeasurementCov>50.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
-<LogMask>5119</LogMask>
+<LogMask>5115</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>
