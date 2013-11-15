@@ -165,7 +165,7 @@ if exist('state','var') && ~isempty(state)
 % 	curPos = get(gcf,'Position'); figSize = [6 4];
 % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
 	mask = viconStateTime <= stateTime(end);
-	offset = [0 0 0 0 0 0 0 0 0.1 0 0 0];
+	offset = [0 0 0 0 0 0 0 0 0.1 0.0 -0.0 0];
 	for i=1:12
 		subplot(4,3,i)
 		
@@ -196,7 +196,7 @@ if exist('state','var') && ~isempty(state)
 	
 % 		axis([30 50 -1 1]);
 	end
-% 	% legend('Vicon','Phone');
+	% legend('Vicon','Phone');
 	
 	viconInterp = interp1(viconStateTime,viconState',tranStateTime,[],'extrap')';
 	err = tranState-viconInterp(7:end,:)+diag(offset(7:end))*ones(size(tranState));
