@@ -30,7 +30,6 @@ Observer_Translational::Observer_Translational() :
 	mDynCov[6][6] = mDynCov[7][7] = mDynCov[8][8] = 0;
 	mErrCovKF.inject(1e-6*createIdentity((double)9));
 
-	mDoMeasUpdate = false;
 	mNewViconPosAvailable = mNewCameraPosAvailable = false;
 
 	mRotCamToPhone = SO3( matmult(createRotMat(2,-0.5*(double)PI),

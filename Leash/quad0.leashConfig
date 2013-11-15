@@ -37,13 +37,13 @@
    </IBVS>
    <Attitude>
       <P>
-         <x>0.500000</x>
-         <y>0.500000</y>
+         <x>0.200000</x>
+         <y>0.200000</y>
          <z>1.000000</z>
       </P>
       <D>
-         <x>0.200000</x>
-         <y>0.200000</y>
+         <x>0.150000</x>
+         <y>0.150000</y>
          <z>1.500000</z>
       </D>
    </Attitude>
@@ -114,7 +114,7 @@
    <MeasurementCov>50.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
-<LogMask>5115</LogMask>
+<LogMask>4763</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
-<IP>192.168.100.107</IP>
+<IP>192.168.100.130</IP>
 <Port>13120</Port>

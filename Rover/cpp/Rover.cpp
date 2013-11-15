@@ -48,6 +48,17 @@ Rover::~Rover()
 
 void Rover::initialize()
 {
+	mMotorInterface.setStartTime(mStartTime);
+	mSensorManager.setStartTime(mStartTime);
+	mObsvAngular.setStartTime(mStartTime);
+	mObsvTranslational.setStartTime(mStartTime);
+	mVelocityEstimator.setStartTime(mStartTime);
+	mFeatureFinder.setStartTime(mStartTime);
+	mTargetFinder2.setStartTime(mStartTime);
+	mTranslationController.setStartTime(mStartTime);
+	mAttitudeThrustController.setStartTime(mStartTime);
+	mQuadLogger.setStartTime(mStartTime);
+
 	int sched = SCHED_NORMAL;
 	int maxPriority = sched_get_priority_max(sched);
 	int minPriority = sched_get_priority_min(sched);
@@ -76,14 +87,12 @@ void Rover::initialize()
 	
 	mMutex_cntl.lock();
 	mTranslationController.setRotViconToPhone(mRotViconToPhone);
-	mTranslationController.setStartTime(mStartTime);
 	mTranslationController.setQuadLogger(&mQuadLogger);
 	mTranslationController.initialize();
 	mTranslationController.setObserverTranslational(&mObsvTranslational);
 	mTranslationController.start();
 	mCommManager.addListener(&mTranslationController);
 
-	mAttitudeThrustController.setStartTime(mStartTime);
 	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
 	mAttitudeThrustController.setMotorInterface(&mMotorInterface);
 	mAttitudeThrustController.initialize();
@@ -93,7 +102,6 @@ void Rover::initialize()
 	mMutex_cntl.unlock();
 
 	mObsvAngular.initialize();
-	mObsvAngular.setStartTime(mStartTime);
 	mObsvAngular.setQuadLogger(&mQuadLogger);
 	mObsvAngular.start();
 	mObsvAngular.addListener(this);
@@ -101,7 +109,6 @@ void Rover::initialize()
 	mCommManager.addListener(&mObsvAngular);
 
 	mObsvTranslational.setQuadLogger(&mQuadLogger);
-	mObsvTranslational.setStartTime(mStartTime);
 	mObsvTranslational.setRotViconToPhone(mRotViconToPhone);
 	mObsvTranslational.setObserverAngular(&mObsvAngular);
 	mObsvTranslational.initialize();
@@ -112,14 +119,12 @@ void Rover::initialize()
 //	mAttitudeThrustController.addListener(&mObsvTranslational);
 
 	mFeatureFinder.initialize();
-	mFeatureFinder.setStartTime(mStartTime);
 	mFeatureFinder.setQuadLogger(&mQuadLogger);
 	mFeatureFinder.start();
 	mSensorManager.addListener(&mFeatureFinder);
 	mCommManager.addListener(&mFeatureFinder);
 	mFeatureFinder.addListener(this);
 
-	mTargetFinder2.setStartTime(mStartTime);
 	mTargetFinder2.setQuadLogger(&mQuadLogger);
 	mTargetFinder2.setObserverAngular(&mObsvAngular);
 	mTargetFinder2.setObserverTranslational(&mObsvTranslational);
@@ -136,7 +141,6 @@ void Rover::initialize()
 	mCommManager.addListener(&mTargetFinder2);
 
 	mVelocityEstimator.initialize();
-	mVelocityEstimator.setStartTime(mStartTime);
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
 	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
@@ -150,7 +154,6 @@ void Rover::initialize()
 	mCommManager.addListener(&mVideoMaker);
 	mSensorManager.addListener(&mVideoMaker);
 
-	mSensorManager.setStartTime(mStartTime);
 	mSensorManager.setQuadLogger(&mQuadLogger);
 	mSensorManager.initialize();
 	mSensorManager.setObserverAngular(&mObsvAngular);
@@ -160,10 +163,8 @@ void Rover::initialize()
 	mSensorManager.addListener(this);
 	mCommManager.addListener(&mSensorManager);
 
-	mQuadLogger.setStartTime(mStartTime);
 
 //	mMotorInterface.addListener(&mObsvTranslational);
-	mMotorInterface.setStartTime(mStartTime);
 	mMotorInterface.addListener(&mTranslationController);
 
 	mNumCpuCores = android_getCpuCount();
