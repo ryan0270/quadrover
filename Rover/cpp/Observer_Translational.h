@@ -88,7 +88,6 @@ class Observer_Translational : public Observer_AngularListener,
 
 	protected:
 	bool mRunning, mDone;
-	bool mDoMeasUpdate;
 	bool mNewViconPosAvailable, mNewCameraPosAvailable;
 	bool mUseViconPos, mUseCameraPos;
 	bool mHaveFirstVicon;

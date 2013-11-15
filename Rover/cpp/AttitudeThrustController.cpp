@@ -131,10 +131,10 @@ using namespace TNT;
 			mRefState[i][0] += dt*mRefState[i+3][0];
 
 		Array2D<double> desVector(3,1,0.0);
-//		double desTheta = 0;
+		double desTheta = 0;
 // TODO: this call for some reason seems to create excessive CPU load
-//		mDesAtt.getAngleAxis(desTheta, desVector);
-//		desVector = desTheta*desVector;
+		mDesAtt.getAngleAxis(desTheta, desVector);
+		desVector = desTheta*desVector;
 //		Array2D<double> accel(3,1);
 		for(int i=0; i<3; i++)
 		{
@@ -143,9 +143,9 @@ using namespace TNT;
 			mRefState[i+3][0] += dt*accel[i][0];
 		}
 
-//		Array2D<double> refVector = submat(mRefState,0,2,0,0);
-//		SO3_LieAlgebra lie(refVector);
-//		SO3 refAtt = lie.integrate(1);
+		Array2D<double> refVector = submat(mRefState,0,2,0,0);
+		SO3_LieAlgebra lie(refVector);
+		SO3 refAtt = lie.integrate(1);
 
 accel[0][0] = accel[1][0] = accel[2][0] = 0;
 //		SO3 attErr = refAtt.inv()*curMotorAtt;

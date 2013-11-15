@@ -90,7 +90,7 @@ class SensorManager : public CommManagerListener
 
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
-	int64_t mTimestampOffsetNS;
+	int64_t mTimestampOffsetNS, mTimestampOffsetNS_mag; // because on the S4 right now the mag uses epoch time while everything else uses uptime
 	int mThreadPriority, mScheduler;
 
 	Time mLastImageTime;

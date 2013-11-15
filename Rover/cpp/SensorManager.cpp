@@ -20,6 +20,7 @@ SensorManager::SensorManager() :
 	mRotPhoneToCam = transpose(mRotCamToPhone);
 
 	mTimestampOffsetNS = 0;
+	mTimestampOffsetNS_mag = 0;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -174,33 +175,13 @@ void SensorManager::run()
 	thread tempMonitorTh(&SensorManager::runTemperatureMonitor, this);
 	thread heightMonitorTh(&SensorManager::runHeightMonitor, this);
 
-//		double accelCal1X = 0.05;
-//		double accelCal1Y = 0.06;
-//		double accelCal1Z = 9.38;
-//		double accelCal2X = 0.06;
-//		double accelCal2Y = -0.16;
-//		double accelCal2Z = -10.10;
-//
-////		double accelScaleZ = 0.5*(accelCal1Z-accelCal2Z)/GRAVITY;
-////		// don't have information on these so assume they are the same
-////		double accelScaleX = accelScaleZ;
-////		double accelScaleY = accelScaleZ;
-//
-//		double accelScaleZ = 1;
-//		double accelScaleX = 1;
-//		double accelScaleY = 1;
-//
-//		double accelOffX = 0.5*(accelCal1X+accelCal2X);
-//		double accelOffY = 0.5*(accelCal1Y+accelCal2Y);
-//		double accelOffZ = 0.5*(accelCal1Z+accelCal2Z);
-
 	// For S3
 //	double accelOffX = -0.07;
 //	double accelOffY = -0.12;
 //	double accelOffZ = -0.3;
 
 	// For S4
-	double accelOffX =  0.02+0.1;
+	double accelOffX =  0.02;
 	double accelOffY = -0.28;
 	double accelOffZ = -0.31;
 
@@ -212,13 +193,31 @@ void SensorManager::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	uint64 eventTimeNS;
 	while(mRunning)
 	{
 		ASensorEvent event;
 		while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
 		{
-			if(mTimestampOffsetNS == 0)
-				mTimestampOffsetNS = mStartTime.getNS()-event.timestamp;
+			if(event.type == ASENSOR_TYPE_MAGNETIC_FIELD)
+				eventTimeNS = event.timestamp+mTimestampOffsetNS_mag;
+			else
+				eventTimeNS = event.timestamp+mTimestampOffsetNS;
+
+			if(mTimestampOffsetNS == 0 && event.type != ASENSOR_TYPE_MAGNETIC_FIELD)
+			{
+				mTimestampOffsetNS = mStartTime.getNS()-eventTimeNS;
+				Log::alert(String()+"mStartTime.getNS(): "+mStartTime.getNS());
+				Log::alert(String()+"   event.timestamp: "+event.timestamp);
+				Log::alert(String()+"mTimestampOffsetNS: "+mTimestampOffsetNS);
+			}
+			else if(mTimestampOffsetNS_mag == 0 && event.type == ASENSOR_TYPE_MAGNETIC_FIELD)
+			{
+				mTimestampOffsetNS_mag = mStartTime.getNS()-eventTimeNS;
+				Log::alert(String()+"    mStartTime.getNS(): "+mStartTime.getNS());
+				Log::alert(String()+"       event.timestamp: "+event.timestamp);
+				Log::alert(String()+"mTimestampOffsetNS_mag: "+mTimestampOffsetNS_mag);
+			}
 			LogFlags logFlag = LOG_FLAG_OTHER;
 			LogID logID = LOG_ID_UNKNOWN;
 			shared_ptr<IData> data = NULL;
@@ -245,9 +244,6 @@ void SensorManager::run()
 						mLastAccel[0][0] = event.data[0];
 						mLastAccel[1][0] = event.data[1];
 						mLastAccel[2][0] = event.data[2];
-//							accelCalibrated[0][0] = (event.data[0]-accelOffX)/accelScaleX;
-//							accelCalibrated[1][0] = (event.data[1]-accelOffY)/accelScaleY;
-//							accelCalibrated[2][0] = (event.data[2]-accelOffZ)/accelScaleZ;
 						accelCalibrated[0][0] = event.data[0]-accelOffX;
 						accelCalibrated[1][0] = event.data[1]-accelOffY;
 						accelCalibrated[2][0] = event.data[2]-accelOffZ;
@@ -270,7 +266,6 @@ void SensorManager::run()
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_GYRO;
 						static_pointer_cast<DataVector<double> >(data)->data = mLastGyro.copy();
-// TODO: Apply gyro bias estimate for the calibrated data
 						gyroCalibrated.inject(mLastGyro);
 //						for(int i=0; i<3; i++)
 //							gyroCalibrated[i][0] /= gyroScale[i];
@@ -296,7 +291,7 @@ void SensorManager::run()
 				default:
 					Log::alert(String()+"Unknown sensor event: "+event.type);
 			}
-			data->timestamp.setTimeNS(event.timestamp+mTimestampOffsetNS);
+			data->timestamp.setTimeNS(eventTimeNS);
 
 			if(mQuadLogger != NULL && logFlag != -1 && data != NULL)
 			{
