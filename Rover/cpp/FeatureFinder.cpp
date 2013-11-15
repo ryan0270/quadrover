@@ -184,9 +184,11 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 													 double minDistance,
 													 int fastThreshold)
 {
+	double pyrScale = 0.5;
 	cv::Mat pyrImage;
-	cv::resize(image, pyrImage, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
-	minDistance /= 2;
+	cv::resize(image, pyrImage, cv::Size(), pyrScale, pyrScale, cv::INTER_AREA);
+	minDistance *= pyrScale;
+
 	vector<cv::KeyPoint> tempKp1;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
 	int maxKp = 1000;
@@ -319,7 +321,7 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 
 	// resize points back to original image
 	for(int i=0; i<points.size(); i++)
-		points[i] *= 2;
+		points[i] *= 1.0/pyrScale;
 
 	return points;
 }

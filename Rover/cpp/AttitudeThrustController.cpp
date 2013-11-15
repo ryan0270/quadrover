@@ -122,9 +122,9 @@ using namespace TNT;
 		//TODO: this should be based on the reference model
 		mThrust = mMass*mDesAccel[2][0]/cos(curEuler[0][0])/cos(curEuler[1][0]);
 
-		SO3 attErr = mDesAtt.inv()*curMotorAtt;
-		Array2D<double> accel(3,1,0.0);
-		Array2D<double> refRate(3,1,0.0);
+//		SO3 attErr = mDesAtt.inv()*curMotorAtt;
+//		Array2D<double> accel(3,1,0.0);
+//		Array2D<double> refRate(3,1,0.0);
 
 		// Simulate the reference system
 	  	for(int i=0; i<3; i++)
@@ -135,7 +135,7 @@ using namespace TNT;
 // TODO: this call for some reason seems to create excessive CPU load
 		mDesAtt.getAngleAxis(desTheta, desVector);
 		desVector = desTheta*desVector;
-//		Array2D<double> accel(3,1);
+		Array2D<double> accel(3,1);
 		for(int i=0; i<3; i++)
 		{
 			accel[i][0] =	-mRefB*mRefState[i+3][0]
@@ -147,9 +147,9 @@ using namespace TNT;
 		SO3_LieAlgebra lie(refVector);
 		SO3 refAtt = lie.integrate(1);
 
-accel[0][0] = accel[1][0] = accel[2][0] = 0;
-//		SO3 attErr = refAtt.inv()*curMotorAtt;
-//		Array2D<double> refRate = submat(mRefState,3,5,0,0);
+//accel[0][0] = accel[1][0] = accel[2][0] = 0;
+		SO3 attErr = refAtt.inv()*curMotorAtt;
+		Array2D<double> refRate = submat(mRefState,3,5,0,0);
 	
 		Array2D<double> rotMatErr = attErr.getRotMat();
 		Array2D<double> rotMatErr_AS = rotMatErr-transpose(rotMatErr);
@@ -256,13 +256,13 @@ accel[0][0] = accel[1][0] = accel[2][0] = 0;
 				logStr = logStr+"0\t";
 			mQuadLogger->addEntry(LOG_ID_DES_ATT,logStr,LOG_FLAG_STATE_DES);
 
-//			Array2D<double> refEuler = refAtt.getAnglesZYX();
-//			logStr = String();
-//			for(int i=0; i<refEuler.dim1(); i++)
-//				logStr = logStr+refEuler[i][0]+"\t";
-//			for(int i=0; i<refRate.dim1(); i++)
-//				logStr = logStr+refRate[i][0]+"\t";
-//			mQuadLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, logStr, LOG_FLAG_STATE_DES);
+			Array2D<double> refEuler = refAtt.getAnglesZYX();
+			logStr = String();
+			for(int i=0; i<refEuler.dim1(); i++)
+				logStr = logStr+refEuler[i][0]+"\t";
+			for(int i=0; i<refRate.dim1(); i++)
+				logStr = logStr+refRate[i][0]+"\t";
+			mQuadLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, logStr, LOG_FLAG_STATE_DES);
 		}
 	}
 	
