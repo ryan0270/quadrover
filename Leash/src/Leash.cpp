@@ -565,7 +565,7 @@ void Leash::pollTCP()
 						break;
 					case COMM_IMG_DATA:
 						{
-							uint32 numRows, numCols, numChannels, type, size;
+							uint32_t numRows, numCols, numChannels, type, size;
 							receiveTCP(mSocketTCP,(tbyte*)&numRows, sizeof(numRows));
 							receiveTCP(mSocketTCP,(tbyte*)&numCols, sizeof(numCols));
 							receiveTCP(mSocketTCP,(tbyte*)&numChannels, sizeof(numChannels));
@@ -1946,7 +1946,7 @@ int Leash::receiveTCP(Socket::ptr socket, tbyte* data, int size)
 
 int Leash::receiveUDP(Socket::ptr socket, tbyte* data, int size)
 {
-	uint32 addr;
+	uint32_t addr;
 	int port;
 	int received = socket->receiveFrom(data, size, addr, port);
 	
@@ -2161,7 +2161,7 @@ void Leash::sendTransSystemController()
 		vector<tbyte> buff;
 		sys.serialize(buff);
 		cout << buff.size() << " bytes serialized" << endl;
-		uint32 size = (uint32)buff.size();
+		uint32_t size = (uint32_t)buff.size();
 		sendTCP((tbyte*)&code, sizeof(code));
 		sendTCP((tbyte*)&size, sizeof(size));
 		sendTCP(&(buff[0]), size);

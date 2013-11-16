@@ -138,18 +138,21 @@ void VelocityEstimator::run()
 
 			if(mQuadLogger != NULL)
 			{
-				logString = String();
+				logString = "";
 				for(int i=0; i<velEst.dim1(); i++)
 					logString = logString + velEst[i][0] + "\t";
 				mQuadLogger->addEntry(LOG_ID_MAP_VEL,logString,LOG_FLAG_CAM_RESULTS);
 
-				logString = String() + heightEst;
+				logString = "";
+				logString = logString + heightEst;
 				mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT,logString,LOG_FLAG_CAM_RESULTS);
 
-				logString = String()+procTime;
+				logString = "";
+				logString = logString+procTime;
 				mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME,logString,LOG_FLAG_CAM_RESULTS);
 
-				logString = String()+ delayTime;
+				logString = "";
+				logString = logString + delayTime;
 				mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
 			}
 		}

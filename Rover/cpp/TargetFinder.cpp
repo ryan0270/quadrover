@@ -98,8 +98,8 @@ void TargetFinder::run()
 
 			double procTime = procStart.getElapsedTimeNS()/1.0e9;
 
-//			if(target != NULL)
-//			{
+			if(target != NULL)
+			{
 				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 				curImage.copyTo(*imageAnnotated);
 				drawTarget(*imageAnnotated, target);
@@ -119,19 +119,18 @@ void TargetFinder::run()
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onTargetFound(data);
 
-if(target != NULL)
-{
-				logString = String();
+				logString = "";
 				for(int i=0; i<target->squareData.size(); i++)
 					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
 				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_CENTERS, logString, LOG_FLAG_CAM_RESULTS);
 
-				logString = String();
+				logString = "";
 				for(int i=0; i<target->squareData.size(); i++)
 					logString = logString+target->squareData[i]->area+"\t";
 				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_AREAS,logString, LOG_FLAG_CAM_RESULTS);
 
-				logString = String()+procTime;
+				logString = "";
+				logString = logString+procTime;
 				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
 			}
 		}

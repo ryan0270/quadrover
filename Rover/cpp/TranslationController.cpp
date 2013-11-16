@@ -5,6 +5,9 @@ namespace ICSL {
 namespace Quadrotor {
 using namespace ICSL::Constants;
 using namespace TNT;
+using namespace toadlet;
+using namespace toadlet::egg;
+
 	TranslationController::TranslationController() :
 		mCurState(6,1,0.0),
 		mDesState(6,1,0.0),
@@ -142,10 +145,10 @@ using namespace TNT;
 		// Logging
 		if(mQuadLogger != NULL)
 		{
-			String logString;
-			for(int i=0; i<accelCmd.dim1(); i++)
-				logString = logString+accelCmd[i][0]+"\t";
-			mQuadLogger->addEntry(LOG_ID_ACCEL_CMD,logString, LOG_FLAG_STATE_DES);
+//			String logString;
+//			for(int i=0; i<accelCmd.dim1(); i++)
+//				logString = logString+accelCmd[i][0]+"\t";
+//			mQuadLogger->addEntry(LOG_ID_ACCEL_CMD,logString, LOG_FLAG_STATE_DES);
 		}
 	}
 

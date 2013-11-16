@@ -110,7 +110,7 @@ class CommManagerListener
 	virtual void onNewCommLogTransfer(){};
 //	virtual void onNewCommControlSystemGains(const Collection<float> &gains){};
 	virtual void onNewCommSendControlSystem(const toadlet::egg::Collection<toadlet::tbyte> &buff){};
-	virtual void onNewCommLogMask(toadlet::uint32 mask){};
+	virtual void onNewCommLogMask(uint32_t mask){};
 	virtual void onNewCommLogClear(){};
 	virtual void onNewCommStateVicon(const toadlet::egg::Collection<float> &data){};
 	virtual void onNewCommDesState(const toadlet::egg::Collection<float> &data){};

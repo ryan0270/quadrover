@@ -241,14 +241,13 @@ using namespace TNT;
 		if(mQuadLogger != NULL)
 		{
 			String logStr;
-			logStr = String();
 			logStr = logStr+cmdRoll+"\t"+cmdPitch+"\t"+cmdYaw+"\t"+cmdThrust;
 			mQuadLogger->addEntry(LOG_ID_TORQUE_CMD, logStr, LOG_FLAG_MOTORS);
 
-			logStr = String();
-			for(int i=0; i<4; i++)
-				logStr= logStr+cmds[i] + "\t";
-			mQuadLogger->addEntry(LOG_ID_MOTOR_CMDS,logStr,LOG_FLAG_MOTORS);
+//			logStr = "";
+//			for(int i=0; i<4; i++)
+//				logStr= logStr+cmds[i] + "\t";
+//			mQuadLogger->addEntry(LOG_ID_MOTOR_CMDS,logStr,LOG_FLAG_MOTORS);
 
 			logStr =String();
 			logStr = logStr+desRoll+"\t"+desPitch+"\t"+desYaw+"\t";
@@ -257,7 +256,7 @@ using namespace TNT;
 			mQuadLogger->addEntry(LOG_ID_DES_ATT,logStr,LOG_FLAG_STATE_DES);
 
 			Array2D<double> refEuler = refAtt.getAnglesZYX();
-			logStr = String();
+			logStr = "";
 			for(int i=0; i<refEuler.dim1(); i++)
 				logStr = logStr+refEuler[i][0]+"\t";
 			for(int i=0; i<refRate.dim1(); i++)

@@ -285,7 +285,7 @@ void Rover::run()
 				// finish making log string
 				for(int i=0; i<usage.size(); i++)
 					str = str+usage[i]+"\t";
-				mQuadLogger.addEntry(Time(), LOG_ID_CPU_USAGE, str,LOG_FLAG_PC_UPDATES);
+				mQuadLogger.addEntry(LOG_ID_CPU_USAGE, str,LOG_FLAG_PC_UPDATES);
 			}
 			cpuUsagePrev.inject(cpuUsageCur);
 
@@ -459,7 +459,7 @@ void Rover::transmitDataUDP()
 		pNumFeatures.dataInt32.push_back(0);
 	mMutex_vision.unlock();
 
-	uint64 time = mStartTime.getElapsedTimeMS();
+	uint64_t time = mStartTime.getElapsedTimeMS();
 	mMutex_data.unlock();
 
 	pArduinoStatus.time = time;
@@ -582,7 +582,7 @@ void Rover::onNewCommTimeSync(int time)
 	int curTime = (int)mStartTime.getElapsedTimeMS();
 	int delta = curTime-time;
 
-	uint64 chad = mStartTime.getMS() + delta;
+	uint64_t chad = mStartTime.getMS() + delta;
 	mMutex_cntl.lock();
 	mStartTime.setTimeMS(chad);
 	mMutex_cntl.unlock();
@@ -605,7 +605,7 @@ void Rover::onNewCommTimeSync(int time)
 	mMotorInterface.setStartTime(mStartTime);
 
 	String str = String()+delta;
-	mQuadLogger.addEntry(Time(), LOG_ID_TIME_SYNC, str,LOG_FLAG_PC_UPDATES);
+	mQuadLogger.addEntry(LOG_ID_TIME_SYNC, str,LOG_FLAG_PC_UPDATES);
 }
 
 void Rover::onNewCommLogTransfer()

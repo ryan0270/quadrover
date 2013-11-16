@@ -90,9 +90,9 @@ enum CommID
 class Packet
 {
 	public:
-	toadlet::int32 size, type;
-	toadlet::uint64 time;
-	toadlet::egg::Collection<toadlet::int32> dataInt32;
+	int32_t size, type;
+	uint64_t time;
+	toadlet::egg::Collection<int32_t> dataInt32;
 	toadlet::egg::Collection<float> dataFloat;
 	toadlet::egg::Collection<bool> dataBool;
 
@@ -101,54 +101,54 @@ class Packet
 	 */
 	void serialize(toadlet::egg::Collection<toadlet::tbyte> &serial)
 	{
-		size = sizeof(toadlet::int32); // size
-		size += sizeof(toadlet::int32); // type
-		size += sizeof(toadlet::uint64); //time
-		size += sizeof(toadlet::int32); // number of toadlet::int32
-		size += dataInt32.size()*sizeof(toadlet::int32); // ints
-		size += sizeof(toadlet::int32); // number of floats
+		size = sizeof(int32_t); // size
+		size += sizeof(int32_t); // type
+		size += sizeof(uint64_t); //time
+		size += sizeof(int32_t); // number of int32
+		size += dataInt32.size()*sizeof(int32_t); // ints
+		size += sizeof(int32_t); // number of floats
 		size += dataFloat.size()*sizeof(float); // floats
-		size += sizeof(toadlet::int32); // number of bools
+		size += sizeof(int32_t); // number of bools
 		size += dataBool.size()*sizeof(bool); // bools
 		serial.resize(size);
 		toadlet::tbyte *p = &serial.front();
 
-		memcpy(p, &size, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
-		memcpy(p, &type, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
-		memcpy(p, &time, sizeof(toadlet::uint64)); p += sizeof(toadlet::uint64);
+		memcpy(p, &size, sizeof(int32_t)); p += sizeof(int32_t);
+		memcpy(p, &type, sizeof(int32_t)); p += sizeof(int32_t);
+		memcpy(p, &time, sizeof(uint64_t)); p += sizeof(uint64_t);
 
-		toadlet::int32 nInt32 = dataInt32.size();
-		memcpy(p, &nInt32, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
-		memcpy(p, &dataInt32.front(), dataInt32.size()*sizeof(toadlet::int32)); p += dataInt32.size()*sizeof(toadlet::int32);
+		int32_t nInt32 = dataInt32.size();
+		memcpy(p, &nInt32, sizeof(int32_t)); p += sizeof(int32_t);
+		memcpy(p, &dataInt32.front(), dataInt32.size()*sizeof(int32_t)); p += dataInt32.size()*sizeof(int32_t);
 
-		toadlet::int32 nFloat = dataFloat.size();
-		memcpy(p, &nFloat, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
+		int32_t nFloat = dataFloat.size();
+		memcpy(p, &nFloat, sizeof(int32_t)); p += sizeof(int32_t);
 		memcpy(p, &dataFloat.front(), dataFloat.size()*sizeof(float)); p += dataFloat.size()*sizeof(float);
 
-		toadlet::int32 nBool= dataBool.size();
-		memcpy(p, &nBool, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
+		int32_t nBool= dataBool.size();
+		memcpy(p, &nBool, sizeof(int32_t)); p += sizeof(int32_t);
 		memcpy(p, &dataBool.front(), dataBool.size()*sizeof(bool)); p += dataBool.size()*sizeof(bool);
 	}
 
 	void deserialize(const toadlet::egg::Collection<toadlet::tbyte> &serial)
 	{
 		const toadlet::tbyte *p = &serial.front();
-		memcpy(&size, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
-		memcpy(&type, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
-		memcpy(&time, p, sizeof(toadlet::uint64)); p += sizeof(toadlet::uint64);
+		memcpy(&size, p, sizeof(int32_t)); p += sizeof(int32_t);
+		memcpy(&type, p, sizeof(int32_t)); p += sizeof(int32_t);
+		memcpy(&time, p, sizeof(uint64_t)); p += sizeof(uint64_t);
 
-		toadlet::int32 nInt32;
-		memcpy(&nInt32, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
+		int32_t nInt32;
+		memcpy(&nInt32, p, sizeof(int32_t)); p += sizeof(int32_t);
 		dataInt32.resize(nInt32);
-		memcpy(&dataInt32.front(), p, dataInt32.size()*sizeof(toadlet::int32)); p += dataInt32.size()*sizeof(toadlet::int32);
+		memcpy(&dataInt32.front(), p, dataInt32.size()*sizeof(int32_t)); p += dataInt32.size()*sizeof(int32_t);
 
-		toadlet::int32 nFloat;
-		memcpy(&nFloat, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
+		int32_t nFloat;
+		memcpy(&nFloat, p, sizeof(int32_t)); p += sizeof(int32_t);
 		dataFloat.resize(nFloat);
 		memcpy(&dataFloat.front(), p, dataFloat.size()*sizeof(float)); p += dataFloat.size()*sizeof(float);
 
-		toadlet::int32 nBool;
-		memcpy(&nBool, p, sizeof(toadlet::int32)); p += sizeof(toadlet::int32);
+		int32_t nBool;
+		memcpy(&nBool, p, sizeof(int32_t)); p += sizeof(int32_t);
 		dataBool.resize(nBool);
 		memcpy(&dataBool.front(), p, dataBool.size()*sizeof(bool)); p += dataBool.size()*sizeof(bool);
 	}

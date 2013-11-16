@@ -231,7 +231,7 @@ void Observer_Angular::doInnovationUpdate(double dt,
 //	accelData->lock(); Array2D<double> accel = accelData->data.copy(); accelData->unlock();
 //	magData->lock(); Array2D<double> mag = magData->data.copy(); magData->unlock();
 
-	String logString1, logString2;
+//	String logString1, logString2;
 	Array2D<double> uB, uI, vB, vI, dMeas, dInertial;
 	mMutex_data.lock();
 
@@ -277,15 +277,15 @@ void Observer_Angular::doInnovationUpdate(double dt,
 
 	mGyroBias += dt*mGainI*mInnovation;
 
-	for(int i=0; i<mGyroBias.dim1(); i++)
-		logString1 = logString1+mGyroBias[i][0] + "\t";
-
-	for(int i=0; i<mInnovation.dim1(); i++)
-		logString2 = logString2+mInnovation[i][0] + "\t";
+//	for(int i=0; i<mGyroBias.dim1(); i++)
+//		logString1 = logString1+mGyroBias[i][0] + "\t";
+//
+//	for(int i=0; i<mInnovation.dim1(); i++)
+//		logString2 = logString2+mInnovation[i][0] + "\t";
 	mMutex_data.unlock();
-
-	mQuadLogger->addEntry(Time(), LOG_ID_GYRO_BIAS, logString1, LOG_FLAG_OBSV_BIAS);
-	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_INNOVATION, logString2, LOG_FLAG_OBSV_BIAS);
+//
+//	mQuadLogger->addEntry(LOG_ID_GYRO_BIAS, logString1, LOG_FLAG_OBSV_BIAS);
+//	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_INNOVATION, logString2, LOG_FLAG_OBSV_BIAS);
 }
 
 // Based on Hamel and Mahoney's nonlinear SO3 observer
@@ -479,7 +479,7 @@ void Observer_Angular::setYawZero()
 	String str1;
 	for(int i=0; i<temp.dim1(); i++)
 		str1 = str1+temp[i][0]+"\t";
-	mQuadLogger->addEntry(Time(), LOG_ID_SET_YAW_ZERO, str1, LOG_FLAG_PC_UPDATES);
+	mQuadLogger->addEntry(LOG_ID_SET_YAW_ZERO, str1, LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
@@ -839,7 +839,7 @@ void Observer_Angular::onNewCommObserverReset()
 	reset();
 	Log::alert("Observer reset");
 	String str = String();
-	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_RESET, str,LOG_FLAG_PC_UPDATES);
+	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_RESET, str,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight)
@@ -859,7 +859,7 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 	String str;
 	str = str+gainP+"\t"+gainI+"\t";
 	str = str+accelWeight+"\t"+magWeight;
-	mQuadLogger->addEntry(Time(), LOG_ID_OBSV_ANG_GAINS_UPDATED, str,LOG_FLAG_PC_UPDATES);
+	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_GAINS_UPDATED, str,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)

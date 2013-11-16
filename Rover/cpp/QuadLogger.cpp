@@ -4,7 +4,10 @@
 
 namespace ICSL{
 namespace Quadrotor{
-//using namespace std;
+using namespace std;
+using namespace toadlet;
+using namespace toadlet::egg;
+
 QuadLogger::QuadLogger()
 {
 	mDir = ".";
@@ -93,10 +96,11 @@ void QuadLogger::run()
 			mLogQueue.pop_front();
 			mMutex_logQueue.unlock();
 
+			line = "";
 			if(mStartTime < entry->timestamp)
-				line = String()+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
+				line = line+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
 			else
-				line = String()+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
+				line = line+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
 			line = line+entry->id+"\t";
 			line = line+entry->str;
 
@@ -124,10 +128,11 @@ void QuadLogger::run()
 		mLogQueue.pop_front();
 		mMutex_logQueue.unlock();
 
+		line = "";
 		if(mStartTime < entry->timestamp)
-			line = String()+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
+			line = line+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
 		else
-			line = String()+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
+			line = line+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
 		line = line+entry->id+"\t";
 		line = line+entry->str;
 

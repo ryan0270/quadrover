@@ -44,9 +44,9 @@ class LogItem
 {
 	public:
 		LogItem(){toadlet::egg::System sys; time = sys.mtime(); line = ""; type = LOG_TYPE_UNKNOWN;}
-		LogItem(toadlet::uint64 time, toadlet::egg::String s, LogType t){this->time = time; line = s; type = t;}
+		LogItem(uint64_t time, toadlet::egg::String s, LogType t){this->time = time; line = s; type = t;}
 
-		toadlet::uint64 time;
+		uint64_t time;
 		String line;
 		LogType type;
 };
@@ -130,7 +130,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		Collection<float> mAttObsvDirWeights;
 		Collection<float> mAttObsvNominalMag;
 		int mMotorValues[4];
-		toadlet::uint64 mTimeMS;
+		uint64_t mTimeMS;
 		int mMotorTrim[4];
 
 		System mSys;
@@ -151,7 +151,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		Collection<float> mAccelBias, mAccelBiasDynVar;
 		Collection<float> mKalmanMeasVar, mKalmanDynVar;
 
-		uint32 mLogMask;
+		uint32_t mLogMask;
 
 		QImage cvMat2QImage(const cv::Mat &mat);
 
@@ -213,7 +213,7 @@ class Leash : public QMainWindow, public TelemetryViconListener
 		TNT::Array2D<float> mRotQuadToPhone, mRotPhoneToQuad;
 		TNT::Array2D<float> mRotViconToPhone, mRotPhoneToVicon;
 
-		toadlet::uint64 mLastTelemSendTime;
+		uint64_t mLastTelemSendTime;
 
 		default_random_engine mRandGenerator;
 		normal_distribution<float> mStdGaussDist;
