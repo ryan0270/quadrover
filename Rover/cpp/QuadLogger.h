@@ -22,7 +22,7 @@
 namespace ICSL {
 namespace Quadrotor {
 //using namespace std;
-using namespace toadlet;
+//using namespace toadlet;
 
 enum LogID
 {
@@ -103,11 +103,11 @@ class QuadLogger
 		toadlet::egg::String getDir(){return mDir;}
 		toadlet::egg::String getFilename(){return mFilename;}
 		toadlet::egg::String getFullPath(){return mDir+"/"+mFilename;}
-		uint32 getMask(){return mTypeMask;}
+		uint32_t getMask(){return mTypeMask;}
 
 		void setDir(toadlet::egg::String dir){mDir = dir;}
 		void setFilename(toadlet::egg::String name){mFilename = name;}
-		void setMask(uint32 mask){mTypeMask = mask;}
+		void setMask(uint32_t mask){mTypeMask = mask;}
 		void addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type);
 		void addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type);
 
@@ -124,7 +124,7 @@ class QuadLogger
 
 	protected:
 		toadlet::egg::String mDir, mFilename;
-		uint32 mTypeMask;
+		uint32_t mTypeMask;
 		toadlet::egg::FileStream::ptr mLogStream;
 		std::mutex mMutex_file, mMutex_logQueue, mMutex_addLine;
 		Time mStartTime;

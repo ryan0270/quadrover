@@ -193,7 +193,7 @@ void SensorManager::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
-	uint64 eventTimeNS;
+	uint64_t eventTimeNS;
 	while(mRunning)
 	{
 		ASensorEvent event;
@@ -295,12 +295,12 @@ void SensorManager::run()
 
 			if(mQuadLogger != NULL && logFlag != -1 && data != NULL)
 			{
-				String s=String();
-				s = s+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
-				s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
-				mMutex_logger.lock();
-				mQuadLogger->addEntry(logID,s,logFlag);
-				mMutex_logger.unlock();
+//				String s=String();
+//				s = s+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
+//				s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
+//				mMutex_logger.lock();
+//				mQuadLogger->addEntry(logID,s,logFlag);
+//				mMutex_logger.unlock();
 			}
 
 			if(data != NULL)
@@ -449,7 +449,7 @@ int SensorManager::getFuelgaugeTemp()
 	return temp;
 }
 
-void SensorManager::passNewImage(const cv::Mat *imageYUV, uint64 timestampNS)
+void SensorManager::passNewImage(const cv::Mat *imageYUV, uint64_t timestampNS)
 {
 	shared_ptr<DataImage> data(new DataImage());
 	data->type = DATA_TYPE_IMAGE;
@@ -458,12 +458,12 @@ void SensorManager::passNewImage(const cv::Mat *imageYUV, uint64 timestampNS)
 	// do this now just so the log time is a bit closer to real
 	if(mQuadLogger != NULL)
 	{
-		String str = String();
-		str = str+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
-		str = str+data->imageId;
-		mMutex_logger.lock();
-		mQuadLogger->addEntry(LOG_ID_IMAGE,str,LOG_FLAG_CAM_RESULTS);
-		mMutex_logger.unlock();
+//		String str = String();
+//		str = str+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
+//		str = str+data->imageId;
+//		mMutex_logger.lock();
+//		mQuadLogger->addEntry(LOG_ID_IMAGE,str,LOG_FLAG_CAM_RESULTS);
+//		mMutex_logger.unlock();
 	}
 
 	shared_ptr<cv::Mat> imageBGR(new cv::Mat);
@@ -502,7 +502,7 @@ void SensorManager::onNewCommStateVicon(const Collection<float> &data)
 	mNewHeightAvailable = true;
 }
 
-void SensorManager::onNewSonarReading(int heightMM, uint64 timestampNS)
+void SensorManager::onNewSonarReading(int heightMM, uint64_t timestampNS)
 {
 	shared_ptr<HeightData<double>> data(new HeightData<double>());
 	data->timestamp.setTimeNS(timestampNS);
@@ -515,11 +515,11 @@ void SensorManager::onNewSonarReading(int heightMM, uint64 timestampNS)
 		mListeners[i]->onNewSensorUpdate(data);
 	mMutex_listeners.unlock();
 
-	String str = String()+Time::calcDiffMS(mStartTime, data->timestamp)+"\t"+data->heightRaw;
-	mMutex_logger.lock();
-	// TODO: Make a sonar log flag
-	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, str, LOG_FLAG_ACCEL);
-	mMutex_logger.unlock();
+//	String str = String()+Time::calcDiffMS(mStartTime, data->timestamp)+"\t"+data->heightRaw;
+//	mMutex_logger.lock();
+//	// TODO: Make a sonar log flag
+//	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, str, LOG_FLAG_ACCEL);
+//	mMutex_logger.unlock();
 }
 
 } // namespace Quadrotor

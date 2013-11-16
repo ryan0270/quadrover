@@ -199,7 +199,7 @@ end
 
 %%
 if exist('cpuUsage','var') && ~isempty(cpuUsage)
-	figure(2000); set(gcf,'Name','CPU Usage')
+	figure(2000); clf; set(gcf,'Name','CPU Usage')
 	[ax, h1, h2] = plotyy(cpuUsageTime,cpuUsage(1,:)', cpuFreqTime, cpuFreq);
 	xlabel('Time [s]');
 	ylabel(ax(1),'Usage ratio');

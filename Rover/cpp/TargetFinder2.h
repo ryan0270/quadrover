@@ -97,7 +97,7 @@ protected:
 
 	Time mStartTime;//, mLastProcessTime;
 
-	toadlet::uint32 mImageProcTimeUS;
+	uint32_t mImageProcTimeUS;
 
 	QuadLogger *mQuadLogger;
 

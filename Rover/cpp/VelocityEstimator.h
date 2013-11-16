@@ -48,7 +48,7 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	void addListener(VelocityEstimatorListener *l){mListeners.push_back(l);}
 
-	uint32 getLastVisionDelayTimeUS(){mMutex_data.lock(); uint32 temp=mLastDelayTimeUS; mMutex_data.unlock(); return temp;};
+	uint32_t getLastVisionDelayTimeUS(){mMutex_data.lock(); uint32_t temp=mLastDelayTimeUS; mMutex_data.unlock(); return temp;};
 
 	// for CommManagerListener
 	void onNewCommVelEstMeasCov(float measCov);
@@ -77,7 +77,7 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	Observer_Translational *mObsvTranslational;
 
-	uint32 mLastDelayTimeUS;
+	uint32_t mLastDelayTimeUS;
 
 	float mMeasCov, mProbNoCorr;
 

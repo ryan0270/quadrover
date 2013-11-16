@@ -86,7 +86,7 @@ void FeatureFinder::run()
 	{
 		if(mNewImageReady
 			&& mIsMotorOn
-			&& mLastRegionFindTime.getElapsedTimeMS() > 100
+//			&& mLastRegionFindTime.getElapsedTimeMS() > 100
 			)
 		{
 			procStart.setTime();
@@ -154,18 +154,19 @@ void FeatureFinder::run()
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
 			if(mQuadLogger != NULL)
 			{
-				logString = String()+(mImageProcTimeUS/1.0e6);
+				logString = "";
+				logString = logString+mImageProcTimeUS/1.0e6;
 				mMutex_logger.lock();
 				mQuadLogger->addEntry(LOG_ID_FEATURE_FIND_TIME,logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
-				logString = String();
+				logString = "";
 				logString = logString+(int)points.size();
 				mMutex_logger.lock();
 				mQuadLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS,logString,LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 
-				logString = String();
+				logString = "";
 				logString = logString+fastThresh;
 				mMutex_logger.lock();
 				mQuadLogger->addEntry(LOG_ID_FAST_THRESHOLD,logString,LOG_FLAG_CAM_RESULTS);
