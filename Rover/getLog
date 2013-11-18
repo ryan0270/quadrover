@@ -1,0 +1,5 @@
+#!/bin/bash
+
+adb pull /mnt/sdcard/RoverService/log.txt
+adb pull /mnt/sdcard/RoverService/log.txt.bak
+adb pull /mnt/sdcard/RoverService/log_ids.m
