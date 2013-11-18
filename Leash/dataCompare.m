@@ -169,19 +169,23 @@ if exist('state','var') && ~isempty(state)
 	for i=1:12
 		subplot(4,3,i)
 		
-		plot(viconStateTime(mask), viconState(i,mask)); hold all
-		plot(stateTime, state(i,:)+offset(i)); hold all
+		plot(stateTime, state(i,:)+offset(i),'Color',[0 0.5 0]); hold all
+		if i < 7
+			plot(viconStateTime(mask), viconState(i,mask),'b'); hold all
+		else
+			plot(viconStateTime(mask), viconState(i,mask),'b','LineWidth',2); hold all
+		end
 		if i == 7 || i == 8
-			plot(cameraPosTime,cameraPos(i-6,:),'.'); hold all
+			plot(cameraPosTime,cameraPos(i-6,:),'r.'); hold all
 		end
 		if i == 9
 			chad = interp1(tranStateTime,tranState',sonarHeightTime)';
 			mask2 = find(abs(chad(3,:)-sonarHeight) < 0.1);
 			plot(sonarHeightTime(mask2), sonarHeight(mask2)+0.1, 'm.');
 		end
-		if i > 9
-			plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
-		end
+% 		if i > 9
+% 			plot(mapVelEstTime, mapVelEst(i-9,:),'.'); hold all
+% 		end
 		hold off
 		ax = axis; axis([stateTime(1) stateTime(end) ax(3) ax(4)]);
 		ax = axis;
