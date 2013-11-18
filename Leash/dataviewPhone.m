@@ -130,10 +130,10 @@ phoneTemp = phoneData(phoneTempIndices,3:6)';
 % mapNumMatchesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_NUM_MATCHES);
 % mapNumMatchesTime = phoneData(mapNumMatchesIndices,1)'/1000;
 % mapNumMatches = phoneData(mapNumMatchesIndices,3)';
-% 
-% numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
-% numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
-% numFeatures = phoneData(numFeaturesIndices,3)';
+
+numFeaturesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_NUM_FEATURE_POINTS);
+numFeaturesTime = phoneData(numFeaturesIndices,1)'/1000;
+numFeatures = phoneData(numFeaturesIndices,3)';
 
 % kfCovIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_KALMAN_ERR_COV);
 % kfCovTime = phoneData(kfCovIndices,1)'/1000;

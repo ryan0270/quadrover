@@ -176,7 +176,7 @@ void SensorManager::run()
 	thread heightMonitorTh(&SensorManager::runHeightMonitor, this);
 
 	// For S3
-	double accelOffX = -0.07-0.1-0.1-0.1;
+	double accelOffX = -0.07-0.1-0.1;
 	double accelOffY = -0.12+0.1;
 	double accelOffZ = -0.3;
 
