@@ -121,8 +121,9 @@ void Observer_Translational::run()
 		if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 1000)
 		{
 			mHaveFirstCameraPos = false;
-			logString = "";
-			mQuadLogger->addEntry(LOG_ID_TARGET_LOST, logString, LOG_FLAG_PC_UPDATES);
+//			logString = "";
+//			mQuadLogger->addEntry(LOG_ID_TARGET_LOST, logString, LOG_FLAG_PC_UPDATES);
+			mQuadLogger->addEntry(LOG_ID_TARGET_LOST, LOG_FLAG_PC_UPDATES);
 			mCameraVelBuffer.clear();
 		}
 		mMutex_posTime.unlock();
@@ -248,10 +249,11 @@ void Observer_Translational::run()
 			}
 
 		{
-			logString = "";
-			for(int i=0; i<mStateKF.dim1(); i++)
-				logString = logString+mStateKF[i][0]+"\t";
-			mQuadLogger->addEntry(LOG_ID_CUR_TRANS_STATE, logString, LOG_FLAG_STATE);
+//			logString = "";
+//			for(int i=0; i<mStateKF.dim1(); i++)
+//				logString = logString+mStateKF[i][0]+"\t";
+//			mQuadLogger->addEntry(LOG_ID_CUR_TRANS_STATE, logString, LOG_FLAG_STATE);
+			mQuadLogger->addEntry(LOG_ID_CUR_TRANS_STATE, mStateKF, LOG_FLAG_STATE);
 		}
 
 		mMutex_kfData.unlock();
@@ -556,10 +558,11 @@ void Observer_Translational::onNewCommStateVicon(const Collection<float> &data)
 	mMutex_events.unlock();
 
 	{
-		String s = String();
-		for(int i=0; i<data.size(); i++)
-			s = s+data[i]+"\t";
-		mQuadLogger->addEntry(LOG_ID_RECEIVE_VICON, s, LOG_FLAG_STATE);
+//		String s = String();
+//		for(int i=0; i<data.size(); i++)
+//			s = s+data[i]+"\t";
+//		mQuadLogger->addEntry(LOG_ID_RECEIVE_VICON, s, LOG_FLAG_STATE);
+		mQuadLogger->addEntry(LOG_ID_RECEIVE_VICON, data, LOG_FLAG_STATE);
 	}
 
 	mNewViconPosAvailable = true;
@@ -596,10 +599,12 @@ void Observer_Translational::onNewCommUseIbvs(bool useIbvs)
 	mUseIbvs = useIbvs;
 	String s;
 	if(useIbvs)
-		mQuadLogger->addEntry(LOG_ID_IBVS_ENABLED, String(), LOG_FLAG_PC_UPDATES);
+//		mQuadLogger->addEntry(LOG_ID_IBVS_ENABLED, String(), LOG_FLAG_PC_UPDATES);
+		mQuadLogger->addEntry(LOG_ID_IBVS_ENABLED, LOG_FLAG_PC_UPDATES);
 	else
 	{
-		mQuadLogger->addEntry(LOG_ID_IBVS_DISABLED, String(), LOG_FLAG_PC_UPDATES);
+//		mQuadLogger->addEntry(LOG_ID_IBVS_DISABLED, String(), LOG_FLAG_PC_UPDATES);
+		mQuadLogger->addEntry(LOG_ID_IBVS_DISABLED, LOG_FLAG_PC_UPDATES);
 		mHaveFirstCameraPos = false;
 	}
 }
@@ -737,77 +742,77 @@ void Observer_Translational::onVelocityEstimator_newEstimate(const shared_ptr<Da
 	mMutex_events.unlock();
 }
 
-void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-{
-	Log::alert("Observer_Translational::onTargetFound: Why am I here?");
-	if(data->target == NULL)
-		return;
-
-	bool resetViconOffset = false;
-	if(mUseIbvs)
-	{
-		if(!mHaveFirstCameraPos)
-		{
-			mQuadLogger->addEntry(LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
-			resetViconOffset = true;
-		}
-		mHaveFirstCameraPos = true;
-	}
-	mMutex_posTime.lock();
-	mLastCameraPosTime.setTime();
-	mMutex_posTime.unlock();
-
-	double f = data->imageData->focalLength;
-	double cx = data->imageData->center.x;
-	double cy = data->imageData->center.y;
-
-	// rotation compensation
-	SO3 att = data->imageData->att;
-
-	Array2D<double> p(3,1);
-	p[0][0] = data->target->meanCenter.x - cx;
-	p[1][0] = data->target->meanCenter.y - cy;
-	p[2][0] = f;
-	p = att*mRotCamToPhone*p;
-	p = -1.0*p; // to get our position instead of the target's
-
-	// Now estimate the pos
-	double avgLength = 0;
-	for(int i=0; i<data->target->squareData[0]->lineLengths.size(); i++)
-		avgLength += data->target->squareData[0]->lineLengths[i];
-	avgLength /= data->target->squareData[0]->lineLengths.size();
-
-	mMutex_kfData.lock();
-	const Array2D<double> state = IData::interpolate(data->timestamp, mStateBuffer);
-	mMutex_kfData.unlock();
-
-	double nomLength =  0.21;
-	Array2D<double> pos(3,1);
-//		pos[2][0] = mTargetNominalLength/avgLength*f;
-	pos[2][0] = state[2][0]-mViconCameraOffset[2][0];
-	pos[0][0] = p[0][0]/f*abs(pos[2][0]);
-	pos[1][0] = p[1][0]/f*abs(pos[2][0]);
-
-	if(resetViconOffset && !mIsViconCameraOffsetSet)
-	{
-		mViconCameraOffset = submat(state,0,2,0,0)-pos;
-		printArray("Vicon offset set to: ", mViconCameraOffset);
-		mIsViconCameraOffsetSet = true;
-	}
-	pos = pos+mViconCameraOffset;
-	shared_ptr<DataVector<double>> posData(new DataVector<double>());
-	posData->type = DATA_TYPE_CAMERA_POS;
-	posData->timestamp.setTime(data->imageData->timestamp);
-	posData->data = pos.copy();
-	mMutex_events.lock();
-	mNewEventsBuffer.push_back(posData);
-	mMutex_events.unlock();
-
-	String str = String();
-	for(int i=0; i<pos.dim1(); i++)
-		str = str+pos[i][0]+"\t";
-	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, str, LOG_FLAG_CAM_RESULTS);
-}
+//void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//{
+//	Log::alert("Observer_Translational::onTargetFound: Why am I here?");
+//	if(data->target == NULL)
+//		return;
+//
+//	bool resetViconOffset = false;
+//	if(mUseIbvs)
+//	{
+//		if(!mHaveFirstCameraPos)
+//		{
+//			mQuadLogger->addEntry(LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
+//			resetViconOffset = true;
+//		}
+//		mHaveFirstCameraPos = true;
+//	}
+//	mMutex_posTime.lock();
+//	mLastCameraPosTime.setTime();
+//	mMutex_posTime.unlock();
+//
+//	double f = data->imageData->focalLength;
+//	double cx = data->imageData->center.x;
+//	double cy = data->imageData->center.y;
+//
+//	// rotation compensation
+//	SO3 att = data->imageData->att;
+//
+//	Array2D<double> p(3,1);
+//	p[0][0] = data->target->meanCenter.x - cx;
+//	p[1][0] = data->target->meanCenter.y - cy;
+//	p[2][0] = f;
+//	p = att*mRotCamToPhone*p;
+//	p = -1.0*p; // to get our position instead of the target's
+//
+//	// Now estimate the pos
+//	double avgLength = 0;
+//	for(int i=0; i<data->target->squareData[0]->lineLengths.size(); i++)
+//		avgLength += data->target->squareData[0]->lineLengths[i];
+//	avgLength /= data->target->squareData[0]->lineLengths.size();
+//
+//	mMutex_kfData.lock();
+//	const Array2D<double> state = IData::interpolate(data->timestamp, mStateBuffer);
+//	mMutex_kfData.unlock();
+//
+//	double nomLength =  0.21;
+//	Array2D<double> pos(3,1);
+////		pos[2][0] = mTargetNominalLength/avgLength*f;
+//	pos[2][0] = state[2][0]-mViconCameraOffset[2][0];
+//	pos[0][0] = p[0][0]/f*abs(pos[2][0]);
+//	pos[1][0] = p[1][0]/f*abs(pos[2][0]);
+//
+//	if(resetViconOffset && !mIsViconCameraOffsetSet)
+//	{
+//		mViconCameraOffset = submat(state,0,2,0,0)-pos;
+//		printArray("Vicon offset set to: ", mViconCameraOffset);
+//		mIsViconCameraOffsetSet = true;
+//	}
+//	pos = pos+mViconCameraOffset;
+//	shared_ptr<DataVector<double>> posData(new DataVector<double>());
+//	posData->type = DATA_TYPE_CAMERA_POS;
+//	posData->timestamp.setTime(data->imageData->timestamp);
+//	posData->data = pos.copy();
+//	mMutex_events.lock();
+//	mNewEventsBuffer.push_back(posData);
+//	mMutex_events.unlock();
+//
+//	String str = String();
+//	for(int i=0; i<pos.dim1(); i++)
+//		str = str+pos[i][0]+"\t";
+//	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, str, LOG_FLAG_CAM_RESULTS);
+//}
 
 void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 {
@@ -988,9 +993,10 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 		mRegionNominalPosMap[newRegions[i]->getId()] = newPoint;
 	}
 
-	String logStr = String()+Time::calcDiffMS(mStartTime,data->timestamp)+"\t";
-	logStr = logStr + imageOffset.x + "\t" + imageOffset.y+"\t";
-	mQuadLogger->addEntry(LOG_ID_IMAGE_OFFSET, logStr, LOG_FLAG_CAM_RESULTS);
+//	String logStr = String()+(int)Time::calcDiffMS(mStartTime,data->timestamp)+"\t";
+//	logStr = logStr + imageOffset.x + "\t" + imageOffset.y+"\t";
+//	mQuadLogger->addEntry(LOG_ID_IMAGE_OFFSET, logStr, LOG_FLAG_CAM_RESULTS);
+	mQuadLogger->addEntry(LOG_ID_IMAGE_OFFSET, imageOffset, data->timestamp, LOG_FLAG_CAM_RESULTS);
 
 	// first time finding anything fun
 	if(repeatRegions.size() == 0)
@@ -1000,7 +1006,8 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	bool resetViconOffset = false;
 	if(!mHaveFirstCameraPos)
 	{
-		mQuadLogger->addEntry(LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
+//		mQuadLogger->addEntry(LOG_ID_TARGET_ACQUIRED, String(), LOG_FLAG_PC_UPDATES);
+		mQuadLogger->addEntry(LOG_ID_TARGET_ACQUIRED, LOG_FLAG_PC_UPDATES);
 		resetViconOffset = true;
 	}
 	mHaveFirstCameraPos = true;
@@ -1030,10 +1037,11 @@ void Observer_Translational::onTargetFound2(const shared_ptr<ImageTargetFind2Dat
 	mNewEventsBuffer.push_back(posData);
 	mMutex_events.unlock();
 
-	String str = String();
-	for(int i=0; i<pos.dim1(); i++)
-		str = str+pos[i][0]+"\t";
-	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, str, LOG_FLAG_CAM_RESULTS);
+//	String str = String();
+//	for(int i=0; i<pos.dim1(); i++)
+//		str = str+pos[i][0]+"\t";
+//	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, str, LOG_FLAG_CAM_RESULTS);
+	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, pos, LOG_FLAG_CAM_RESULTS);
 }
 
 Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)

@@ -2,7 +2,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (observerTuning CXX C)
 
-
 find_package (OpenCV REQUIRED)
 
 # set (OPENCV_LIB_TYPE=SHARED)
@@ -24,6 +23,7 @@ set (INC ${INC}
 	${ROVER_DIR}/cpp
 	${TOADLET_INCLUDE_DIR}
 	${OpenCV_INCLUDE_DIRS}
+	${ANDROID_NDK_DIR}
 	)
 include_directories (${INC})
 
@@ -36,6 +36,7 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
+	${ROVER_DIR}/cpp/ActiveRegion.cpp
 	${ROVER_DIR}/cpp/Rotation.cpp
 	${ROVER_DIR}/cpp/CommManager.cpp
 	${ROVER_DIR}/cpp/FeatureFinder.cpp
@@ -44,14 +45,13 @@ set (SRC ${SRC}
 	${ROVER_DIR}/cpp/Observer_Angular.cpp
 	${ROVER_DIR}/cpp/VelocityEstimator.cpp
 	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
-	${ROVER_DIR}/cpp/TargetFinder.cpp
+#	${ROVER_DIR}/cpp/TargetFinder.cpp
 	${ROVER_DIR}/cpp/TargetFinder2.cpp
 	${ROVER_DIR}/cpp/Observer_Translational.cpp
 	${ROVER_DIR}/cpp/QuadLogger.cpp
 	${ROVER_DIR}/cpp/TranslationController.cpp
 	${ROVER_DIR}/cpp/AttitudeThrustController.cpp
-	${ROVER_DIR}/cpp/ActiveRegion.cpp
-	# ${ROVER_DIR}/cpp/SensorManager.cpp
+#	${ROVER_DIR}/cpp/SensorManager.cpp
 	./cpp/main.cpp
 )
 
@@ -65,7 +65,7 @@ set (H ${H}
 	${ROVER_DIR}/cpp/Observer_Translational.h
 	${ROVER_DIR}/cpp/Time.h
 	${ROVER_DIR}/cpp/CommManager.h
-	${ROVER_DIR}/cpp/TargetFinder.h
+#	${ROVER_DIR}/cpp/TargetFinder.h
 	${ROVER_DIR}/cpp/TargetFinder2.h
 	${ROVER_DIR}/cpp/FeatureFinder.h
 	${ROVER_DIR}/cpp/TranslationController.h

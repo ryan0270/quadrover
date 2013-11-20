@@ -41,6 +41,10 @@ enum DataType
 	DATA_TYPE_MAG,
 	DATA_TYPE_PRESSURE,
 	DATA_TYPE_IMAGE,
+	DATA_TYPE_IMAGE_MATCH,
+	DATA_TYPE_IMAGE_FEATURES,
+	DATA_TYPE_IMAGE_TARGET_FIND,
+	DATA_TYPE_ANNOTATED_IMAGE,
 	DATA_TYPE_PHONE_TEMP,
 	DATA_TYPE_STATE_TRAN,
 	DATA_TYPE_NET_ACCEL_TRAN,
@@ -189,7 +193,7 @@ class DataImage : public IData
 class DataAnnotatedImage : public IData
 {
 	public:
-	DataAnnotatedImage() : IData() { };
+	DataAnnotatedImage() : IData() {type = DATA_TYPE_ANNOTATED_IMAGE;}
 
 	shared_ptr<cv::Mat> imageAnnotated;
 	shared_ptr<DataImage> imageDataSource;
@@ -199,10 +203,10 @@ class DataAnnotatedImage : public IData
 };
 
 template <class T>
-class DataPhoneTemp : public Data<T>
+class DataPhoneTemp : public IData
 {
 	public:
-	DataPhoneTemp() : Data<T>() {Data<T>::type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
+	DataPhoneTemp() : IData() {type = DATA_TYPE_PHONE_TEMP; battTemp = secTemp = fgTemp = /*tmuTemp =*/ -1;}
 
 	T battTemp, secTemp, fgTemp;//, tmuTemp;
 };
@@ -210,7 +214,7 @@ class DataPhoneTemp : public Data<T>
 class ImageMatchData : public IData
 {
 	public:
-	ImageMatchData() : IData(){};
+	ImageMatchData() : IData(){type = DATA_TYPE_IMAGE_MATCH;}
 	vector<vector<cv::Point2f>> featurePoints;
 	shared_ptr<DataImage> imageData0, imageData1;
 	shared_ptr<DataAnnotatedImage> imageAnnotated;
@@ -222,7 +226,7 @@ class ImageMatchData : public IData
 class ImageFeatureData : public IData
 {
 	public:
-	ImageFeatureData() : IData() {};
+	ImageFeatureData() : IData() {type = DATA_TYPE_IMAGE_FEATURES;}
 	vector<cv::Point2f> featurePoints;
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotated;
@@ -308,22 +312,22 @@ class RectGroup
 	const cv::Point2f zeroPoint; // this should be static but then I'd have to make a .cpp file just for it
 };
 
-class ImageTargetFindData : public IData
-{
-	public:
-	ImageTargetFindData() : IData() {};
-	shared_ptr<RectGroup> target;
-	shared_ptr<DataImage> imageData;
-	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
-
-	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
-	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
-};
+//class ImageTargetFindData : public IData
+//{
+//	public:
+//	ImageTargetFindData() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
+//	shared_ptr<RectGroup> target;
+//	shared_ptr<DataImage> imageData;
+//	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
+//
+//	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
+//	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
+//};
 
 class ImageTargetFind2Data : public IData
 {
 	public:
-	ImageTargetFind2Data() : IData() {};
+	ImageTargetFind2Data() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
 	vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
@@ -357,7 +361,7 @@ template <class T>
 class SO3Data : public IData
 {
 	public:
-	SO3Data() : IData(){};
+	SO3Data() : IData(){type = DATA_TYPE_SO3;}
 
 	SO3 rotation;
 };
@@ -366,7 +370,7 @@ template <class T>
 class HeightData : public IData
 {
 	public:
-	HeightData() : IData(){};
+	HeightData() : IData(){type = DATA_TYPE_HEIGHT;}
 
 	T height, heightRaw;
 };
