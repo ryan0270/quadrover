@@ -7,6 +7,7 @@ namespace Quadrotor{
 using namespace std;
 using namespace toadlet;
 using namespace toadlet::egg;
+using namespace TNT;
 
 QuadLogger::QuadLogger()
 {
@@ -27,6 +28,7 @@ QuadLogger::QuadLogger()
 	mTypeMask |= LOG_FLAG_CAM_RESULTS;
 //	mTypeMask |= LOG_FLAG_CAM_IMAGES;
 	mTypeMask |= LOG_FLAG_PHONE_TEMP;
+	mTypeMask |= LOG_FLAG_SONAR;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -89,7 +91,7 @@ void QuadLogger::run()
 		if(size > 0)
 			t.setTime(mLogQueue.front()->timestamp);
 		mMutex_logQueue.unlock();
-		while(size > 0 && !mPaused && t.getElapsedTimeMS() > 1.0e3 && mRunning)
+		while(size > 0 && !mPaused && /*t.getElapsedTimeMS() > 1.0e3 &&*/ mRunning)
 		{
 			mMutex_logQueue.lock();
 			entry  = mLogQueue.front();
@@ -98,9 +100,9 @@ void QuadLogger::run()
 
 			line = "";
 			if(mStartTime < entry->timestamp)
-				line = line+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
+				line = line+(int)Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
 			else
-				line = line+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
+				line = line+(int)Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
 			line = line+entry->id+"\t";
 			line = line+entry->str;
 
@@ -130,9 +132,9 @@ void QuadLogger::run()
 
 		line = "";
 		if(mStartTime < entry->timestamp)
-			line = line+Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
+			line = line+(int)Time::calcDiffMS(mStartTime,entry->timestamp)+"\t";
 		else
-			line = line+Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
+			line = line+(int)Time::calcDiffMS(entry->timestamp,mStartTime)+"\t";
 		line = line+entry->id+"\t";
 		line = line+entry->str;
 
@@ -152,12 +154,6 @@ void QuadLogger::run()
 	}
 
 	mDone = true;
-}
-
-//void QuadLogger::addLine(const String &str, LogFlags type)
-void QuadLogger::addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type)
-{
-	addEntry(Time(), id, str, type);
 }
 
 void QuadLogger::addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type)
@@ -180,6 +176,158 @@ void QuadLogger::addEntry(const Time &t, const LogID &id, const toadlet::egg::St
 		mMutex_logQueue.unlock();
 	}
 	mMutex_addLine.unlock();
+}
+
+void QuadLogger::addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type)
+{
+	addEntry(Time(), id, str, type);
+}
+
+void QuadLogger::addEntry(const LogID &id, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+		addEntry(Time(), id, "", type);
+}
+
+void QuadLogger::addEntry(const LogID &id, int data, const Time &t, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		str = str+(int)Time::calcDiffMS(mStartTime, t)+"\t";
+		str = str+data;
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, double data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+		addEntry(Time(), id, String()+data, type);
+}
+
+void QuadLogger::addEntry(const LogID &id, double data, const Time &t, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		str = str+(int)Time::calcDiffMS(mStartTime, t)+"\t";
+		str = str+data;
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const Array2D<double> &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		for(int i=0; i<data.dim1(); i++)
+			for(int j=0; j<data.dim2(); j++)
+				str = str+data[i][j]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const shared_ptr<DataVector<double>> &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		for(int i=0; i<data->data.dim1(); i++)
+			for(int j=0; j<data->data.dim2(); j++)
+				str = str+data->data[i][j]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const SO3 &data, const Array2D<double> &velData, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		double w = data.getQuaternion().getScalarPart();
+		const Array2D<double> v = data.getQuaternion().getVectorPart();
+		String str;
+		str = str +w+"\t";
+		for(int i=0; i<v.dim1(); i++)
+			str = str +v[i][0] + "\t";
+		for(int i=0; i<velData.dim1(); i++)
+			str = str +velData[i][0]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const shared_ptr<SO3Data<double>> &data, const shared_ptr<DataVector<double>> &velData, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		double w =data->rotation.getQuaternion().getScalarPart();
+		const Array2D<double> v = data->rotation.getQuaternion().getVectorPart();
+		String str = String()+(int)Time::calcDiffMS(mStartTime,data->timestamp)+"\t";
+		str = str +w+"\t";
+		for(int i=0; i<v.dim1(); i++)
+			str = str +v[i][0] + "\t";
+		for(int i=0; i<velData->data.dim1(); i++)
+			str = str +velData->data[i][0]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const Collection<double> &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		for(int i=0; i<data.size(); i++)
+			str = str+data[i]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const Collection<float> &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		for(int i=0; i<data.size(); i++)
+			str = str+data[i]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const cv::Point2f &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str = String()+data.x+"\t"+data.y;
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const cv::Point2f &data, const Time &t, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str = String()+(int)Time::calcDiffMS(mStartTime,t)+"\t"+data.x+"\t"+data.y;
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		str = str+(int)Time::calcDiffMS(mStartTime, t)+"\t";
+		str = str+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
+		addEntry(Time(), id, str, type);
+	}
 }
 
 void QuadLogger::generateMatlabHeader()

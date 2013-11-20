@@ -26,7 +26,7 @@ using namespace std;
 
 class Observer_Angular : public CommManagerListener,
 						 public SensorManagerListener,
-						 public TargetFinderListener,
+//						 public TargetFinderListener,
 						 public TargetFinder2Listener
 {
 	public:
@@ -80,7 +80,7 @@ class Observer_Angular : public CommManagerListener,
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for TargetFinderListener
-	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
+//	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
 
 	// for TargetFinder2Listener
 	void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data);
@@ -100,10 +100,10 @@ class Observer_Angular : public CommManagerListener,
 	toadlet::egg::Collection<TNT::Array2D<double>> mExtraDirsMeasured, mExtraDirsInertial;
 	toadlet::egg::Collection<double> mExtraDirsWeight;
 
-	TNT::Array2D<double> convert_so3toCoord(TNT::Array2D<double> const &so3);
-	TNT::Array2D<double> convert_coordToso3(TNT::Array2D<double> const &SO3);
+//	TNT::Array2D<double> convert_so3toCoord(TNT::Array2D<double> const &so3);
+//	TNT::Array2D<double> convert_coordToso3(TNT::Array2D<double> const &SO3);
 
-	TNT::Array2D<double> extractEulerAngles(TNT::Array2D<double> const &rotMat);
+//	TNT::Array2D<double> extractEulerAngles(TNT::Array2D<double> const &rotMat);
 
 	Time mStartTime;
 	int mBurnCount;

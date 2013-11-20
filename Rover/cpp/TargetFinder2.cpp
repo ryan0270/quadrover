@@ -175,9 +175,10 @@ void TargetFinder2::run()
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onTargetFound2(data);
 
-				logString = "";
-				logString = logString+procTime;
-				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
+//				logString = "";
+//				logString = logString+procTime;
+//				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME, procTime, LOG_FLAG_CAM_RESULTS);
 			}
 		}
 

@@ -280,18 +280,21 @@ void Rover::run()
 				double used = 0;
 				for(int j=0; j<3; j++)
 					used += cpuUsageCur[0][j]-cpuUsagePrev[0][j];
-				str = str+(used/maxTotal/(double)mNumCpuCores)+"\t";
+//				str = str+(used/maxTotal/(double)mNumCpuCores)+"\t";
+				usage.push_front(used/maxTotal/(double)mNumCpuCores);
 
 				// finish making log string
-				for(int i=0; i<usage.size(); i++)
-					str = str+usage[i]+"\t";
-				mQuadLogger.addEntry(LOG_ID_CPU_USAGE, str,LOG_FLAG_PC_UPDATES);
+//				for(int i=0; i<usage.size(); i++)
+//					str = str+usage[i]+"\t";
+//				mQuadLogger.addEntry(LOG_ID_CPU_USAGE, str,LOG_FLAG_PC_UPDATES);
+				mQuadLogger.addEntry(LOG_ID_CPU_USAGE, usage, LOG_FLAG_PC_UPDATES);
 			}
 			cpuUsagePrev.inject(cpuUsageCur);
 
 			// also log cpu freq
-			String str = String()+freqAcc/freqCnt;
-			mQuadLogger.addEntry(LOG_ID_CPU_FREQ, str, LOG_FLAG_PC_UPDATES);
+//			String str = String()+freqAcc/freqCnt;
+//			mQuadLogger.addEntry(LOG_ID_CPU_FREQ, str, LOG_FLAG_PC_UPDATES);
+			mQuadLogger.addEntry(LOG_ID_CPU_FREQ, freqAcc/freqCnt, LOG_FLAG_PC_UPDATES);
 			freqCnt = 0;
 			freqAcc = 0;
 		}
@@ -604,8 +607,9 @@ void Rover::onNewCommTimeSync(int time)
 
 	mMotorInterface.setStartTime(mStartTime);
 
-	String str = String()+delta;
-	mQuadLogger.addEntry(LOG_ID_TIME_SYNC, str,LOG_FLAG_PC_UPDATES);
+//	String str = String()+delta;
+//	mQuadLogger.addEntry(LOG_ID_TIME_SYNC, str,LOG_FLAG_PC_UPDATES);
+	mQuadLogger.addEntry(LOG_ID_TIME_SYNC, delta,LOG_FLAG_PC_UPDATES);
 }
 
 void Rover::onNewCommLogTransfer()

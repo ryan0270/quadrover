@@ -21,7 +21,7 @@ namespace Quadrotor {
 class TranslationController : 	public Observer_TranslationalListener,
 								public CommManagerListener,
 								public MotorInterfaceListener,
-								public TargetFinderListener,
+//								public TargetFinderListener,
 								public TargetFinder2Listener
 {
 	public:
@@ -70,7 +70,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void onMotorWarmupDone(){reset();Log::alert("Tran Controller Received motor warmup done");}
 	
 	// for TargetFinderListener
-	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
+//	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
 
 	// for TargetFinder2Listener
 	void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data);
@@ -113,7 +113,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 
 	int mThreadPriority, mScheduler;
 
-	shared_ptr<ImageTargetFindData> mTargetData;
+//	shared_ptr<ImageTargetFindData> mTargetData;
 	shared_ptr<ImageTargetFind2Data> mTarget2Data;
 	shared_ptr<ImageTranslationData> mTargetTranslationData;
 	std::mutex mMutex_target;
