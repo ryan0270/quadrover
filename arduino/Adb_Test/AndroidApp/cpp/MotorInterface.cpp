@@ -16,8 +16,10 @@ using namespace toadlet::egg;
 
 		mDoMotorWarmup = false;
 
-		mServerSocket = NULL;
-		mSocket = NULL;
+		mServerSocketSend = NULL;
+		mServerSocketReceive= NULL;
+		mSocketSend = NULL;
+		mSocketReceive = NULL;
 
 		mLastSonarHeight = 0;
 
@@ -40,12 +42,17 @@ using namespace toadlet::egg;
 
 	void MotorInterface::initialize()
 	{
-		mServerSocket = Socket::ptr(Socket::createTCPSocket());
-		mServerSocket->bind(45670);
-		mServerSocket->listen(1);
-		mServerSocket->setBlocking(false);
+		mServerSocketSend = Socket::ptr(Socket::createTCPSocket());
+		mServerSocketSend->bind(45670);
+		mServerSocketSend->listen(1);
+		mServerSocketSend->setBlocking(false);
+		mSocketSend = Socket::ptr(mServerSocketSend->accept());
 
-		mSocket = Socket::ptr(mServerSocket->accept());
+		mServerSocketReceive = Socket::ptr(Socket::createTCPSocket());
+		mServerSocketReceive->bind(45671);
+		mServerSocketReceive->listen(1);
+		mServerSocketReceive->setBlocking(false);
+		mSocketReceive = Socket::ptr(mServerSocketReceive->accept());
 
 		mScheduler = SCHED_NORMAL;
 		mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -63,28 +70,41 @@ using namespace toadlet::egg;
 		sp.sched_priority = mThreadPriority;
 		sched_setscheduler(0, mScheduler, &sp);
 		Time lastSendTime;
+		uint16_t cmdBase = 0;
 		while(mRunning)
 		{
 			mMutex_sendTime.lock();
 			lastSendTime.setTime(mLastSendTime);
 			mMutex_sendTime.unlock();
-			if(!isConnected())
+			if(!isConnectedSend())
 			{
 				mWaitingForConnection = true;
 				mWaitingForConnection = false;
-				mSocket = Socket::ptr(mServerSocket->accept());
-				if(mSocket != NULL)
+				mSocketSend = Socket::ptr(mServerSocketSend->accept());
+				if(mSocketSend != NULL)
 					Log::alert("Connected to motors");
 			}
-			else if(lastSendTime.getElapsedTimeMS() > 10)
+			else if(lastSendTime.getElapsedTimeMS() > 5)
 			{
 				// this is just to keep the connection alive
-				Collection<uint16_t> cmds(4,0);
+				Collection<uint16_t> cmds(4);
+				cmds[0] = cmdBase++;
+				cmds[1] = cmdBase++;
+				cmds[2] = cmdBase++;
+				cmds[3] = cmdBase++;
 				sendCommandForced(cmds);
+				if(cmdBase == 2048)
+					cmdBase = 0;
 			}
 
-			if(isConnected())
+			if(isConnectedReceive())
 				pollTCP();
+			else
+			{
+				mSocketReceive = Socket::ptr(mServerSocketReceive->accept());
+				if(mSocketReceive != NULL)
+					Log::alert("Connected to receive port");
+			}
 
 			System::msleep(1);
 		}
@@ -92,13 +112,13 @@ using namespace toadlet::egg;
 		Collection<uint16_t> cmds(4,0);
 		sendCommandForced(cmds);
 		mMutex_socket.lock();
-		if(mSocket != NULL)
+		if(mSocketSend != NULL)
 		{
-			mSocket->close();
-			mSocket = NULL;
+			mSocketSend->close();
+			mSocketSend = NULL;
 		}
-		mServerSocket->close();
-		mServerSocket = NULL;
+		mServerSocketSend->close();
+		mServerSocketSend = NULL;
 		mMutex_socket.unlock();
 
 		mShutdown = true;
@@ -106,7 +126,7 @@ using namespace toadlet::egg;
 
 	void MotorInterface::sendCommand(const Collection<uint16_t> &cmds)
 	{
-		if(!isConnected() || !mMotorsEnabled)
+		if(!isConnectedSend() || !mMotorsEnabled)
 			return;
 
 		mMutex_sendTime.lock();
@@ -117,25 +137,24 @@ using namespace toadlet::egg;
 
 		for(int i=0; i<cmds.size(); i++)
 			mMotorCmds[i] = min((uint16_t)MAX_MOTOR_CMD, max((uint16_t)MIN_MOTOR_CMD, cmds[i]));
-		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16_t));
+		int result = mSocketSend->send((tbyte*)mMotorCmds, 4*sizeof(uint16_t));
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
 		if(result != 4*sizeof(uint16_t))
 		{
-			if(mSocket != NULL)
-				mSocket->close();
+			if(mSocketSend != NULL)
+				mSocketSend->close();
 
-			mSocket = NULL;
+			mSocketSend = NULL;
 			mMotorsEnabled = false;
 		}
 	}
 
 	void MotorInterface::sendCommandForced(const Collection<uint16_t> &cmds)
 	{
-		if(!isConnected())
+		if(!isConnectedSend())
 			return;
 
-Log::alert(String()+mStartTime.getElapsedTimeMS()+": sent commands");
 		mMutex_sendTime.lock();
 		mLastSendTime.setTime();
 		mMutex_sendTime.unlock();
@@ -144,16 +163,16 @@ Log::alert(String()+mStartTime.getElapsedTimeMS()+": sent commands");
 
 		for(int i=0; i<cmds.size(); i++)
 			mMotorCmds[i] = min((uint16_t)MAX_MOTOR_CMD, max((uint16_t)MIN_MOTOR_CMD, cmds[i]));
-		int result = mSocket->send((tbyte*)mMotorCmds, 4*sizeof(uint16_t));
+		int result = mSocketSend->send((tbyte*)mMotorCmds, 4*sizeof(uint16_t));
 
 		mMutex_data.unlock(); mMutex_socket.unlock();
 
 		if(result != 4*sizeof(uint16_t))
 		{
-			if(mSocket != NULL)
-				mSocket->close();
+			if(mSocketSend != NULL)
+				mSocketSend->close();
 
-			mSocket = NULL;
+			mSocketSend = NULL;
 			mMotorsEnabled = false;
 		}
 	}
@@ -178,26 +197,30 @@ Log::alert(String()+mStartTime.getElapsedTimeMS()+": sent commands");
 		}
 	}
 
-	bool MotorInterface::isConnected() const
+	bool MotorInterface::isConnectedSend() const
 	{
-		return (mSocket != NULL) && !mWaitingForConnection;
+		return (mSocketSend != NULL) && !mWaitingForConnection;
+	}
+
+	bool MotorInterface::isConnectedReceive() const
+	{
+		return mSocketReceive != NULL;
 	}
 
 	void MotorInterface::pollTCP()
 	{
-		if(!isConnected())
+		if(!isConnectedReceive())
 		{
 			Log::alert("Not connected");
 			return;
 		}
 
 		Time curTime;
-		bool newPacketReady = mSocket != NULL && mSocket->pollRead(0);
+		bool newPacketReady = mSocketReceive != NULL && mSocketReceive->pollRead(0);
 		while(newPacketReady && mRunning)
 		{
 			uint8_t code = -1;
 			bool resetSocket = false;
-//			bool received = receiveTCP((tbyte*)&code, sizeof(code));// == sizeof(code);
 			int received = receiveTCP((tbyte*)&code, sizeof(code));// == sizeof(code);
 			if(received == sizeof(code))
 			{
@@ -214,13 +237,7 @@ Log::alert(String()+mStartTime.getElapsedTimeMS()+": sent commands");
 						{
 							mMutex_data.lock();
 							mLastSonarHeight = height/1.0e3;
-							Log::alert(String()+"sonar: " + height/1.0e3);
 							mMutex_data.unlock();
-//							shared_ptr<HeightData<double>> heightData(new HeightData<double>);
-//							heightData->timestamp.setTime(curTime);
-//							heightData->type = DATA_TYPE_HEIGHT;
-//							heightData->heightRaw = height/1000.0;
-//							heightData->height = height/1000.0;
 						}
 						else
 							resetSocket = true;
@@ -234,23 +251,23 @@ Log::alert(String()+mStartTime.getElapsedTimeMS()+": sent commands");
 			if(resetSocket)
 			{
 				Log::alert("Socket reset");
-				mSocket->close();
-				mSocket = NULL;
+				mSocketReceive->close();
+				mSocketReceive = NULL;
 			}
 
-			newPacketReady = mSocket != NULL && mSocket->pollRead(0);
+			newPacketReady = mSocketReceive != NULL && mSocketReceive->pollRead(0);
 		}
 	}
 
 	int MotorInterface::receiveTCP(tbyte* data, int size)
 	{
-		if(!isConnected())
+		if(!isConnectedReceive())
 			return 0;
-		int received= mSocket->receive(data, size);
+		int received= mSocketReceive->receive(data, size);
 		int delta = 1;
 		while(delta > 0 && received < size)
 		{
-			delta = mSocket->receive(data+received, size-received);
+			delta = mSocketReceive->receive(data+received, size-received);
 			received += delta;
 		}
 
