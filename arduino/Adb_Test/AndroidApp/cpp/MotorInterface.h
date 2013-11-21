@@ -33,7 +33,8 @@ class MotorInterface
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	bool isConnected() const;
+	inline bool isConnectedSend() const;
+	inline bool isConnectedReceive() const;
 
 	void sendCommand(const toadlet::egg::Collection<uint16_t> &cmds);
 
@@ -48,7 +49,8 @@ class MotorInterface
 	double getLastSonarHeight(){mMutex_data.lock(); double temp = mLastSonarHeight; mLastSonarHeight = 0; mMutex_data.unlock(); return temp;}
 
 	protected:
-	toadlet::egg::Socket::ptr mServerSocket, mSocket;
+	toadlet::egg::Socket::ptr mServerSocketSend, mSocketSend;
+	toadlet::egg::Socket::ptr mServerSocketReceive, mSocketReceive;
 	bool mRunning, mShutdown;
 	bool mMotorsEnabled;
 	bool mWaitingForConnection;

@@ -1,45 +1,33 @@
 #include <SPI.h>
 #include <Adb.h>
 
-int verbosity=1;
-
-boolean phoneIsConnected;
+boolean phoneIsConnectedReceive, phoneIsConnectedSend;
 unsigned long lastPhoneUpdateTimeMS;
 
 uint16_t motorCommands[4];
 
 // Adb connection.
-Connection * connection;
+Connection *connectionReceive, *connectionSend;
 // Event handler for the shell connection. 
-void adbEventHandler(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
+void adbEventHandlerReceive(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
 {
-  if(event == ADB_CONNECT && verbosity > 0)
-  {    Serial.println("ADB_CONNECT");  }
+  if(event == ADB_CONNECT)
+  {    Serial.println("ADB_CONNECT receive");  }
   else if(event == ADB_DISCONNECT)
-  {
-    phoneIsConnected = false;
-    if(verbosity > 0)
-      Serial.println("ADB_DISCONNECT");
-  }
-  else if(event == ADB_CONNECTION_OPEN && verbosity > 0)
-  {    Serial.println("ADB_CONNECTION_OPEN");  }
+  {    phoneIsConnectedReceive = false;    Serial.println("ADB_DISCONNECT receive");  }
+  else if(event == ADB_CONNECTION_OPEN)
+  {    Serial.println("ADB_CONNECTION_OPEN receive");  }
   else if(event == ADB_CONNECTION_CLOSE)
-  {
-    phoneIsConnected = false;
-    if(verbosity > 0)
-      Serial.println("ADB_CONNECTION_CLOSE");
+  {    phoneIsConnectedReceive = false;    Serial.println("ADB_CONNECTION_CLOSE receive");
   }
   else if(event == ADB_CONNECTION_FAILED)
-  {
-    phoneIsConnected = false;
-    if(verbosity > 0)
-      Serial.println("ADB_CONNECTION_FAILED");
+  {    phoneIsConnectedReceive = false;    Serial.println("ADB_CONNECTION_FAILED receive");
   }
   else if (event == ADB_CONNECTION_RECEIVE)
   {
-    if(!phoneIsConnected && verbosity > 0)
-      Serial.println("Phone connected");
-    phoneIsConnected = true;
+    if(!phoneIsConnectedReceive)
+      Serial.println("Phone connected receive");
+    phoneIsConnectedReceive = true;
     for(int i=0; i<4; i++)
     {
       short val = (data[2*i+1] << 8) | (data[2*i]);
@@ -50,21 +38,38 @@ void adbEventHandler(Connection * connection, adb_eventType event, uint16_t leng
   }
 }
 
+void adbEventHandlerSend(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
+{
+  if(event == ADB_CONNECT)
+  {    Serial.println("ADB_CONNECT send");  }
+  else if(event == ADB_DISCONNECT)
+  {    phoneIsConnectedSend = false;    Serial.println("ADB_DISCONNECT send");  }
+  else if(event == ADB_CONNECTION_OPEN)
+  {    phoneIsConnectedSend = true;    Serial.println("ADB_CONNECTION_OPEN send");    }
+  else if(event == ADB_CONNECTION_CLOSE)
+  {    phoneIsConnectedSend = false;    Serial.println("ADB_CONNECTION_CLOSE send");  }
+  else if(event == ADB_CONNECTION_FAILED)
+  {    phoneIsConnectedSend = false;    Serial.println("ADB_CONNECTION_FAILED send");  }
+  else if (event == ADB_CONNECTION_RECEIVE)
+  {    Serial.println("Why is the send connection receiving data?");  }
+}
+
 void setup()
 {
-  if(verbosity > 0)
-  {
-    Serial.begin(115200);
-    Serial.println("Start chadding");
-  }
+  Serial.begin(115200);
+  Serial.println("Start chadding");
 
   delay(500);
   // Initialise the ADB subsystem.  
   ADB::init();
-  // Open an ADB stream to the phone's shell. Auto-reconnect
-  connection = ADB::addConnection("tcp:45670", true, adbEventHandler);  
+  // If I do two-way comm on a single port I get some delays receiving data
+  // every time after I send data
+  // Splitting it out to one port dedictated to each direction seems to get 
+  // around this.
+  connectionReceive = ADB::addConnection("tcp:45670", true, adbEventHandlerReceive);
+  connectionSend = ADB::addConnection("tcp:45671", true, adbEventHandlerSend);
 
-  phoneIsConnected = false;
+  phoneIsConnectedReceive = false;
   lastPhoneUpdateTimeMS = millis();
 }  
 
@@ -74,38 +79,54 @@ enum
 };
 
 unsigned long lastHeightSendTimeMS = 0;
+unsigned long lastMotorPrintTime = 0;
 unsigned long loopStart = 0;
 void loop() 
 {
+  loopStart = millis();
   if((millis() - lastPhoneUpdateTimeMS) > 100)
   {
-    if(phoneIsConnected && verbosity >= 1)
+    if(phoneIsConnectedReceive)
       Serial.println("Lost the phone");
-    phoneIsConnected = false;
+    phoneIsConnectedReceive = false;
   }
-  else if((millis()-lastPhoneUpdateTimeMS) > 30)
+  else if((millis()-lastPhoneUpdateTimeMS) > 10)
+  {
+    Serial.print("Long comm wait: ");
     Serial.println(millis()-lastPhoneUpdateTimeMS);
+  }
 
-  if(millis()-lastHeightSendTimeMS > 1000)
+  if(millis()-lastHeightSendTimeMS > 50 && phoneIsConnectedSend)
   {
     uint16_t dt = millis()-lastHeightSendTimeMS;
     lastHeightSendTimeMS = millis();
     
-    if(phoneIsConnected)
+    uint8_t code = COMM_ARDUINO_HEIGHT;
+    uint8_t buff[3];
+    buff[0] = code;
+    memcpy(&(buff[1]),&dt,2);
+    connectionSend->write(3,&(buff[0]));
+  }
+  
+  if(millis()-lastMotorPrintTime > 1e3 && phoneIsConnectedReceive)
+  {
+    lastMotorPrintTime = millis();
+    for(int i=0; i<4; i++)
     {
-      uint8_t code = COMM_ARDUINO_HEIGHT;
-      // ADB comm seems to wait for an ok reply which is needed
-      // before it will send again. I don't want to wait for that
-      // So I'll build everything into a single send
-      uint8_t buff[3];
-      buff[0] = code;
-      memcpy(&(buff[1]),&dt,2);
-      connection->write(3,&(buff[0]));
+      Serial.print(motorCommands[i]);
+      Serial.print("\t");
     }
+    Serial.print("\n");
   }
 
   while(ADB::poll());
   
+  unsigned long loopTime = millis()-loopStart;
+  if(loopTime > 5)
+  {
+    Serial.print("Long loop time: ");
+    Serial.println(loopTime);
+  }
   delay(1);
 } 
 
