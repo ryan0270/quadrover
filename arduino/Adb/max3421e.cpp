@@ -109,10 +109,10 @@ boolean max3421e_reset(void)
 	// Wait until the PLL is stable
 	while (!(max3421e_read(MAX_REG_USBIRQ) & bmOSCOKIRQ))
 	{
-//		// Timeout after 256 attempts.
-//		tmp++;
-//		if (tmp == 0)
-//			return (false);
+		// Timeout after 256 attempts.
+		tmp++;
+		if (tmp == 0)
+			return (false);
 	}
 
 	// Success.

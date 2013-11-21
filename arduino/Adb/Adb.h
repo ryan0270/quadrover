@@ -153,8 +153,6 @@ public:
 	static boolean isAdbDevice(usb_device * device, int configuration, adb_usbConfiguration * handle);
 	static void initUsb(usb_device * device, adb_usbConfiguration * handle);
 	static void closeAll();
-
-	static unsigned long lastPollTime;
 };
 
 #endif

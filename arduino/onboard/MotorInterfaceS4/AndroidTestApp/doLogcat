@@ -1,4 +1,0 @@
-#!/bin/bash
-
-adb logcat -c
-adb logcat | grep -e toadlet -e TestApplication -e DeviceListActivity

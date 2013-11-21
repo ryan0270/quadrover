@@ -33,8 +33,7 @@ class Observer_Translational : public Observer_AngularListener,
 								public CommManagerListener,
 								public SensorManagerListener,
 								public VelocityEstimatorListener,
-//								public TargetFinderListener,
-								public TargetFinder2Listener
+								public TargetFinderListener
 {
 	public:
 	Observer_Translational();
@@ -81,10 +80,7 @@ class Observer_Translational : public Observer_AngularListener,
 										 const shared_ptr<Data<double>> &heightData);
 
 	// for TargetFinderListener
-//	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
-
-	// for TargetFinder2Listener
-	void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data);
+	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
 
 	protected:
 	bool mRunning, mDone;

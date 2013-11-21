@@ -36,7 +36,7 @@ Rover::Rover() :
 	mImageData = NULL;
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
-	mTargetData2 = NULL;
+	mTargetData = NULL;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -54,7 +54,7 @@ void Rover::initialize()
 	mObsvTranslational.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 	mFeatureFinder.setStartTime(mStartTime);
-	mTargetFinder2.setStartTime(mStartTime);
+	mTargetFinder.setStartTime(mStartTime);
 	mTranslationController.setStartTime(mStartTime);
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mQuadLogger.setStartTime(mStartTime);
@@ -69,7 +69,7 @@ void Rover::initialize()
 	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
 	mVelocityEstimator.setThreadPriority(sched,maxPriority-1);
 	mFeatureFinder.setThreadPriority(sched,maxPriority-2);
-	mTargetFinder2.setThreadPriority(sched,maxPriority-2);
+	mTargetFinder.setThreadPriority(sched,maxPriority-2);
 	mTranslationController.setThreadPriority(sched,maxPriority-2);
 	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
 	mCommManager.setThreadPriority(sched,minPriority);
@@ -125,20 +125,19 @@ void Rover::initialize()
 	mCommManager.addListener(&mFeatureFinder);
 	mFeatureFinder.addListener(this);
 
-	mTargetFinder2.setQuadLogger(&mQuadLogger);
-	mTargetFinder2.setObserverAngular(&mObsvAngular);
-	mTargetFinder2.setObserverTranslational(&mObsvTranslational);
-	mTargetFinder2.initialize();
-	mTargetFinder2.start();
-	mTargetFinder2.addListener(this);
-	mTargetFinder2.addListener(&mObsvAngular);
-	mTargetFinder2.addListener(&mObsvTranslational);
-	mTargetFinder2.addListener(&mTranslationController);
-//	mTargetFinder2.addListener(&mVelocityEstimator);
-	mTargetFinder2.addRegionListener(&mVelocityEstimator);
-	mTargetFinder2.addRegionListener(&mFeatureFinder);
-	mSensorManager.addListener(&mTargetFinder2);
-	mCommManager.addListener(&mTargetFinder2);
+	mTargetFinder.setQuadLogger(&mQuadLogger);
+	mTargetFinder.setObserverAngular(&mObsvAngular);
+	mTargetFinder.setObserverTranslational(&mObsvTranslational);
+	mTargetFinder.initialize();
+	mTargetFinder.start();
+	mTargetFinder.addListener(this);
+	mTargetFinder.addListener(&mObsvAngular);
+	mTargetFinder.addListener(&mObsvTranslational);
+	mTargetFinder.addListener(&mTranslationController);
+	mTargetFinder.addRegionListener(&mVelocityEstimator);
+	mTargetFinder.addRegionListener(&mFeatureFinder);
+	mSensorManager.addListener(&mTargetFinder);
+	mCommManager.addListener(&mTargetFinder);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
@@ -194,14 +193,14 @@ void Rover::shutdown()
 
 	mVelocityEstimator.shutdown();
 	mFeatureFinder.shutdown();
-	mTargetFinder2.shutdown();
+	mTargetFinder.shutdown();
 	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
-	mTargetData2 = NULL;
+	mTargetData = NULL;
 	mSensorManager.shutdown();
 
 	mMotorInterface.shutdown();
@@ -253,11 +252,11 @@ void Rover::run()
 			if(cpuUsagePrev.dim1() != cpuUsageCur.dim1())
 				cpuUsagePrev = Array2D<int>(cpuUsageCur.dim1(), cpuUsageCur.dim2(),0.0);
 			double maxTotal= 0;
-			Collection<double> usage;
+			Collection<double> usage(5);
 			for(int i=1; i<cpuUsageCur.dim1(); i++)
 			{
 				if(cpuUsageCur[i][0] == 0 || cpuUsagePrev[i][0] == 0) // this cpu is turned off
-					usage.push_back(0);
+					usage[i] = 0;
 				else
 				{
 					double total = 0;
@@ -268,7 +267,7 @@ void Rover::run()
 						used += cpuUsageCur[i][j] - cpuUsagePrev[i][j];
 
 					maxTotal = max(maxTotal, total);
-					usage.push_back(used/total);
+					usage[i] = used/total;
 				}
 			}
 
@@ -280,20 +279,13 @@ void Rover::run()
 				double used = 0;
 				for(int j=0; j<3; j++)
 					used += cpuUsageCur[0][j]-cpuUsagePrev[0][j];
-//				str = str+(used/maxTotal/(double)mNumCpuCores)+"\t";
-				usage.push_front(used/maxTotal/(double)mNumCpuCores);
+				usage[0] = used/maxTotal/(double)mNumCpuCores;
 
-				// finish making log string
-//				for(int i=0; i<usage.size(); i++)
-//					str = str+usage[i]+"\t";
-//				mQuadLogger.addEntry(LOG_ID_CPU_USAGE, str,LOG_FLAG_PC_UPDATES);
 				mQuadLogger.addEntry(LOG_ID_CPU_USAGE, usage, LOG_FLAG_PC_UPDATES);
 			}
 			cpuUsagePrev.inject(cpuUsageCur);
 
 			// also log cpu freq
-//			String str = String()+freqAcc/freqCnt;
-//			mQuadLogger.addEntry(LOG_ID_CPU_FREQ, str, LOG_FLAG_PC_UPDATES);
 			mQuadLogger.addEntry(LOG_ID_CPU_FREQ, freqAcc/freqCnt, LOG_FLAG_PC_UPDATES);
 			freqCnt = 0;
 			freqAcc = 0;
@@ -518,8 +510,8 @@ void Rover::transmitImage()
 
 	cv::Mat img;
 	mMutex_vision.lock();
-	if(mObsvTranslational.isTargetFound() && mTargetData2 != NULL)
-		mTargetData2->imageAnnotatedData->imageAnnotated->copyTo(img);
+	if(mObsvTranslational.isTargetFound() && mTargetData != NULL)
+		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(img);
 	else if(mFeatureData != NULL)
 		mFeatureData->imageAnnotated->imageAnnotated->copyTo(img);
 	mMutex_vision.unlock();
@@ -602,13 +594,11 @@ void Rover::onNewCommTimeSync(int time)
 	mQuadLogger.setStartTime(mStartTime);
 
 	mFeatureFinder.setStartTime(mStartTime);
-	mTargetFinder2.setStartTime(mStartTime);
+	mTargetFinder.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 
 	mMotorInterface.setStartTime(mStartTime);
 
-//	String str = String()+delta;
-//	mQuadLogger.addEntry(LOG_ID_TIME_SYNC, str,LOG_FLAG_PC_UPDATES);
 	mQuadLogger.addEntry(LOG_ID_TIME_SYNC, delta,LOG_FLAG_PC_UPDATES);
 }
 
@@ -656,10 +646,10 @@ void Rover::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 	mMutex_vision.unlock();
 }
 
-void Rover::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
+void Rover::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 {
 	mMutex_vision.lock();
-	mTargetData2 = data;
+	mTargetData = data;
 	mMutex_vision.unlock();
 }
 
@@ -669,8 +659,8 @@ void Rover::copyImageData(cv::Mat *m)
 		return;
 
 	mMutex_vision.lock();
-	if( mTargetData2 != NULL)
-		mTargetData2->imageAnnotatedData->imageAnnotated->copyTo(*m);
+	if( mTargetData != NULL)
+		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m);
 	else if(mFeatureData != NULL)
 		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
 	else if(mImageData != NULL)
