@@ -32,16 +32,16 @@ static usb_eventHandler * eventHandler = NULL;
 usb_device deviceTable[USB_NUMDEVICES + 1];
 
 /**
- * Initialises the USB1 layer.
+ * Initialises the USB layer.
  */
-void USB1::init()
+void USB::init()
 {
  	max3421e_init();
 	max3421e_powerOn();
 
 	uint8_t i;
 
-	// Initialise the USB1 state machine.
+	// Initialise the USB state machine.
 	usb_task_state = USB_DETACHED_SUBSTATE_INITIALIZE;
 
 	// Initialise the device table.
@@ -50,16 +50,16 @@ void USB1::init()
 
 	// Address 0 is used to configure devices and assign them an address when they are first plugged in
 	deviceTable[0].address = 0;
-	USB1::initEndPoint(&(deviceTable[0].control), 0);
+	USB::initEndPoint(&(deviceTable[0].control), 0);
 
 }
 
 /**
- * Initialises a USB1 endpoint.
- * @param endpoint USB1 endpoint
+ * Initialises a USB endpoint.
+ * @param endpoint USB endpoint
  * @param address endpoint address
  */
-void USB1::initEndPoint(usb_endpoint * endpoint, uint8_t address)
+void USB::initEndPoint(usb_endpoint * endpoint, uint8_t address)
 {
 	endpoint->address = address;
 	endpoint->sendToggle = bmSNDTOG0;
@@ -67,23 +67,23 @@ void USB1::initEndPoint(usb_endpoint * endpoint, uint8_t address)
 }
 
 /**
- * Initialises a USB1 device and switches to the given configuration
- * @param USB1 device
+ * Initialises a USB device and switches to the given configuration
+ * @param USB device
  * @param configuration configuration to switch to
  * @return negative error code or zero on success.
  */
-int USB1::initDevice(usb_device * device, int configuration)
+int USB::initDevice(usb_device * device, int configuration)
 {
 	char buf[4];
 
 	uint8_t rcode;
 
-	// Set the configuration for this USB1 device.
-	rcode = USB1::setConfiguration(device, configuration);
+	// Set the configuration for this USB device.
+	rcode = USB::setConfiguration(device, configuration);
 	if (rcode<0) return rcode;
 
 	// Get the first supported language.
-	rcode = USB1::getString(device, 0, 0, 4, buf);
+	rcode = USB::getString(device, 0, 0, 4, buf);
 	if (rcode<0) return rcode;
     device->firstStringLanguage = (buf[3] << 8) | buf[2];
 
@@ -91,21 +91,21 @@ int USB1::initDevice(usb_device * device, int configuration)
 }
 
 /**
- * Sets the global USB1 event callback function. Use this to catch global events like device connect/disconnect.
+ * Sets the global USB event callback function. Use this to catch global events like device connect/disconnect.
  * @param handler event handler function.
  */
-void USB1::setEventHandler(usb_eventHandler * handler)
+void USB::setEventHandler(usb_eventHandler * handler)
 {
 	eventHandler = handler;
 }
 
 /**
- * Fires a USB1 event. This calls the callback function set by setEventHandler.
+ * Fires a USB event. This calls the callback function set by setEventHandler.
  *
  * @param device the device the events relates to.
  * @param event event type (i.e. connected, disconnected)
  */
-void USB1::fireEvent(usb_device * device, usb_eventType event)
+void USB::fireEvent(usb_device * device, usb_eventType event)
 {
 	eventHandler(device, event);
 }
@@ -125,8 +125,8 @@ void usb_setUsbTaskState(uint8_t state)
 /**
  * Gets the usb device at the given address, or NULL is the address is out of range (greater than USB_NUMDEVICES+1,
  * as address zero is reserver).
- * @param address USB1 device address
- * @return USB1 device struct or NULL on failure (address out of range)
+ * @param address USB device address
+ * @return USB device struct or NULL on failure (address out of range)
  */
 usb_device * usb_getDevice(uint8_t address)
 {
@@ -201,9 +201,9 @@ int usb_dispatchPacket(uint8_t token, usb_endpoint * endpoint, unsigned int nakL
 }
 
 /**
- * USB1 poll method. Performs enumeration/cleanup.
+ * USB poll method. Performs enumeration/cleanup.
  */
-void USB1::poll()
+void USB::poll()
 {
 	uint8_t i;
 	uint8_t rcode;
@@ -214,7 +214,7 @@ void USB1::poll()
 	// Poll the MAX3421E device.
 	max3421e_poll();
 
-	/* modify USB1 task state if Vbus changed */
+	/* modify USB task state if Vbus changed */
 	tmpdata = max3421e_getVbusState();
 
 	switch (tmpdata)
@@ -238,20 +238,20 @@ void USB1::poll()
 		break;
 	}// switch( tmpdata
 
-	//Serial.print("USB1 task state: ");
+	//Serial.print("USB task state: ");
 	//Serial.println( usb_task_state, HEX );
 
 	switch (usb_task_state)
 	{
 	case USB_DETACHED_SUBSTATE_INITIALIZE:
 
-		// TODO right now it looks like the USB1 board is just reset on disconnect. Fire disconnect for all connected
+		// TODO right now it looks like the USB board is just reset on disconnect. Fire disconnect for all connected
 		// devices.
 		for (i = 1; i < USB_NUMDEVICES; i++)
 			if (deviceTable[i].active)
-				USB1::fireEvent(&(deviceTable[i]), USB_DISCONNECT);
+				USB::fireEvent(&(deviceTable[i]), USB_DISCONNECT);
 
-		USB1::init();
+		USB::init();
 		usb_task_state = USB_DETACHED_SUBSTATE_WAIT_FOR_DEVICE;
 		break;
 	case USB_DETACHED_SUBSTATE_WAIT_FOR_DEVICE: //just sit here
@@ -278,7 +278,7 @@ void USB1::poll()
 			max3421e_write(MAX_REG_MODE, tmpdata);
 			//                  max3421e_regWr( rMODE, bmSOFKAENAB );
 			usb_task_state = USB_ATTACHED_SUBSTATE_WAIT_SOF;
-			delay = millis() + 20; //20ms wait after reset per USB1 spec
+			delay = millis() + 20; //20ms wait after reset per USB spec
 		}
 		break;
 
@@ -298,7 +298,7 @@ void USB1::poll()
 
 		deviceTable[0].control.maxPacketSize = 8;
 
-		rcode = USB1::getDeviceDescriptor(&deviceTable[0], &deviceDescriptor);
+		rcode = USB::getDeviceDescriptor(&deviceTable[0], &deviceDescriptor);
 		if (rcode == 0)
 		{
 			deviceTable[0].control.maxPacketSize = deviceDescriptor.bMaxPacketSize0;
@@ -323,21 +323,21 @@ void USB1::poll()
 				deviceTable[i].address = i;
 				deviceTable[i].active = true;
 
-				USB1::initEndPoint(&(deviceTable[i].control), 0);
+				USB::initEndPoint(&(deviceTable[i].control), 0);
 
 				// temporary record until plugged with real device endpoint structure
-				rcode = USB1::setAddress(&deviceTable[0], i);
+				rcode = USB::setAddress(&deviceTable[0], i);
 
 				if (rcode == 0)
 				{
-					USB1::fireEvent(&deviceTable[i], USB_CONNECT);
+					USB::fireEvent(&deviceTable[i], USB_CONNECT);
 					// usb_task_state = USB_STATE_CONFIGURING;
 					// NB: I've bypassed the configuring state, because configuration should be handled
 					// in the usb event handler.
 					usb_task_state = USB_STATE_RUNNING;
 				} else
 				{
-					USB1::fireEvent(&deviceTable[i], USB_ADRESSING_ERROR);
+					USB::fireEvent(&deviceTable[i], USB_ADRESSING_ERROR);
 
 					// TODO remove usb_error at some point?
 					usb_error = USB_STATE_ADDRESSING;
@@ -350,7 +350,7 @@ void USB1::poll()
 		// If no vacant spot was found in the device table, fire an error.
 		if (usb_task_state == USB_STATE_ADDRESSING)
 		{
-			USB1::fireEvent(&deviceTable[i], USB_ADRESSING_ERROR);
+			USB::fireEvent(&deviceTable[i], USB_ADRESSING_ERROR);
 
 			// No vacant place in devtable
 			usb_error = 0xfe;
@@ -373,27 +373,27 @@ void USB1::poll()
  * result to ASCII by ignoring every second byte. However, since the target buffer is used as a temporary storage during
  * this process it must be twice as large as the desired maximum string size.
  *
- * @param device USB1 device.
+ * @param device USB device.
  * @param index string index.
  * @param languageId language ID.
  * @param length buffer length.
  * @param str target buffer.
  * @return 0 on success, error code otherwise.
  */
-int USB1::getString(usb_device * device, uint8_t index, uint8_t languageId, uint16_t length, char * str)
+int USB::getString(usb_device * device, uint8_t index, uint8_t languageId, uint16_t length, char * str)
 {
 	uint8_t stringLength = 0;
 	int i, ret = 0;
 
     // Get string length;
-	ret = USB1::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, index, USB_DESCRIPTOR_STRING, languageId, sizeof(uint8_t), &stringLength);
+	ret = USB::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, index, USB_DESCRIPTOR_STRING, languageId, sizeof(uint8_t), &stringLength);
     if (ret<0) return -1;
 
     // Trim string size to fit the target buffer.
     if (stringLength>length) stringLength = length;
 
 	// Get the whole thing.
-	ret = USB1::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, index, USB_DESCRIPTOR_STRING, languageId, stringLength, (uint8_t *)str);
+	ret = USB::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, index, USB_DESCRIPTOR_STRING, languageId, stringLength, (uint8_t *)str);
     if (ret<0) return -2;
 
 	// Convert to 8-bit ASCII
@@ -405,14 +405,14 @@ int USB1::getString(usb_device * device, uint8_t index, uint8_t languageId, uint
 }
 
 /**
- * Performs an in transfer from a USB1 device from an arbitrary endpoint.
+ * Performs an in transfer from a USB device from an arbitrary endpoint.
  *
- * @param device USB1 bulk device.
+ * @param device USB bulk device.
  * @param device length number of bytes to read.
  * @param data target buffer.
  * @return number of bytes read, or error code in case of failure.
  */
-int USB1::read(usb_device * device, usb_endpoint * endpoint, uint16_t length, uint8_t * data, unsigned int nakLimit)
+int USB::read(usb_device * device, usb_endpoint * endpoint, uint16_t length, uint8_t * data, unsigned int nakLimit)
 {
 	uint16_t rcode, bytesRead;
 	uint16_t maxPacketSize = endpoint->maxPacketSize;
@@ -434,7 +434,7 @@ int USB1::read(usb_device * device, usb_endpoint * endpoint, uint16_t length, ui
 		if (rcode)
 		{
 //			if (rcode != hrNAK)
-//				serialPrintf("USB1::read: dispatch error %d\n", rcode);
+//				serialPrintf("USB::read: dispatch error %d\n", rcode);
 
 			return -1;
 		}
@@ -442,7 +442,7 @@ int USB1::read(usb_device * device, usb_endpoint * endpoint, uint16_t length, ui
 		// Assert that the RCVDAVIRQ bit in register MAX_REG_HIRQ is set.
 		if ((max3421e_read(MAX_REG_HIRQ) & bmRCVDAVIRQ) == 0)
 		{
-//			serialPrintf("USB1::read: toggle error? %d\n", rcode);
+//			serialPrintf("USB::read: toggle error? %d\n", rcode);
 
 			// TODO: the absence of RCVDAVIRQ indicates a toggle error. Need to add handling for that.
 			return -2;
@@ -480,29 +480,29 @@ int USB1::read(usb_device * device, usb_endpoint * endpoint, uint16_t length, ui
 
 
 /**
- * Performs a bulk in transfer from a USB1 device.
+ * Performs a bulk in transfer from a USB device.
  *
- * @param device USB1 bulk device.
+ * @param device USB bulk device.
  * @param device length number of bytes to read.
  * @param data target buffer.
  *
  * @return number of bytes read, or error code in case of failure.
  */
-int USB1::bulkRead(usb_device * device, uint16_t length, uint8_t * data, boolean poll)
+int USB::bulkRead(usb_device * device, uint16_t length, uint8_t * data, boolean poll)
 {
-	return USB1::read(device, &(device->bulk_in), length, data, poll ? 1 : USB_NAK_LIMIT);
+	return USB::read(device, &(device->bulk_in), length, data, poll ? 1 : USB_NAK_LIMIT);
 }
 
 
 /**
- * Performs ab out transfer to a USB1 device on an arbitrary endpoint.
+ * Performs ab out transfer to a USB device on an arbitrary endpoint.
  *
- * @param device USB1 bulk device.
+ * @param device USB bulk device.
  * @param device length number of bytes to read.
  * @param data target buffer.
  * @return number of bytes written, or error code in case of failure.
  */
-int USB1::write(usb_device * device, usb_endpoint * endpoint, uint16_t length, uint8_t * data)
+int USB::write(usb_device * device, usb_endpoint * endpoint, uint16_t length, uint8_t * data)
 {
 	uint8_t rcode = 0, retry_count;
 
@@ -597,46 +597,46 @@ int USB1::write(usb_device * device, usb_endpoint * endpoint, uint16_t length, u
 }
 
 /**
- * Performs a bulk out transfer to a USB1 device.
+ * Performs a bulk out transfer to a USB device.
  *
- * @param device USB1 bulk device.
+ * @param device USB bulk device.
  * @param device length number of bytes to read.
  * @param data target buffer.
  * @return number of bytes read, or error code in case of failure.
  */
-int USB1::bulkWrite(usb_device * device, uint16_t length, uint8_t * data)
+int USB::bulkWrite(usb_device * device, uint16_t length, uint8_t * data)
 {
-	return USB1::write(device, &(device->bulk_out) , length, data);
+	return USB::write(device, &(device->bulk_out) , length, data);
 }
 
 /**
  * Read/write data to/from the control endpoint of a device.
  *
- * @param device USB1 device.
+ * @param device USB device.
  * @param direction true for input, false for output.
  * @param length number of bytes to transfer.
  * @param data data buffer.
  */
-uint8_t USB1::ctrlData(usb_device * device, boolean direction, uint16_t length, uint8_t * data)
+uint8_t USB::ctrlData(usb_device * device, boolean direction, uint16_t length, uint8_t * data)
 {
 	if (direction)
 	{
 		// IN transfer
 		device->control.receiveToggle = bmRCVTOG1;
-		return USB1::read(device, &(device->control), length, data, USB_NAK_LIMIT);
+		return USB::read(device, &(device->control), length, data, USB_NAK_LIMIT);
 
 	} else
 	{
 		// OUT transfer
 		device->control.sendToggle = bmSNDTOG1;
-		return USB1::write(device, &(device->control), length, data);
+		return USB::write(device, &(device->control), length, data);
 	}
 }
 
 /**
- * Sends a control request to a USB1 device.
+ * Sends a control request to a USB device.
  *
- * @param device USB1 device to send the control request to.
+ * @param device USB device to send the control request to.
  * @param requestType request type (in/out).
  * @param request request.
  * @param valueLow low byte of the value parameter.
@@ -646,7 +646,7 @@ uint8_t USB1::ctrlData(usb_device * device, boolean direction, uint16_t length, 
  * @param data data to send in case of output transfer, or reception buffer in case of input. If no data is to be exchanged this should be set to NULL.
  * @return 0 on success, error code otherwise
  */
-int USB1::controlRequest(
+int USB::controlRequest(
 		usb_device * device,
 		uint8_t requestType,
 		uint8_t request,
@@ -687,7 +687,7 @@ int USB1::controlRequest(
 	// Data stage, if present
 	if (data != NULL)
 	{
-		rcode = USB1::ctrlData(device, direction, length, data);
+		rcode = USB::ctrlData(device, direction, length, data);
 
 		// If unsuccessful, return error.
 		if (rcode<0)
@@ -710,61 +710,61 @@ int USB1::controlRequest(
 }
 
 /**
- * Gets the device descriptor of a USB1 device.
- * @param device USB1 device
+ * Gets the device descriptor of a USB device.
+ * @param device USB device
  * @param descriptor pointer to a usb_deviceDescriptor record that will be filled with the requested data.
  * @return 0 in case of success, error code otherwise
  */
-int USB1::getDeviceDescriptor(usb_device * device, usb_deviceDescriptor * descriptor)
+int USB::getDeviceDescriptor(usb_device * device, usb_deviceDescriptor * descriptor)
 {
-	return(USB1::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, 0x00, USB_DESCRIPTOR_DEVICE, 0x0000, sizeof(usb_deviceDescriptor), (uint8_t *)descriptor));
+	return(USB::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, 0x00, USB_DESCRIPTOR_DEVICE, 0x0000, sizeof(usb_deviceDescriptor), (uint8_t *)descriptor));
 }
 
 /**
- * Gets the configuration descriptor of a USB1 device as a byte array.
- * @param device USB1 device
+ * Gets the configuration descriptor of a USB device as a byte array.
+ * @param device USB device
  * @param conf configuration number
  * @param length length of the data buffer. This method will not write beyond this boundary.
  * @return number of bytes read, or negative number in case of error.
  */
-int USB1::getConfigurationDescriptor(usb_device * device, uint8_t conf, uint16_t length, uint8_t * data)
+int USB::getConfigurationDescriptor(usb_device * device, uint8_t conf, uint16_t length, uint8_t * data)
 {
 	uint16_t descriptorLength;
 	int rcode;
 
 	// Read the length of the configuration descriptor.
-	rcode = (USB1::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, conf, USB_DESCRIPTOR_CONFIGURATION, 0x0000, 4, data));
+	rcode = (USB::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, conf, USB_DESCRIPTOR_CONFIGURATION, 0x0000, 4, data));
 	if (rcode) return -1;
 
 	descriptorLength = (data[3] << 8) | data[2];
 	if (descriptorLength<length) length = descriptorLength;
 
 	// Read the length of the configuration descriptor.
-	rcode = (USB1::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, conf, USB_DESCRIPTOR_CONFIGURATION, 0x0000, length, data));
+	rcode = (USB::controlRequest(device, bmREQ_GET_DESCR, USB_REQUEST_GET_DESCRIPTOR, conf, USB_DESCRIPTOR_CONFIGURATION, 0x0000, length, data));
 	if (rcode) return -2;
 
 	return length;
 }
 
 /**
- * Sets the address of a newly connected USB1 device.
+ * Sets the address of a newly connected USB device.
  *
  * @param device the 'zero' usb device (address 0, endpoint 0)
  * @param address the address to set for the newly connected device
  * @return 0 in case of success, error code otherwise
  */
-int USB1::setAddress(usb_device * device, uint8_t address)
+int USB::setAddress(usb_device * device, uint8_t address)
 {
-    return(USB1::controlRequest(device, bmREQ_SET, USB_REQUEST_SET_ADDRESS, address, 0x00, 0x0000, 0x0000, NULL));
+    return(USB::controlRequest(device, bmREQ_SET, USB_REQUEST_SET_ADDRESS, address, 0x00, 0x0000, 0x0000, NULL));
 }
 
 /**
  * Switches a device to the given configuration.
- * @param device USB1 device
+ * @param device USB device
  * @param configuration configuration number to switch to
  * @param error code. Negative on error or zero on success.
  */
-int USB1::setConfiguration(usb_device * device, uint8_t configuration)
+int USB::setConfiguration(usb_device * device, uint8_t configuration)
 {
-    return(USB1::controlRequest(device, bmREQ_SET, USB_REQUEST_SET_CONFIGURATION, configuration, 0x00, 0x0000, 0x0000, NULL));
+    return(USB::controlRequest(device, bmREQ_SET, USB_REQUEST_SET_CONFIGURATION, configuration, 0x00, 0x0000, 0x0000, NULL));
 }

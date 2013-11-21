@@ -324,10 +324,10 @@ class RectGroup
 //	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 //};
 
-class ImageTargetFind2Data : public IData
+class ImageTargetFindData : public IData
 {
 	public:
-	ImageTargetFind2Data() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
+	ImageTargetFindData() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
 	vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
@@ -352,7 +352,7 @@ class ImageTranslationData : public IData
 {
 	public:
 	ImageTranslationData() : IData() {type = DATA_TYPE_IMAGE_TRANSLATION;}
-	shared_ptr<ImageTargetFind2Data> imageTargetFind2Data;
+	shared_ptr<ImageTargetFindData> imageTargetFindData;
 	vector<cv::Point2f> goodPoints; // location of found points, already adjusted for current attitude and image offset
 	vector<cv::Point2f> nominalPoints; // nominal location of the respective found points
 };

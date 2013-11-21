@@ -26,8 +26,7 @@ using namespace std;
 
 class Observer_Angular : public CommManagerListener,
 						 public SensorManagerListener,
-//						 public TargetFinderListener,
-						 public TargetFinder2Listener
+						 public TargetFinderListener
 {
 	public:
 	Observer_Angular();
@@ -80,10 +79,7 @@ class Observer_Angular : public CommManagerListener,
 	void onNewSensorUpdate(shared_ptr<IData> const &data);
 
 	// for TargetFinderListener
-//	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
-
-	// for TargetFinder2Listener
-	void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data);
+	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
 
 	protected:
 	bool mRunning, mDone;

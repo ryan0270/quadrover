@@ -29,8 +29,7 @@
 #include "VideoMaker.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
-//#include "TargetFinder.h"
-#include "TargetFinder2.h"
+#include "TargetFinder.h"
 #include "VelocityEstimator.h"
 #include "Listeners.h"
 
@@ -40,7 +39,7 @@ class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public SensorManagerListener,
 				 public FeatureFinderListener,
-				 public TargetFinder2Listener
+				 public TargetFinderListener
 {
 public:
 	Rover();
@@ -91,10 +90,7 @@ public:
 	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
 	// for TargetFinderListener
-//	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
-
-	// for TargetFinder2Listener
-	void onTargetFound2(shared_ptr<ImageTargetFind2Data> const &data);
+	void onTargetFound(shared_ptr<ImageTargetFindData> const &data);
 
 protected:
 	CommManager mCommManager;
@@ -121,8 +117,7 @@ protected:
 
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
-//	TargetFinder mTargetFinder;
-	TargetFinder2 mTargetFinder2;
+	TargetFinder mTargetFinder;
 
 	SensorManager mSensorManager;
 
@@ -138,7 +133,7 @@ protected:
 //	shared_ptr<ImageMatchData> mImageMatchData;
 	shared_ptr<ImageFeatureData> mFeatureData;
 //	shared_ptr<ImageTargetFindData> mTargetData;
-	shared_ptr<ImageTargetFind2Data> mTargetData2;
+	shared_ptr<ImageTargetFindData> mTargetData;
 
 	VideoMaker mVideoMaker;
 	

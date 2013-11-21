@@ -4,12 +4,13 @@
 #include <thread>
 #include <mutex>
 #include <memory>
+#include <vector>
 
 #include "toadlet/egg.h"
 
 #include "Time.h"
-#include "Data.h"
-#include "Listeners.h"
+//#include "Data.h"
+//#include "Listeners.h"
 
 namespace ICSL {
 namespace Quadrotor{
@@ -41,26 +42,23 @@ class MotorInterface
 
 	vector<uint16> getMotorCmds();
 
-//	bool isConnected() const;
+	bool isConnected() const;
 
 	void setCommand(const toadlet::egg::Collection<uint16> &cmds);
 
 	void enableMotors(bool on);
 	bool isMotorsEnabled() const {return mMotorsEnabled;}
 
-
-	void addListener(MotorInterfaceListener *listener){mListeners.push_back(listener);}
-
 	void setStartTime(Time time){mStartTime.setTime(time);}
 
 	protected:
-//;	toadlet::egg::Socket::ptr mServerSocket, mSocket;
+	toadlet::egg::Socket::ptr mServerSocket, mSocket;
 	bool mRunning, mShutdown;
 	bool mMotorsEnabled;
 	bool mWaitingForConnection;
 	vector<uint16> mMotorCmds;
 
-	std::mutex mMutex_cmds;//, mMutex_socket;
+	std::mutex mMutex_cmds, mMutex_socket;
 
 	// skips enabled/disabled checks
 	void sendCommandForced(const toadlet::egg::Collection<uint16> &cmds);
@@ -70,13 +68,11 @@ class MotorInterface
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
 	Time mStartTime;
-//	Time mLastSendTime;
-//	std::mutex mMutex_sendTime;
+	Time mLastSendTime;
+	std::mutex mMutex_sendTime;
 
-	toadlet::egg::Collection<MotorInterfaceListener*> mListeners;
-
-//	void pollTCP();
-//	int receiveTCP(tbyte* data, int size);
+	void pollTCP();
+	int receiveTCP(tbyte* data, int size);
 };
 
 } // namespace Quadrotor

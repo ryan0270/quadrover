@@ -138,25 +138,9 @@ void VelocityEstimator::run()
 
 			if(mQuadLogger != NULL)
 			{
-//				logString = "";
-//				for(int i=0; i<velEst.dim1(); i++)
-//					logString = logString + velEst[i][0] + "\t";
-//				mQuadLogger->addEntry(LOG_ID_MAP_VEL,logString,LOG_FLAG_CAM_RESULTS);
 				mQuadLogger->addEntry(LOG_ID_MAP_VEL, velEst, LOG_FLAG_CAM_RESULTS);
-
-//				logString = "";
-//				logString = logString + heightEst;
-//				mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT,logString,LOG_FLAG_CAM_RESULTS);
 				mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT, heightEst, LOG_FLAG_CAM_RESULTS);
-
-//				logString = "";
-//				logString = logString+procTime;
-//				mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME,logString,LOG_FLAG_CAM_RESULTS);
 				mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME, procTime, LOG_FLAG_CAM_RESULTS);
-
-//				logString = "";
-//				logString = logString + delayTime;
-//				mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY,logString,LOG_FLAG_CAM_RESULTS);
 				mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY, delayTime, LOG_FLAG_CAM_RESULTS);
 			}
 		}
@@ -242,11 +226,7 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	for(int i=0; i<C.dim1()-1; i++)
 		for(int j=0; j<C.dim2()-1; j++)
 			numMatches += C[i][j];
-	{
-//		String str = String()+numMatches;
-//		mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES,str, LOG_FLAG_CAM_RESULTS);
-		mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
-	}
+	mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
 	
 	// Find map vel
 	Array2D<double> vel(3,1), covVel(3,3);
@@ -337,11 +317,7 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageRegionLocData> 
 	for(int i=0; i<C.dim1()-1; i++)
 		for(int j=0; j<C.dim2()-1; j++)
 			numMatches += C[i][j];
-	{
-//		String str = String()+numMatches;
-//		mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES,str, LOG_FLAG_CAM_RESULTS);
-		mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
-	}
+	mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
 	
 	// Find map vel
 	Array2D<double> vel(3,1), covVel(3,3);
