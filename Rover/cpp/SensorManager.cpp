@@ -521,5 +521,17 @@ void SensorManager::onNewSonarReading(int heightMM, uint64_t timestampNS)
 	mMutex_logger.unlock();
 }
 
+void SensorManager::onNewSonar(const shared_ptr<HeightData<double>> &data)
+{
+	mMutex_listeners.lock();
+	for(int i=0; i<mListeners.size(); i++)
+		mListeners[i]->onNewSensorUpdate(data);
+	mMutex_listeners.unlock();
+
+	mMutex_logger.lock();
+	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, data->heightRaw, data->timestamp, LOG_FLAG_SONAR);
+	mMutex_logger.unlock();
+}
+
 } // namespace Quadrotor
 } // namespace ICSL

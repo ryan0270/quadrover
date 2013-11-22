@@ -35,7 +35,7 @@ typedef void(usb_eventHandler)(usb_device * device, usb_eventType event);
 #define A_OKAY 0x59414b4f
 #define A_CLSE 0x45534c43
 #define A_WRTE 0x45545257
-#define A_AUTH 0x48545541
+//#define A_AUTH 0x48545541
 
 #define ADB_CLASS 0xff
 #define ADB_SUBCLASS 0x42
@@ -44,12 +44,12 @@ typedef void(usb_eventHandler)(usb_device * device, usb_eventType event);
 #define ADB_USB_PACKETSIZE 0x40
 #define ADB_CONNECTION_RETRY_TIME 1000
 
-/* AUTH packets first argument */
-/* Request */
-#define ADB_AUTH_TOKEN         1
-/* Response */
-#define ADB_AUTH_SIGNATURE     2
-#define ADB_AUTH_RSAPUBLICKEY  3
+///* AUTH packets first argument */
+///* Request */
+//#define ADB_AUTH_TOKEN         1
+///* Response */
+//#define ADB_AUTH_SIGNATURE     2
+//#define ADB_AUTH_RSAPUBLICKEY  3
 
 typedef struct
 {

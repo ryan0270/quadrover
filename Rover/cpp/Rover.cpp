@@ -1,6 +1,5 @@
 #include "Rover.h"
 
-
 namespace ICSL {
 namespace Quadrotor {
 //using namespace std;
@@ -161,6 +160,7 @@ void Rover::initialize()
 	mSensorManager.addListener(&mObsvTranslational);
 	mSensorManager.addListener(this);
 	mCommManager.addListener(&mSensorManager);
+	mMotorInterface.addSonarListener(&mSensorManager);
 
 
 //	mMotorInterface.addListener(&mObsvTranslational);
