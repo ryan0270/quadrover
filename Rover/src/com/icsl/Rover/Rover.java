@@ -23,11 +23,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.content.BroadcastReceiver;
-import android.content.IntentFilter;
-import android.os.ParcelFileDescriptor;
-import android.content.Context;
-import android.app.PendingIntent;
 
 import java.lang.String;
 import java.lang.Integer;
@@ -35,11 +30,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.util.regex.Pattern;
 import java.util.List;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -52,6 +42,7 @@ public class Rover extends Activity implements Runnable
 	public final static String EXTRA_MESSAGE = "com.icsl.Rover.MESSAGE";
 	private static final String ME = "Rover";
 
+	private Mat mImage;
 	private Bitmap mBitmap;
 	private boolean mThreadRun, mThreadIsDone, mOpenCVManagerConnected;
 
@@ -59,9 +50,19 @@ public class Rover extends Activity implements Runnable
 	private TextView mTvGyro, mTvAccel, mTvMag, mTvImgProcTime;
 	private TextView mTvRoll, mTvPitch, mTvYaw;
 
-	RoverService mService = null;
+	RoverService mService;
 	boolean mBound = false;
+
+//	Camera mCamera = null;
+//	MediaRecorder mMediaRecorder = null;
+//	long mLastPreviewTimeNS = 0;
+//	Mat mImgYUV, mImgRGB;
+//	double mAvgProcTime = 0;
+//	int mImgProcCnt = 0;
+//	double mAvgDT = 0;
+//	byte[] mImgBuffer;
 	
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -106,14 +107,9 @@ public class Rover extends Activity implements Runnable
 				Log.e(ME,"Caught sleeping 2");}
 		}
 
-		if(mBound)
-		{
-			unbindService(mConnection);
-			mBound = false;
-		}
-		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
-		stopService(roverServiceIntent);
-		mService = null;
+		if(mImage != null)
+			mImage.release();
+		mImage = null;
 
 		// There seems be a thread issue where android is still trying to draw the bitmap during
 		// shutdown after I've already recycled mBitmap. So set the image to null before recycling.
@@ -136,9 +132,6 @@ public class Rover extends Activity implements Runnable
 			unbindService(mConnection);
 			mBound = false;
 		}
-		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
-		stopService(roverServiceIntent);
-		mService = null;
 		Log.i(ME,"Java stopped");
 	}
 
@@ -158,7 +151,6 @@ public class Rover extends Activity implements Runnable
 		}
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		stopService(roverServiceIntent);
-		mService = null;
 	}
 
 	public void run()
@@ -168,11 +160,9 @@ public class Rover extends Activity implements Runnable
 		mThreadRun = true;
 		while(mThreadRun)
 		{
-			if(mBound && mService != null/* && !mService.isConnectedToPC()*/)
+			if(mBound && !mService.isConnectedToPC())
 			{
 				mBitmap = mService.getImage();
-				if(mBitmap == null)
-					continue;
 
 				float gyro[] = mService.getRoverGyroValue();
 				float accel[] = mService.getRoverAccelValue();
@@ -221,7 +211,8 @@ public class Rover extends Activity implements Runnable
 //						mTvPitch.setText(strPitch);
 //						mTvYaw.setText(strYaw);
 
-						mIvImageDisplay.setImageBitmap(mBitmap); 
+						if(mBitmap != null)
+							mIvImageDisplay.setImageBitmap(mBitmap); 
 					}
 				});
 			}
@@ -246,9 +237,15 @@ public class Rover extends Activity implements Runnable
 			Log.i(ME, "Bound to Rover service");
 		}
 
+//		@Override
+//		public void onServiceDisconnected(ComponentName arg0)
+//		{ mBound = false; Log.i(ME, "Unbound from Rover service"); }
+		
 		@Override
-		public void onServiceDisconnected(ComponentName arg0)
-		{ mBound = false; Log.i(ME, "Unbound from Rover service"); }
+		public void onServiceDisconnected(ComponentName arg0) {
+			mBound = false;
+			Log.i(ME, "Unbound from Rover service");
+		}
 	};
 
 	static{

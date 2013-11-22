@@ -40,8 +40,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
-public class RoverService extends Service
-{
+public class RoverService extends Service {
 //	private ServiceHandler mServiceHandler;
 	private final static String ME = "RoverService";
 
@@ -153,44 +152,18 @@ public class RoverService extends Service
 	{
 		super.onDestroy();
 		Log.i(ME,"Rover service stop started");
-		try
+		if(mCamera != null)
 		{
-			if(mCamera != null)
-			{
-				mCamera.setPreviewCallback(null);
-				mCamera.release();
-				mCamera = null;
-			}
+			mCamera.setPreviewCallback(null);
+			mCamera.release();
+			mCamera = null;
 		}
-		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
-
-		try
+		if(mMediaRecorder != null)
 		{
-			if(mMediaRecorder != null)
-			{
-				mMediaRecorder.reset();
-				mMediaRecorder.release();
-				mMediaRecorder = null;
-			}
+			mMediaRecorder.reset();
+			mMediaRecorder.release();
+			mMediaRecorder = null;
 		}
-		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
-
-//		try
-//		{
-//			if(mAdkReadMonitor != null)
-//			{
-//				mAdkReadMonitor.stop();
-//				mAdkReadMonitorThread.join();
-//			}
-//			if(mAdkMotorCmdSender != null)
-//			{
-//				mAdkMotorCmdSender.stop();
-//				mAdkMotoCmdSenderThread.join();
-//			}
-//			mAdkReadMonitor = null;
-//			mAdkMotorCmdSender = null;
-//		}
-//		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
 
 		onJNIStop();
 		if(mWakeLock != null && mWakeLock.isHeld())
@@ -216,20 +189,17 @@ public class RoverService extends Service
 //			camParams.setPreviewSize(640,480);
 			camParams.setPreviewSize(320,240);
 
-			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
-			for(int i=0; i<fpsList.size(); i++)
-			{
-				int[] fps = fpsList.get(i);
-				Log.i(ME, "Supported fps: " + String.valueOf(fpsList.get(i)[0]) + ", " + String.valueOf(fpsList.get(i)[1]));
-			}
+			//	List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
+			//	int[] fps = fpsList.get(fpsList.size()-1);
 			//	camParams.setPreviewFpsRange((fps[0]), fps[1]);
 			camParams.setPreviewFpsRange(30000, 30000);
-			// I'm not sure if this overwrites the ISO, or other, settings
-// 			camParams.setVideoStabilization(true);
-			if(camParams.getVideoStabilization())
-				Log.i(ME, "I have video stabilization");
-			else
-				Log.i(ME, "I don't have video stabilization");
+//			if(camParams.getVideoStabilization())
+//			{
+//				Log.i(ME, "I have video stabilization");
+				camParams.setVideoStabilization(true);
+//			}
+//			else
+//				Log.i(ME, "I don't have video stabilization");
 
 			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
 			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
@@ -377,11 +347,9 @@ public class RoverService extends Service
 	public native float[] getAccelValue();
 	public native float[] getMagValue();
 	public native float[] getAttitude();
-//	public native int[] getMotorCmds();
 	public native int getImageProcTimeMS();
 	public native boolean pcIsConnected();
 	public native void passNewImage(long addr, long timestampNS);
-//	public native void onNewSonarReading(int val, long timestampNS);
 
 	static
 	{
