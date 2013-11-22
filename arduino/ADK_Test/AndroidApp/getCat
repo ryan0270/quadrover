@@ -1,3 +1,0 @@
-#!/bin/bash
-# adb logcat -d | grep toadlet > chad
-adb logcat -d ADKTest:V *:S > chad
