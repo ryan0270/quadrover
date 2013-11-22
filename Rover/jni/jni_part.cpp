@@ -56,14 +56,6 @@ JNIEXPORT jboolean JNICALL Java_com_icsl_Rover_RoverService_getImage(JNIEnv* env
 	return true;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_onNewSonarReading(JNIEnv* env, jobject thiz, jint jval, jlong jtimestamp)
-{
-	if(rover == NULL)
-		return;
-
-	rover->onNewSonarReading(jval, jtimestamp);
-}
-
 JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_passNewImage(JNIEnv* env, jobject thiz, jlong imgAddr, jlong timestampNS)
 {
 	if(rover == NULL)
