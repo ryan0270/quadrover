@@ -86,6 +86,12 @@ class RegionFinderListener
 	virtual void onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data)=0;
 };
 
+class SonarListener
+{
+	public:
+	virtual void onNewSonar(const shared_ptr<HeightData<double>> &data)=0;
+};
+
 class CommManagerListener
 {
 	public:

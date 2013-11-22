@@ -136,21 +136,6 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getAttitude(JNIEn
 	return jval;
 }
 
-JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getMotorCmds(JNIEnv* env, jobject thiz)
-{
-	if(rover == NULL)
-		return env->NewIntArray(0);
-
-	std::vector<toadlet::uint16> cmds = rover->getMotorCmds();
-	jintArray jval = env->NewIntArray(cmds.size());
-	jint *elem = env->GetIntArrayElements(jval,0);
-	for(int i=0; i<cmds.size(); i++)
-		elem[i] = (jint)cmds[i];
-
-	env->ReleaseIntArrayElements(jval, elem, 0);
-	return jval;
-}
-
 JNIEXPORT jint JNICALL Java_com_icsl_Rover_RoverService_getImageProcTimeMS(JNIEnv* env, jobject thiz)
 {
 	if(rover == NULL)

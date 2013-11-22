@@ -39,7 +39,7 @@ class AttitudeThrustController : public CommManagerListener,
 
 	void calcControl();
 
-	Collection<uint16> getLastMotorCmds(){mMutex_motorInterface.lock(); Collection<uint16> temp(mLastMotorCmds); mMutex_motorInterface.unlock(); return temp;}
+	Collection<uint16_t> getLastMotorCmds(){mMutex_motorInterface.lock(); Collection<uint16_t> temp(mLastMotorCmds); mMutex_motorInterface.unlock(); return temp;}
 	TNT::Array2D<double> getDesAttitude();
 
 	void addListener(AttitudeThrustControllerListener* l){mListeners.push_back(l);}
@@ -69,7 +69,7 @@ class AttitudeThrustController : public CommManagerListener,
 
 	double mForceScaling, mTorqueScaling;
 	int mMotorTrim[4];
-	Collection<uint16> mLastMotorCmds;
+	Collection<uint16_t> mLastMotorCmds;
 
 	MotorInterface *mMotorInterface;
 

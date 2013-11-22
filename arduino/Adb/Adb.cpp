@@ -93,6 +93,7 @@ void ADB::fireEvent(Connection * connection, adb_eventType type, uint16_t length
  */
 Connection * ADB::addConnection(const char * connectionString, boolean reconnect, adb_eventHandler * handler)
 {
+
 	// Allocate a new ADB connection object
 	Connection * connection = (Connection*)malloc(sizeof(Connection));
 	if (connection == NULL) return NULL;
@@ -129,30 +130,30 @@ Connection * ADB::addConnection(const char * connectionString, boolean reconnect
 #ifdef DEBUG
 static void adb_printMessage(adb_message * message)
 {
-//	switch(message->command)
-//	{
-//	case A_OKAY:
-//		serialPrintf("OKAY message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
-//		break;
-//	case A_CLSE:
-//		serialPrintf("CLSE message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
-//		break;
-//	case A_WRTE:
-//		serialPrintf("WRTE message [%lx] %ld %ld, %ld bytes\n", message->command, message->arg0, message->arg1, message->data_length);
-//		break;
-//	case A_CNXN:
-//		serialPrintf("CNXN message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
-//		break;
-//	case A_SYNC:
-//		serialPrintf("SYNC message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
-//		break;
-//	case A_OPEN:
-//		serialPrintf("OPEN message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
-//		break;
-//	default:
-//		serialPrintf("WTF message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
-//		break;
-//	}
+	switch(message->command)
+	{
+	case A_OKAY:
+		serialPrintf("OKAY message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
+		break;
+	case A_CLSE:
+		serialPrintf("CLSE message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
+		break;
+	case A_WRTE:
+		serialPrintf("WRTE message [%lx] %ld %ld, %ld bytes\n", message->command, message->arg0, message->arg1, message->data_length);
+		break;
+	case A_CNXN:
+		serialPrintf("CNXN message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
+		break;
+	case A_SYNC:
+		serialPrintf("SYNC message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
+		break;
+	case A_OPEN:
+		serialPrintf("OPEN message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
+		break;
+	default:
+		serialPrintf("WTF message [%lx] %ld %ld\n", message->command, message->arg0, message->arg1);
+		break;
+	}
 }
 #endif
 
@@ -177,7 +178,7 @@ int ADB::writeEmptyMessage(usb_device * device, uint32_t command, uint32_t arg0,
 	message.magic = command ^ 0xffffffff;
 
 #ifdef DEBUG
-//	serialPrint("OUT << "); adb_printMessage(&message);
+	serialPrint("OUT << "); adb_printMessage(&message);
 #endif
 
 	return USB::bulkWrite(device, sizeof(adb_message), (uint8_t*)&message);
@@ -215,7 +216,7 @@ int ADB::writeMessage(usb_device * device, uint32_t command, uint32_t arg0, uint
 	message.magic = command ^ 0xffffffff;
 
 #ifdef DEBUG
-//	serialPrint("OUT << "); adb_printMessage(&message);
+	serialPrint("OUT << "); adb_printMessage(&message);
 #endif
 
 	rcode = USB::bulkWrite(device, sizeof(adb_message), (uint8_t*)&message);
@@ -264,7 +265,7 @@ boolean ADB::pollMessage(adb_message * message, boolean poll)
 	if (message->magic != (message->command ^ 0xffffffff))
 	{
 #ifdef DEBUG
-//		serialPrintf("Broken message, magic mismatch, %d bytes\n", bytesRead);
+		serialPrintf("Broken message, magic mismatch, %d bytes\n", bytesRead);
 		return false;
 #endif
 	}
@@ -302,7 +303,7 @@ void ADB::openClosedConnections()
 }
 
 /**
- * Handles an ADB OKAY message, which represents a transition in the connection state machine.
+ * Handles and ADB OKAY message, which represents a transition in the connection state machine.
  *
  * @param connection ADB connection
  * @param message ADB message struct.
@@ -574,6 +575,7 @@ boolean ADB::isAdbDevice(usb_device * device, int configuration, adb_usbConfigur
 	}
 
 	return ret;
+
 }
 
 /**

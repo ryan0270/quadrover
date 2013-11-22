@@ -119,6 +119,14 @@ using namespace toadlet::egg;
 		}
 		mServerSocketSend->close();
 		mServerSocketSend = NULL;
+
+		if(mSocketReceive != NULL)
+		{
+			mSocketReceive->close();
+			mSocketReceive = NULL;
+		}
+		mServerSocketReceive->close();
+		mServerSocketReceive = NULL;
 		mMutex_socket.unlock();
 
 		mShutdown = true;

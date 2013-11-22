@@ -71,7 +71,7 @@ public:
 //	void setVisionParams(toadlet::egg::Collection<int> p);
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
 	void passNewImage(cv::Mat *img, int64_t const &timestampNS){mSensorManager.passNewImage(img, timestampNS);}
-	vector<uint16> getMotorCmds() {return mMotorInterface.getMotorCmds();}
+//	vector<uint16_t> getMotorCmds() {return mMotorInterface.getMotorCmds();}
 	void onNewSonarReading(int heightMM, uint64_t timestampNS){mSensorManager.onNewSonarReading(heightMM, timestampNS);}
 
 	// Observer_AngularListener

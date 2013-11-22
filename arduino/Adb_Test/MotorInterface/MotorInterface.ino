@@ -9,49 +9,38 @@ uint16_t motorCommands[4];
 // Adb connection.
 Connection *connectionReceive, *connectionSend;
 // Event handler for the shell connection. 
-void adbEventHandlerReceive(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
+void adbEventHandler(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
 {
   if(event == ADB_CONNECT)
-  {    Serial.println("ADB_CONNECT receive");  }
+  {    Serial.println("ADB_CONNECT");  }
   else if(event == ADB_DISCONNECT)
-  {    phoneIsConnectedReceive = false;    Serial.println("ADB_DISCONNECT receive");  }
+  {    phoneIsConnectedReceive = false;    Serial.println("ADB_DISCONNECT");  }
   else if(event == ADB_CONNECTION_OPEN)
   {    Serial.println("ADB_CONNECTION_OPEN receive");  }
   else if(event == ADB_CONNECTION_CLOSE)
-  {    phoneIsConnectedReceive = false;    Serial.println("ADB_CONNECTION_CLOSE receive");
+  {    phoneIsConnectedReceive = false;    Serial.println("ADB_CONNECTION_CLOSE");
   }
   else if(event == ADB_CONNECTION_FAILED)
-  {    phoneIsConnectedReceive = false;    Serial.println("ADB_CONNECTION_FAILED receive");
+  {    phoneIsConnectedReceive = false;    Serial.println("ADB_CONNECTION_FAILED");
   }
   else if (event == ADB_CONNECTION_RECEIVE)
   {
-    if(!phoneIsConnectedReceive)
-      Serial.println("Phone connected receive");
-    phoneIsConnectedReceive = true;
-    for(int i=0; i<4; i++)
+    if(connection == connectionReceive)
     {
-      short val = (data[2*i+1] << 8) | (data[2*i]);
-      motorCommands[i] = val;
+      if(!phoneIsConnectedReceive)
+        Serial.println("Phone connected receive");
+      phoneIsConnectedReceive = true;
+      for(int i=0; i<4; i++)
+      {
+        short val = (data[2*i+1] << 8) | (data[2*i]);
+        motorCommands[i] = val;
+      }
+  
+      lastPhoneUpdateTimeMS = millis();
     }
-
-    lastPhoneUpdateTimeMS = millis();
+    else
+      Serial.println("Why is the send connection receiving data?");
   }
-}
-
-void adbEventHandlerSend(Connection * connection, adb_eventType event, uint16_t length, uint8_t * data)
-{
-  if(event == ADB_CONNECT)
-  {    Serial.println("ADB_CONNECT send");  }
-  else if(event == ADB_DISCONNECT)
-  {    phoneIsConnectedSend = false;    Serial.println("ADB_DISCONNECT send");  }
-  else if(event == ADB_CONNECTION_OPEN)
-  {    phoneIsConnectedSend = true;    Serial.println("ADB_CONNECTION_OPEN send");    }
-  else if(event == ADB_CONNECTION_CLOSE)
-  {    phoneIsConnectedSend = false;    Serial.println("ADB_CONNECTION_CLOSE send");  }
-  else if(event == ADB_CONNECTION_FAILED)
-  {    phoneIsConnectedSend = false;    Serial.println("ADB_CONNECTION_FAILED send");  }
-  else if (event == ADB_CONNECTION_RECEIVE)
-  {    Serial.println("Why is the send connection receiving data?");  }
 }
 
 void setup()
@@ -66,8 +55,8 @@ void setup()
   // every time after I send data
   // Splitting it out to one port dedictated to each direction seems to get 
   // around this.
-  connectionReceive = ADB::addConnection("tcp:45670", true, adbEventHandlerReceive);
-  connectionSend = ADB::addConnection("tcp:45671", true, adbEventHandlerSend);
+  connectionReceive = ADB::addConnection("tcp:45670", true, adbEventHandler);
+  connectionSend = ADB::addConnection("tcp:45671", true, adbEventHandler);
 
   phoneIsConnectedReceive = false;
   lastPhoneUpdateTimeMS = millis();
@@ -90,11 +79,11 @@ void loop()
       Serial.println("Lost the phone");
     phoneIsConnectedReceive = false;
   }
-  else if((millis()-lastPhoneUpdateTimeMS) > 10)
-  {
-    Serial.print("Long comm wait: ");
-    Serial.println(millis()-lastPhoneUpdateTimeMS);
-  }
+//  else if((millis()-lastPhoneUpdateTimeMS) > 10)
+//  {
+//    Serial.print("Long comm wait: ");
+//    Serial.println(millis()-lastPhoneUpdateTimeMS);
+//  }
 
   if(millis()-lastHeightSendTimeMS > 50 && phoneIsConnectedSend)
   {

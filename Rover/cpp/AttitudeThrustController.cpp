@@ -213,19 +213,20 @@ using namespace TNT;
 			cnt++;
 		}
 
-		Collection<uint16> motorCmds(4);
+		Collection<uint16_t> motorCmds(4);
 		if(mPcIsConnected)
 		{
 			mMutex_data.lock();
 			for(int i=0; i<4; i++)
-				motorCmds[i] = (uint16)(cmds[i]+mMotorTrim[i]+0.5);
+				motorCmds[i] = (uint16_t)(cmds[i]+mMotorTrim[i]+0.5);
 			mMutex_data.unlock();
 		}
 		else
 			for(int i=0; i<4;i++)
 				motorCmds[i] = 0;
 		mMutex_motorInterface.lock();
-		mMotorInterface->setCommand(motorCmds);
+//		mMotorInterface->setCommand(motorCmds);
+		mMotorInterface->sendCommand(motorCmds);
 		mLastMotorCmds = motorCmds; // should copy all the data
 		mMutex_motorInterface.unlock();
 	

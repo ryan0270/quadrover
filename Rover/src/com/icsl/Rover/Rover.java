@@ -26,9 +26,6 @@ import android.util.Log;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.os.ParcelFileDescriptor;
-import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbAccessory;
-import android.hardware.usb.UsbManager;
 import android.content.Context;
 import android.app.PendingIntent;
 
@@ -55,7 +52,6 @@ public class Rover extends Activity implements Runnable
 	public final static String EXTRA_MESSAGE = "com.icsl.Rover.MESSAGE";
 	private static final String ME = "Rover";
 
-	private Mat mImage;
 	private Bitmap mBitmap;
 	private boolean mThreadRun, mThreadIsDone, mOpenCVManagerConnected;
 
@@ -65,26 +61,7 @@ public class Rover extends Activity implements Runnable
 
 	RoverService mService = null;
 	boolean mBound = false;
-
-//	Camera mCamera = null;
-//	MediaRecorder mMediaRecorder = null;
-//	long mLastPreviewTimeNS = 0;
-//	Mat mImgYUV, mImgRGB;
-//	double mAvgProcTime = 0;
-//	int mImgProcCnt = 0;
-//	double mAvgDT = 0;
-//	byte[] mImgBuffer;
 	
-	// For arduino comm
-	private static final String ACTION_USB_PERMISSION = "com.google.example.USB_PERMISSION";
-	UsbAccessory mAccessory;
-	private UsbManager mUsbManager;
-	private PendingIntent mPermissionIntent;
-	private boolean mPermissionRequestPending;
-	ParcelFileDescriptor mFileDescriptor = null;
-	FileInputStream mInputStream = null;
-	FileOutputStream mOutputStream = null;
-
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -104,12 +81,6 @@ public class Rover extends Activity implements Runnable
 		mTvRoll = (TextView)findViewById(R.id.tvRollAngle);
 		mTvPitch= (TextView)findViewById(R.id.tvPitchAngle);
 		mTvYaw= (TextView)findViewById(R.id.tvYawAngle);
-
-        mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-		mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
-		IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
-		filter.addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED);
-		registerReceiver(mUsbReceiver, filter);
     }
 
     @Override
@@ -118,34 +89,6 @@ public class Rover extends Activity implements Runnable
 		super.onResume();
 		mBitmap = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
 		mIvImageDisplay.setImageBitmap(mBitmap);
-
-		if (mInputStream != null && mOutputStream != null)
-			return;
- 
-		UsbAccessory[] accessories = mUsbManager.getAccessoryList();
-		UsbAccessory accessory = (accessories == null ? null : accessories[0]);
-		if (accessory != null)
-		{
-			if (mUsbManager.hasPermission(accessory))
-			{
-				mAccessory = accessory;
-				if(mService != null)
-					mService.openAccessory(accessory);
-			}
-			else
-			{
-				synchronized (mUsbReceiver)
-				{
-					if (!mPermissionRequestPending)
-					{
-						mUsbManager.requestPermission(accessory,mPermissionIntent);
-						mPermissionRequestPending = true;
-					}
-				}
-			}
-		}
-		else
-			Log.d(ME, "mAccessory is null");
 
 		(new Thread(this)).start();
 	}
@@ -163,21 +106,14 @@ public class Rover extends Activity implements Runnable
 				Log.e(ME,"Caught sleeping 2");}
 		}
 
-		if(mImage != null)
-			mImage.release();
-		mImage = null;
-
 		if(mBound)
 		{
-			if(mService != null)
-				mService.closeAccessory();
 			unbindService(mConnection);
 			mBound = false;
 		}
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		stopService(roverServiceIntent);
 		mService = null;
-		mAccessory = null;
 
 		// There seems be a thread issue where android is still trying to draw the bitmap during
 		// shutdown after I've already recycled mBitmap. So set the image to null before recycling.
@@ -197,22 +133,18 @@ public class Rover extends Activity implements Runnable
 		super.onStop();
 		if(mBound)
 		{
-			if(mService != null)
-				mService.closeAccessory();
 			unbindService(mConnection);
 			mBound = false;
 		}
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		stopService(roverServiceIntent);
 		mService = null;
-		mAccessory = null;
 		Log.i(ME,"Java stopped");
 	}
 
 	public void onBtnStartService_clicked(View v)
 	{
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
-		roverServiceIntent.putExtra("com.icsl.Rover.USB_ACCESSORY", mAccessory);
 		startService(roverServiceIntent);
 		bindService(roverServiceIntent, mConnection, BIND_AUTO_CREATE);
 	}
@@ -221,15 +153,12 @@ public class Rover extends Activity implements Runnable
 	{
 		if(mBound)
 		{
-			if(mService != null)
-				mService.closeAccessory();
 			unbindService(mConnection);
 			mBound = false;
 		}
 		Intent roverServiceIntent = new Intent(Rover.this, RoverService.class);
 		stopService(roverServiceIntent);
 		mService = null;
-		mAccessory = null;
 	}
 
 	public void run()
@@ -239,9 +168,11 @@ public class Rover extends Activity implements Runnable
 		mThreadRun = true;
 		while(mThreadRun)
 		{
-			if(mBound && mService != null && !mService.isConnectedToPC())
+			if(mBound && mService != null/* && !mService.isConnectedToPC()*/)
 			{
 				mBitmap = mService.getImage();
+				if(mBitmap == null)
+					continue;
 
 				float gyro[] = mService.getRoverGyroValue();
 				float accel[] = mService.getRoverAccelValue();
@@ -290,8 +221,7 @@ public class Rover extends Activity implements Runnable
 //						mTvPitch.setText(strPitch);
 //						mTvYaw.setText(strYaw);
 
-						if(mBitmap != null)
-							mIvImageDisplay.setImageBitmap(mBitmap); 
+						mIvImageDisplay.setImageBitmap(mBitmap); 
 					}
 				});
 			}
@@ -312,58 +242,13 @@ public class Rover extends Activity implements Runnable
 		public void onServiceConnected(ComponentName className, IBinder service) {
 			RoverService.RoverBinder binder = (RoverService.RoverBinder) service;
 			mService = binder.getService();
-			if(mAccessory != null)
-				mService.openAccessory(mAccessory);
 			mBound = true;
 			Log.i(ME, "Bound to Rover service");
 		}
 
-//		@Override
-//		public void onServiceDisconnected(ComponentName arg0)
-//		{ mBound = false; Log.i(ME, "Unbound from Rover service"); }
-		
 		@Override
-		public void onServiceDisconnected(ComponentName arg0) {
-			mBound = false;
-			Log.i(ME, "Unbound from Rover service");
-		}
-	};
-
-	// for arduino comm
-	private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver()
-	{
-		@Override
-		public void onReceive(Context context, Intent intent)
-		{
-			String action = intent.getAction();
-			if (ACTION_USB_PERMISSION.equals(action))
-			{
-				synchronized (this)
-				{
-					UsbAccessory accessory = (UsbAccessory)intent.getParcelableExtra(UsbManager.EXTRA_ACCESSORY);
-					if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false))
-					{
-						mAccessory = accessory;
-						if(mService != null)
-							mService.openAccessory(accessory);
-					}
-					else
-						Log.d(ME, "permission denied for accessory " + accessory);
-					mPermissionRequestPending = false;
-				}
-			}
-			else if (UsbManager.ACTION_USB_ACCESSORY_DETACHED.equals(action))
-			{
-				Log.i(ME,"Got the detached notification");
-				UsbAccessory accessory = (UsbAccessory)intent.getParcelableExtra(UsbManager.EXTRA_ACCESSORY);
-				if (accessory != null && accessory.equals(mAccessory))
-				{
-					mAccessory = null;
-					if(mService != null)
-						mService.closeAccessory();
-				}
-			}
-		}
+		public void onServiceDisconnected(ComponentName arg0)
+		{ mBound = false; Log.i(ME, "Unbound from Rover service"); }
 	};
 
 	static{
