@@ -429,6 +429,25 @@ void ADB::handleConnect(adb_message * message)
 
 }
 
+void ADB::handleAuthenticate(adb_message * message)
+{
+	Serial.print("Recevied A_AUTH with args: ");
+	Serial.print(message->arg0);
+	Serial.print(", ");
+	Serial.println(message->arg1);
+
+	ADB::writeStringMessage(adbDevice, A_AUTH, ADB_AUTH_RSAPUBLICKEY, NULL, "Chad AUTH");
+	while(!ADB::pollMessage(message, true))
+		delay(1);
+	if(message->command == A_CNXN)
+		ADB::handleConnect(message);
+	else
+	{
+		Serial.println("Unexpected response: ");
+		Serial.println(message->command,HEX);
+	}
+}
+
 /**
  * This method is called periodically to check for new messages on the USB bus and process them.
  */
@@ -450,9 +469,7 @@ boolean ADB::poll()
 		ADB::writeStringMessage(adbDevice, A_CNXN, 0x01000000, 4096, (char*)"host::microbridge");
 		delay(500); // Give the device some time to respond.
 	}
-
-	// If we are connected, check if there are connections that need to be opened
-	if (connected)
+	else // If we are connected, check if there are connections that need to be opened
 		ADB::openClosedConnections();
 
 	// Check for an incoming ADB message.
@@ -462,6 +479,8 @@ boolean ADB::poll()
 	// Handle a response from the ADB device to our CONNECT message.
 	if (message.command == A_CNXN)
 		ADB::handleConnect(&message);
+	else if(message.command == A_AUTH)
+		ADB::handleAuthenticate(&message);
 
 	// Handle messages for specific connections
 	for (connection = firstConnection; connection != NULL; connection = connection->next)
