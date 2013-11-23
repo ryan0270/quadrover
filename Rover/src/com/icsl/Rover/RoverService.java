@@ -29,18 +29,10 @@ import android.util.Log;
 import android.widget.Toast;
 import android.view.SurfaceView;
 import android.view.SurfaceHolder;
-import android.hardware.usb.UsbAccessory;
-import android.hardware.usb.UsbManager;
-import android.os.ParcelFileDescriptor;
 
 import java.lang.Thread;
 import java.io.File;
 import java.util.List;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -48,8 +40,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
-public class RoverService extends Service
-{
+public class RoverService extends Service {
 //	private ServiceHandler mServiceHandler;
 	private final static String ME = "RoverService";
 
@@ -68,14 +59,6 @@ public class RoverService extends Service
 	private double mAvgDT = 0;
 	private Mat mImage = null;
 	private Bitmap mBmp = null;
-
-	private UsbAccessory mAccessory;
-	private UsbManager mUsbManager;
-	private PendingIntent mPermissionIntent;
-	private boolean mPermissionRequestPending;
-	private ParcelFileDescriptor mFileDescriptor = null;
-	private FileInputStream mInputStream;
-	private FileOutputStream mOutputStream;
 
 	public class RoverBinder extends Binder 
 	{ RoverService getService(){ return RoverService.this; } }
@@ -127,8 +110,6 @@ public class RoverService extends Service
 
 		openCamera();
 
-        mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-
 		onJNIStart();
 		setLogDir(logDir.toString());
 		startLogging();
@@ -171,44 +152,18 @@ public class RoverService extends Service
 	{
 		super.onDestroy();
 		Log.i(ME,"Rover service stop started");
-		try
+		if(mCamera != null)
 		{
-			if(mCamera != null)
-			{
-				mCamera.setPreviewCallback(null);
-				mCamera.release();
-				mCamera = null;
-			}
+			mCamera.setPreviewCallback(null);
+			mCamera.release();
+			mCamera = null;
 		}
-		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
-
-		try
+		if(mMediaRecorder != null)
 		{
-			if(mMediaRecorder != null)
-			{
-				mMediaRecorder.reset();
-				mMediaRecorder.release();
-				mMediaRecorder = null;
-			}
+			mMediaRecorder.reset();
+			mMediaRecorder.release();
+			mMediaRecorder = null;
 		}
-		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
-
-		try
-		{
-			if(mAdkReadMonitor != null)
-			{
-				mAdkReadMonitor.stop();
-				mAdkReadMonitorThread.join();
-			}
-			if(mAdkMotorCmdSender != null)
-			{
-				mAdkMotorCmdSender.stop();
-				mAdkMotoCmdSenderThread.join();
-			}
-			mAdkReadMonitor = null;
-			mAdkMotorCmdSender = null;
-		}
-		catch(Exception e){Log.i(ME,"destroy exception: "+e);}
 
 		onJNIStop();
 		if(mWakeLock != null && mWakeLock.isHeld())
@@ -225,7 +180,6 @@ public class RoverService extends Service
 	}
 
 	private Object imgLock = new Object();
-	private Object adkLock = new Object();
 	private void openCamera()
 	{
 		try{
@@ -235,20 +189,17 @@ public class RoverService extends Service
 //			camParams.setPreviewSize(640,480);
 			camParams.setPreviewSize(320,240);
 
-			List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
-			for(int i=0; i<fpsList.size(); i++)
-			{
-				int[] fps = fpsList.get(i);
-				Log.i(ME, "Supported fps: " + String.valueOf(fpsList.get(i)[0]) + ", " + String.valueOf(fpsList.get(i)[1]));
-			}
+			//	List<int[]> fpsList = camParams.getSupportedPreviewFpsRange();
+			//	int[] fps = fpsList.get(fpsList.size()-1);
 			//	camParams.setPreviewFpsRange((fps[0]), fps[1]);
 			camParams.setPreviewFpsRange(30000, 30000);
-			// I'm not sure if this overwrites the ISO, or other, settings
-// 			camParams.setVideoStabilization(true);
-			if(camParams.getVideoStabilization())
-				Log.i(ME, "I have video stabilization");
-			else
-				Log.i(ME, "I don't have video stabilization");
+//			if(camParams.getVideoStabilization())
+//			{
+//				Log.i(ME, "I have video stabilization");
+				camParams.setVideoStabilization(true);
+//			}
+//			else
+//				Log.i(ME, "I don't have video stabilization");
 
 			Size preferredVideoSize = camParams.getPreferredPreviewSizeForVideo();
 			Log.i(ME, "Preferred video size: "+String.valueOf(preferredVideoSize.width)+"x"+String.valueOf(preferredVideoSize.height));
@@ -355,238 +306,30 @@ public class RoverService extends Service
 
 	public Bitmap getImage()
 	{
-		if(pcIsConnected())
-  		return null;
+//		if(pcIsConnected())
+			return null;
 
-		try{
-			if(mImage == null)
-				mImage = new Mat(240,320,CvType.CV_8UC3);
-//				mImage = new Mat(480,640,CvType.CV_8UC3);
-
-			if( getImage(mImage.getNativeObjAddr()) )
-				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
-			else
-				return null;
-			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
-				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
-			Utils.matToBitmap(mImage, mBmp);
-		} catch(Exception e){
-			Log.e(ME,e.toString());
-			mImage = null;
-			mBmp = null;
-		}
-		return mBmp;
+//		try
+//		{
+//			if(mImage == null)
+//				mImage = new Mat(240,320,CvType.CV_8UC3);
+////				mImage = new Mat(480,640,CvType.CV_8UC3);
+//
+//			if( getImage(mImage.getNativeObjAddr()) )
+//				Imgproc.cvtColor(mImage,mImage,Imgproc.COLOR_BGR2RGB);
+//			else
+//				return null;
+//			if(mBmp == null || mBmp.getWidth() != mImage.width() || mBmp.getHeight() != mImage.height())
+//				mBmp = Bitmap.createBitmap(mImage.width(), mImage.height(), Bitmap.Config.ARGB_8888);
+//			Utils.matToBitmap(mImage, mBmp);
+//		} catch(Exception e){
+//			Log.e(ME,e.toString());
+//			mImage = null;
+//			mBmp = null;
+//		}
+//		return mBmp;
 	}
 
-	public void openAccessory(UsbAccessory accessory)
-	{
-		mAccessory = accessory;
-		mFileDescriptor = mUsbManager.openAccessory(accessory);
-		if (mFileDescriptor != null)
-		{
-			FileDescriptor fd = mFileDescriptor.getFileDescriptor();
-
-			mInputStream = new FileInputStream(fd);
-			mAdkReadMonitor = new ADKReadMonitor();
-			mAdkReadMonitorThread = new Thread(mAdkReadMonitor);
-			mAdkReadMonitorThread.start();
-
-			mOutputStream = new FileOutputStream(fd);
-			mAdkMotorCmdSender = new ADKMotorCmdSender();
-			mAdkMotoCmdSenderThread = new Thread(mAdkMotorCmdSender);
-			mAdkMotoCmdSenderThread.start();
-
-			Log.d(ME, "accessory opened");
-//			setAdkConnected(true);
-		}
-		else
-			Log.d(ME, "accessory open fail");
-	}
-
-	public void closeAccessory()
-	{
-		Log.i(ME,"Closing accessory");
-		try
-		{
-			if(mAdkReadMonitor != null)
-			{
-				mAdkReadMonitor.stop();
-				mAdkReadMonitorThread.join();
-			}
-			if(mAdkMotorCmdSender != null)
-			{
-				mAdkMotorCmdSender.stop();
-				mAdkMotoCmdSenderThread.join();
-			}
-			mAdkReadMonitor = null;
-			mAdkMotorCmdSender = null;
-
-			if (mFileDescriptor != null)
-				mFileDescriptor.close();
-		}
-		catch (Exception e){}
-
-		mFileDescriptor = null;
-		mAccessory = null;
-		Log.i(ME,"Closing the accessory");
-	}
-
-	public byte[] int2ByteArray(int val, int numBytes)
-	{
-		byte[] chad = new byte[numBytes];
-		for(int i=0; i<numBytes; i++)
-			chad[numBytes-i-1] = (byte)(val >> i*8);
-
-		return chad;
-	}
-
-	// I don't use this so it's not well tested
-	public byte[] float2ByteArray(float val)
-	{
-		int valBytes = Float.floatToIntBits(val);
-		byte[] chad = new byte[4];
-		chad[0] = (byte)(valBytes >> 3*8);
-		chad[1] = (byte)(valBytes >> 2*8);
-		chad[2] = (byte)(valBytes >> 1*8);
-		chad[3] = (byte)(valBytes >> 0*8);
-
-		return chad;
-	}
-	
-	// mInputStream.read() blocks and I can't use mInputStream.available()
-	// due to an apparent bug (always throws and exception) so I have to run
-	// separate threads for read/write
-	private class ADKReadMonitor implements Runnable
-	{
-		public void stop()
-		{
-			Log.i(ME,"Telling adk cmd runner to stop");
-			mRunning = false;
-		}
-
-		public void run()
-		{
-			mRunning = true;
-			Thread me = Thread.currentThread();
-			me.setPriority(Thread.MAX_PRIORITY-2);
-			while(mRunning)
-			{
-				if(mInputStream != null)
-				{
-					try
-					{
-						byte[] buff = new byte[2];
-						int ret = mInputStream.read(buff, 0, 2);
-						long timestamp = System.nanoTime();
-						int val = ByteBuffer.wrap(buff).getShort();
-						onNewSonarReading(val, timestamp);
-					}
-					catch (Exception e)
-					{
-						Log.e(ME,"Error reading stream: "+e.toString());
-						mInputStream = null;
-						if(mFileDescriptor != null)
-						{
-							FileDescriptor fd = mFileDescriptor.getFileDescriptor();
-							mInputStream = new FileInputStream(fd);
-						}
-					}
-				}
-
-				try{ Thread.sleep(1); }
-				catch(Exception e){ Log.e(ME,"Caught sleeping"); }
-			}
-
-			Log.i(ME,"ADKMonitor runner finished");
-		}
-
-		private boolean mRunning;
-	}
-	private ADKReadMonitor mAdkReadMonitor = null;
-	private Thread mAdkReadMonitorThread = null;
-
-	private class ADKMotorCmdSender implements Runnable
-	{
-		public void stop()
-		{
-			Log.i(ME,"Telling adk cmd send runner to stop");
-			mRunning = false;
-		}
-
-		public boolean sendMotorCommands(int cmd0, int cmd1, int cmd2, int cmd3)
-		{
-			if(mOutputStream == null)
-				return false;
-
-			byte[] b0 = int2ByteArray(cmd0,2);
-			byte[] b1 = int2ByteArray(cmd1,2);
-			byte[] b2 = int2ByteArray(cmd2,2);
-			byte[] b3 = int2ByteArray(cmd3,2);
-
-			byte[] buff = new byte[8];
-			buff[0] = b0[0];
-			buff[1] = b0[1];
-			buff[2] = b1[0];
-			buff[3] = b1[1];
-			buff[4] = b2[0];
-			buff[5] = b2[1];
-			buff[6] = b3[0];
-			buff[7] = b3[1];
-
-			boolean success = false;
-			try
-			{
-				mOutputStream.write(buff);
-				success = true;
-			}
-			catch (IOException e)
-			{
-				Log.e(ME, "write failed: ", e);
-				mInputStream = null;
-				mOutputStream = null;
-				if (mFileDescriptor != null)
-				{
-					try
-					{ mFileDescriptor.close(); }
-					catch (Exception e1){}
-				}
-				mFileDescriptor = null;
-			}
-
-			return success;
-		}
-
-		public void run()
-		{
-			mRunning = true;
-
-			Thread me = Thread.currentThread();
-			me.setPriority(Thread.MAX_PRIORITY);
-
-			long lastTime = System.nanoTime();
-			long curTime;
-			while(mRunning)
-			{
-				curTime = System.nanoTime();
-				if(curTime-lastTime > 20e6)
-					Log.i(ME, "Long time: " + String.valueOf((int)((curTime-lastTime)/1.e6 + 0.5)));
-				lastTime = curTime;
-
-				int[] cmds = getMotorCmds();
-				if(cmds.length == 4)
-					sendMotorCommands(cmds[0], cmds[1], cmds[2], cmds[3]);
-
-				try{ Thread.sleep(5); }
-				catch(Exception e){ Log.e(ME,"Caught sleeping"); }
-			}
-
-			Log.i(ME,"ADKMotorCmdSender runner finished");
-		}
-
-		private boolean mRunning;
-	}
-	private ADKMotorCmdSender mAdkMotorCmdSender= null;
-	private Thread mAdkMotoCmdSenderThread= null;
 
 	float[] getRoverGyroValue(){ return getGyroValue(); }
 	float[] getRoverAccelValue(){ return getAccelValue(); }
@@ -595,10 +338,8 @@ public class RoverService extends Service
 	int getRoverImageProcTimeMS(){ return getImageProcTimeMS(); }
 	boolean isConnectedToPC(){ return pcIsConnected();}
 
-	public native String nativeTest();
 	public native void onJNIStart();
 	public native void onJNIStop();
-	public native void setNumCpuCores(int numCores);
 	public native void setLogDir(String jdir);
 	public native void startLogging();
 	public native boolean getImage(long addr);
@@ -606,11 +347,9 @@ public class RoverService extends Service
 	public native float[] getAccelValue();
 	public native float[] getMagValue();
 	public native float[] getAttitude();
-	public native int[] getMotorCmds();
 	public native int getImageProcTimeMS();
 	public native boolean pcIsConnected();
 	public native void passNewImage(long addr, long timestampNS);
-	public native void onNewSonarReading(int val, long timestampNS);
 
 	static
 	{

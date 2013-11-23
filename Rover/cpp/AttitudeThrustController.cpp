@@ -169,7 +169,7 @@ using namespace TNT;
 		double cmdThrust = mThrust/mForceScaling/4.0;
 		mMutex_data.unlock();
 		
-		double cmds[4];
+		Collection<double> cmds(4);
 		bool sane = false;
 		int cnt = 0;
 		while(!sane && cnt < 10)
@@ -213,19 +213,20 @@ using namespace TNT;
 			cnt++;
 		}
 
-		Collection<uint16> motorCmds(4);
+		Collection<uint16_t> motorCmds(4);
 		if(mPcIsConnected)
 		{
 			mMutex_data.lock();
 			for(int i=0; i<4; i++)
-				motorCmds[i] = (uint16)(cmds[i]+mMotorTrim[i]+0.5);
+				motorCmds[i] = (uint16_t)(cmds[i]+mMotorTrim[i]+0.5);
 			mMutex_data.unlock();
 		}
 		else
 			for(int i=0; i<4;i++)
 				motorCmds[i] = 0;
 		mMutex_motorInterface.lock();
-		mMotorInterface->setCommand(motorCmds);
+//		mMotorInterface->setCommand(motorCmds);
+		mMotorInterface->sendCommand(motorCmds);
 		mLastMotorCmds = motorCmds; // should copy all the data
 		mMutex_motorInterface.unlock();
 	
@@ -240,28 +241,23 @@ using namespace TNT;
 		// Logging
 		if(mQuadLogger != NULL)
 		{
-			String logStr;
-			logStr = logStr+cmdRoll+"\t"+cmdPitch+"\t"+cmdYaw+"\t"+cmdThrust;
-			mQuadLogger->addEntry(LOG_ID_TORQUE_CMD, logStr, LOG_FLAG_MOTORS);
+			Collection<double> data(4);
+			data[0] = cmdRoll;
+			data[1] = cmdPitch;
+			data[2] = cmdYaw;
+			data[3] = cmdThrust;
+			mQuadLogger->addEntry(LOG_ID_TORQUE_CMD, data, LOG_FLAG_MOTORS);
 
-//			logStr = "";
-//			for(int i=0; i<4; i++)
-//				logStr= logStr+cmds[i] + "\t";
-//			mQuadLogger->addEntry(LOG_ID_MOTOR_CMDS,logStr,LOG_FLAG_MOTORS);
+			mQuadLogger->addEntry(LOG_ID_MOTOR_CMDS, cmds, LOG_FLAG_MOTORS);
 
-			logStr =String();
-			logStr = logStr+desRoll+"\t"+desPitch+"\t"+desYaw+"\t";
-			for(int i=0; i<3; i++)
-				logStr = logStr+"0\t";
-			mQuadLogger->addEntry(LOG_ID_DES_ATT,logStr,LOG_FLAG_STATE_DES);
+			data.clear();
+			data.resize(3);
+			data[0] = desRoll;
+			data[1] = desPitch;
+			data[2] = desYaw;
+			mQuadLogger->addEntry(LOG_ID_DES_ATT,data,LOG_FLAG_STATE_DES);
 
-			Array2D<double> refEuler = refAtt.getAnglesZYX();
-			logStr = "";
-			for(int i=0; i<refEuler.dim1(); i++)
-				logStr = logStr+refEuler[i][0]+"\t";
-			for(int i=0; i<refRate.dim1(); i++)
-				logStr = logStr+refRate[i][0]+"\t";
-			mQuadLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, logStr, LOG_FLAG_STATE_DES);
+			mQuadLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, refAtt, refRate, LOG_FLAG_STATE_DES);
 		}
 	}
 	

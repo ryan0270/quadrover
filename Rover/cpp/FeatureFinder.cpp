@@ -154,22 +154,10 @@ void FeatureFinder::run()
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
 			if(mQuadLogger != NULL)
 			{
-				logString = "";
-				logString = logString+mImageProcTimeUS/1.0e6;
 				mMutex_logger.lock();
-				mQuadLogger->addEntry(LOG_ID_FEATURE_FIND_TIME,logString,LOG_FLAG_CAM_RESULTS);
-				mMutex_logger.unlock();
-
-				logString = "";
-				logString = logString+(int)points.size();
-				mMutex_logger.lock();
-				mQuadLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS,logString,LOG_FLAG_CAM_RESULTS);
-				mMutex_logger.unlock();
-
-				logString = "";
-				logString = logString+fastThresh;
-				mMutex_logger.lock();
-				mQuadLogger->addEntry(LOG_ID_FAST_THRESHOLD,logString,LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_FEATURE_FIND_TIME, mImageProcTimeUS/1.0e6, LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS, points.size(), LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_FAST_THRESHOLD, fastThresh, LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 			}
 		}

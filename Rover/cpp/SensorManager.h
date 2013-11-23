@@ -34,7 +34,8 @@ namespace Quadrotor{
 using namespace std;
 static const int ASENSOR_TYPE_PRESSURE=6; // not yet defined for NDK
 
-class SensorManager : public CommManagerListener
+class SensorManager : public CommManagerListener,
+					  public SonarListener
 {
 	public:
 	SensorManager();

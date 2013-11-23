@@ -277,38 +277,28 @@ void Observer_Angular::doInnovationUpdate(double dt,
 
 	mGyroBias += dt*mGainI*mInnovation;
 
-//	for(int i=0; i<mGyroBias.dim1(); i++)
-//		logString1 = logString1+mGyroBias[i][0] + "\t";
-//
-//	for(int i=0; i<mInnovation.dim1(); i++)
-//		logString2 = logString2+mInnovation[i][0] + "\t";
+	mQuadLogger->addEntry(LOG_ID_GYRO_BIAS, mGyroBias, LOG_FLAG_OBSV_BIAS);
+	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_INNOVATION, mInnovation, LOG_FLAG_OBSV_BIAS);
 	mMutex_data.unlock();
-//
-//	mQuadLogger->addEntry(LOG_ID_GYRO_BIAS, logString1, LOG_FLAG_OBSV_BIAS);
-//	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_INNOVATION, logString2, LOG_FLAG_OBSV_BIAS);
 }
 
-// Based on Hamel and Mahoney's nonlinear SO3 observer
+// Based on Hamel and Mahony's nonlinear SO3 observer
 void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<double>> &gyroData)
 {
 	if(dt > 0.1)
+	{
+		Log::alert(String()+"angular observer long dt: " + dt);
 		return; // too long of a period to integrate over
+	}
 
 	mMutex_data.lock();
-//	gyroData->lock();
 	mCurVel.inject(gyroData->dataCalibrated - mGyroBias);
 	Time gyroTime( gyroData->timestamp);
-//	gyroData->unlock();
 	Array2D<double> gyro = mCurVel+mGainP*mInnovation;
 
 	SO3_LieAlgebra gyro_so3(gyro);
 	SO3 A = gyro_so3.integrate(dt);
 	mCurAttitude = mCurAttitude*A;
-
-	shared_ptr<DataVector<double>> attData(new DataVector<double> );
-	attData->type = DATA_TYPE_ATTITUDE;
-	attData->timestamp.setTime(gyroTime);
-	attData->data = mCurAttitude.getAnglesZYX();
 
 	shared_ptr<DataVector<double>> velData(new DataVector<double> );
 	velData->type = DATA_TYPE_ANGULAR_VEL;
@@ -328,44 +318,38 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 	for(int i=0; i<mListeners.size(); i++)
 		mListeners[i]->onObserver_AngularUpdated(rotData, velData);
 
-	String logStr=String()+Time::calcDiffMS(mStartTime,attData->timestamp)+"\t";
-	for(int i=0; i<attData->data.dim1(); i++)
-		logStr = logStr+attData->data[i][0] + "\t";
-	for(int i=0; i<velData->data.dim1(); i++)
-		logStr = logStr+velData->data[i][0]+"\t";
-	if(mQuadLogger != NULL)
-		mQuadLogger->addEntry(LOG_ID_CUR_ATT, logStr,LOG_FLAG_STATE);
+	mQuadLogger->addEntry(LOG_ID_CUR_ATT, rotData, velData, LOG_FLAG_STATE);
 }
 
-Array2D<double> Observer_Angular::convert_so3toCoord(const Array2D<double> &so3)
-{
-	Array2D<double> SO3(3,1);
-	SO3[0][0] = so3[2][1];
-	SO3[1][0] = so3[0][2];
-	SO3[2][0] = so3[1][0];
+//Array2D<double> Observer_Angular::convert_so3toCoord(const Array2D<double> &so3)
+//{
+//	Array2D<double> SO3(3,1);
+//	SO3[0][0] = so3[2][1];
+//	SO3[1][0] = so3[0][2];
+//	SO3[2][0] = so3[1][0];
+//
+//	return SO3;
+//}
+//
+//Array2D<double> Observer_Angular::convert_coordToso3(const Array2D<double> &SO3)
+//{
+//	Array2D<double> so3(3,3,0.0);
+//	so3[1][2] = -(so3[2][1] = SO3[0][0]);
+//	so3[2][0] = -(so3[0][2] = SO3[1][0]);
+//	so3[0][1] = -(so3[1][0] = SO3[2][0]);
+//
+//	return so3;
+//}
 
-	return SO3;
-}
-
-Array2D<double> Observer_Angular::convert_coordToso3(const Array2D<double> &SO3)
-{
-	Array2D<double> so3(3,3,0.0);
-	so3[1][2] = -(so3[2][1] = SO3[0][0]);
-	so3[2][0] = -(so3[0][2] = SO3[1][0]);
-	so3[0][1] = -(so3[1][0] = SO3[2][0]);
-
-	return so3;
-}
-
-Array2D<double> Observer_Angular::extractEulerAngles(const Array2D<double> &rotMat)
-{
-	Array2D<double> euler(3,1);
-	euler[0][0] = atan2(rotMat[2][1], rotMat[2][2]); // roll ... @TODO: this should be range checked
-	euler[1][0] = atan2(-rotMat[2][0], sqrt(rotMat[0][0]*rotMat[0][0] + rotMat[1][0]*rotMat[1][0])); // pitch 
-	euler[2][0] = atan2(rotMat[1][0], rotMat[0][0]);
-
-	return euler;
-}
+//Array2D<double> Observer_Angular::extractEulerAngles(const Array2D<double> &rotMat)
+//{
+//	Array2D<double> euler(3,1);
+//	euler[0][0] = atan2(rotMat[2][1], rotMat[2][2]); // roll ... @TODO: this should be range checked
+//	euler[1][0] = atan2(-rotMat[2][0], sqrt(rotMat[0][0]*rotMat[0][0] + rotMat[1][0]*rotMat[1][0])); // pitch 
+//	euler[2][0] = atan2(rotMat[1][0], rotMat[0][0]);
+//
+//	return euler;
+//}
 
 SO3 Observer_Angular::estimateAttAtTime(const Time &t)
 {
@@ -476,10 +460,7 @@ void Observer_Angular::setYawZero()
 	temp = mMagDirNom.copy();
 	mMutex_data.unlock();
 
-	String str1;
-	for(int i=0; i<temp.dim1(); i++)
-		str1 = str1+temp[i][0]+"\t";
-	mQuadLogger->addEntry(LOG_ID_SET_YAW_ZERO, str1, LOG_FLAG_PC_UPDATES);
+	mQuadLogger->addEntry(LOG_ID_SET_YAW_ZERO, temp, LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
@@ -507,60 +488,8 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 	}
 }
 
-void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-{
-//Log::alert("I shouldn't be here (observer angular)");
-//	if(data->target == NULL)
-//		return;
-//
-//	mMutex_targetFindTime.lock();
-//	mLastTargetFindTime.setTime();
-//	mMutex_targetFindTime.unlock();
-//
-//	cv::Point2f p0 = data->target->squareData[0]->contour[0];
-//	cv::Point2f p1 = data->target->squareData[0]->contour[1];
-//	cv::Point2f p2 = data->target->squareData[0]->contour[2];
-//
-//	// long edge of target
-//	Array2D<double> measDir1(3,1);
-//	measDir1[0][0] = p1.x-p0.x;
-//	measDir1[1][0] = p1.y-p0.y;
-//	measDir1[2][0] = 0;
-//	measDir1 = 1.0/norm2(measDir1)*measDir1;
-//	measDir1 = matmult(mRotCamToPhone, measDir1);
-//
-//	Array2D<double> nomDir1(3,1);
-//	nomDir1[0][0] = -1;
-//	nomDir1[1][0] = 1;
-//	nomDir1[2][0] = 0;
-//	nomDir1 = 1.0/norm2(nomDir1)*nomDir1;
-//
-//	// short edge of target
-//	Array2D<double> measDir2(3,1);
-//	measDir2[0][0] = p2.x-p1.x;
-//	measDir2[1][0] = p2.y-p1.y;
-//	measDir2[2][0] = 0;
-//	measDir2 = 1.0/norm2(measDir2)*measDir2;
-//	measDir2 = matmult(mRotCamToPhone, measDir2);
-//
-//	Array2D<double> nomDir2(3,1);
-//	nomDir2[0][0] = 1;
-//	nomDir2[1][0] = 1;
-//	nomDir2[2][0] = 0;
-//	nomDir2 = 1.0/norm2(nomDir2)*nomDir2;
-//
-//	mMutex_data.lock();
-//	mExtraDirsMeasured.push_back(measDir1.copy());
-//	mExtraDirsMeasured.push_back(measDir2.copy());
-//	mExtraDirsInertial.push_back(nomDir1.copy());
-//	mExtraDirsInertial.push_back(nomDir2.copy());
-//	mExtraDirsWeight.push_back(2*2);
-//	mExtraDirsWeight.push_back(2*2);
-//	mMutex_data.unlock();
-}
-
 // This function is way too long, I should probably split it up sometime
-void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
+void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 {
 	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 10)
 		return; // don't set my initial nominal angle yet
@@ -656,7 +585,6 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 	SO3 R_x( createRotMat(0, euler[0][0]) );
 	SO3 R_y( createRotMat(1, euler[1][0]) );
 	SO3 R_z( createRotMat(2, euler[2][0]) );
-//	SO3 attYX = R_x*R_y; // This is what Daewan had in his paper but I don't think it's right
 	SO3 attYX = R_y*R_x; // R_y*R_x*R_x'*R_y'*R_z'*P = R_z'*P
 	SO3 rotYX = attYX*SO3(mRotCamToPhone);
 	double f = data->imageData->focalLength;
@@ -781,7 +709,7 @@ void Observer_Angular::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &da
 		}
 		else
 		{
-Log::alert(String()+mStartTime.getElapsedTimeMS()+" -- Bad bunch");
+Log::alert(String()+(int)mStartTime.getElapsedTimeMS()+" -- Bad bunch");
 			for(int i=0; i<repeatPairs.size(); i++)
 			{
 				mNominalDirMap.erase(repeatPairs[i]);
@@ -828,18 +756,14 @@ Log::alert(String()+mStartTime.getElapsedTimeMS()+" -- Bad bunch");
 		mNominalDirCreateTime[newPairs[i]] = data->imageData->timestamp;
 	}
 
-	String str;
-	for(int i=0; i<mVisionInnovation.dim1(); i++)
-		str = str+mVisionInnovation[i][0]+"\t";
-	mQuadLogger->addEntry(LOG_ID_VISION_INNOVATION, str, LOG_FLAG_OBSV_BIAS);
+	mQuadLogger->addEntry(LOG_ID_VISION_INNOVATION, mVisionInnovation, LOG_FLAG_OBSV_BIAS);
 }
 
 void Observer_Angular::onNewCommObserverReset()
 {
 	reset();
 	Log::alert("Observer reset");
-	String str = String();
-	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_RESET, str,LOG_FLAG_PC_UPDATES);
+	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_RESET, LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight)
@@ -856,10 +780,13 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 		s = s+magWeight+"\t";
 		Log::alert(s);
 	}
-	String str;
-	str = str+gainP+"\t"+gainI+"\t";
-	str = str+accelWeight+"\t"+magWeight;
-	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_GAINS_UPDATED, str,LOG_FLAG_PC_UPDATES);
+
+	Array2D<double> vals(4,1);
+	vals[0][0] = gainP;
+	vals[1][0] = gainI;
+	vals[2][0] = accelWeight;
+	vals[3][0] = magWeight;
+	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_GAINS_UPDATED, vals,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)

@@ -52,7 +52,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 6;
+	int dataSet = 8;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -90,6 +90,16 @@ int main(int argv, char* argc[])
 			dataDir = "../dataSets/Nov1";
 			startImg = 11045;
 			endImg = 13250;
+			break;
+		case 7:
+			dataDir = "../dataSets/Nov2";
+			startImg = 785;
+			endImg = 2985;
+			break;
+		case 8:
+			dataDir = "../dataSets/Nov13_3";
+			startImg = 4686;
+			endImg = 7486;
 			break;
 	}
 
