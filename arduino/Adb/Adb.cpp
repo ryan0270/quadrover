@@ -16,6 +16,7 @@
 
 #include <string.h>
 #include <Adb.h>
+#include "../key_exchange_RSA/key_exchange_RSA/util.h"
 
 // #define DEBUG
 
@@ -25,6 +26,9 @@ static usb_device * adbDevice;
 static Connection * firstConnection;
 static boolean connected;
 static int connectionLocalId = 1;
+
+static long publicKey[] = {7, 143};
+static long privateKey[] = {103, 143};
 
 // Event handler callback function.
 adb_eventHandler * eventHandler;
@@ -431,10 +435,54 @@ void ADB::handleConnect(adb_message * message)
 
 void ADB::handleAuthenticate(adb_message * message)
 {
+	uint32_t numBytes = message->data_length;
+	uint32_t bytesLeft = numBytes;
+	uint8_t buf[ADB_USB_PACKETSIZE];
+	ConnectionStatus previousStatus;
+	int bytesRead;
+	int len = bytesLeft < ADB_USB_PACKETSIZE ? bytesLeft : ADB_USB_PACKETSIZE;
+
+	// Read payload
+	bytesRead = USB::bulkRead(adbDevice, len, buf, false);
+	while(bytesLeft > 0)
+	{
+		int len = bytesLeft < ADB_USB_PACKETSIZE ? bytesLeft : ADB_USB_PACKETSIZE;
+
+		// Read payload
+		bytesRead = USB::bulkRead(adbDevice, len, buf, false);
+
+		// Break out of the read loop if there's no data to read :(
+		if (bytesRead==-1) break;
+
+		bytesLeft -= bytesRead;
+	}
+
+	uint16_t bufSigned[ADB_USB_PACKETSIZE];
+	for(int i=0; i<numBytes; i++)
+		bufSigned[i] = rsa::raiseto_mod(buf[i], privateKey[0], privateKey[1]);
+
+	uint16_t bufDecrypted[ADB_USB_PACKETSIZE];
+	for(int i=0; i<numBytes; i++)
+		bufDecrypted[i] = rsa::raiseto_mod(bufSigned[i], publicKey[0], publicKey[1]);
+
 	Serial.print("Recevied A_AUTH with args: ");
 	Serial.print(message->arg0);
 	Serial.print(", ");
-	Serial.println(message->arg1);
+	Serial.print(message->arg1);
+	Serial.print(", ");
+	Serial.println(numBytes);
+	Serial.print("  Message: ");
+	for(int i=0; i<numBytes; i++)
+		Serial.print(buf[i],HEX);
+	Serial.print("\n");
+	Serial.print("Decrypted: ");
+	for(int i=0; i<numBytes; i++)
+		Serial.print(bufDecrypted[i],HEX);
+	Serial.print("\n");
+	Serial.print("   Signed: ");
+	for(int i=0; i<numBytes; i++)
+		Serial.print(bufSigned[i],HEX);
+	Serial.print("\n");
 
 	ADB::writeStringMessage(adbDevice, A_AUTH, ADB_AUTH_RSAPUBLICKEY, NULL, "Chad AUTH");
 	while(!ADB::pollMessage(message, true))
