@@ -4,7 +4,7 @@
 
 #define SONAR_PIN 2
 
-int verbosity=1;
+int verbosity=0;
 
 enum
 {
@@ -121,7 +121,6 @@ void setup()
   doRegularMotorStart();
 
   phoneIsConnected = false;
-  phoneIsConnected = false;
   lastPhoneUpdateTimeMS = millis();
 
   sonarPort = digitalPinToPort(SONAR_PIN);
@@ -174,8 +173,6 @@ void loop()
     uint16_t height = sonarPulseLength/5.8;
     newSonarReady = false;
     sonarIsHigh = false;
-    
-height = 200;
 
     if(phoneIsConnected)
       sendVal(height);

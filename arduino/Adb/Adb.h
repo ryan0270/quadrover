@@ -82,6 +82,12 @@ typedef struct
 
 } adb_message;
 
+typedef struct
+{
+	uint16_t a;
+	uint16_t b;
+} rsa_key;
+
 typedef enum
 {
 	ADB_UNUSED = 0,
