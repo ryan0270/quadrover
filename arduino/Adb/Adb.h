@@ -82,6 +82,12 @@ typedef struct
 
 } adb_message;
 
+typedef struct
+{
+	uint16_t a;
+	uint16_t b;
+} rsa_key;
+
 typedef enum
 {
 	ADB_UNUSED = 0,
@@ -139,6 +145,7 @@ private:
 	static void handleClose(Connection * connection);
 	static void handleWrite(Connection * connection, adb_message * message);
 	static void handleConnect(adb_message * message);
+	static void handleAuthenticate(adb_message * message);
 	static boolean isAdbInterface(usb_interfaceDescriptor * interface);
 
 public:
@@ -153,8 +160,6 @@ public:
 	static boolean isAdbDevice(usb_device * device, int configuration, adb_usbConfiguration * handle);
 	static void initUsb(usb_device * device, adb_usbConfiguration * handle);
 	static void closeAll();
-
-	static unsigned long lastPollTime;
 };
 
 #endif

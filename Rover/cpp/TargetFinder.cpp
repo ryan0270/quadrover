@@ -2,8 +2,7 @@
 
 namespace ICSL {
 namespace Quadrotor{
-//using namespace TNT;
-//using namespace ICSL::Constants;
+using namespace TNT;
 
 TargetFinder::TargetFinder()
 {
@@ -22,6 +21,8 @@ TargetFinder::TargetFinder()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+
+	mObsvTranslational = NULL;
 }
 
 void TargetFinder::shutdown()
@@ -42,6 +43,7 @@ void TargetFinder::initialize()
 
 void TargetFinder::run()
 {
+#ifndef ICSL_TARGETFIND_SIMULATION
 	mFinished = false;
 	mRunning = true;
 
@@ -49,12 +51,21 @@ void TargetFinder::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
+	Array2D<double> Sn = pow(5,2)*createIdentity((double)2);
+	Array2D<double> SnInv(2,2,0.0);
+	SnInv[0][0] = 1.0/Sn[0][0];
+	SnInv[1][1] = 1.0/Sn[1][1];
+//	double varxi = pow(300,2);
+	double varxi_ratio = 0.2;
+	double probNoCorr = 0.0000001;
+
 	shared_ptr<RectGroup> target;
 	shared_ptr<DataImage> imageData;
 	cv::Mat curImage, curImageGray, pyr1ImageGray, imageAnnotated;
 	float targetRatios[] = {0, 0, 0, 0, 0, 0};
 	String logString;
 	Time procStart;
+	Time imageTime;
 	while(mRunning)
 	{
 		if(mNewImageReady
@@ -65,17 +76,12 @@ void TargetFinder::run()
 			mNewImageReady = false;
 
 			imageData = mImageDataNext;
-//			imageData->lock();
-			try
-			{
-				imageData->image->copyTo(curImage);
-				imageData->imageGray->copyTo(curImageGray);
-			}
-			catch(...) {Log::alert("copyTo error in TargetFinder 1");}
-			if(curImageGray.cols == 640)
-				cv::pyrDown(curImageGray, pyr1ImageGray);
-			else
-				pyr1ImageGray = curImageGray;
+//			imageData->image->copyTo(curImage);
+//			imageData->imageGray->copyTo(curImageGray);
+//			if(curImageGray.cols == 640)
+//				cv::pyrDown(curImageGray, pyr1ImageGray);
+//			else
+//				pyr1ImageGray = curImageGray;
 //			cvtColor(pyr1Image, pyr1ImageGray, CV_BGR2GRAY);
 
 			if(mHaveUpdatedSettings)
@@ -91,47 +97,88 @@ void TargetFinder::run()
 				mHaveUpdatedSettings = false;
 			}
 
-			target = findTarget(pyr1ImageGray, *imageData->cameraMatrix, *imageData->distCoeffs);
-			// TODO: Compensate for current attitdue
-			if(curImage.cols == 640)
-				Log::alert("TargetFinder doesn't handle 640x480 images at this time");
+			imageTime.setTime(imageData->timestamp);
+
+			vector<vector<cv::Point>> allContours = findContours(*imageData->imageGray);
+			vector<shared_ptr<ActiveRegion>> curRegions = objectify(allContours,Sn,SnInv,varxi_ratio,probNoCorr,imageTime);
+			{ // special announcement of region centroids only
+				shared_ptr<ImageRegionLocData> regionData(new ImageRegionLocData());
+				regionData->imageData = imageData;
+				regionData->timestamp.setTime(imageTime);
+				regionData->regionLocs.resize(curRegions.size());
+				for(int i=0; i<curRegions.size(); i++)
+					regionData->regionLocs[i] = curRegions[i]->getFoundPos();
+				for(int i=0; i<mRegionListeners.size(); i++)
+					mRegionListeners[i]->onRegionsFound(regionData);
+			}
+
+			double f = imageData->focalLength;
+			cv::Point2f center = imageData->center;
+
+			Array2D<double> oldState(9,1), oldErrCov(9,9);
+			Array2D<double> mv(3,1), Sv(3,3);
+			double mz, varz;
+			const Array2D<double> curState = mObsvTranslational->estimateStateAtTime(imageTime);
+			const Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(imageTime);
+			Array2D<double> omega(3,1);
+			SO3 curAtt = imageData->att;
+			SO3 oldAtt, attChange;
+			double theta;
+			Array2D<double> axis;
+			double dt;
+			for(int i=0; i<mActiveRegions.size(); i++)
+			{
+				shared_ptr<ActiveRegion> ao = mActiveRegions[i];
+
+				dt = Time::calcDiffNS(ao->getLastFoundTime(), imageTime)/1.0e6;
+				oldState.inject(mObsvTranslational->estimateStateAtTime(ao->getLastFoundTime()));
+				oldErrCov.inject(mObsvTranslational->estimateErrCovAtTime(ao->getLastFoundTime()));
+				oldAtt = mObsvAngular->estimateAttAtTime(ao->getLastFoundTime());
+
+				attChange = curAtt*oldAtt.inv();
+				attChange.getAngleAxis(theta, axis);
+				omega.inject(theta/dt*axis);
+
+				mv.inject(0.5*(submat(oldState,3,5,0,0)+submat(curState,3,5,0,0)));
+				// HACK HACK HACK
+				Sv.inject(0.5*(submat(oldErrCov,3,5,3,5)+submat(curErrCov,3,5,3,5)));
+				mz = 0.5*(oldState[2][0]+curState[2][0]);
+				varz = 0.5*(oldErrCov[2][2]+curErrCov[2][2]);
+
+				ao->updatePositionDistribution(mv, Sv, mz, varz, f, center, omega, imageTime);
+			}
+
+			vector<RegionMatch> goodMatches;
+			vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
+			matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi_ratio, probNoCorr, imageTime);
 
 			double procTime = procStart.getElapsedTimeNS()/1.0e9;
-
-			if(target != NULL)
+//			if(repeatRegions.size() > 0 || newRegions.size() > 0)
 			{
 				shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-				curImage.copyTo(*imageAnnotated);
-				drawTarget(*imageAnnotated, target);
+				imageData->image->copyTo(*imageAnnotated);
+				drawTarget(*imageAnnotated, curRegions, repeatRegions);
 
 				shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
 				imageAnnotatedData->imageAnnotated = imageAnnotated;
 				imageAnnotatedData->imageDataSource = imageData;
 				imageAnnotatedData->timestamp.setTime(imageData->timestamp);
-				mImageAnnotatedLast = imageAnnotatedData;
 
 				shared_ptr<ImageTargetFindData> data(new ImageTargetFindData());
-				data->type = DATA_TYPE_CAMERA_POS;
-				data->target = target;
+				data->type = DATA_TYPE_TARGET_FIND;
+				data->repeatRegions= repeatRegions;
+				data->newRegions= newRegions;
 				data->imageData = imageData;
 				data->imageAnnotatedData = imageAnnotatedData;
-				data->timestamp.setTime(imageData->timestamp);
+				data->timestamp.setTime(imageTime);
+
 				for(int i=0; i<mListeners.size(); i++)
 					mListeners[i]->onTargetFound(data);
 
-				logString = "";
-				for(int i=0; i<target->squareData.size(); i++)
-					logString = logString+target->squareData[i]->center.x+"\t"+target->squareData[i]->center.y+"\t";
-				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_CENTERS, logString, LOG_FLAG_CAM_RESULTS);
-
-				logString = "";
-				for(int i=0; i<target->squareData.size(); i++)
-					logString = logString+target->squareData[i]->area+"\t";
-				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_AREAS,logString, LOG_FLAG_CAM_RESULTS);
-
-				logString = "";
-				logString = logString+procTime;
-				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
+//				logString = "";
+//				logString = logString+procTime;
+//				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME,logString, LOG_FLAG_CAM_RESULTS);
+				mQuadLogger->addEntry(LOG_ID_TARGET_FIND_PROC_TIME, procTime, LOG_FLAG_CAM_RESULTS);
 			}
 		}
 
@@ -139,275 +186,54 @@ void TargetFinder::run()
 	}
 
 	mFinished = true;
+#endif
 }
 
-shared_ptr<RectGroup> TargetFinder::findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs)
+void TargetFinder::drawTarget(cv::Mat &image,
+							   const vector<shared_ptr<ActiveRegion>> &curRegions,
+							   const vector<shared_ptr<ActiveRegion>> &repeatRegions)
 {
-	vector<vector<cv::Point> > squares;
-	vector<vector<cv::Point> > contours;
-
-	cv::Mat gray0, gray;
-	if(image.channels() == 3)
-		cvtColor(image, gray0, CV_BGR2GRAY);
-	else
-	{
-		try{ image.copyTo(gray0); }
-		catch(...) {Log::alert("copyTo error in TargetFinder 2"); return NULL;}
-	}
-
-	Canny(gray0, gray, 50, 150, 3);
-
-	// find contours and store them all as a list
-	findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
-
-	vector<cv::Point> approx;
-	// test each contour for rectangle-ishness
-	for( size_t i = 0; i < contours.size(); i++ )
-	{
-		if( fabs(contourArea(cv::Mat(contours[i]))) < 30)
-				continue;
-
-		// approximate contour with accuracy proportional
-		// to the contour perimeter
-		approxPolyDP(cv::Mat(contours[i]), approx, arcLength(cv::Mat(contours[i]), true)*0.04, true);
-
-		// square contours should have 4 vertices after approximation
-		// relatively large area (to filter out noisy contours)
-		// and be convex.
-		// Note: absolute value of an area is used because
-		// area may be positive or negative - in accordance with the
-		// contour orientation
-		if( approx.size() == 4 )
-		{
-			double maxCosine = 0;
-
-			for( int j = 2; j < 5; j++ )
-			{
-				// find the maximum cosine of the angle between joint edges
-				double cosine = abs(angle(approx[j%4], approx[j-2], approx[j-1]));
-				maxCosine = max(maxCosine, cosine);
-			}
-
-			// if cosines of all angles are small
-			// (all angles are ~90 degree) then write 
-			// vertices to resultant sequence
-			if( maxCosine < 0.3 )
-				squares.push_back(approx);
-		}
-	}
-
-	// Make square object
-	double f = cameraMatrix.at<double>(0,0);
-	double cx = cameraMatrix.at<double>(0,2);
-	double cy = cameraMatrix.at<double>(1,2);
-	cv::Point2f center(cx, cy);
-	vector<shared_ptr<Rect> > squareData(squares.size());
-	for(int i=0; i<squares.size(); i++)
-	{
-		vector<cv::Point2f> squares2(squares[i].size());
-		for(int j=0; j<squares[i].size(); j++)
-			squares2[j] = squares[i][j];
-		cv::undistortPoints(squares2, squares2, cameraMatrix, distCoeffs);
-		for(int j=0; j<squares2.size(); j++)
-			squares2[j] = squares2[j]*f+center;
-		shared_ptr<Rect> data(new Rect(squares2));
-		squareData[i] = data;
-	}
-
-	// Group squares that seem to be similar
-	vector< shared_ptr<RectGroup> > groups;
-	for(int i=0; i<squareData.size(); i++)
-	{
-		shared_ptr<Rect> data = squareData[i];
-		// See if we belong to an existing group
-		bool foundGroup = false;
-		for(int g=0; g<groups.size(); g++)
-		{
-			if( norm(data->center-groups[g]->meanCenter) < 20 &&
-				abs(data->area - groups[g]->meanArea) < 0.10*groups[g]->meanArea )
-			{
-				groups[g]->add(data);
-				foundGroup = true;
-				break;
-			}
-		}
-
-		if(!foundGroup)
-		{
-			shared_ptr<RectGroup> newGroup(new RectGroup(data));
-			groups.push_back(newGroup);
-		}
-	}
-
-	// Sort area from largest to smallest
-	sort(groups.begin(), groups.end(), 
-				[&](const shared_ptr<RectGroup> &g1, const shared_ptr<RectGroup> &g2){return g1->meanArea  > g2->meanArea;});
-
-	// Find groups that seem to have the correct inter-group relationship
-	vector<shared_ptr<RectGroup> > candidateSets;
-	vector<double> candidateSetScores;
-	float idealRatios[] = {3.4, 30, 9};
-	for(int i=0; i<groups.size(); i++)
-	{
-		vector<double> ratios(groups.size(),0.0);
-
-		if(ratios.size() == 0)
-			continue;
-
-		// find ratios to all other groups
-		shared_ptr<RectGroup> data = groups[i];
-		cv::Point2f center = groups[i]->meanCenter;
-		double a1 = groups[i]->meanArea;
-		for(int j=i+1; j<groups.size(); j++)
-		{
-			if(norm(center-groups[j]->meanCenter) < 20)
-				ratios[j] = a1/groups[j]->meanArea;
-		}
-
-		if(ratios.size() == 0)
-			continue;
-
-		// Find a set of groups that looks good (based only on the ratios relative to the largest rect)
-		vector<shared_ptr<RectGroup> > groupSet;
-		vector<int> usedRatios;
-		groupSet.push_back(groups[i]);
-		for(int j=0; j<2; j++)
-		{
-			int minIndex = 0;
-			int minErr= abs(ratios[0]-idealRatios[j]);
-			for(int r=1; r<ratios.size(); r++)
-			{
-				float err = abs(ratios[r]-idealRatios[j]);
-				if(err < minErr)
-				{
-					minIndex = r;
-					minErr = err;
-				}
-			}
-
-			if(minErr < 0.3*idealRatios[j] &&
-				find(usedRatios.begin(), usedRatios.end(), minIndex) == usedRatios.end())
-			{
-				usedRatios.push_back(minIndex);
-				groupSet.push_back(groups[minIndex]);
-			}
-		}
-
-		if(groupSet.size() < 3)
-			continue;
-
-		// Find the best combination of specific squares
-		shared_ptr<Rect> b0, b1, b2, b3;
-		shared_ptr<Rect> d0, d1, d2;
-		float bestScore = 0x7FFFFFFF;
-		for(int j0=0; j0<groupSet[0]->squareData.size(); j0++)
-		{
-			d0 = groupSet[0]->squareData[j0];
-			for(int j1=0; j1<groupSet[1]->squareData.size(); j1++)
-			{
-				d1 = groupSet[1]->squareData[j1];
-				for(int j2=0; j2<groupSet[2]->squareData.size(); j2++)
-				{
-					d2 = groupSet[2]->squareData[j2];
-					float ratios[3];
-					ratios[0] = d0->area/d1->area;
-					ratios[1] = d0->area/d2->area;
-					ratios[2] = d1->area/d2->area;
-
-					float score = 0;
-					for(int r=0; r<2; r++)
-						score += abs(ratios[i]-idealRatios[i])/idealRatios[i];
-
-					if(score < bestScore)
-					{
-						b0 = d0;
-						b1 = d1;
-						b2 = d2;
-						bestScore = score;
-					}
-				}
-			}
-		}
-		shared_ptr<RectGroup> set(new RectGroup);
-		set->add(d0);
-		set->add(d1);
-		set->add(d2);
-		candidateSets.push_back(set);
-		candidateSetScores.push_back(bestScore);
-	}
-
-	shared_ptr<RectGroup> bestSet = NULL;
-	if(candidateSets.size() > 0)
-	{
-		int bestScore = candidateSetScores[0];
-		bestSet = candidateSets[0];
-		for(int c=1; c<candidateSetScores.size(); c++)
-		{
-			if(candidateSetScores[c] < bestScore)
-			{
-				bestScore = candidateSetScores[c];
-				bestSet = candidateSets[c];
-			}
-		}
-
-		// make sure squares are sorted from largest to smallest
-
-		// Order the points for consistency
-		// This target has some symmetry so it assumes that 
-		// yaw doesn't change much
-		double targetAngle = bestSet->squareData[0]->angle;
-		for(int i=0; i<bestSet->squareData.size(); i++)
-		{
-			shared_ptr<Rect> rect = bestSet->squareData[i];
-			vector<double> angles(rect->contour.size());
-			for(int j=0; j<angles.size(); j++)
-			{
-				cv::Point2f d = rect->contour[j] - rect->center;
-				float a = atan2(d.y,d.x) - targetAngle;
-				if(a < 0) a += 2*PI;
-				angles[j] = a;
-			}
-
-			vector<int> indices(rect->contour.size());
-			for(int j=0; j<indices.size(); j++)
-				indices[j] = j;
-			sort(indices.begin(), indices.end(), [&](int i1, int i2) { return angles[i1] < angles[i2]; });
-
-			vector<double> tempAngles(angles.size());
-			vector<cv::Point> tempContourInt(indices.size());
-			vector<cv::Point2f> tempContour(indices.size());
-			vector<double> tempLengths(indices.size());
-			for(int j=0; j<indices.size(); j++)
-			{
-				tempAngles[j] = angles[indices[j]];
-				tempContourInt[j] = rect->contourInt[indices[j]];
-				tempContour[j] = rect->contour[indices[j]];
-				tempLengths[j] = rect->lineLengths[indices[j]];
-			}
-			tempAngles.swap(angles);
-			tempContourInt.swap(rect->contourInt);
-			tempContour.swap(rect->contour);
-			tempLengths.swap(rect->lineLengths);
-		}
-	}
-
-	return bestSet;
-}
-
-void TargetFinder::drawTarget(cv::Mat &image, const shared_ptr<RectGroup> &target)
-{
-	if(target == NULL)
+	if(curRegions.size() == 0 && repeatRegions.size() == 0)
 		return;
-	for( int i = 0; i < target->squareData.size(); i++ )
-	{
-		const cv::Point *p = &target->squareData[i]->contourInt[0];
-		int n = (int)target->squareData[i]->contourInt.size();
-		polylines(image, &p, &n, 1, true, cv::Scalar(255,0,0), 2, CV_AA);
 
-		cv::Scalar colors[] {cv::Scalar(0,0,255), cv::Scalar(0,255,0), cv::Scalar(0,255,255), cv::Scalar(255,0,255)};
-		for(int j=0; j<target->squareData[i]->contour.size(); j++)
-			circle(image, target->squareData[i]->contour[j], 4, colors[j], -1);
-	}
+	vector<vector<cv::Point>> curContours(curRegions.size()), repeatContours(repeatRegions.size());
+	for(int i=0; i<curRegions.size(); i++)
+		curContours[i] = curRegions[i]->getContour();
+	for(int i=0; i<repeatRegions.size(); i++)
+		repeatContours[i] = repeatRegions[i]->getContour();
+
+	cv::drawContours(image, curContours, -1, cv::Scalar(255,0,0), 2);
+	cv::drawContours(image, repeatContours, -1, cv::Scalar(0,0,255), 2);
+
+//	cv::Point p1, p2;
+//	for(int i=0; i<curRegions.size(); i++)
+//	{
+//		const vector<shared_ptr<ActiveRegion>> neighbors = curRegions[i]->getNeighbors();
+//		for(int j=0; j<neighbors.size(); j++)
+//			if(curRegions[i]->getId() < neighbors[j]->getId())
+//			{
+//				p1.x = curRegions[i]->getExpectedPos()[0][0];
+//				p1.y = curRegions[i]->getExpectedPos()[1][0];
+//				p2.x = neighbors[j]->getExpectedPos()[0][0];
+//				p2.y = neighbors[j]->getExpectedPos()[1][0];
+//
+//				line(image, p1, p2, cv::Scalar(0,255,255), 1);
+//			}
+//	}
+//	for(int i=0; i<repeatRegions.size(); i++)
+//	{
+//		const vector<shared_ptr<ActiveRegion>> neighbors = repeatRegions[i]->getNeighbors();
+//		for(int j=0; j<neighbors.size(); j++)
+//			if(repeatRegions[i]->getId() < neighbors[j]->getId())
+//			{
+//				p1.x = repeatRegions[i]->getExpectedPos()[0][0];
+//				p1.y = repeatRegions[i]->getExpectedPos()[1][0];
+//				p2.x = neighbors[j]->getExpectedPos()[0][0];
+//				p2.y = neighbors[j]->getExpectedPos()[1][0];
+//
+//				line(image, p1, p2, cv::Scalar(0,255,255), 1);
+//			}
+//	}
 }
 
 
@@ -419,5 +245,227 @@ void TargetFinder::onNewSensorUpdate(const shared_ptr<IData> &data)
 		mNewImageReady = mNewImageReady_targetFind = true;
 	}
 }
+
+vector<vector<cv::Point>> TargetFinder::findContours(const cv::Mat &image)
+{
+	cv::Mat pyrImage;
+	double pyrScale = 0.5;
+	resize(image, pyrImage, cv::Size(), pyrScale, pyrScale, cv::INTER_AREA);
+
+	int delta = 5*2;
+	int minArea = 1.0/pow(15,2)*pyrImage.rows*pyrImage.cols;
+	int maxArea = 1.0/pow(2,2)*pyrImage.rows*pyrImage.cols;
+	double maxVariation = 0.25; // smaller reduces number of regions
+	double minDiversity = 0.4; // smaller increase the number of regions
+	cv::MSER mserDetector(delta, minArea, maxArea, maxVariation, minDiversity);
+	vector<vector<cv::Point>> regions;
+	mserDetector(pyrImage, regions);
+
+	// preallocate
+	cv::Mat mask(pyrImage.rows,pyrImage.cols,CV_8UC1, cv::Scalar(0));
+
+	/////////////////// Find contours ///////////////////////
+	vector<vector<cv::Point>> allContours;
+	vector<vector<cv::Point>> contours;
+	cv::Rect boundRect;
+	int border = 2;
+	for(int i=0; i<regions.size(); i++)
+	{
+		boundRect = boundingRect( cv::Mat(regions[i]) );
+		// reject regions on the border since they will change, but perhaps not enough to 
+		// prevent matches
+		if(boundRect.x == 0 || boundRect.y == 0 ||
+			boundRect.x+boundRect.width == pyrImage.cols || boundRect.y+boundRect.height == pyrImage.rows )
+			continue;
+
+		boundRect.x = max(0, boundRect.x-border);
+		boundRect.y = max(0, boundRect.y-border);
+		boundRect.width = min(pyrImage.cols, boundRect.x+boundRect.width+2*border)-boundRect.x;
+		boundRect.height= min(pyrImage.rows, boundRect.y+boundRect.height+2*border)-boundRect.y;;
+		cv::Point corner(boundRect.x, boundRect.y);
+		mask(boundRect) = cv::Scalar(0);
+		uchar *row;
+		int step = mask.step;
+		for(int j=0; j<regions[i].size(); j++) 
+		{
+			int x = regions[i][j].x;
+			int y = regions[i][j].y;
+			mask.at<uchar>(y,x) = 255;
+		}
+
+		cv::findContours(mask(boundRect), contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, corner);
+
+		for(int i=0; i<contours.size(); i++)
+		{
+			if(cv::contourArea(contours[i]) >= minArea)
+				allContours.push_back(contours[i]);
+		}
+	}
+
+
+	// scale the contours back to the original image size
+	for(int i=0; i<allContours.size(); i++)
+		for(int j=0; j<allContours[i].size(); j++)
+			allContours[i][j] *= 1.0/pyrScale;
+
+	return allContours;
+}
+
+vector<shared_ptr<ActiveRegion>> TargetFinder::objectify(const vector<vector<cv::Point>> &contours,
+										   const TNT::Array2D<double> Sn,
+										   const TNT::Array2D<double> SnInv,
+										   double varxi_ratio, double probNoCorr,
+										   const Time &imageTime)
+{
+	/////////////////// make objects of the new contours ///////////////////////
+	vector<shared_ptr<ActiveRegion>> curRegions;
+	for(int i=0; i<contours.size(); i++)
+	{
+		shared_ptr<ActiveRegion> ao1(new ActiveRegion(contours[i]));
+		ao1->markFound(imageTime);
+		ao1->setPosCov(Sn);
+		curRegions.push_back(ao1);
+	}
+
+	/////////////////// similarity check ///////////////////////
+	// Ideally, I would do this on all of the active objects at the end of the loop
+	// but I still need to work out the math for that. Doing it here, I can take
+	// advantage of everything having the same covariance
+	Array2D<double> ssC = ActiveRegion::calcCorrespondence(curRegions, curRegions, 0.5*Sn, 2.0*SnInv, varxi_ratio, 0);
+
+	// Now keep only things that don't have confusion
+	// if there is confusion, only keep one
+	vector<shared_ptr<ActiveRegion>> tempList;
+	tempList.swap(curRegions);
+	vector<bool> isStillGood(tempList.size(), true);
+	for(int i=0; i<tempList.size(); i++)
+	{
+		if(!isStillGood[i])
+		{
+			tempList[i]->kill();
+			continue;
+		}
+		vector<int> confusionList;
+		for(int j=i+1; j<tempList.size(); j++)
+			if(ssC[i][j] > 0.2)
+				confusionList.push_back(j);
+
+		for(int j=0; j<confusionList.size(); j++)
+			isStillGood[confusionList[j]] = false;
+
+		curRegions.push_back(tempList[i]);
+	}
+
+	for(int i=0; i<curRegions.size(); i++)
+		for(int j=i+1; j<curRegions.size(); j++)
+			curRegions[i]->addNeighbor(curRegions[j], true);
+
+	return curRegions;
+}
+
+void TargetFinder::matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
+			  vector<RegionMatch> &goodMatches,
+			  vector<shared_ptr<ActiveRegion>> &repeatRegions,
+			  vector<shared_ptr<ActiveRegion>> &newRegions,
+			  const TNT::Array2D<double> Sn,
+			  const TNT::Array2D<double> SnInv,
+			  double varxi_ratio, double probNoCorr,
+			  const Time &imageTime)
+{
+	/////////////////// Establish correspondence based on postiion ///////////////////////
+	Array2D<double> C = ActiveRegion::calcCorrespondence(mActiveRegions, curRegions, Sn, SnInv, varxi_ratio, probNoCorr);
+
+	///////////////////  make matches ///////////////////////
+	shared_ptr<ActiveRegion> aoPrev, aoCur;
+	int N1 = mActiveRegions.size();
+	int N2 = curRegions.size();
+	vector<bool> prevMatched(N1, false);
+	vector<bool> curMatched(N2, false);
+	vector<cv::Point2f> offsets;
+	for(int i=0; i<N1; i++)
+	{
+		if(N2 == 0 || C[i][N2] > 0.4)
+			continue; // this object probably doesn't have a partner
+
+		aoPrev = mActiveRegions[i];
+
+		int maxIndex = 0;
+		float maxScore = 0;
+		for(int j=0; j<N2; j++)
+		{
+			if(C[i][j] > maxScore && !curMatched[j])
+			{
+				maxScore = C[i][j];
+				maxIndex =j;
+			}
+		}
+
+		curMatched[maxIndex] = true;
+		aoCur = curRegions[maxIndex];
+
+		cv::Point offset = aoCur->getFoundPos()-aoPrev->getFoundPos();
+		offsets.push_back(offset);
+
+		RegionMatch m;
+		m.aoPrev = aoPrev;
+		m.aoCur = aoCur;
+		m.score = C[i][maxIndex];
+		goodMatches.push_back(m);
+		aoPrev->copyData(*aoCur);
+		aoPrev->markFound(imageTime);
+		aoPrev->addLife(2);
+		repeatRegions.push_back(aoPrev);
+		aoCur->kill();
+	}
+
+	vector<int> dupIndices;
+	for(int j=0; j<curRegions.size(); j++)
+		if(!curMatched[j])
+		{
+			// first check to see if we didn't match because there
+			// were too many similar regions
+			bool addMe = true;
+			if(C.dim1() > 0 && C.dim2() > 0 && C[N1][j] < 0.5)
+			{
+				// yup, now we should clear out the riff raff
+				for(int i=0; i<N1; i++)
+					if(C[i][j] > 0.1)
+					{
+						if(prevMatched[i]) // the dupe already found a good match so we shouldn't delete him
+							addMe = false;
+						else
+							dupIndices.push_back(i);
+					}
+			}
+			// Now add the new region which will be the 
+			// only remaining one
+			if(addMe)
+				newRegions.push_back(curRegions[j]);
+			else
+				curRegions[j]->kill();
+		}
+
+	// sort and remove repeats 
+	sort(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator endIter = unique(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator iter = dupIndices.begin();
+	while(iter != endIter)
+	{
+		mActiveRegions[(*iter)]->kill();
+		iter++;
+	}
+
+	for(int i=0; i<mActiveRegions.size(); i++)
+		mActiveRegions[i]->takeLife(1);
+
+	sort(mActiveRegions.begin(), mActiveRegions.end(), ActiveRegion::sortPredicate);
+	while(mActiveRegions.size() > 0 && !mActiveRegions.back()->isAlive() )
+		mActiveRegions.pop_back();
+
+	// TODO
+	for(int i=0; i<newRegions.size(); i++)
+		mActiveRegions.push_back(newRegions[i]);
+}
+
 } // namespace Quadrotor
 } // namespace ICSL

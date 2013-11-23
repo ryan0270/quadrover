@@ -76,8 +76,6 @@ badd +1 VideoMaker.h
 badd +1 VideoMaker.cpp
 badd +1 Rotation.h
 badd +1 Rotation.cpp
-badd +1 TargetFinder2.h
-badd +1 TargetFinder2.cpp
 badd +1 ActiveRegion.h
 badd +1 ActiveRegion.cpp
 badd +1 Listeners.h

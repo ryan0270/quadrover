@@ -14,7 +14,6 @@
 namespace ICSL {
 namespace Quadrotor{
 using namespace std;
-using namespace toadlet;
 
 enum{ 
 	MIN_MOTOR_CMD = 0, 
@@ -36,47 +35,48 @@ class MotorInterface
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	void start(){ thread th(&MotorInterface::run, this); th.detach(); }
-	void run();
+	inline bool isConnectedSend() const;
+	inline bool isConnectedReceive() const;
 
-	vector<uint16> getMotorCmds();
-
-//	bool isConnected() const;
-
-	void setCommand(const toadlet::egg::Collection<uint16> &cmds);
+	void sendCommand(const toadlet::egg::Collection<uint16_t> &cmds);
 
 	void enableMotors(bool on);
 	bool isMotorsEnabled() const {return mMotorsEnabled;}
 
+	void start(){ thread th(&MotorInterface::run, this); th.detach(); }
+	void run();
 
 	void addListener(MotorInterfaceListener *listener){mListeners.push_back(listener);}
+	void addSonarListener(SonarListener *listener){mSonarListeners.push_back(listener);}
 
 	void setStartTime(Time time){mStartTime.setTime(time);}
 
 	protected:
-//;	toadlet::egg::Socket::ptr mServerSocket, mSocket;
+	toadlet::egg::Socket::ptr mServerSocketSend, mSocketSend;
+	toadlet::egg::Socket::ptr mServerSocketReceive, mSocketReceive;
 	bool mRunning, mShutdown;
 	bool mMotorsEnabled;
 	bool mWaitingForConnection;
-	vector<uint16> mMotorCmds;
+	uint16_t mMotorCmds[4];
 
-	std::mutex mMutex_cmds;//, mMutex_socket;
+	std::mutex mMutex_data, mMutex_socket;
 
 	// skips enabled/disabled checks
-	void sendCommandForced(const toadlet::egg::Collection<uint16> &cmds);
+	void sendCommandForced(const toadlet::egg::Collection<uint16_t> &cmds);
 
 	int mThreadPriority, mScheduler;
 
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;
 	Time mStartTime;
-//	Time mLastSendTime;
-//	std::mutex mMutex_sendTime;
+	Time mLastSendTime;
+	std::mutex mMutex_sendTime;
 
 	toadlet::egg::Collection<MotorInterfaceListener*> mListeners;
+	toadlet::egg::Collection<SonarListener*> mSonarListeners;
 
 	void pollTCP();
-	int receiveTCP(tbyte* data, int size);
+	int receiveTCP(toadlet::tbyte* data, int size);
 };
 
 } // namespace Quadrotor

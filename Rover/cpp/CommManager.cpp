@@ -186,7 +186,7 @@ void CommManager::pollUDP()
 				mLastPacketTime.setTimeMS(pck.time);
 			else if(abs((long int)(pck.time - mLastPacketTime.getMS())) > 1000)
 			{
-				String s = String()+"Really old packet so assume this is a new starting poing. dt = "+(pck.time-mLastPacketTime.getMS());
+				String s = String()+"Really old packet so assume this is a new starting poing. dt = "+(int)(pck.time-mLastPacketTime.getMS());
 				Log::alert(s);
 				mLastPacketTime.setTimeMS(pck.time);
 			}

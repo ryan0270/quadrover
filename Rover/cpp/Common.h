@@ -21,6 +21,7 @@ enum LogFlags
 	LOG_FLAG_CAM_IMAGES		= 1 << 10,
 	LOG_FLAG_PRESSURE		= 1 << 11,
 	LOG_FLAG_PHONE_TEMP		= 1 << 12,
+	LOG_FLAG_SONAR			= 1 << 13,
 };
 
 enum CommID

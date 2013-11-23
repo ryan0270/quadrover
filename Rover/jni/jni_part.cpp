@@ -56,14 +56,6 @@ JNIEXPORT jboolean JNICALL Java_com_icsl_Rover_RoverService_getImage(JNIEnv* env
 	return true;
 }
 
-JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_onNewSonarReading(JNIEnv* env, jobject thiz, jint jval, jlong jtimestamp)
-{
-	if(rover == NULL)
-		return;
-
-	rover->onNewSonarReading(jval, jtimestamp);
-}
-
 JNIEXPORT void JNICALL Java_com_icsl_Rover_RoverService_passNewImage(JNIEnv* env, jobject thiz, jlong imgAddr, jlong timestampNS)
 {
 	if(rover == NULL)
@@ -133,21 +125,6 @@ JNIEXPORT jfloatArray JNICALL Java_com_icsl_Rover_RoverService_getAttitude(JNIEn
 	elem[2] = (jfloat)att[2][0];
 
 	env->ReleaseFloatArrayElements(jval, elem, 0);
-	return jval;
-}
-
-JNIEXPORT jintArray JNICALL Java_com_icsl_Rover_RoverService_getMotorCmds(JNIEnv* env, jobject thiz)
-{
-	if(rover == NULL)
-		return env->NewIntArray(0);
-
-	std::vector<toadlet::uint16> cmds = rover->getMotorCmds();
-	jintArray jval = env->NewIntArray(cmds.size());
-	jint *elem = env->GetIntArrayElements(jval,0);
-	for(int i=0; i<cmds.size(); i++)
-		elem[i] = (jint)cmds[i];
-
-	env->ReleaseIntArrayElements(jval, elem, 0);
 	return jval;
 }
 

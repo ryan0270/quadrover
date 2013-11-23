@@ -40,7 +40,7 @@ using namespace toadlet::egg;
 
 		mUseIbvs = false;
 
-		mTargetData = NULL;
+//		mTargetData = NULL;
 
 		mRotCamToPhone = SO3( matmult(createRotMat(2,-0.5*(double)PI),
 								      createRotMat(0,(double)PI)) );
@@ -144,12 +144,7 @@ using namespace toadlet::egg;
 	
 		// Logging
 		if(mQuadLogger != NULL)
-		{
-//			String logString;
-//			for(int i=0; i<accelCmd.dim1(); i++)
-//				logString = logString+accelCmd[i][0]+"\t";
-//			mQuadLogger->addEntry(LOG_ID_ACCEL_CMD,logString, LOG_FLAG_STATE_DES);
-		}
+			mQuadLogger->addEntry(LOG_ID_ACCEL_CMD, accelCmd, LOG_FLAG_STATE_DES);
 	}
 
 	Array2D<double> TranslationController::calcControlPID(const Array2D<double> &error,double dt)
@@ -333,7 +328,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		// Predict the target's current position based on kinematics
 		vector<cv::Point2f> points = xlateData->goodPoints;
 		double dtImg = xlateData->timestamp.getElapsedTimeNS()/1.0e9;
-		double f = xlateData->imageTargetFind2Data->imageData->focalLength;
+		double f = xlateData->imageTargetFindData->imageData->focalLength;
 		Array2D<double> vel(3,1);
 		double z;
 		if(mObsvTranslational == NULL)
@@ -411,10 +406,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		// use real height for z vel
 //		desVel[2][0] = -mIbvsPosGains[2][0]*(curState[2][0]-desState[2][0]);
 
-		String logString;
-		for(int i=0; i<desVel.dim1(); i++)
-			logString = logString+desVel[i][0]+"\t";
-		mQuadLogger->addEntry(LOG_ID_VEL_CMD, logString, LOG_FLAG_STATE_DES);
+		mQuadLogger->addEntry(LOG_ID_VEL_CMD, desVel, LOG_FLAG_STATE_DES);
 
 		Array2D<double> velErr(3,1);
 		velErr[0][0] = curState[3][0]-(desState[3][0]+desVel[0][0]);
@@ -570,18 +562,6 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 	}
 
 	void TranslationController::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-	{
-		if(data->target != NULL)
-		{
-			mMutex_target.lock();
-			mTargetData = data;
-			mMutex_target.unlock();
-
-			mNewMeasAvailable = true;
-		}
-	}
-
-	void TranslationController::onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
 	{
 		if(data == NULL || (data->repeatRegions.size() + data->newRegions.size()) == 0)
 			return;

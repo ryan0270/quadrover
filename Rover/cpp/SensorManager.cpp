@@ -295,12 +295,9 @@ void SensorManager::run()
 
 			if(mQuadLogger != NULL && logFlag != -1 && data != NULL)
 			{
-//				String s=String();
-//				s = s+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
-//				s = s+event.data[0]+"\t"+event.data[1]+"\t"+event.data[2]+"\t"+event.data[3];
-//				mMutex_logger.lock();
-//				mQuadLogger->addEntry(logID,s,logFlag);
-//				mMutex_logger.unlock();
+				mMutex_logger.lock();
+				mQuadLogger->addEntry(logID,event,data->timestamp,logFlag);
+				mMutex_logger.unlock();
 			}
 
 			if(data != NULL)
@@ -344,12 +341,19 @@ void SensorManager::runTemperatureMonitor()
 
 		if(mQuadLogger != NULL)
 		{
-			String s = String();
-			s = s+battTemp+"\t";
-			s = s+secTemp+"\t";
-			s = s+fgTemp+"\t";
+//			String s = String();
+//			s = s+battTemp+"\t";
+//			s = s+secTemp+"\t";
+//			s = s+fgTemp+"\t";
+//			mMutex_logger.lock();
+//			mQuadLogger->addEntry(LOG_ID_PHONE_TEMP,s,LOG_FLAG_PHONE_TEMP);
+//			mMutex_logger.unlock();
+			Collection<double> data(3);
+			data[0] = battTemp;
+			data[1] = secTemp;
+			data[2] = fgTemp;
 			mMutex_logger.lock();
-			mQuadLogger->addEntry(LOG_ID_PHONE_TEMP,s,LOG_FLAG_PHONE_TEMP);
+			mQuadLogger->addEntry(LOG_ID_PHONE_TEMP,data,LOG_FLAG_PHONE_TEMP);
 			mMutex_logger.unlock();
 		}
 
@@ -458,12 +462,9 @@ void SensorManager::passNewImage(const cv::Mat *imageYUV, uint64_t timestampNS)
 	// do this now just so the log time is a bit closer to real
 	if(mQuadLogger != NULL)
 	{
-//		String str = String();
-//		str = str+Time::calcDiffMS(mStartTime, data->timestamp)+"\t";
-//		str = str+data->imageId;
-//		mMutex_logger.lock();
-//		mQuadLogger->addEntry(LOG_ID_IMAGE,str,LOG_FLAG_CAM_RESULTS);
-//		mMutex_logger.unlock();
+		mMutex_logger.lock();
+		mQuadLogger->addEntry(LOG_ID_IMAGE, (int)data->imageId, data->timestamp, LOG_FLAG_CAM_RESULTS);
+		mMutex_logger.unlock();
 	}
 
 	shared_ptr<cv::Mat> imageBGR(new cv::Mat);
@@ -515,11 +516,21 @@ void SensorManager::onNewSonarReading(int heightMM, uint64_t timestampNS)
 		mListeners[i]->onNewSensorUpdate(data);
 	mMutex_listeners.unlock();
 
-//	String str = String()+Time::calcDiffMS(mStartTime, data->timestamp)+"\t"+data->heightRaw;
-//	mMutex_logger.lock();
-//	// TODO: Make a sonar log flag
-//	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, str, LOG_FLAG_ACCEL);
-//	mMutex_logger.unlock();
+	mMutex_logger.lock();
+	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, data->heightRaw, data->timestamp, LOG_FLAG_SONAR);
+	mMutex_logger.unlock();
+}
+
+void SensorManager::onNewSonar(const shared_ptr<HeightData<double>> &data)
+{
+	mMutex_listeners.lock();
+	for(int i=0; i<mListeners.size(); i++)
+		mListeners[i]->onNewSensorUpdate(data);
+	mMutex_listeners.unlock();
+
+	mMutex_logger.lock();
+	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, data->heightRaw, data->timestamp, LOG_FLAG_SONAR);
+	mMutex_logger.unlock();
 }
 
 } // namespace Quadrotor

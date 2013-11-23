@@ -10,6 +10,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 #include <toadlet/egg.h>
 
@@ -17,87 +18,108 @@
 #include "QuadLogger.h"
 #include "Common.h"
 #include "Time.h"
-#include "Data.h"
+//#include "Data.h"
+#include "ActiveRegion.h"
 #include "Listeners.h"
+#include "Observer_Angular.h"
+#include "Observer_Translational.h"
 
 namespace ICSL {
 namespace Quadrotor {
 class TargetFinder : public CommManagerListener,
 						public SensorManagerListener
 {
-	public:
-		explicit TargetFinder();
-		virtual ~TargetFinder(){};
+public:
+	explicit TargetFinder();
+	virtual ~TargetFinder(){};
 
-		void shutdown();
-		void start(){ thread th(&TargetFinder::run, this); th.detach(); }
-		void initialize();
-		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void shutdown();
+	void start(){ thread th(&TargetFinder::run, this); th.detach(); }
+	void initialize();
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-		bool isFirstImageProcessed(){return mFirstImageProcessed;}
+	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
+	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
 
-		void setStartTime(Time t){mStartTime = t;}
-		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	bool isFirstImageProcessed(){return mFirstImageProcessed;}
 
-		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
-		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
-		void getLastImage(cv::Mat *outImage);
-		toadlet::egg::Collection<int> getVisionParams();
+	void setStartTime(Time t){mStartTime = t;}
+	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
-		void addListener(TargetFinderListener *listener){mListeners.push_back(listener);}
+	int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
+	int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
+	void getLastImage(cv::Mat *outImage);
+	toadlet::egg::Collection<int> getVisionParams();
 
-		// CommManagerListener functions
-		void onNewCommMotorOn(){mIsMotorOn = true;}
-		void onNewCommMotorOff(){mIsMotorOn = false;}
-		
-		// SensorManagerListener
-		void onNewSensorUpdate(const shared_ptr<IData> &data);
+	void addListener(TargetFinderListener *listener){mListeners.push_back(listener);}
+	void addRegionListener(RegionFinderListener *listener){mRegionListeners.push_back(listener);}
 
-	protected:
-		bool mUseIbvs;
-		bool mFirstImageProcessed;
-		bool mRunning, mFinished;
-		bool mNewImageReady, mNewImageReady_targetFind;
-		bool mLogImages;
-		bool mHaveUpdatedSettings;
-		bool mIsMotorOn;
+	// CommManagerListener functions
+	void onNewCommMotorOn(){mIsMotorOn = true;}
+	void onNewCommMotorOff(){mIsMotorOn = false;}
 
-		shared_ptr<DataImage> mImageDataNext;
-		shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
+	vector<vector<cv::Point>> findContours(const cv::Mat &image);
 
-		Time mStartTime;//, mLastProcessTime;
+	vector<shared_ptr<ActiveRegion>> objectify(const vector<vector<cv::Point>> &contours,
+			const TNT::Array2D<double> Sn,
+			const TNT::Array2D<double> SnInv,
+			double varxi_ratio, double probNoCorr,
+			const Time &imageTime);
 
-		toadlet::uint32 mImageProcTimeUS;
+	void matchify(const vector<shared_ptr<ActiveRegion>> &curRegions,
+			vector<RegionMatch> &goodMatches,
+			vector<shared_ptr<ActiveRegion>> &repeatRegions,
+			vector<shared_ptr<ActiveRegion>> &newRegions,
+			const TNT::Array2D<double> Sn,
+			const TNT::Array2D<double> SnInv,
+			double varxi_ratio, double probNoCorr,
+			const Time &imageTime);
 
-		QuadLogger *mQuadLogger;
+	vector<shared_ptr<ActiveRegion>> &getActiveRegions(){return mActiveRegions;}
+	static void drawTarget(cv::Mat &image,
+						   const vector<shared_ptr<ActiveRegion>> &curRegions,
+						   const vector<shared_ptr<ActiveRegion>> &repeatObjets);
+	
+	// SensorManagerListener
+	void onNewSensorUpdate(const shared_ptr<IData> &data);
 
-		std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
-		std::mutex mMutex_logger;
-		std::mutex mMutex_params;
+protected:
+	bool mUseIbvs;
+	bool mFirstImageProcessed;
+	bool mRunning, mFinished;
+	bool mNewImageReady, mNewImageReady_targetFind;
+	bool mLogImages;
+	bool mHaveUpdatedSettings;
+	bool mIsMotorOn;
 
-		toadlet::egg::Collection<TargetFinderListener*> mListeners;
+	shared_ptr<DataImage> mImageDataNext;
+	shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
 
-		void run();
+	Time mStartTime;//, mLastProcessTime;
 
-		int mThreadPriority, mScheduler;
+	uint32_t mImageProcTimeUS;
 
-		shared_ptr<RectGroup> findTarget(cv::Mat &image, const cv::Mat &cameraMatrix, const cv::Mat &distCoeffs);
-		static void drawTarget(cv::Mat &img, const shared_ptr<RectGroup> &target);
+	QuadLogger *mQuadLogger;
 
-		// helper function:
-		// finds a cosine of angle between vectors
-		// from pt0->pt1 and from pt0->pt2
-		static double angle( cv::Point pt1, cv::Point pt2, cv::Point pt0 )
-		{
-			double dx1 = pt1.x - pt0.x;
-			double dy1 = pt1.y - pt0.y;
-			double dx2 = pt2.x - pt0.x;
-			double dy2 = pt2.y - pt0.y;
-			return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
-		}
+	std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
+	std::mutex mMutex_logger;
+	std::mutex mMutex_params;
+
+	toadlet::egg::Collection<TargetFinderListener*> mListeners;
+	toadlet::egg::Collection<RegionFinderListener*> mRegionListeners;
+
+	void run();
+
+	int mThreadPriority, mScheduler;
+
+	// for new targetfinder
+	Observer_Angular *mObsvAngular;
+	Observer_Translational *mObsvTranslational;
+	vector<shared_ptr<ActiveRegion>> mActiveRegions;
 };
 
 } // namespace Quadrotor
 } // namespace ICSL
 
 #endif
+//#endif

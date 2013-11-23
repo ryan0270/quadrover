@@ -6,6 +6,8 @@
 #include <thread>
 #include <mutex>
 
+#include "android/sensor.h"
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -13,16 +15,17 @@
 
 #include <cmath>
 
+#include "TNT/tnt.h"
+
 #include "Data.h"
 #include "Common.h"
 #include "Time.h"
+#include "TNT_Utils.h"
 
 #include <toadlet/egg.h>
 
 namespace ICSL {
 namespace Quadrotor {
-//using namespace std;
-//using namespace toadlet;
 
 enum LogID
 {
@@ -109,7 +112,20 @@ class QuadLogger
 		void setFilename(toadlet::egg::String name){mFilename = name;}
 		void setMask(uint32_t mask){mTypeMask = mask;}
 		void addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type);
+		void addEntry(const LogID &id, LogFlags type);
 		void addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type);
+		void addEntry(const LogID &id, int data, const Time &t, LogFlags type);
+		void addEntry(const LogID &id, double data, LogFlags type);
+		void addEntry(const LogID &id, double data, const Time &t, LogFlags type);
+		void addEntry(const LogID &id, const TNT::Array2D<double> &data, LogFlags type);
+		void addEntry(const LogID &id, const shared_ptr<DataVector<double>> &data, LogFlags type);
+		void addEntry(const LogID &id, const SO3 &data, const TNT::Array2D<double> &velData, LogFlags type);
+		void addEntry(const LogID &id, const shared_ptr<SO3Data<double>> &data, const shared_ptr<DataVector<double>> &velData, LogFlags type);
+		void addEntry(const LogID &id, const toadlet::egg::Collection<double> &data, LogFlags type);
+		void addEntry(const LogID &id, const toadlet::egg::Collection<float> &data, LogFlags type);
+		void addEntry(const LogID &id, const cv::Point2f &data, LogFlags type);
+		void addEntry(const LogID &id, const cv::Point2f &data, const Time &t, LogFlags type);
+		void addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type);
 
 		void pause(){mPaused = true;}
 		void resume(){mPaused = false;}

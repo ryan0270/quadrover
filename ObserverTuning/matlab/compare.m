@@ -7,7 +7,9 @@ disp('start chadding')
 % dataDir = '../dataSets/Sep19';
 % dataDir = '../dataSets/Sep23';
 % dataDir = '../dataSets/Oct3_2';
-dataDir = '../dataSets/Nov1';
+% dataDir = '../dataSets/Nov1';
+% dataDir = '../dataSets/Nov2';
+dataDir = '../dataSets/Nov13_3';
 viconFile = [dataDir '/pcData.txt'];
 viconData = importdata(viconFile,'\t',0);
 
@@ -17,9 +19,9 @@ viconStateIndices = find(viconData(:,2) == 1);
 viconStateTime = viconData(viconStateIndices,1)'/1000;
 viconState = viconData(viconStateIndices,3:14)';
 
-mask = find(abs(viconState(3,:)) > 2);
-viconStateTime(mask) = [];
-viconState(:,mask) = [];
+% mask = find(abs(viconState(3,:)) > 2);
+% viconStateTime(mask) = [];
+% viconState(:,mask) = [];
 
 %%
 phoneFile = [dataDir '/obsvLog.txt'];
@@ -28,9 +30,12 @@ phoneData = phoneData(1:end-1,:);
 
 syncIndex = find(phoneData(:,2) == -500,1,'last');
 
-% angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
-% angleStateTime = phoneData(angleStateIndices,1)'/1000;
+angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
+angleStateTime = phoneData(angleStateIndices,1)'/1000;
 % angleState = phoneData(angleStateIndices,4:9)';
+quatState = phoneData(angleStateIndices,4:10)';
+temp = quat2angle(quatState(1:4,:));
+angleState = [temp([3 2 1],:); quatState(5:7,:)];
 
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;

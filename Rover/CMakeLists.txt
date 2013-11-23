@@ -60,9 +60,8 @@ set (SRC ${SRC}
 	./cpp/Observer_Translational.cpp
 	./cpp/QuadLogger.cpp
 	./cpp/CommManager.cpp
-#	./cpp/TargetFinder.cpp
+	./cpp/TargetFinder.cpp
 	./cpp/ActiveRegion.cpp
-	./cpp/TargetFinder2.cpp
 	./cpp/FeatureFinder.cpp
 	./cpp/TranslationController.cpp
 	./cpp/AttitudeThrustController.cpp
@@ -87,8 +86,7 @@ set (H ${H}
 	./cpp/QuadLogger.h
 	./cpp/Time.h
 	./cpp/CommManager.h
-#	./cpp/TargetFinder.h
-	./cpp/TargetFinder2.h
+	./cpp/TargetFinder.h
 	./cpp/ActiveRegion.h
 	./cpp/FeatureFinder.h
 	./cpp/TranslationController.h
@@ -115,7 +113,3 @@ set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 add_library (Rover SHARED ${SRC} ${H})
 target_link_libraries (Rover ${LIBS})
 install (TARGETS Rover DESTINATION ${Rover_SOURCE_DIR}/libs/${NDK_NAME_ARCH})
-
-#if (${ANDROID_NDK_API_LEVEL} LESS 9)
-	install (FILES ${JTOADLET_FLICK_JAR} ${JTOADLET_PEEPER_JAR} ${JTOADLET_RIBBIT_JAR} ${JTOADLET_PAD_JAR} ${JTOADLET_TADPOLE_JAR} DESTINATION ${Rover_SOURCE_DIR}/libs)
-#endif (${ANDROID_NDK_API_LEVEL} LESS 9)

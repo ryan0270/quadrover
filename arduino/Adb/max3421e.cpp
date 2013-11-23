@@ -1,5 +1,6 @@
 /*
-Copyright 2011 Niels Brouwers 
+Copyright 2011 Niels Brouwers
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -109,10 +110,10 @@ boolean max3421e_reset(void)
 	// Wait until the PLL is stable
 	while (!(max3421e_read(MAX_REG_USBIRQ) & bmOSCOKIRQ))
 	{
-//		// Timeout after 256 attempts.
-//		tmp++;
-//		if (tmp == 0)
-//			return (false);
+		// Timeout after 256 attempts.
+		tmp++;
+		if (tmp == 0)
+			return (false);
 	}
 
 	// Success.
