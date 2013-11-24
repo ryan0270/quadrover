@@ -125,6 +125,7 @@ using namespace TNT;
 //		SO3 attErr = mDesAtt.inv()*curMotorAtt;
 //		Array2D<double> accel(3,1,0.0);
 //		Array2D<double> refRate(3,1,0.0);
+//		SO3 refAtt;
 
 		// Simulate the reference system
 	  	for(int i=0; i<3; i++)
@@ -132,7 +133,6 @@ using namespace TNT;
 
 		Array2D<double> desVector(3,1,0.0);
 		double desTheta = 0;
-// TODO: this call for some reason seems to create excessive CPU load
 		mDesAtt.getAngleAxis(desTheta, desVector);
 		desVector = desTheta*desVector;
 		Array2D<double> accel(3,1);
@@ -264,7 +264,6 @@ using namespace TNT;
 	void AttitudeThrustController::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData)
 	{
 		mMutex_data.lock();
-//		mCurAtt.inject(attData->rotation.getAnglesZYX());
 		mCurAtt = attData->rotation;
 		mCurAngularVel.inject(angularVelData->data);
 		mMutex_data.unlock();
@@ -295,17 +294,18 @@ using namespace TNT;
 	{
 		mPcIsConnected = true;
 		Log::alert(String("Turning motors off"));
-		mMutex_motorInterface.lock();
-		mMotorInterface->enableMotors(false);
-		mMutex_motorInterface.unlock();
+//		mMutex_motorInterface.lock();
+//		mMotorInterface->enableMotors(false);
+//		mMutex_motorInterface.unlock();
 	}
 	
-	void AttitudeThrustController::onNewCommMotorOn()
+//	void AttitudeThrustController::onNewCommMotorOn()
+	void AttitudeThrustController::onMotorWarmupDone()
 	{
 		mPcIsConnected = true;
-		mMutex_motorInterface.lock();
-		mMotorInterface->enableMotors(true);
-		mMutex_motorInterface.unlock();
+//		mMutex_motorInterface.lock();
+//		mMotorInterface->enableMotors(true);
+//		mMutex_motorInterface.unlock();
 
 		for(int i=0; i<mRefState.dim1(); i++)
 			mRefState[i][0] = 0;
@@ -314,9 +314,9 @@ using namespace TNT;
 	void AttitudeThrustController::onCommConnectionLost()
 	{
 		mPcIsConnected = false;
-		mMutex_motorInterface.lock();
-		mMotorInterface->enableMotors(false);
-		mMutex_motorInterface.unlock();
+//		mMutex_motorInterface.lock();
+//		mMotorInterface->enableMotors(false);
+//		mMutex_motorInterface.unlock();
 	}
 	
 	void AttitudeThrustController::onNewCommForceGain(float k)

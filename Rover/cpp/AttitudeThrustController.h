@@ -21,7 +21,8 @@ namespace Quadrotor{
 
 class AttitudeThrustController : public CommManagerListener,
 								public TranslationControllerListener,
-								public Observer_AngularListener
+								public Observer_AngularListener,
+								public MotorInterfaceListener
 {
 	public:
 	AttitudeThrustController();
@@ -48,7 +49,7 @@ class AttitudeThrustController : public CommManagerListener,
 	void onNewCommForceGain(float k);
 	void onNewCommTorqueGain(float k);
 	void onCommConnectionLost();
-	void onNewCommMotorOn();
+//	void onNewCommMotorOn();
 	void onNewCommMotorOff();
 	void onNewCommMotorTrim(const int trim[4]);
 	void onNewCommMass(float m);
@@ -60,6 +61,9 @@ class AttitudeThrustController : public CommManagerListener,
 
 	// for Observer_AngularListener
 	void onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData, const shared_ptr<DataVector<double>> &angularVelData);
+
+	// for MotorInterfaceListener
+	void onMotorWarmupDone();
 
 	protected:
 	bool mRunning, mDone;

@@ -295,5 +295,20 @@ using namespace toadlet::egg;
 
 		return received;
 	}
+
+	void MotorInterface::onCommConnectionLost()
+	{
+		enableMotors(false);
+	}
+
+	void MotorInterface::onNewCommMotorOn()
+	{
+		enableMotors(true);
+	}
+
+	void MotorInterface::onNewCommMotorOff()
+	{
+		enableMotors(false);
+	}
 } // namespace Quadrotor
 } // namespace ICSL

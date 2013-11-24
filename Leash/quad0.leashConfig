@@ -2,13 +2,13 @@
 <Controller>
    <Translation>
       <P>
-         <x>3.000000</x>
-         <y>3.000000</y>
+         <x>2.000000</x>
+         <y>2.000000</y>
          <z>2.000000</z>
       </P>
       <D>
-         <x>3.000000</x>
-         <y>3.000000</y>
+         <x>2.000000</x>
+         <y>2.000000</y>
          <z>2.000000</z>
       </D>
       <I>
@@ -37,8 +37,8 @@
    </IBVS>
    <Attitude>
       <P>
-         <x>0.500000</x>
-         <y>0.500000</y>
+         <x>0.250000</x>
+         <y>0.250000</y>
          <z>1.000000</z>
       </P>
       <D>
@@ -100,9 +100,9 @@
    <TotalMass>1.100000</TotalMass>
    <MotorTrim>
       <North>-35.000000</North>
-      <East>45.000000</East>
+      <East>55.000000</East>
       <South>-70.000000</South>
-      <West>45.000000</West>
+      <West>35.000000</West>
    </MotorTrim>
 </Hardware>
 <Vision>
@@ -116,5 +116,5 @@
 </Vision>
 <LogMask>4763</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
-<IP>192.168.100.107</IP>
+<IP>192.168.100.130</IP>
 <Port>13120</Port>

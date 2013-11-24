@@ -28,7 +28,10 @@ syncIndex = find(phoneData(:,2) == -500,1,'last');
 
 angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
 angleStateTime = phoneData(angleStateIndices,1)'/1000;
-angleState = phoneData(angleStateIndices,4:9)';
+% angleState = phoneData(angleStateIndices,4:9)';
+quatState = phoneData(angleStateIndices,4:10)';
+temp = quat2angle(quatState(1:4,:));
+angleState = [temp([3 2 1],:); quatState(5:7,:)];
 
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
@@ -38,7 +41,6 @@ tranStateTime = tranStateTime(mask);
 tranState = tranState(:,mask);
 if ~isempty(tranState)
 	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime,[],'extrap')';
-% 	tranStateInterp = interp1(tranStateTime,tranState',angleStateTime,[],'extrap')';
 	stateTime = angleStateTime;
 	state = [angleState; tranStateInterp];
 	state_dt = mean(diff(stateTime));

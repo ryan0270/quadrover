@@ -16,7 +16,7 @@
 
 #include <string.h>
 #include <Adb.h>
-#include "../key_exchange_RSA/key_exchange_RSA/util.h"
+//#include "../key_exchange_RSA/key_exchange_RSA/util.h"
 
 // #define DEBUG
 
@@ -41,6 +41,7 @@ static void usbEventHandler(usb_device * device, usb_eventType event);
  */
 void ADB::init()
 {
+
 	// Signal that we are not connected.
 	adbDevice = NULL;
 	connected = false;
@@ -457,43 +458,43 @@ void ADB::handleAuthenticate(adb_message * message)
 		bytesLeft -= bytesRead;
 	}
 
-	uint16_t bufSigned[ADB_USB_PACKETSIZE];
-	for(int i=0; i<numBytes; i++)
-		bufSigned[i] = rsa::raiseto_mod(buf[i], privateKey[0], privateKey[1]);
+//	uint16_t bufSigned[ADB_USB_PACKETSIZE];
+//	for(int i=0; i<numBytes; i++)
+//		bufSigned[i] = rsa::raiseto_mod(buf[i], privateKey[0], privateKey[1]);
+//
+//	uint16_t bufDecrypted[ADB_USB_PACKETSIZE];
+//	for(int i=0; i<numBytes; i++)
+//		bufDecrypted[i] = rsa::raiseto_mod(bufSigned[i], publicKey[0], publicKey[1]);
 
-	uint16_t bufDecrypted[ADB_USB_PACKETSIZE];
-	for(int i=0; i<numBytes; i++)
-		bufDecrypted[i] = rsa::raiseto_mod(bufSigned[i], publicKey[0], publicKey[1]);
-
-	Serial.print("Recevied A_AUTH with args: ");
-	Serial.print(message->arg0);
-	Serial.print(", ");
-	Serial.print(message->arg1);
-	Serial.print(", ");
-	Serial.println(numBytes);
-	Serial.print("  Message: ");
-	for(int i=0; i<numBytes; i++)
-		Serial.print(buf[i],HEX);
-	Serial.print("\n");
-	Serial.print("Decrypted: ");
-	for(int i=0; i<numBytes; i++)
-		Serial.print(bufDecrypted[i],HEX);
-	Serial.print("\n");
-	Serial.print("   Signed: ");
-	for(int i=0; i<numBytes; i++)
-		Serial.print(bufSigned[i],HEX);
-	Serial.print("\n");
+//	Serial.print("Recevied A_AUTH with args: ");
+//	Serial.print(message->arg0);
+//	Serial.print(", ");
+//	Serial.print(message->arg1);
+//	Serial.print(", ");
+//	Serial.println(numBytes);
+//	Serial.print("  Message: ");
+//	for(int i=0; i<numBytes; i++)
+//		Serial.print(buf[i],HEX);
+//	Serial.print("\n");
+//	Serial.print("Decrypted: ");
+//	for(int i=0; i<numBytes; i++)
+//		Serial.print(bufDecrypted[i],HEX);
+//	Serial.print("\n");
+//	Serial.print("   Signed: ");
+//	for(int i=0; i<numBytes; i++)
+//		Serial.print(bufSigned[i],HEX);
+//	Serial.print("\n");
 
 	ADB::writeStringMessage(adbDevice, A_AUTH, ADB_AUTH_RSAPUBLICKEY, NULL, "Chad AUTH");
 	while(!ADB::pollMessage(message, true))
 		delay(1);
 	if(message->command == A_CNXN)
 		ADB::handleConnect(message);
-	else
-	{
-		Serial.println("Unexpected response: ");
-		Serial.println(message->command,HEX);
-	}
+//	else
+//	{
+//		Serial.println("Unexpected response: ");
+//		Serial.println(message->command,HEX);
+//	}
 }
 
 /**
@@ -684,7 +685,6 @@ static void usbEventHandler(usb_device * device, usb_eventType event)
 	switch (event)
 	{
 	case USB_CONNECT:
-
 		// Check if the newly connected device is an ADB device, and initialise it if so.
 		if (ADB::isAdbDevice(device, 0, &handle))
 			ADB::initUsb(device, &handle);
