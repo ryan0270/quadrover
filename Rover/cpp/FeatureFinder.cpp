@@ -122,17 +122,17 @@ void FeatureFinder::run()
 			}
 
 			// A little adaptation to achieve the target number of points
-			if(points.size() == 0)
-			{
-				mMutex_params.lock();
-				fastThresh = mFASTThreshold;
-				mMutex_params.unlock();
-			}
-			else
-			{
+//			if(points.size() == 0)
+//			{
+//				mMutex_params.lock();
+//				fastThresh = mFASTThreshold;
+//				mMutex_params.unlock();
+//			}
+//			else
+//			{
 				fastThresh += min(1.0f, max(-1.0f, fastAdaptRate*((float)points.size()-pointCntTarget)));
 				fastThresh = max(5.0f, fastThresh);
-			}
+//			}
 
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
 			try{ curImage.copyTo(*imageAnnotated); }

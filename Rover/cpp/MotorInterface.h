@@ -25,7 +25,7 @@ enum
 	COMM_ARDUINO_HEIGHT=1,
 };
 
-class MotorInterface
+class MotorInterface : public CommManagerListener
 {
 	public:
 	MotorInterface();
@@ -50,6 +50,11 @@ class MotorInterface
 	void addSonarListener(SonarListener *listener){mSonarListeners.push_back(listener);}
 
 	void setStartTime(Time time){mStartTime.setTime(time);}
+
+	// for CommManagerListener
+	void onCommConnectionLost();
+	void onNewCommMotorOn();
+	void onNewCommMotorOff();
 
 	protected:
 	toadlet::egg::Socket::ptr mServerSocketSend, mSocketSend;

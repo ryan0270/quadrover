@@ -83,6 +83,7 @@ void Rover::initialize()
 	mMotorInterface.initialize();
 	mMotorInterface.enableMotors(false);
 	mMotorInterface.start();
+	mCommManager.addListener(&mMotorInterface);
 	
 	mMutex_cntl.lock();
 	mTranslationController.setRotViconToPhone(mRotViconToPhone);
@@ -98,6 +99,7 @@ void Rover::initialize()
 	mAttitudeThrustController.start();
 	mCommManager.addListener(&mAttitudeThrustController);
 	mTranslationController.addListener(&mAttitudeThrustController);
+	mMotorInterface.addListener(&mAttitudeThrustController);
 	mMutex_cntl.unlock();
 
 	mObsvAngular.initialize();
@@ -235,10 +237,10 @@ void Rover::run()
 		}
 		if(!mImageIsSending && mLastImageSendTime.getElapsedTimeMS() > 200)
 		{
-//			mImageIsSending = true;
-//			imageSendTh = thread(&Rover::transmitImage, this);
-//			imageSendTh.detach();
-//			mLastImageSendTime.setTime();
+			mImageIsSending = true;
+			imageSendTh = thread(&Rover::transmitImage, this);
+			imageSendTh.detach();
+			mLastImageSendTime.setTime();
 		}
 
 		freq = getCpuFreq();
@@ -500,8 +502,6 @@ void Rover::transmitDataUDP()
 
 void Rover::transmitImage()
 {
-//mImageIsSending = false;
-//return;
 	if(!mCommManager.pcIsConnected())
 	{
 		mImageIsSending = false;
@@ -529,8 +529,6 @@ void Rover::transmitImage()
 	vector<int> params;
 	params.push_back(CV_IMWRITE_JPEG_QUALITY);
 	params.push_back(30); // 0 to 100, higher is better
-//	params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-//	params.push_back(3);
 
 	// now send it
 	numRows = img.rows;

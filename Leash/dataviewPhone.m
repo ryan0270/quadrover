@@ -17,7 +17,10 @@ angleStateRef = phoneData(angleStateRefIndices,3:8)';
 
 angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
 angleStateTime = phoneData(angleStateIndices,1)'/1000;
-angleState = phoneData(angleStateIndices,4:9)';
+% angleState = phoneData(angleStateIndices,4:9)';
+quatState = phoneData(angleStateIndices,4:10)';
+temp = quat2angle(quatState(1:4,:));
+angleState = [temp([3 2 1],:); quatState(5:7,:)];
 
 tranStateRefIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_DES_TRANS_STATE);
 tranStateRefTime = phoneData(tranStateRefIndices,1)'/1000;
@@ -177,7 +180,10 @@ torqueCmd = phoneData(torqueCmdIndices,3:6)';
 
 angleRefModelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_REF_ATTITUDE_SYSTEM_STATE);
 angleRefModelTime = phoneData(angleRefModelIndices,1)'/1000;
-angleRefModel = phoneData(angleRefModelIndices,3:8)';
+% angleRefModel = phoneData(angleRefModelIndices,4:9)';
+quatState = phoneData(angleRefModelIndices,3:9)';
+temp = quat2angle(quatState(1:4,:));
+angleRefModel = [temp([3 2 1],:); quatState(5:7,:)];
 
 visionInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VISION_INNOVATION);
 visionInnovationTime = phoneData(visionInnovationIndices,1)'/1000;
@@ -222,7 +228,7 @@ if exist('state','var') && ~isempty(state)
 		subplot(2,3,i);
 		plot(stateRefTime, stateRef(i,:)); hold all
         plot(stateTime,state(i,:),'LineWidth',2); hold all
-% 		plot(angleRefModelTime, angleRefModel(i,:)); hold all
+		plot(angleRefModelTime, angleRefModel(i,:)); hold all
 		hold off
         xlabel('Time [s]');
         ylabel(stateLabels(i));
