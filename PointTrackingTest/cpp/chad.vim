@@ -39,46 +39,16 @@ set undofile
 let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
 let v:this_session=expand("<sfile>:p")
 silent only
-cd ~/Software/QuadRover/ObserverTuning/cpp
+cd ~/Software/QuadRover/PointTrackingTest/cpp
 if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
 badd +1 main.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/Rover.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/Observer_Angular.h
-badd +1 ~/Software/QuadRover/Rover/cpp/Observer_Angular.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/Observer_Translational.h
-badd +1 ~/Software/QuadRover/Rover/cpp/Observer_Translational.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/AttitudeThrustController.h
-badd +1 ~/Software/QuadRover/Rover/cpp/AttitudeThrustController.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/TranslationController.h
-badd +1 ~/Software/QuadRover/Rover/cpp/TranslationController.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/MotorInterface.h
-badd +1 ~/Software/QuadRover/Rover/cpp/MotorInterface.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/CommManager.h
-badd +1 ~/Software/QuadRover/Rover/cpp/CommManager.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/SensorManager.h
-badd +1 ~/Software/QuadRover/Rover/cpp/SensorManager.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/FeatureFinder.h
 badd +1 ~/Software/QuadRover/Rover/cpp/FeatureFinder.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder.h
-badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/VelocityEstimator.h
-badd +1 ~/Software/QuadRover/Rover/cpp/VelocityEstimator.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/Common.h
-badd +1 ~/Software/QuadRover/Rover/cpp/Data.h
-badd +1 ~/Software/QuadRover/Rover/cpp/QuadLogger.h
-badd +1 ~/Software/QuadRover/Rover/cpp/QuadLogger.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.h
-badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/Time.h
-badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.h
-badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.h
-badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/Listeners.h
-badd +1 ~/Software/QuadRover/Rover/cpp/TNT_Utils.h
+badd +1 ~/Software/QuadRover/Rover/cpp/TrackedPoint.h
+badd +1 ~/Software/QuadRover/Rover/cpp/TrackedPoint.cpp
 args main.cpp main.cpp
 edit main.cpp
 set splitbelow splitright
@@ -189,7 +159,8 @@ setlocal tabstop=4
 setlocal tags=
 setlocal textwidth=0
 setlocal thesaurus=
-setlocal noundofile
+setlocal undofile
+setlocal undolevels=-123456
 setlocal nowinfixheight
 setlocal nowinfixwidth
 set nowrap
@@ -202,10 +173,9 @@ exe s:l
 normal! zt
 1
 normal! 0
-lcd ~/Software/QuadRover/ObserverTuning/cpp
 wincmd w
 argglobal
-edit ~/Software/QuadRover/ObserverTuning/cpp/main.cpp
+edit ~/Software/QuadRover/Rover/cpp/FeatureFinder.h
 setlocal keymap=
 setlocal noarabic
 setlocal autoindent
@@ -302,7 +272,8 @@ setlocal tabstop=4
 setlocal tags=
 setlocal textwidth=0
 setlocal thesaurus=
-setlocal noundofile
+setlocal undofile
+setlocal undolevels=-123456
 setlocal nowinfixheight
 setlocal nowinfixwidth
 set nowrap
@@ -315,9 +286,7 @@ exe s:l
 normal! zt
 1
 normal! 0
-lcd ~/Software/QuadRover/ObserverTuning/cpp
 wincmd w
-2wincmd w
 exe 'vert 1resize ' . ((&columns * 118 + 118) / 237)
 exe 'vert 2resize ' . ((&columns * 118 + 118) / 237)
 tabnext 1

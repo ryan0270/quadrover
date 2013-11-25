@@ -1,5 +1,0 @@
-#!/bin/bash
-
-ant clean
-ant uninstall
-ant debug install
