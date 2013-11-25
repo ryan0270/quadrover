@@ -13,9 +13,7 @@ std::mutex TrackedPoint::mutex_lastID;
 
 TrackedPoint::TrackedPoint() :
 	mExpectedPos(2,1,0.0),
-	mPosCov(2,2,0.0),
-	mPrincipalAxes(2,2,0.0),
-	mPrincipalAxesEigVal(2,0.0)
+	mPosCov(2,2,0.0)
 {
 	mLife = 10;
 	mutex_lastID.lock(); mId = lastID++; mutex_lastID.unlock();
@@ -24,33 +22,29 @@ TrackedPoint::TrackedPoint() :
 	mPosCov[0][0] = mPosCov[1][1] = 1;
 }
 
-TrackedPoint::TrackedPoint(std::vector<cv::Point> points) : TrackedPoint()
+TrackedPoint::TrackedPoint(const Time & time, const cv::Point2f &point) : TrackedPoint()
 {
-	mContour = points;
-	mMoments = cv::moments(points);
-	mFoundPos.x = mMoments.m10/mMoments.m00;
-	mFoundPos.y = mMoments.m01/mMoments.m00;
-	mExpectedPos[0][0] = mFoundPos.x;
-	mExpectedPos[1][0] = mFoundPos.y;
-	calcPrincipalAxes();
+	mPoint = point;
+	mExpectedPos[0][0] = point.x;
+	mExpectedPos[1][0] = point.y;
+	mHistory.push_back(pair<Time, cv::Point2f>(time, point));
+	mLastFoundTime.setTime(time);
 }
 
-void TrackedPoint::copyData(const TrackedPoint &ao)
+void TrackedPoint::copyData(const TrackedPoint &tp)
 {
-	mContour.assign(ao.mContour.begin(), ao.mContour.end());
-	mMoments = ao.mMoments;
-	mPrevFoundPos = mFoundPos;
-	mFoundPos = ao.mFoundPos;
-	mPrincipalAxes.inject(ao.mPrincipalAxes);
-	mPrincipalAxesEigVal[0] = ao.mPrincipalAxesEigVal[0];
-	mPrincipalAxesEigVal[1] = ao.mPrincipalAxesEigVal[1];
-	for(int i=0; i<ao.mNeighbors.size(); i++)
-		addNeighbor(ao.mNeighbors[i], true);
+	mPoint = tp.mPoint;
+	mLastFoundTime = tp.mLastFoundTime;
+	mCreateTime = tp.mCreateTime;
+	mLife = tp.mLife;
+	mId = tp.mId;
 }
 
-void TrackedPoint::markFound(const Time &time)
+void TrackedPoint::markFound(const Time &time, const cv::Point2f &point)
 {
 	mLastFoundTime.setTime(time);
+	mPoint = point;
+	mHistory.push_back(pair<Time, cv::Point2f>(time, point));
 }
 
 void TrackedPoint::addLife(float val)
@@ -69,136 +63,9 @@ void TrackedPoint::takeLife(float val)
 void TrackedPoint::kill()
 {
 	mLife = 0;
-	// need to copy this list first
-	// since when we go to remove neighbors
-	// it will modify my list
-	vector<shared_ptr<TrackedPoint>> nList = mNeighbors;
-	for(int i=0; i<mNeighbors.size(); i++)
-		mNeighbors[i]->removeNeigbor(mId, false);
-
-	mNeighbors.clear();
 }
 
-void TrackedPoint::addNeighbor(shared_ptr<TrackedPoint> n, bool doTwoWay)
-{
-	if(n->mLife <= 0)
-	{
-		Log::alert("dud");
-		return;
-	}
-	if(n->mId == mId)
-	{
-		Log::alert("adding myself");
-		return;
-	}
 
-	bool found = false;
-	for(int i=0; i<mNeighbors.size(); i++)
-		if(n->mId == mNeighbors[i]->mId)
-		{
-			found = true;
-			break;
-		}
-
-	if(!found)
-	{
-		mNeighbors.push_back(n);
-//Log::alert(String()+"Connecting " + mId + " and "+n->mId);
-	}
-
-	if(doTwoWay)
-		n->addNeighbor(shared_from_this(), false);
-
-	// check for duds
-	bool haveDud = false;
-	for(int i=0; i<mNeighbors.size(); i++)
-		if(!mNeighbors[i]->isAlive())
-		{
-			haveDud = true;
-			break;
-		}
-	
-	if(haveDud)// || mNeighbors.size() > 50)
-	{
-		String str = "\n";
-		Log::alert("------------------------- Have a dud -------------------------");
-		for(int i=0; i<mNeighbors.size(); i++)
-		{
-			str = str+mNeighbors[i]->mId+"\t";
-			str = str+mNeighbors[i]->mLife+"\t";
-			str = str+"\n";
-		}
-		Log::alert(str);
-		Log::alert("//////////////////////////////////////////////////");
-	}
-}
-
-void TrackedPoint::removeNeigbor(int nid, bool doTwoWay)
-{
-	vector<shared_ptr<TrackedPoint>>::iterator iter;
-	iter = mNeighbors.begin();
-	bool found = false;
-	while(iter != mNeighbors.end() && !found)
-	{
-		if((*iter)->mId == nid)
-		{
-			shared_ptr<TrackedPoint> n = *iter;
-			mNeighbors.erase(iter);
-			if(doTwoWay)
-				n->removeNeigbor(mId, false);
-			found = true;
-		}
-		iter++;
-	}
-}
-
-// from http://en.wikipedia.org/wiki/Image_moment
-void TrackedPoint::calcPrincipalAxes()
-{
-	Array2D<double> cov(2,2);
-	cov[0][0] = mMoments.mu20/mMoments.m00;
-	cov[0][1] = mMoments.mu11/mMoments.m00;
-	cov[1][0] = cov[0][1];
-	cov[1][1] = mMoments.mu02/mMoments.m00;
-
-	double eigMid = 0.5*(cov[0][0]+cov[1][1]);
-	double eigOffset = 0.5*sqrt( (cov[0][0]-cov[1][1])*(cov[0][0]-cov[1][1]) + 4*cov[0][1]*cov[0][1] );
-	mPrincipalAxesEigVal[0] = eigMid+eigOffset;
-	mPrincipalAxesEigVal[1] = eigMid-eigOffset;
-	if(cov[0][1] == 0)
-	{
-		if(cov[0][0] > cov[1][1])
-		{
-			mPrincipalAxes[0][0] = 1;
-			mPrincipalAxes[1][0] = 0;
-			mPrincipalAxes[0][1] = 0;
-			mPrincipalAxes[1][1] = 1;
-		}
-		else
-		{
-			mPrincipalAxes[0][0] = 0;
-			mPrincipalAxes[1][0] = 1;
-			mPrincipalAxes[0][1] = 1;
-			mPrincipalAxes[1][1] = 0;
-		}
-	}
-	else
-	{
-		mPrincipalAxes[0][0] = mPrincipalAxesEigVal[0]-cov[1][1];
-		mPrincipalAxes[1][0] = cov[0][1];
-		mPrincipalAxes[0][1] = mPrincipalAxes[1][0];
-		mPrincipalAxes[1][1] = -mPrincipalAxes[0][0];
-	}
-
-	double scale0 = norm2(submat(mPrincipalAxes,0,1,0,0));
-	double scale1 = norm2(submat(mPrincipalAxes,0,1,1,1));
-	mPrincipalAxes[0][0] /= scale0;
-	mPrincipalAxes[1][0] /= scale0;
-	mPrincipalAxes[0][1] /= scale1;
-	mPrincipalAxes[1][1] /= scale1;
-	mPrincipalAxesEigVal[0] /= scale0;
-	mPrincipalAxesEigVal[1] /= scale1;
-}
 
 // Hmm, should I change this so it does incremental updates instead of updating as
 // one big step from the last found time
@@ -255,8 +122,8 @@ void TrackedPoint::updatePositionDistribution(const Array2D<double> &mv, const A
 		mz2Inv = 1.0/mz/mz+sz*sz/pow(mz,4);
 	}
 
-	double x = mFoundPos.x-center.x;
-	double y = mFoundPos.y-center.y;
+	double x = mPoint.x-center.x;
+	double y = mPoint.y-center.y;
 	double dt = Time::calcDiffNS(mLastFoundTime, curTime)/1.0e9;
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
@@ -291,17 +158,16 @@ void TrackedPoint::updatePositionDistribution(const Array2D<double> &mv, const A
 	mExpectedPos[1][0] += center.y;
 }
 
-// TODO: This should operate on S1 and S2 (the covariances of each point being matched
-// instead of assuming a constant Sn for curObjectList
-Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<TrackedPoint>> &prevObjectList,
-												 const vector<shared_ptr<TrackedPoint>> &curObjectList,
+// TODO: This should operate on S1 and S2 (the covariances of each point being matched)
+// instead of assuming a constant Sn for curPointList
+Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<TrackedPoint>> &prevPointList,
+												 const vector<shared_ptr<TrackedPoint>> &curPointList,
 												 const Array2D<double> &Sn1,
 												 const Array2D<double> &SnInv1,
-												 double varxi_ratio,
 												 double probNoCorr)
 {
-	int N1 = prevObjectList.size();
-	int N2 = curObjectList.size();
+	int N1 = prevPointList.size();
+	int N2 = curPointList.size();
 
 	if(N1 == 0 || N2 == 0)
 		return Array2D<double>();
@@ -323,8 +189,8 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 	double eigMid, eigOffset;
 	for(int i=0; i<N1; i++)
 	{
-		md.inject(prevObjectList[i]->mExpectedPos);
-		Sd.inject(prevObjectList[i]->mPosCov);
+		md.inject(prevPointList[i]->mExpectedPos);
+		Sd.inject(prevPointList[i]->mPosCov);
 
 		den = Sd[0][0]*Sd[1][1]-Sd[0][1]*Sd[1][0];
 		SdInv[0][0] = Sd[1][1]/den;
@@ -402,11 +268,11 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 	double x, y, fC, f;
 	for(int j=0; j<N2; j++)
 	{
-		x = curObjectList[j]->mFoundPos.x;
-		y = curObjectList[j]->mFoundPos.y;
+		x = curPointList[j]->mPoint.x;
+		y = curPointList[j]->mPoint.y;
 		for(int i=0; i<N1; i++)
 		{
-			md.inject(prevObjectList[i]->mExpectedPos);
+			md.inject(prevPointList[i]->mExpectedPos);
 			if(abs(x-md[0][0]) < xRangeList[i] && abs(y-md[1][0]) < yRangeList[i] )
 				chad.push_back(make_pair(i, j));
 			else
@@ -414,16 +280,14 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 		}
 	}
 
-	double dxi, pxi;
-//	double pxi_coeff = 1.0/sqrt(2.0*PI*varxi);
 	Array2D<double> mq(2,1), SnInvmq(2,1), ma(2,1), temp1(2,1);
 	double scale = 1e6;
 	for(int idx=0; idx<chad.size(); idx++)
 	{
 		int i=chad[idx].first;
 		int j=chad[idx].second;
-		mq[0][0] = curObjectList[j]->mFoundPos.x;
-		mq[1][0] = curObjectList[j]->mFoundPos.y;
+		mq[0][0] = curPointList[j]->mPoint.x;
+		mq[1][0] = curPointList[j]->mPoint.y;
 
 		SnInvmq[0][0] = SnInv[0][0]*mq[0][0]; // assumes Sn diagonal
 		SnInvmq[1][0] = SnInv[1][1]*mq[1][0];
@@ -431,7 +295,7 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 //		double fC = matmultS(transpose(mq),matmult(SnInv,mq));
 		fC = SnInv[0][0]*mq[0][0]*mq[0][0] + SnInv[1][1]*mq[1][0]*mq[1][0]; // assumes Sn is diagonal
 		
-		md.inject(prevObjectList[i]->mExpectedPos);
+		md.inject(prevPointList[i]->mExpectedPos);
 //		ma = matmult(SaList[i],SdInvmdList[i]+SnInvmq);
 		temp1.inject(SdInvmdList[i]+SnInvmq);
 		ma[0][0] = SaList[i][0][0]*temp1[0][0] + SaList[i][0][1]*temp1[1][0];
@@ -441,12 +305,7 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 		f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
 			+ fBList[i] + fC;
 
-		// shape distribution
-		double varxi = pow(varxi_ratio*prevObjectList[i]->getArea(),2);
-		double pxi_coeff = 1.0/sqrt(2.0*PI*varxi);
-		dxi = calcShapeDistance(prevObjectList[i], curObjectList[j]);
-		pxi = pxi_coeff*exp(-0.5*dxi*dxi/varxi);
-		C[i][j] = scale*pxi*coeffList[i]*exp(-0.5*f);
+		C[i][j] = scale*coeffList[i]*exp(-0.5*f);
 	}
 
 	for(int j=0; j<N2; j++)
@@ -455,9 +314,10 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 	C[N1][N2] = 0;
 
 	// Scale colums to unit sum
+	double colSum;
 	for(int j=0; j<N2; j++)
 	{
-		double colSum = 0;
+		colSum = 0;
 		for(int i=0; i<N1+1; i++)
 			colSum += C[i][j];
 
@@ -471,9 +331,10 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 		return C;
 
 	// Now check if any of the rows sum to over 1
+	double rowSum;
 	for(int i=0; i<N1; i++)
 	{
-		double rowSum = 0;
+		rowSum = 0;
 		for(int j=0; j<N2; j++)
 			rowSum += C[i][j];
 
@@ -492,7 +353,7 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 	// and, finally, reset the virtual point correspondence so columns sum to 1 again
 	for(int j=0; j<N2; j++)
 	{
-		double colSum = 0;
+		colSum = 0;
 		for(int i=0; i<N1; i++)
 			colSum += C[i][j];
 		C[N1][j] = 1-colSum;
@@ -501,42 +362,6 @@ Array2D<double> TrackedPoint::calcCorrespondence(const vector<shared_ptr<Tracked
 //printArray("C:\n",C);
 
 	return C;
-}
-
-double TrackedPoint::calcShapeDistance(const shared_ptr<TrackedPoint> &ao1, const shared_ptr<TrackedPoint> &ao2)
-{
-	return abs(ao1->mMoments.m00 - ao2->mMoments.m00);
-// Adapted from OpenCV's matchShapes (but I use central moments instead of Hu moments)
-//	double c1, c2, c3;
-//	c1 = c2 = c3 = 0;
-//	int sma, smb;
-//	for(int k=0; k<7; k++)
-//	{
-//		double ama = abs( ao1->centralMoms[k] );
-//		double amb = abs( ao2->centralMoms[k] );
-//		if(ama < 1.e-5 || amb < 1.e-5)
-//			continue;
-//		if(ao1->centralMoms[k] > 0)
-//			sma = 1;
-//		else if(ao1->centralMoms[k] < 0)
-//			sma = -1;
-//		else
-//			sma = 0;
-//		if(ao2->centralMoms[k] > 0)
-//			smb = 1;
-//		else if(ao2->centralMoms[k] < 0)
-//			smb = -1;
-//		else
-//			smb = 0;
-//
-//		ama = sma*log10(ama);
-//		amb = smb*log10(amb);
-//		c1 += abs(-1./ama+1./amb);
-////		c2 += abs(-ama+amb);
-////		c3 = max(c3, abs((ama-amb)/ama));
-//	}
-//
-//	return c1;
 }
 
 }
