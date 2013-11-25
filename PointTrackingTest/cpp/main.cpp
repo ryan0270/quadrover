@@ -18,6 +18,16 @@
 #include "FeatureFinder.h"
 #include "TrackedPoint.h"
 
+void matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &curPoints,
+			  std::vector<ICSL::Quadrotor::PointMatch> &goodMatches,
+			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &repeatPoints,
+			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &newPoints,
+			  const TNT::Array2D<double> Sn,
+			  const TNT::Array2D<double> SnInv,
+			  double probNoCorr,
+			  const ICSL::Quadrotor::Time &imageTime,
+			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &mTrackedPoints);
+
 int main(int argv, char* argc[])
 {
 	using namespace ICSL;
@@ -36,6 +46,7 @@ int main(int argv, char* argc[])
 		case 0:
 			dataDir = "../dataSets/Nov13_3";
 			startImg = 4686;
+			startImg += 500;
 			endImg = 7486;
 			break;
 	}
@@ -107,15 +118,13 @@ int main(int argv, char* argc[])
 	cv::namedWindow("tom",1);
 	cv::moveWindow("tom",0,261);
 
-//	vector<shared_ptr<ActiveRegion>> activeRegions;
-//
-//	Array2D<double> Sn = 10*10*createIdentity((double)2);
-//	Array2D<double> SnInv(2,2,0.0);
-//	SnInv[0][0] = 1.0/Sn[0][0];
-//	SnInv[1][1] = 1.0/Sn[1][1];
-////	double varxi = pow(500,2);
-//	double varxi_ratio = 0.1;
-//	double probNoCorr = 0.0000001;
+	vector<shared_ptr<TrackedPoint>> trackedPoints;
+
+	Array2D<double> Sn = 5*5*createIdentity((double)2);
+	Array2D<double> SnInv(2,2,0.0);
+	SnInv[0][0] = 1.0/Sn[0][0];
+	SnInv[1][1] = 1.0/Sn[1][1];
+	double probNoCorr = 1e-6;
 
 	FeatureFinder featureFinder;
 	featureFinder.initialize();
@@ -129,7 +138,7 @@ int main(int argv, char* argc[])
 	vector<cv::Point2f> points;
 	float qualityLevel = 0.05;
 	float fastThresh = 30;
-	int sepDist = 10;
+	int sepDist = 50;
 	float pointCntTarget = 30;
 	float fastAdaptRate = 0.01;
 	while(keypress != (int)'q' && imgIter != imgList.end())
@@ -147,77 +156,70 @@ Time start;
 			for(int i=0; i<points.size(); i++)
 				points[i] = points[i]*f+center;
 		}
-		
-//		vector<vector<cv::Point>> allContours = targetFinder.findContours(imgGray);
-//
-//		vector<shared_ptr<ActiveRegion>> curRegions = targetFinder.objectify(allContours,Sn,SnInv,varxi_ratio,probNoCorr,curTime);
-//
-//		/////////////////// Get location priors for active regions ///////////////////////
-//		Array2D<double> mv(3,1,0.0);
-//		Array2D<double> Sv = 0.1*0.1*createIdentity((double)3);
-//		double mz = 1;
-//		double sz = 0.05;
-//		double f = mCameraMatrix_640x480->at<double>(0,0);
-//		Array2D<double> omega(3,1,0.0);
-//
-//		activeRegions = targetFinder.getActiveRegions();
-//
-//		for(int i=0; i<activeRegions.size(); i++)
-//		{
-//			shared_ptr<ActiveRegion> ao = activeRegions[i];
-//			ao->updatePositionDistribution(mv, Sv, mz, sz*sz, f, center, omega, curTime);
-//		}
-//
-//		/////////////////// make matches ///////////////////////
-//		vector<RegionMatch> goodMatches;
-//		vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
-//		targetFinder.matchify(curRegions, goodMatches, repeatRegions, newRegions, Sn, SnInv, varxi_ratio, probNoCorr, curTime);
-//		activeRegions = targetFinder.getActiveRegions();
-//		activeCnt += activeRegions.size();
-//
-//
-		imshow("chad",oldImg);
 
-//		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
-//		oldImg.copyTo(dblImg(cv::Rect(0,0,oldImg.cols,oldImg.rows)));
-
+		// make objects
+		vector<shared_ptr<TrackedPoint>> curPoints(points.size());
 		for(int i=0; i<points.size(); i++)
 		{
-			if(imgCnt % 2 == 0)
-			circle(img, points[i], 3, cv::Scalar(0,255,0), -1);
-			else
-			circle(img, points[i], 3, cv::Scalar(255,0,0), -1);
+			curPoints[i] = shared_ptr<TrackedPoint>(new TrackedPoint(curTime, points[i]));
+//			curPoints[i]->markFound(curTime, points[i]);
+			curPoints[i]->setPosCov(Sn);
 		}
-//
-//		vector<vector<cv::Point>> curContours(curRegions.size());
-//		for(int i=0; i<curRegions.size(); i++)
-//			curContours[i] = curRegions[i]->getContour();
-//		cv::drawContours(img, curContours, -1, cv::Scalar(255,0,0), 2);
+
+//		/////////////////// Get location priors for active regions ///////////////////////
+		Array2D<double> mv(3,1,0.0);
+		Array2D<double> Sv = 0.1*0.1*createIdentity((double)3);
+		double mz = 1;
+		double sz = 0.05;
+		Array2D<double> omega(3,1,0.0);
+
+		for(int i=0; i<trackedPoints.size(); i++)
+		{
+			shared_ptr<TrackedPoint> tp = trackedPoints[i];
+			tp->updatePositionDistribution(mv, Sv, mz, sz*sz, f, center, omega, curTime);
+		}
+
+		/////////////////// make matches ///////////////////////
+		vector<PointMatch> goodMatches;
+		vector<shared_ptr<TrackedPoint>> repeatPoints, newPoints;
+		matchify(curPoints, goodMatches, repeatPoints, newPoints, Sn, SnInv, probNoCorr, curTime, trackedPoints);
+		activeCnt += trackedPoints.size();
+
+
+		imshow("chad",oldImg);
+
+		cv::Mat dblImg(img.rows, 2*img.cols, img.type());
+		oldImg.copyTo(dblImg(cv::Rect(0,0,oldImg.cols,oldImg.rows)));
+
+		for(int i=0; i<points.size(); i++)
+			circle(img, points[i], 4, cv::Scalar(255,0,0), -1);
+
 		img.copyTo(oldImg);
 		imshow("bob",img);
 
-//		/////////////////// draw principal axes ///////////////////////
-//		cv::Mat axisImg;
-//		img.copyTo(axisImg);
-//		targetFinder.drawTarget(axisImg, curRegions, repeatRegions); 
-//
-//		imshow("bob",axisImg);
-//		vector<vector<cv::Point>> repeatContours(repeatRegions.size());
-//		
-//		for(int i=0; i<repeatRegions.size(); i++)
-//			repeatContours[i] = repeatRegions[i]->getContour();
-//		cv::drawContours(img, repeatContours, -1, cv::Scalar(0,0,255), 2);
-//
+		vector<vector<cv::Point2f>> repeatPts(repeatPoints.size());
+		for(int i=0; i<repeatPoints.size(); i++)
+			circle(img, repeatPoints[i]->getPos(), 4, cv::Scalar(0,0,255), -1);
+
 //		stringstream name;
 //		name << imgDir << "/annotated/img_" << imgCnt << ".bmp";
 //		imwrite(name.str().c_str(),img);
-//
-//		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
-//		cv::Point2f offset(321,0);
-//		for(int i=0; i<goodMatches.size(); i++)
-//			line(dblImg,goodMatches[i].aoPrev->getPrevFoundPos(), goodMatches[i].aoCur->getFoundPos()+offset, cv::Scalar(0,255,0), 2);
-//		imshow("tom",dblImg);
-//
+
+		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
+		cv::Point2f offset(321,0);
+		for(int i=0; i<goodMatches.size(); i++)
+		{
+			const vector<pair<Time, cv::Point2f>> history = goodMatches[i].tpPrev->getHistory();
+			vector<pair<Time, cv::Point2f>>::const_iterator iter = history.end();
+			iter--;
+			cv::Point2f p2 = iter->second;
+			iter--;
+			cv::Point2f p1 = iter->second;
+			
+			line(dblImg,p1, p2+offset, cv::Scalar(0,255,0), 2);
+		}
+		imshow("tom",dblImg);
+
 		keypress = cv::waitKey(0) % 256;
 
 		imgIter++;
@@ -233,3 +235,115 @@ Time start;
     return 0;
 }
 
+void matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &curPoints,
+			  std::vector<ICSL::Quadrotor::PointMatch> &goodMatches,
+			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &repeatPoints,
+			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &newPoints,
+			  const TNT::Array2D<double> Sn,
+			  const TNT::Array2D<double> SnInv,
+			  double probNoCorr,
+			  const ICSL::Quadrotor::Time &imageTime,
+			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &mTrackedPoints)
+{
+	using namespace ICSL;
+	using namespace ICSL::Quadrotor;
+	using namespace TNT;
+	using namespace std;
+	/////////////////// Establish correspondence based on postiion ///////////////////////
+
+	Array2D<double> C = TrackedPoint::calcCorrespondence(mTrackedPoints, curPoints, Sn, SnInv, probNoCorr);
+printArray("C:\n",C);
+
+	///////////////////  make matches ///////////////////////
+	shared_ptr<TrackedPoint> tpPrev, tpCur;
+	int N1 = mTrackedPoints.size();
+	int N2 = curPoints.size();
+	vector<bool> prevMatched(N1, false);
+	vector<bool> curMatched(N2, false);
+	vector<cv::Point2f> offsets;
+	for(int i=0; i<N1; i++)
+	{
+		if(N2 == 0 || C[i][N2] > 0.4)
+			continue; // this object probably doesn't have a partner
+
+		tpPrev = mTrackedPoints[i];
+
+		int maxIndex = 0;
+		float maxScore = 0;
+		for(int j=0; j<N2; j++)
+		{
+			if(C[i][j] > maxScore && !curMatched[j])
+			{
+				maxScore = C[i][j];
+				maxIndex =j;
+			}
+		}
+
+		if(maxScore < 0.5)
+			continue;
+
+		curMatched[maxIndex] = true;
+		tpCur = curPoints[maxIndex];
+
+		cv::Point offset = tpCur->getPos()-tpPrev->getPos();
+		offsets.push_back(offset);
+
+		PointMatch m;
+		m.tpPrev = tpPrev;
+		m.tpCur = tpCur;
+		m.score = C[i][maxIndex];
+		goodMatches.push_back(m);
+//		tpPrev->copyData(*tpCur);
+		tpPrev->markFound(imageTime,tpCur->getPos());
+//		tpPrev->addLife(2);
+		repeatPoints.push_back(tpPrev);
+		tpCur->kill();
+	}
+
+	vector<int> dupIndices;
+	for(int j=0; j<curPoints.size(); j++)
+		if(!curMatched[j])
+		{
+			// first check to see if we didn't match because there
+			// were too many similar regions
+			bool addMe = true;
+			if(C.dim1() > 0 && C.dim2() > 0 && C[N1][j] < 0.5)
+			{
+				// yup, now we should clear out the riff raff
+				for(int i=0; i<N1; i++)
+					if(C[i][j] > 0.1)
+					{
+						if(prevMatched[i]) // the dupe already found a good match so we shouldn't delete him
+							addMe = false;
+						else
+							dupIndices.push_back(i);
+					}
+			}
+			// Now add the new region which will be the 
+			// only remaining one
+			if(addMe)
+				newPoints.push_back(curPoints[j]);
+			else
+				curPoints[j]->kill();
+		}
+
+	// sort and remove repeats 
+	sort(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator endIter = unique(dupIndices.begin(), dupIndices.end());
+	vector<int>::const_iterator iter = dupIndices.begin();
+	while(iter != endIter)
+	{
+		mTrackedPoints[(*iter)]->kill();
+		iter++;
+	}
+
+	for(int i=0; i<mTrackedPoints.size(); i++)
+		mTrackedPoints[i]->takeLife(1);
+
+	sort(mTrackedPoints.begin(), mTrackedPoints.end(), TrackedPoint::sortPredicate);
+	while(mTrackedPoints.size() > 0 && !mTrackedPoints.back()->isAlive() )
+		mTrackedPoints.pop_back();
+
+	for(int i=0; i<newPoints.size(); i++)
+		mTrackedPoints.push_back(newPoints[i]);
+}
