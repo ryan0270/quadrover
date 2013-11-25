@@ -4,13 +4,13 @@ project (TargetFindTest CXX C)
 
 # Source files
 set (SRC ${SRC}
-	${ROVER_DIR}/cpp/TargetFinder2.cpp
+	${ROVER_DIR}/cpp/TargetFinder.cpp
 	${ROVER_DIR}/cpp/ActiveRegion.cpp
 	)
 
 # Headers
 set (H ${H}
-	${ROVER_DIR}/cpp/TargetFinder2.h
+	${ROVER_DIR}/cpp/TargetFinder.h
 	${ROVER_DIR}/cpp/Time.h
 	${ROVER_DIR}/cpp/TNT_Utils.h
 	${ROVER_DIR}/cpp/Listeners.h

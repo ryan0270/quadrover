@@ -319,6 +319,7 @@ void QuadLogger::addEntry(const LogID &id, const cv::Point2f &data, const Time &
 	}
 }
 
+#ifndef ICSL_TARGETFIND_SIMULATION
 void QuadLogger::addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type)
 {
 	if( (mTypeMask & type) && mRunning)
@@ -329,6 +330,7 @@ void QuadLogger::addEntry(const LogID &id, const ASensorEvent &event, const Time
 		addEntry(Time(), id, str, type);
 	}
 }
+#endif
 
 void QuadLogger::generateMatlabHeader()
 {
