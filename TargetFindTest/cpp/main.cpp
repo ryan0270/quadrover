@@ -15,7 +15,7 @@
 #include "TNT_Utils.h"
 
 #include "Time.h"
-#include "TargetFinder2.h"
+#include "TargetFinder.h"
 #include "ActiveRegion.h"
 
 int main(int argv, char* argc[])
@@ -29,7 +29,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 6;
+	int dataSet = 7;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -68,6 +68,11 @@ int main(int argv, char* argc[])
 			dataDir = "../dataSets/Nov1";
 			startImg = 11045;
 			endImg = 13250;
+			break;
+		case 7:
+			dataDir = "../dataSets/Nov24";
+			startImg = 844;
+			endImg = 2875;
 			break;
 	}
 
@@ -139,7 +144,7 @@ int main(int argv, char* argc[])
 	double varxi_ratio = 0.1;
 	double probNoCorr = 0.0000001;
 
-	TargetFinder2 targetFinder;
+	TargetFinder targetFinder;
 
 	int keypress = 0;
 	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
