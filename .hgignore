@@ -34,3 +34,4 @@ VisionTesting/video*/*
 VisionTesting/backup*/*
 ObserverTuning/dataSets*
 TargetFindTest/dataSets*
+PointTrackingTest/dataSets*

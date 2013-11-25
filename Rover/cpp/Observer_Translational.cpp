@@ -1053,6 +1053,7 @@ Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 
 	if(mRawAccelDataBuffer.size() == 0)
 	{
+Log::alert("No accel data");
 		for(int i=0; i<6; i++)
 			mStateKF[i][0] = 0;
 		mStateKF[6][0] = 0;

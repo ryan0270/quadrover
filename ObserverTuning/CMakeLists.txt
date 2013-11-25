@@ -45,8 +45,7 @@ set (SRC ${SRC}
 	${ROVER_DIR}/cpp/Observer_Angular.cpp
 	${ROVER_DIR}/cpp/VelocityEstimator.cpp
 	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
-#	${ROVER_DIR}/cpp/TargetFinder.cpp
-	${ROVER_DIR}/cpp/TargetFinder2.cpp
+	${ROVER_DIR}/cpp/TargetFinder.cpp
 	${ROVER_DIR}/cpp/Observer_Translational.cpp
 	${ROVER_DIR}/cpp/QuadLogger.cpp
 	${ROVER_DIR}/cpp/TranslationController.cpp
@@ -65,8 +64,7 @@ set (H ${H}
 	${ROVER_DIR}/cpp/Observer_Translational.h
 	${ROVER_DIR}/cpp/Time.h
 	${ROVER_DIR}/cpp/CommManager.h
-#	${ROVER_DIR}/cpp/TargetFinder.h
-	${ROVER_DIR}/cpp/TargetFinder2.h
+	${ROVER_DIR}/cpp/TargetFinder.h
 	${ROVER_DIR}/cpp/FeatureFinder.h
 	${ROVER_DIR}/cpp/TranslationController.h
 	${ROVER_DIR}/cpp/AttitudeThrustController.h

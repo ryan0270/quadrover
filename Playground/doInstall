@@ -1,9 +1,0 @@
-#!/bin/bash
-#cd build
-#make
-#make install
-#cd ..
-ant clean
-ant uninstall
-ant debug install
-./doLogcat

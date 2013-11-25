@@ -7,6 +7,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 #include "toadlet/egg.h"
 
@@ -25,14 +26,10 @@
 #include "VideoMaker.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
-#include "TargetFinder2.h"
+#include "TargetFinder.h"
 #include "VelocityEstimator.h"
 #include "Rotation.h"
 #include "Listeners.h"
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d/features2d.hpp>
 
 // yeah, I'm too lazy to avoid making this global at the moment
 toadlet::egg::Collection<ICSL::Quadrotor::CommManagerListener *> commManagerListeners;
@@ -177,7 +174,7 @@ int main(int argv, char* argc[])
 	QuadLogger mQuadLogger;
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
-	TargetFinder2 mTargetFinder;
+	TargetFinder mTargetFinder;
 //	SensorManager mSensorManager;
 	MotorInterface mMotorInterface;
 //	CommManager mCommManager;
@@ -286,10 +283,10 @@ int main(int argv, char* argc[])
 	} myFeatureFinderListener;
 	mFeatureFinder.addListener(&myFeatureFinderListener);
 
-	class MyTargetFinder2Listener : public TargetFinder2Listener
+	class MyTargetFinderListener : public TargetFinderListener
 	{
 		public:
-		void onTargetFound2(const shared_ptr<ImageTargetFind2Data> &data)
+		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
 		{
 			stringstream ss;
 			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
@@ -301,10 +298,10 @@ int main(int argv, char* argc[])
 		int imgCnt;
 		string imgDir;
 
-	} myTargetFinder2Listener;
-	myTargetFinder2Listener.imgCnt = 0;
-	myTargetFinder2Listener.imgDir = imgDir;
-	mTargetFinder.addListener(&myTargetFinder2Listener);
+	} myTargetFinderListener;
+	myTargetFinderListener.imgCnt = 0;
+	myTargetFinderListener.imgDir = imgDir;
+	mTargetFinder.addListener(&myTargetFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online

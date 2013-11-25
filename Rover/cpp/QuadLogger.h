@@ -6,9 +6,7 @@
 #include <thread>
 #include <mutex>
 
-#ifndef ICSL_TARGETFIND_SIMULATION
 #include "android/sensor.h"
-#endif
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -127,9 +125,7 @@ class QuadLogger
 		void addEntry(const LogID &id, const toadlet::egg::Collection<float> &data, LogFlags type);
 		void addEntry(const LogID &id, const cv::Point2f &data, LogFlags type);
 		void addEntry(const LogID &id, const cv::Point2f &data, const Time &t, LogFlags type);
-#ifndef ICSL_TARGETFIND_SIMULATION
 		void addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type);
-#endif
 
 
 		void pause(){mPaused = true;}

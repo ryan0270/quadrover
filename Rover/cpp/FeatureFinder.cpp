@@ -86,7 +86,6 @@ void FeatureFinder::run()
 	{
 		if(mNewImageReady
 			&& mIsMotorOn
-//			&& mLastRegionFindTime.getElapsedTimeMS() > 100
 			)
 		{
 			procStart.setTime();
@@ -180,12 +179,12 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 
 	vector<cv::KeyPoint> tempKp1;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
-	int maxKp = 1000;
-	int gridRows = 3;
-	int gridCols = 3;
-	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
-	detector.detect(pyrImage, tempKp1);
-//	FAST(pyrImage, tempKp1, fastFeatureThreshold, true);
+//	int maxKp = 1000;
+//	int gridRows = 3;
+//	int gridCols = 3;
+//	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
+//	detector.detect(pyrImage, tempKp1);
+	FAST(pyrImage, tempKp1, fastThreshold, true);
 	int blockSize = 5;
 	eigenValResponses(pyrImage, tempKp1, blockSize);
 

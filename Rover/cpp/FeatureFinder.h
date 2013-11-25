@@ -48,6 +48,12 @@ class FeatureFinder : public CommManagerListener,
 		void getLastImageAnnotated(cv::Mat *outImage);
 		toadlet::egg::Collection<int> getVisionParams();
 
+		static vector<cv::Point2f> findFeaturePoints(const cv::Mat &image, 
+															 double qualityLevel,
+															 double minDistance,
+															 int fastThreshold);
+		static void drawPoints(const vector<cv::Point2f> &points, cv::Mat &img);
+
 		void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
 
 		// CommManagerListener functions
@@ -94,12 +100,7 @@ class FeatureFinder : public CommManagerListener,
 
 		int mThreadPriority, mScheduler;
 
-		static vector<cv::Point2f> findFeaturePoints(const cv::Mat &image, 
-															 double qualityLevel,
-															 double minDistance,
-															 int fastThreshold);
 		static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
-		static void drawPoints(const vector<cv::Point2f> &points, cv::Mat &img);
 
 		Time mLastRegionFindTime;
 		std::mutex mMutex_regionFindTime;
