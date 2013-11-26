@@ -86,6 +86,12 @@ class RegionFinderListener
 	virtual void onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data)=0;
 };
 
+class ObjectTrackerListener
+{
+	public:
+	virtual void onObjectsTracked(const std::shared_ptr<ObjectTrackerData> &data)=0;
+};
+
 class SonarListener
 {
 	public:

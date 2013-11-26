@@ -47,8 +47,10 @@ set shortmess=aoO
 badd +1 main.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/FeatureFinder.h
 badd +1 ~/Software/QuadRover/Rover/cpp/FeatureFinder.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/TrackedPoint.h
-badd +1 ~/Software/QuadRover/Rover/cpp/TrackedPoint.cpp
+badd +1 ~/Software/QuadRover/Rover/cpp/TrackedObject.h
+badd +1 ~/Software/QuadRover/Rover/cpp/TrackedObject.cpp
+badd +1 ~/Software/QuadRover/Rover/cpp/ObjectTracker.h
+badd +1 ~/Software/QuadRover/Rover/cpp/ObjectTracker.cpp
 args main.cpp main.cpp
 edit main.cpp
 set splitbelow splitright

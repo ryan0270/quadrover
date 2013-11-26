@@ -126,6 +126,7 @@ class QuadLogger
 		void addEntry(const LogID &id, const cv::Point2f &data, LogFlags type);
 		void addEntry(const LogID &id, const cv::Point2f &data, const Time &t, LogFlags type);
 		void addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type);
+		void addEntry(const LogID &id, const shared_ptr<DataImage> &data, LogFlags type);
 
 
 		void pause(){mPaused = true;}

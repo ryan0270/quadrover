@@ -2,8 +2,6 @@
 
 namespace ICSL {
 namespace Quadrotor{
-//using namespace TNT;
-//using namespace ICSL::Constants;
 using namespace toadlet::egg;
 
 FeatureFinder::FeatureFinder()
@@ -30,8 +28,6 @@ FeatureFinder::FeatureFinder()
 	mFASTThreshold = 30;
 	mPointCntTarget = 30;
 	mFASTAdaptRate = 0.01;
-
-	mLastRegionFindTime.setTimeMS(0);
 }
 
 void FeatureFinder::shutdown()
@@ -121,21 +117,11 @@ void FeatureFinder::run()
 			}
 
 			// A little adaptation to achieve the target number of points
-//			if(points.size() == 0)
-//			{
-//				mMutex_params.lock();
-//				fastThresh = mFASTThreshold;
-//				mMutex_params.unlock();
-//			}
-//			else
-//			{
-				fastThresh += min(1.0f, max(-1.0f, fastAdaptRate*((float)points.size()-pointCntTarget)));
-				fastThresh = max(5.0f, fastThresh);
-//			}
+			fastThresh += min(1.0f, max(-1.0f, fastAdaptRate*((float)points.size()-pointCntTarget)));
+			fastThresh = max(5.0f, fastThresh);
 
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-			try{ curImage.copyTo(*imageAnnotated); }
-			catch(...) {Log::alert("copyTo error in FeatureFinder 2");}
+			curImage.copyTo(*imageAnnotated);
 			drawPoints(points, *imageAnnotated);
 			
 			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
@@ -147,6 +133,7 @@ void FeatureFinder::run()
 			data->featurePoints = points;
 			data->imageData = imageData;
 			data->imageAnnotated = imageAnnotatedData;
+			data->timestamp.setTime(imageData->timestamp);
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onFeaturesFound(data);
 
@@ -433,16 +420,6 @@ void FeatureFinder::onNewCommVisionFeatureFindFASTAdaptRate(float r)
 
 	mHaveUpdatedSettings = true;
 	Log::alert(String()+"Feature finder FAST adapt rate set to " + r);
-}
-
-void FeatureFinder::onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data)
-{
-	if(data->regionLocs.size() > 5)
-	{
-		mMutex_regionFindTime.lock();
-		mLastRegionFindTime.setTime();
-		mMutex_regionFindTime.unlock();
-	}
 }
 
 } // namespace Quadrotor

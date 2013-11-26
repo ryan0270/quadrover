@@ -22,88 +22,75 @@
 namespace ICSL {
 namespace Quadrotor {
 class FeatureFinder : public CommManagerListener,
-					  public RegionFinderListener, // if we're finding good regions don't look for points
 						public SensorManagerListener
 {
 	public:
-		explicit FeatureFinder();
-		virtual ~FeatureFinder(){};
+	explicit FeatureFinder();
+	virtual ~FeatureFinder(){};
 
-		void shutdown();
-		void start(){ thread th(&FeatureFinder::run, this); th.detach(); }
-		void initialize();
-		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void shutdown();
+	void start(){ thread th(&FeatureFinder::run, this); th.detach(); }
+	void initialize();
+	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setStartTime(Time t){mStartTime = t;}
+	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 
-//		bool isFirstImageProcessed(){return mFirstImageProcessed;}
+	int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
+	int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
+	void getLastImage(cv::Mat *outImage);
+	void getLastImageAnnotated(cv::Mat *outImage);
+	toadlet::egg::Collection<int> getVisionParams();
 
-		void setVisionParams(const toadlet::egg::Collection<int> &p);
-		void setStartTime(Time t){mStartTime = t;}
-		void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	static vector<cv::Point2f> findFeaturePoints(const cv::Mat &image, 
+														 double qualityLevel,
+														 double minDistance,
+														 int fastThreshold);
+	static void drawPoints(const vector<cv::Point2f> &points, cv::Mat &img);
 
-//		void enableIbvs(bool enable);
+	void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
 
-		int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
-		int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
-		void getLastImage(cv::Mat *outImage);
-		void getLastImageAnnotated(cv::Mat *outImage);
-		toadlet::egg::Collection<int> getVisionParams();
-
-		static vector<cv::Point2f> findFeaturePoints(const cv::Mat &image, 
-															 double qualityLevel,
-															 double minDistance,
-															 int fastThreshold);
-		static void drawPoints(const vector<cv::Point2f> &points, cv::Mat &img);
-
-		void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
-
-		// CommManagerListener functions
-		void onNewCommVisionFeatureFindQualityLevel(float qLevel);
-		void onNewCommVisionFeatureFindSeparationDistance(int sepDist);
-		void onNewCommVisionFeatureFindFASTThreshold(int thresh);
-		void onNewCommVisionFeatureFindPointCntTarget(int target);
-		void onNewCommVisionFeatureFindFASTAdaptRate(float r);
-		void onNewCommMotorOn(){mIsMotorOn = true;};
-		void onNewCommMotorOff(){mIsMotorOn = false;};
-		
-		// SensorManagerListener
-		void onNewSensorUpdate(const shared_ptr<IData> &data);
-
-		// RegionFinderListener
-		void onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data);
+	// CommManagerListener functions
+	void onNewCommVisionFeatureFindQualityLevel(float qLevel);
+	void onNewCommVisionFeatureFindSeparationDistance(int sepDist);
+	void onNewCommVisionFeatureFindFASTThreshold(int thresh);
+	void onNewCommVisionFeatureFindPointCntTarget(int target);
+	void onNewCommVisionFeatureFindFASTAdaptRate(float r);
+	void onNewCommMotorOn(){mIsMotorOn = true;};
+	void onNewCommMotorOff(){mIsMotorOn = false;};
+	
+	// SensorManagerListener
+	void onNewSensorUpdate(const shared_ptr<IData> &data);
 
 	protected:
-		bool mUseIbvs;
-		bool mRunning, mFinished;
-		bool mNewImageReady; //, mNewImageReady_targetFind;
-		bool mHaveUpdatedSettings;
-		bool mIsMotorOn;
+	bool mUseIbvs;
+	bool mRunning, mFinished;
+	bool mNewImageReady; //, mNewImageReady_targetFind;
+	bool mHaveUpdatedSettings;
+	bool mIsMotorOn;
 
-		shared_ptr<DataImage> mImageDataNext;
-		shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
+	shared_ptr<DataImage> mImageDataNext;
+	shared_ptr<DataAnnotatedImage> mImageAnnotatedLast;
 
-		Time mStartTime, mLastProcessTime;
+	Time mStartTime, mLastProcessTime;
 
-		toadlet::uint32 mImageProcTimeUS;
+	toadlet::uint32 mImageProcTimeUS;
 
-		QuadLogger *mQuadLogger;
+	QuadLogger *mQuadLogger;
 
-		std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
-		std::mutex mMutex_logger;
-		std::mutex mMutex_params;
+	std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
+	std::mutex mMutex_logger;
+	std::mutex mMutex_params;
 
-		toadlet::egg::Collection<FeatureFinderListener*> mListeners;
+	toadlet::egg::Collection<FeatureFinderListener*> mListeners;
 
-		float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
-		int mSepDist, mPointCntTarget;
+	float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
+	int mSepDist, mPointCntTarget;
 
-		void run();
+	void run();
 
-		int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler;
 
-		static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
-
-		Time mLastRegionFindTime;
-		std::mutex mMutex_regionFindTime;
+	static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
 };
 
 } // namespace Quadrotor

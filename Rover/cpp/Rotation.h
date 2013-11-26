@@ -125,6 +125,7 @@ class SO3
 	Quaternion getQuaternion() const {return mQuaternion;}
 
 	void getAngleAxis(double &angle, TNT::Array2D<double> &axis) const {mQuaternion.getAngleAxis1(angle, axis);}
+	SO3_LieAlgebra log() const;
 
 	bool isIdentity() const;
 
