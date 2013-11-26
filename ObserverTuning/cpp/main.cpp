@@ -26,7 +26,8 @@
 #include "VideoMaker.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
-#include "TargetFinder.h"
+//#include "TargetFinder.h"
+#include "ObjectTracker.h"
 #include "VelocityEstimator.h"
 #include "Rotation.h"
 #include "Listeners.h"
@@ -174,7 +175,7 @@ int main(int argv, char* argc[])
 	QuadLogger mQuadLogger;
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
-	TargetFinder mTargetFinder;
+//	TargetFinder mTargetFinder;
 //	SensorManager mSensorManager;
 	MotorInterface mMotorInterface;
 //	CommManager mCommManager;
@@ -220,20 +221,30 @@ int main(int argv, char* argc[])
 	addCommManagerListener(&mFeatureFinder);
 	mFeatureFinder.start();
 
-	mTargetFinder.initialize();
-	mTargetFinder.setStartTime(startTime);
-	mTargetFinder.setQuadLogger(&mQuadLogger);
-	mTargetFinder.addListener(&mObsvAngular);
-	mTargetFinder.addListener(&mObsvTranslational);
-	mTargetFinder.addListener(&mTranslationController);
-//	mTargetFinder.addListener(&mVelocityEstimator);
-	mTargetFinder.addRegionListener(&mVelocityEstimator);
-	mTargetFinder.addRegionListener(&mFeatureFinder);
-	mTargetFinder.setObserverAngular(&mObsvAngular);
-	mTargetFinder.setObserverTranslational(&mObsvTranslational);
-	addSensorManagerListener(&mTargetFinder);
-	addCommManagerListener(&mTargetFinder);
-	mTargetFinder.start();
+//	mTargetFinder.initialize();
+//	mTargetFinder.setStartTime(startTime);
+//	mTargetFinder.setQuadLogger(&mQuadLogger);
+//	mTargetFinder.addListener(&mObsvAngular);
+//	mTargetFinder.addListener(&mObsvTranslational);
+//	mTargetFinder.addListener(&mTranslationController);
+////	mTargetFinder.addListener(&mVelocityEstimator);
+//	mTargetFinder.addRegionListener(&mVelocityEstimator);
+//	mTargetFinder.addRegionListener(&mFeatureFinder);
+//	mTargetFinder.setObserverAngular(&mObsvAngular);
+//	mTargetFinder.setObserverTranslational(&mObsvTranslational);
+//	addSensorManagerListener(&mTargetFinder);
+//	addCommManagerListener(&mTargetFinder);
+//	mTargetFinder.start();
+
+	ObjectTracker mObjectTracker;
+	mObjectTracker.initialize();
+	mObjectTracker.setStartTime(startTime);
+	mObjectTracker.setQuadLogger(&mQuadLogger);
+	mObjectTracker.setObserverTranslation(&mObsvTranslational);
+	mObjectTracker.setObserverAngular(&mObsvAngular);
+	mObjectTracker.addListener(&mObsvTranslational);
+	mObjectTracker.start();
+	mFeatureFinder.addListener(&mObjectTracker);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(startTime);
@@ -271,37 +282,59 @@ int main(int argv, char* argc[])
 	// Add some vision event listeners so I can display the images
 
 	cv::namedWindow("dispFeatureFind",1);
-	cv::namedWindow("dispTargetFind",1);
+	cv::namedWindow("dispObjectTrack",1);
 	cv::moveWindow("dispFeatureFind",0,0);
-	cv::moveWindow("dispTargetFind",321,0);
+	cv::moveWindow("dispObjectTrack",321,0);
 
 	class MyFeatureFinderListener : public FeatureFinderListener
 	{
 		public:
 		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-		{ imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated)); cv::waitKey(1);}
+		{
+			imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated));
+			cv::waitKey(1);
+		}
 	} myFeatureFinderListener;
 	mFeatureFinder.addListener(&myFeatureFinderListener);
 
-	class MyTargetFinderListener : public TargetFinderListener
+	class MyObjectTrackerListenr : public ObjectTrackerListener
 	{
 		public:
-		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+		void onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
 		{
 			stringstream ss;
 			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
 //			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
-			imshow("dispTargetFind",*(data->imageAnnotatedData->imageAnnotated));
+			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
 			cv::waitKey(1);
 		};
 
 		int imgCnt;
 		string imgDir;
+	} myObjectTrackerListener;
+	myObjectTrackerListener.imgCnt = 0;
+	myObjectTrackerListener.imgDir = imgDir;
+	mObjectTracker.addListener(&myObjectTrackerListener);
 
-	} myTargetFinderListener;
-	myTargetFinderListener.imgCnt = 0;
-	myTargetFinderListener.imgDir = imgDir;
-	mTargetFinder.addListener(&myTargetFinderListener);
+//	class MyTargetFinderListener : public TargetFinderListener
+//	{
+//		public:
+//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//		{
+//			stringstream ss;
+//			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
+////			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+//			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
+//			cv::waitKey(1);
+//		};
+//
+//		int imgCnt;
+//		string imgDir;
+//
+//	} myTargetFinderListener;
+//	myTargetFinderListener.imgCnt = 0;
+//	myTargetFinderListener.imgDir = imgDir;
+//	mTargetFinder.addListener(&myTargetFinderListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -345,7 +378,7 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommMAPHeightMeasCov(0.1*0.1);
 
 		commManagerListeners[i]->onNewCommVisionFeatureFindQualityLevel(0.01);
-		commManagerListeners[i]->onNewCommVisionFeatureFindSeparationDistance(10);
+		commManagerListeners[i]->onNewCommVisionFeatureFindSeparationDistance(20);
 		commManagerListeners[i]->onNewCommVisionFeatureFindFASTThreshold(20);
 		commManagerListeners[i]->onNewCommVisionFeatureFindPointCntTarget(50);
 		commManagerListeners[i]->onNewCommVisionFeatureFindFASTAdaptRate(0.05);
@@ -421,7 +454,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 400e3;
+	int endTimeDelta = 300e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -488,7 +521,8 @@ int main(int argv, char* argc[])
 				mObsvAngular.setStartTime(startTime);
 				mObsvTranslational.setStartTime(startTime);
 				mFeatureFinder.setStartTime(startTime);
-				mTargetFinder.setStartTime(startTime);
+//				mTargetFinder.setStartTime(startTime);
+				mObjectTracker.setStartTime(startTime);
 				mVelocityEstimator.setStartTime(startTime);
 				mQuadLogger.setStartTime(startTime);
 
@@ -692,7 +726,7 @@ int main(int argv, char* argc[])
 //	mCommManager.shutdown();
 	mVelocityEstimator.shutdown();
 	mFeatureFinder.shutdown();
-	mTargetFinder.shutdown();
+//	mTargetFinder.shutdown();
 //	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 

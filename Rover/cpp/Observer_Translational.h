@@ -24,6 +24,7 @@
 #include "Observer_Angular.h"
 #include "ActiveRegion.h"
 #include "Listeners.h"
+#include "TrackedObject.h"
 
 #include "toadlet/egg.h"
 
@@ -33,7 +34,7 @@ class Observer_Translational : public Observer_AngularListener,
 								public CommManagerListener,
 								public SensorManagerListener,
 								public VelocityEstimatorListener,
-								public TargetFinderListener
+								public ObjectTrackerListener
 {
 	public:
 	Observer_Translational();
@@ -79,8 +80,8 @@ class Observer_Translational : public Observer_AngularListener,
 	void onVelocityEstimator_newEstimate(const shared_ptr<DataVector<double>> &velData,
 										 const shared_ptr<Data<double>> &heightData);
 
-	// for TargetFinderListener
-	void onTargetFound(const shared_ptr<ImageTargetFindData> &data);
+	// for ObjectTrackerListener
+	void onObjectsTracked(const shared_ptr<ObjectTrackerData> &data);
 
 	protected:
 	bool mRunning, mDone;
@@ -172,10 +173,10 @@ class Observer_Translational : public Observer_AngularListener,
 
 	bool mIsViconCameraOffsetSet;
 
-	unordered_map<size_t, shared_ptr<ActiveRegion>> mRegionMap;
+	unordered_map<size_t, shared_ptr<TrackedObject>> mObjectMap;
 	// the nominal position of each region when the quadrotor is
 	// at the "origin"
-	unordered_map<size_t, cv::Point2f> mRegionNominalPosMap;
+	unordered_map<size_t, cv::Point2f> mObjectNominalPosMap;
 
 	cv::Point2f mLastImageOffset;
 };
