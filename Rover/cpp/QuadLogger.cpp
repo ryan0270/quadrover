@@ -330,6 +330,18 @@ void QuadLogger::addEntry(const LogID &id, const ASensorEvent &event, const Time
 	}
 }
 
+void QuadLogger::addEntry(const LogID &id, const shared_ptr<DataImage> &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str = String()+(int)Time::calcDiffMS(mStartTime,data->timestamp)+"\t";
+		str = str+data->imageId;
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+
 void QuadLogger::generateMatlabHeader()
 {
 	FileStream::ptr logStream = FileStream::ptr(new FileStream(mDir+"/log_ids.m", FileStream::Open_BIT_WRITE));

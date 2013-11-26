@@ -315,6 +315,14 @@ TNT::Array2D<double> SO3::getAnglesZYX() const
 	return mQuaternion.toAnglesZYX();
 }
 
+SO3_LieAlgebra SO3::log() const
+{
+	double angle;
+	Array2D<double> axis;
+	mQuaternion.getAngleAxis1(angle, axis);
+	return SO3_LieAlgebra(angle*axis);
+}
+
 void SO3::reset()
 {
 	mQuaternion.set(1,0,0,0);

@@ -16,17 +16,29 @@
 
 #include "Time.h"
 #include "FeatureFinder.h"
-#include "TrackedPoint.h"
+#include "TrackedObject.h"
+#include "ObjectTracker.h"
+#include "QuadLogger.h"
+#include "Data.h"
+#include "Rotation.h"
+#include "Observer_Translational.h"
+#include "Observer_Angular.h"
+#include "Listeners.h"
 
-void matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &curPoints,
-			  std::vector<ICSL::Quadrotor::PointMatch> &goodMatches,
-			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &repeatPoints,
-			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &newPoints,
-			  const TNT::Array2D<double> Sn,
-			  const TNT::Array2D<double> SnInv,
-			  double probNoCorr,
-			  const ICSL::Quadrotor::Time &imageTime,
-			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &mTrackedPoints);
+
+class MyListener : public ICSL::Quadrotor::ObjectTrackerListener
+{
+	public:
+	std::shared_ptr<ICSL::Quadrotor::ObjectTrackerData> data;
+
+	void onObjectsTracked(const std::shared_ptr<ICSL::Quadrotor::ObjectTrackerData> &data)
+	{ this->data = data; }
+};
+
+void loadData(const std::string &dataDir, const std::string &imgDir,
+			std::list<std::shared_ptr<ICSL::Quadrotor::DataImage>> &imageDataBuffer,
+			std::list<std::shared_ptr<ICSL::Quadrotor::DataVector<double>>> &tranStateBuffer,
+			std::list<std::shared_ptr<ICSL::Quadrotor::SO3Data<double>>> &attBuffer);
 
 int main(int argv, char* argc[])
 {
@@ -45,71 +57,19 @@ int main(int argv, char* argc[])
 	{
 		case 0:
 			dataDir = "../dataSets/Nov13_3";
-			startImg = 4686;
-			startImg += 500;
-			endImg = 7486;
 			break;
 	}
 
 	string imgDir;
 	imgDir = dataDir + "/video";
 
-	vector<pair<int, Time>> imgIdList;
-	// preload all images
-	list<pair<int, shared_ptr<cv::Mat>>> imgList;
-	int imgId = startImg;
-	int numImages;
-	numImages = endImg-startImg;;
-	for(int i=0; i<numImages; i++)
-	{
-		cv::Mat img;
-		while(img.data == NULL)
-		{
-			stringstream ss;
-			ss << "image_" << imgId++ << ".bmp";
-			string filename = imgDir+"/"+ss.str();
-			img = cv::imread(filename);
-			if(img.data == NULL)
-				cout << "Failed to load " << filename << endl;
-		}
+	// Load the log file
+	list<shared_ptr<DataVector<double>>> tranStateBuffer;
+	list<shared_ptr<SO3Data<double>>> attBuffer;
+	list<shared_ptr<DataImage>> imgDataBuffer;
+	loadData(dataDir, dataDir+"/video", imgDataBuffer, tranStateBuffer, attBuffer);
 
-		shared_ptr<cv::Mat> pImg(new cv::Mat);
-		img.copyTo(*pImg);
-
-		imgList.push_back(pair<int, shared_ptr<cv::Mat>>(imgId, pImg));
-	}
-
-	// Camera calibration
-	double f;
-	cv::Point2f center;
-	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
-	cv::FileStorage fs;
-	string filename = dataDir + "/calib_640x480.yml";
-	fs.open(filename.c_str(), cv::FileStorage::READ);
-	if( fs.isOpened() )
-	{
-		mCameraMatrix_640x480 = shared_ptr<cv::Mat>(new cv::Mat());
-		mCameraDistortionCoeffs = shared_ptr<cv::Mat>(new cv::Mat());
-
-		fs["camera_matrix"] >> *mCameraMatrix_640x480;
-		fs["distortion_coefficients"] >> *mCameraDistortionCoeffs;
-		cout << "Camera calib loaded from " << filename.c_str() << endl;
-
-		mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
-		mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
-		(*mCameraMatrix_320x240) = (*mCameraMatrix_320x240)*0.5;
-
-		f = mCameraMatrix_320x240->at<double>(0,0);
-		center.x = mCameraMatrix_320x240->at<double>(0,2);
-		center.y = mCameraMatrix_320x240->at<double>(1,2);
-
-		cout << "Loaded camera matrix" << endl;
-	}
-	else
-		cout << "Failed to open " <<  filename.c_str();
-	fs.release();
-	cv::Mat cameraMatrix = *mCameraMatrix_320x240;
-	cv::Mat distCoeffs = *mCameraDistortionCoeffs;
+	///////////////////////////////////////////////////////////////////////////
 
 	cv::namedWindow("chad",1);
 	cv::moveWindow("chad",0,0);
@@ -118,73 +78,84 @@ int main(int argv, char* argc[])
 	cv::namedWindow("tom",1);
 	cv::moveWindow("tom",0,261);
 
-	vector<shared_ptr<TrackedPoint>> trackedPoints;
+	Observer_Translational obsvTranslation;
+	obsvTranslation.tranStateBuffer = tranStateBuffer;
 
-	Array2D<double> Sn = 5*5*createIdentity((double)2);
-	Array2D<double> SnInv(2,2,0.0);
-	SnInv[0][0] = 1.0/Sn[0][0];
-	SnInv[1][1] = 1.0/Sn[1][1];
-	double probNoCorr = 1e-6;
+	Observer_Angular obsvAngular;
+	obsvAngular.angleStateBuffer = attBuffer;
 
-	FeatureFinder featureFinder;
-	featureFinder.initialize();
+	ObjectTracker objectTracker;
+	objectTracker.initialize();
+	objectTracker.start();
+	objectTracker.setObserverTranslation(&obsvTranslation);
+	objectTracker.setObserverAngular(&obsvAngular);
+
+	MyListener myListener;
+	myListener.data = NULL;
+	objectTracker.addListener(&myListener);
+
+	list<shared_ptr<DataImage>>::const_iterator imgIter = imgDataBuffer.begin();
+	// Skip the first several images
+	for(int i=0; i<200; i++)
+		imgIter++;
 
 	int keypress = 0;
-	list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imgIter = imgList.begin();
 	cv::Mat img(240,320, CV_8UC3, cv::Scalar(0)), oldImg(240,320,CV_8UC3,cv::Scalar(0)), imgGray;
 	int activeCnt = 0;
 	int imgCnt = 0;
 	Time curTime;
 	vector<cv::Point2f> points;
-	float qualityLevel = 0.05;
-	float fastThresh = 30;
-	int sepDist = 50;
+	float qualityLevel = 0.01;
+	float fastThresh = 20;
+	int sepDist = 20;
 	float pointCntTarget = 30;
-	float fastAdaptRate = 0.01;
-	while(keypress != (int)'q' && imgIter != imgList.end())
+	float fastAdaptRate = 0.05;
+	shared_ptr<DataImage> curImgData, prevImgData;
+	curImgData = *imgIter;
+	imgIter++;
+	double longestLife = 0;
+	double avgOldestLife = 0;
+	float avgOldestLifeCnt = 0;
+	while(keypress != (int)'q' && imgIter != imgDataBuffer.end())
 	{
-//Log::alert(String()+"imgCnt: "+imgCnt);
-		curTime.addTimeMS(33);
-		img = *(imgIter->second);
-		cvtColor(img,imgGray,CV_BGR2GRAY);
+		prevImgData = curImgData;
+		curImgData = *imgIter;
+		curTime.setTime(curImgData->timestamp);
+		curImgData->image->copyTo(img);
+		curImgData->imageGray->copyTo(imgGray);
+		double f = curImgData->focalLength;
+		cv::Point2f center = curImgData->center;
+		double dt = Time::calcDiffNS(prevImgData->timestamp, curImgData->timestamp)/1.0e9;
 
+
+		myListener.data = NULL;
 Time start;
 		points = FeatureFinder::findFeaturePoints(imgGray, qualityLevel, sepDist, fastThresh);
 		if(points.size() > 0)
 		{
-			cv::undistortPoints(points, points, cameraMatrix, distCoeffs);
+			cv::undistortPoints(points, points, *curImgData->cameraMatrix, *curImgData->distCoeffs);
 			for(int i=0; i<points.size(); i++)
-				points[i] = points[i]*f+center;
+				points[i] = points[i]*f + center;
 		}
+		fastThresh += min(1.0f, max(-1.0f, fastAdaptRate*((float)points.size()-pointCntTarget)));
+		fastThresh = max(5.0f, fastThresh);
 
-		// make objects
-		vector<shared_ptr<TrackedPoint>> curPoints(points.size());
-		for(int i=0; i<points.size(); i++)
-		{
-			curPoints[i] = shared_ptr<TrackedPoint>(new TrackedPoint(curTime, points[i]));
-//			curPoints[i]->markFound(curTime, points[i]);
-			curPoints[i]->setPosCov(Sn);
-		}
+		// make data and pass to the object tracker
+		shared_ptr<ImageFeatureData> data(new ImageFeatureData());
+		data->featurePoints= points;
+		data->imageData = curImgData;
+		data->timestamp.setTime(curImgData->timestamp);
+		objectTracker.onFeaturesFound(data);
 
-//		/////////////////// Get location priors for active regions ///////////////////////
-		Array2D<double> mv(3,1,0.0);
-		Array2D<double> Sv = 0.1*0.1*createIdentity((double)3);
-		double mz = 1;
-		double sz = 0.05;
-		Array2D<double> omega(3,1,0.0);
+		while(myListener.data == NULL)
+			System::msleep(1);
 
-		for(int i=0; i<trackedPoints.size(); i++)
-		{
-			shared_ptr<TrackedPoint> tp = trackedPoints[i];
-			tp->updatePositionDistribution(mv, Sv, mz, sz*sz, f, center, omega, curTime);
-		}
-
-		/////////////////// make matches ///////////////////////
-		vector<PointMatch> goodMatches;
-		vector<shared_ptr<TrackedPoint>> repeatPoints, newPoints;
-		matchify(curPoints, goodMatches, repeatPoints, newPoints, Sn, SnInv, probNoCorr, curTime, trackedPoints);
-		activeCnt += trackedPoints.size();
-
+		const vector<shared_ptr<TrackedObject>> trackedObjects = objectTracker.getTrackedObjects();
+		vector<shared_ptr<TrackedObject>> repeatObjects, newObjects;
+		repeatObjects = myListener.data->trackedObjects;
+		newObjects = myListener.data->newObjects;
+		
+		activeCnt += trackedObjects.size();
 
 		imshow("chad",oldImg);
 
@@ -197,9 +168,9 @@ Time start;
 		img.copyTo(oldImg);
 		imshow("bob",img);
 
-		vector<vector<cv::Point2f>> repeatPts(repeatPoints.size());
-		for(int i=0; i<repeatPoints.size(); i++)
-			circle(img, repeatPoints[i]->getPos(), 4, cv::Scalar(0,0,255), -1);
+		vector<vector<cv::Point2f>> repeatPts(repeatObjects.size());
+		for(int i=0; i<repeatObjects.size(); i++)
+			circle(img, repeatObjects[i]->getLocation(), 4, cv::Scalar(0,0,255), -1);
 
 //		stringstream name;
 //		name << imgDir << "/annotated/img_" << imgCnt << ".bmp";
@@ -207,143 +178,177 @@ Time start;
 
 		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
 		cv::Point2f offset(321,0);
-		for(int i=0; i<goodMatches.size(); i++)
+		for(int i=0; i<repeatObjects.size(); i++)
 		{
-			const vector<pair<Time, cv::Point2f>> history = goodMatches[i].tpPrev->getHistory();
+			const vector<pair<Time, cv::Point2f>> history = repeatObjects[i]->getHistory();
 			vector<pair<Time, cv::Point2f>>::const_iterator iter = history.end();
 			iter--;
 			cv::Point2f p2 = iter->second;
 			iter--;
 			cv::Point2f p1 = iter->second;
-			
+
 			line(dblImg,p1, p2+offset, cv::Scalar(0,255,0), 2);
 		}
 		imshow("tom",dblImg);
 
-		keypress = cv::waitKey(0) % 256;
+		keypress = cv::waitKey(1) % 256;
 
 		imgIter++;
 		imgCnt++;
+
+		Time oldTime = objectTracker.getOldest()->getCreateTime();
+		double curLongLife = Time::calcDiffNS(oldTime, curTime)/1.0e9;
+		avgOldestLife += curLongLife;
+		avgOldestLifeCnt++;
+		if(curLongLife > longestLife)
+		{
+			longestLife = curLongLife;
+//			cout << "New record: " << longestLife << endl;
+		}
+		if(imgCnt % 100 == 0)
+		{
+			cout << "Tracked points: " << trackedObjects.size() << "\t\t";
+			cout << "Oldest life time: " << curLongLife << endl;
+		}
 	}
-//
-////	for(int i=0; i<TimeKeeper::times.size(); i++)
-////		if(TimeKeeper::times[i] != 0)
-////			Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
-////	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,4)/imgCnt);
-////	Log::alert(String()+"num regions:\t" + activeCnt/imgCnt);
+
+	cout << "Avg oldest life: " << avgOldestLife/avgOldestLifeCnt << endl;
+
+	objectTracker.shutdown();
+
+//	for(int i=0; i<TimeKeeper::times.size(); i++)
+//		if(TimeKeeper::times[i] != 0)
+//			Log::alert(String()+"t" + i +":\t" + (TimeKeeper::times[i]/imgCnt));
+//	Log::alert(String()+"avg algo time: " + TimeKeeper::sum(0,4)/imgCnt);
+//	Log::alert(String()+"num regions:\t" + activeCnt/imgCnt);
 
     return 0;
 }
 
-void matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &curPoints,
-			  std::vector<ICSL::Quadrotor::PointMatch> &goodMatches,
-			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &repeatPoints,
-			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &newPoints,
-			  const TNT::Array2D<double> Sn,
-			  const TNT::Array2D<double> SnInv,
-			  double probNoCorr,
-			  const ICSL::Quadrotor::Time &imageTime,
-			  std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedPoint>> &mTrackedPoints)
+void loadData(const std::string &dataDir, const std::string &imgDir,
+			std::list<std::shared_ptr<ICSL::Quadrotor::DataImage>> &imgDataBuffer,
+			std::list<std::shared_ptr<ICSL::Quadrotor::DataVector<double>>> &tranStateBuffer,
+			std::list<std::shared_ptr<ICSL::Quadrotor::SO3Data<double>>> &attBuffer)
 {
+	using namespace std;
 	using namespace ICSL;
 	using namespace ICSL::Quadrotor;
 	using namespace TNT;
-	using namespace std;
-	/////////////////// Establish correspondence based on postiion ///////////////////////
 
-	Array2D<double> C = TrackedPoint::calcCorrespondence(mTrackedPoints, curPoints, Sn, SnInv, probNoCorr);
-printArray("C:\n",C);
+	imgDataBuffer.clear();
+	tranStateBuffer.clear();
+	attBuffer.clear();
 
-	///////////////////  make matches ///////////////////////
-	shared_ptr<TrackedPoint> tpPrev, tpCur;
-	int N1 = mTrackedPoints.size();
-	int N2 = curPoints.size();
-	vector<bool> prevMatched(N1, false);
-	vector<bool> curMatched(N2, false);
-	vector<cv::Point2f> offsets;
-	for(int i=0; i<N1; i++)
+	// Camera calibration
+	cv::Point2f center;
+	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
+	cv::FileStorage fs;
+	string calibFilename = dataDir + "/calib_640x480.yml";
+	fs.open(calibFilename .c_str(), cv::FileStorage::READ);
+	if( fs.isOpened() )
 	{
-		if(N2 == 0 || C[i][N2] > 0.4)
-			continue; // this object probably doesn't have a partner
+		mCameraMatrix_640x480 = shared_ptr<cv::Mat>(new cv::Mat());
+		mCameraDistortionCoeffs = shared_ptr<cv::Mat>(new cv::Mat());
 
-		tpPrev = mTrackedPoints[i];
+		fs["camera_matrix"] >> *mCameraMatrix_640x480;
+		fs["distortion_coefficients"] >> *mCameraDistortionCoeffs;
+		cout << "Camera calib loaded from " << calibFilename.c_str() << endl;
 
-		int maxIndex = 0;
-		float maxScore = 0;
-		for(int j=0; j<N2; j++)
-		{
-			if(C[i][j] > maxScore && !curMatched[j])
-			{
-				maxScore = C[i][j];
-				maxIndex =j;
-			}
-		}
+		mCameraMatrix_320x240 = shared_ptr<cv::Mat>(new cv::Mat());
+		mCameraMatrix_640x480->copyTo( *mCameraMatrix_320x240 );
+		(*mCameraMatrix_320x240) = (*mCameraMatrix_320x240)*0.5;
 
-		if(maxScore < 0.5)
-			continue;
-
-		curMatched[maxIndex] = true;
-		tpCur = curPoints[maxIndex];
-
-		cv::Point offset = tpCur->getPos()-tpPrev->getPos();
-		offsets.push_back(offset);
-
-		PointMatch m;
-		m.tpPrev = tpPrev;
-		m.tpCur = tpCur;
-		m.score = C[i][maxIndex];
-		goodMatches.push_back(m);
-//		tpPrev->copyData(*tpCur);
-		tpPrev->markFound(imageTime,tpCur->getPos());
-//		tpPrev->addLife(2);
-		repeatPoints.push_back(tpPrev);
-		tpCur->kill();
+		cout << "Loaded camera matrix" << endl;
 	}
+	else
+		cout << "Failed to open " <<  calibFilename.c_str();
+	fs.release();
 
-	vector<int> dupIndices;
-	for(int j=0; j<curPoints.size(); j++)
-		if(!curMatched[j])
+	string line;
+	string dataFilename = dataDir+"/phoneLog.txt";
+	ifstream file(dataFilename.c_str());
+	if(file.is_open())
+	{
+		getline(file, line); // first line is a throw-away
+		getline(file, line); // second line is also a throw-away
+
+		
+		Array2D<double> tranState(9,1);
+		double w, x, y, z; // for quaternions
+		while(file.good())
 		{
-			// first check to see if we didn't match because there
-			// were too many similar regions
-			bool addMe = true;
-			if(C.dim1() > 0 && C.dim2() > 0 && C[N1][j] < 0.5)
+			getline(file, line);
+			stringstream ss(line);
+			double time;
+			int type;
+			ss >> time >> type;
+
+			switch(type)
 			{
-				// yup, now we should clear out the riff raff
-				for(int i=0; i<N1; i++)
-					if(C[i][j] > 0.1)
+				case LOG_ID_IMAGE:
 					{
-						if(prevMatched[i]) // the dupe already found a good match so we shouldn't delete him
-							addMe = false;
-						else
-							dupIndices.push_back(i);
+						int id;
+						ss >> time >> id;
+
+						shared_ptr<cv::Mat> img(new cv::Mat());
+						shared_ptr<cv::Mat> imgGray(new cv::Mat());
+
+						stringstream ss2;
+						ss2 << "image_" << id << ".bmp";
+						string imgFilename = imgDir+"/"+ss2.str();
+						*img = cv::imread(imgFilename);
+						if(img->data != NULL)
+						{
+							shared_ptr<DataImage> data(new DataImage());
+							data->timestamp.setTimeMS(time);
+							data->imageId = id;
+							data->image = img;
+							cv::cvtColor(*img, *imgGray, CV_BGR2GRAY); 
+							data->imageGray = imgGray;
+							data->imageFormat = IMG_FORMAT_BGR;
+							data->cap = NULL;
+							if(img->rows = 240)
+								data->cameraMatrix = mCameraMatrix_320x240;
+							else
+								data->cameraMatrix = mCameraMatrix_640x480;
+							data->focalLength = data->cameraMatrix->at<double>(0,0);
+							data->center.x = data->cameraMatrix->at<double>(0,2);
+							data->center.y = data->cameraMatrix->at<double>(1,2);
+							data->distCoeffs = mCameraDistortionCoeffs;
+
+							imgDataBuffer.push_back(data);
+						}
 					}
+					break;
+				case LOG_ID_CUR_TRANS_STATE:
+					{
+						for(int i=0; i<9; i++)
+							ss >> tranState[i][0];
+						shared_ptr<DataVector<double>> data(new DataVector<double>);
+						data->timestamp.setTimeMS(time);
+						data->data = tranState.copy();
+						tranStateBuffer.push_back(data);
+					}
+					break;
+				case LOG_ID_CUR_ATT:
+					{
+						shared_ptr<SO3Data<double>> data(new SO3Data<double>);
+//						ss >> time >> w >> x >> y >> z;
+//						SO3 rot(Quaternion(w,x,y,z));
+						ss >> time >> x >> y >> z;
+						SO3 rot(createRotMat_ZYX(z,y,x));
+						data->timestamp.setTimeMS(time);
+						data->rotation = rot;
+						attBuffer.push_back(data);
+					}
+					break;
 			}
-			// Now add the new region which will be the 
-			// only remaining one
-			if(addMe)
-				newPoints.push_back(curPoints[j]);
-			else
-				curPoints[j]->kill();
 		}
 
-	// sort and remove repeats 
-	sort(dupIndices.begin(), dupIndices.end());
-	vector<int>::const_iterator endIter = unique(dupIndices.begin(), dupIndices.end());
-	vector<int>::const_iterator iter = dupIndices.begin();
-	while(iter != endIter)
-	{
-		mTrackedPoints[(*iter)]->kill();
-		iter++;
+		file.close();
 	}
+	else
+		cout << "Failed to open file: " << dataFilename << endl;
 
-	for(int i=0; i<mTrackedPoints.size(); i++)
-		mTrackedPoints[i]->takeLife(1);
-
-	sort(mTrackedPoints.begin(), mTrackedPoints.end(), TrackedPoint::sortPredicate);
-	while(mTrackedPoints.size() > 0 && !mTrackedPoints.back()->isAlive() )
-		mTrackedPoints.pop_back();
-
-	for(int i=0; i<newPoints.size(); i++)
-		mTrackedPoints.push_back(newPoints[i]);
+	cout << "Loaded " << tranStateBuffer.size()+attBuffer.size() << " lines" << endl;
 }

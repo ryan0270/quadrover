@@ -459,11 +459,10 @@ void SensorManager::passNewImage(const cv::Mat *imageYUV, uint64_t timestampNS)
 	data->type = DATA_TYPE_IMAGE;
 	data->timestamp.setTimeNS(timestampNS);
 
-	// do this now just so the log time is a bit closer to real
 	if(mQuadLogger != NULL)
 	{
 		mMutex_logger.lock();
-		mQuadLogger->addEntry(LOG_ID_IMAGE, (int)data->imageId, data->timestamp, LOG_FLAG_CAM_RESULTS);
+		mQuadLogger->addEntry(LOG_ID_IMAGE, data, LOG_FLAG_CAM_RESULTS);
 		mMutex_logger.unlock();
 	}
 

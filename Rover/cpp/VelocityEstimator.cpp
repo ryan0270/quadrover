@@ -611,9 +611,10 @@ Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<
 	C[N1][N2] = 0;
 
 	// Scale colums to unit sum
+	double colSum;
 	for(int j=0; j<N2; j++)
 	{
-		double colSum = 0;
+		colSum = 0;
 		for(int i=0; i<N1+1; i++)
 			colSum += C[i][j];
 
@@ -623,9 +624,10 @@ Array2D<double> VelocityEstimator::calcCorrespondence(const vector<pair<Array2D<
 	}
 
 	// Now check if any of the rows sum to over 1
+	double rowSum;
 	for(int i=0; i<N1; i++)
 	{
-		double rowSum = 0;
+		rowSum = 0;
 		for(int j=0; j<N2; j++)
 			rowSum += C[i][j];
 
