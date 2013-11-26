@@ -313,18 +313,6 @@ class RectGroup
 	const cv::Point2f zeroPoint; // this should be static but then I'd have to make a .cpp file just for it
 };
 
-//class ImageTargetFindData : public IData
-//{
-//	public:
-//	ImageTargetFindData() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
-//	shared_ptr<RectGroup> target;
-//	shared_ptr<DataImage> imageData;
-//	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
-//
-//	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
-//	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
-//};
-
 class ImageRegionLocData : public IData
 {
 	public:
@@ -337,11 +325,26 @@ class ImageRegionLocData : public IData
 	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock();}// if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 };
 
-class ImageTargetFindData : public IData
+//class ImageTargetFindData : public IData
+//{
+//	public:
+//	ImageTargetFindData() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
+//	vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
+//	shared_ptr<DataImage> imageData;
+//	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
+//
+//	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
+//	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
+//};
+
+class ObjectTrackerData : public IData
 {
 	public:
-	ImageTargetFindData() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
-	vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
+	ObjectTrackerData() : IData() {type = DATA_TYPE_OBJECT_TRACKER;}
+	vector<cv::Point2f> repeatObjectLocs, newObjectLocs; // something that will not change
+	vector<shared_ptr<TrackedObject>> repeatObjects, newObjects; // these are just pointers, so the object location might change before it's used
+	vector<ObjectMatch> matches;
+
 	shared_ptr<DataImage> imageData;
 	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
 
@@ -349,24 +352,12 @@ class ImageTargetFindData : public IData
 	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 };
 
-class ObjectTrackerData : public IData
-{
-	public:
-	ObjectTrackerData() : IData() {type = DATA_TYPE_OBJECT_TRACKER;}
-	vector<cv::Point2f> trackedObjectLocs, newObjectLocs; // something that will not change
-	vector<shared_ptr<TrackedObject>> trackedObjects, newObjects; // these are just pointers, so the object location might change before it's used
-
-	shared_ptr<DataImage> imageData;
-
-	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock();}
-	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock();}
-};
-
 class ImageTranslationData : public IData
 {
 	public:
 	ImageTranslationData() : IData() {type = DATA_TYPE_IMAGE_TRANSLATION;}
-	shared_ptr<ImageTargetFindData> imageTargetFindData;
+//	shared_ptr<ImageTargetFindData> imageTargetFindData;
+	shared_ptr<ObjectTrackerData> objectTrackingData;
 	vector<cv::Point2f> goodPoints; // location of found points, already adjusted for current attitude and image offset
 	vector<cv::Point2f> nominalPoints; // nominal location of the respective found points
 };

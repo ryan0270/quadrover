@@ -44,7 +44,7 @@ class VelocityEstimator : public FeatureFinderListener,
 	void setStartTime(Time t){mStartTime.setTime(t);}
 	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
 	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
-	void setRotPhoneToCam(const TNT::Array2D<double> &rot){mRotPhoneToCam.inject(rot); mRotCamToPhone.inject(transpose(rot));}
+	void setRotPhoneToCam(const TNT::Array2D<double> &rot);
 
 	void addListener(VelocityEstimatorListener *l){mListeners.push_back(l);}
 
@@ -64,6 +64,7 @@ class VelocityEstimator : public FeatureFinderListener,
 	bool mRunning, mDone;
 	int mThreadPriority, mScheduler;
 	TNT::Array2D<double> mRotPhoneToCam, mRotCamToPhone;
+	TNT::Array2D<double> mRotPhoneToCam2, mRotCamToPhone2;
 	QuadLogger *mQuadLogger;
 	Time mStartTime;
 

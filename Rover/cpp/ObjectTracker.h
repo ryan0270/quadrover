@@ -44,6 +44,11 @@ class ObjectTracker : public FeatureFinderListener
 	const vector<shared_ptr<TrackedObject>> &getTrackedObjects() const {return mTrackedObjects;}
 	const shared_ptr<TrackedObject> &getOldest() const {return mOldest;}
 
+	static void drawResults(cv::Mat &img,
+							const vector<ObjectMatch> &matches,
+							const vector<shared_ptr<TrackedObject>> &repeatObjects,
+							const vector<shared_ptr<TrackedObject>> &newObjects);
+
 	void addListener(ObjectTrackerListener *listener){mListeners.push_back(listener);}
 
 	// for FeatureFinderListener

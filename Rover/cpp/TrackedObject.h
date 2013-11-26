@@ -36,7 +36,7 @@ class TrackedObject
 	virtual const Time &getLastFoundTime() const {return mLastFoundTime;}
 	virtual int getId() const {return mId;}
 	virtual const Time &getCreateTime() const;
-	virtual const vector<pair<Time, cv::Point2f>> &getHistory(){return mHistory;}
+	virtual const vector<pair<Time, cv::Point2f>> &getHistory() const {return mHistory;}
 
 	// assumes location distributions have already been calculated
 	virtual void updatePositionDistribution(const TNT::Array2D<double> &mv, const TNT::Array2D<double> &Sv, 

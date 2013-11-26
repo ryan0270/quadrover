@@ -72,13 +72,13 @@ class VelocityEstimatorListener
 	virtual void onVelocityEstimator_newEstimate(const std::shared_ptr<DataVector<double> > &velData, const std::shared_ptr<Data<double> > &heightData)=0;
 };
 
-class TargetFinderListener
-{
-	public:
-	virtual ~TargetFinderListener(){};
-
-	virtual void onTargetFound(const std::shared_ptr<ImageTargetFindData> &data)=0;
-};
+//class TargetFinderListener
+//{
+//	public:
+//	virtual ~TargetFinderListener(){};
+//
+//	virtual void onTargetFound(const std::shared_ptr<ImageTargetFindData> &data)=0;
+//};
 
 class RegionFinderListener
 {

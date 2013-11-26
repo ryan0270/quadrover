@@ -489,275 +489,275 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 }
 
 // This function is way too long, I should probably split it up sometime
-void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-{
-	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 10)
-		return; // don't set my initial nominal angle yet
-
-	mMutex_targetFindTime.lock();
-	mLastTargetFindTime.setTime();
-	mMutex_targetFindTime.unlock();
-
-	//////////////////////////// Bookeeping ///////////////////////////////////////////
-	// check for dead regions
-	vector<size_t> deadKeys;
-	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
-	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
-		if( regionIter->second->getLife() <= 0)
-			deadKeys.push_back(regionIter->second->getId());
-	sort(deadKeys.begin(), deadKeys.end());
-
-	unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator angleIter;
-	vector<unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator> removeIters;
-	for(angleIter = mNominalDirMap.begin(); angleIter != mNominalDirMap.end(); angleIter++)
-		if( binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.first) ||
-			binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.second) )
-			removeIters.push_back(angleIter);
-
-
-	unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator timeIter;
-	vector<unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator> removeTimeIters;
-	for(timeIter = mNominalDirCreateTime.begin(); timeIter != mNominalDirCreateTime.end(); timeIter++)
-		if( binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.first) ||
-			binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.second) )
-			removeTimeIters.push_back(timeIter);
-
-	for(int i=0; i<removeIters.size(); i++)
-		mNominalDirMap.erase( removeIters[i] );
-	for(int i=0; i<removeTimeIters.size(); i++)
-		mNominalDirCreateTime.erase( removeTimeIters[i] );
-	for(int i=0; i<deadKeys.size(); i++)
-		mRegionMap.erase( deadKeys[i] );
-
-	// add new stuff
-	vector<shared_ptr<ActiveRegion>> repeatRegions;
-	repeatRegions.reserve(data->repeatRegions.size());
-	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
-
-	// need to make sure we actually know about all the repeat regions
-	for(int i=0; i<data->repeatRegions.size(); i++)
-		if( mRegionMap.count(data->repeatRegions[i]->getId()) > 0)
-			repeatRegions.push_back(data->repeatRegions[i]);
-		else
-			newRegions.push_back(data->repeatRegions[i]);
-
-	for(int i=0; i<newRegions.size(); i++)
-		mRegionMap[newRegions[i]->getId()] = newRegions[i];
-
-	// assemble everything into one vector
-	vector<shared_ptr<ActiveRegion>> regions;
-	regions.reserve(repeatRegions.size()+newRegions.size());
-	regions.insert(regions.end(), repeatRegions.begin(), repeatRegions.end());
-	regions.insert(regions.end(), newRegions.begin(), newRegions.end());
-
-	// go through and see what pairs we already know about
-	vector<pair<size_t,size_t>> repeatPairs, newPairs;
-	vector<pair<cv::Point2f, cv::Point2f>> repeatPairPoints, newPairPoints;
-	for(int i=0; i<regions.size(); i++)
-		for(int j=i+1; j<regions.size(); j++)
-		{
-			int id1 = min(regions[i]->getId(), regions[j]->getId());
-			int id2 = max(regions[i]->getId(), regions[j]->getId());
-
-			pair<size_t,size_t> pr(id1, id2);
-			cv::Point2f pt1 = mRegionMap[id1]->getFoundPos();
-			cv::Point2f pt2 = mRegionMap[id2]->getFoundPos();
-			if(mNominalDirMap.count(pr) > 0)
-			{
-				repeatPairs.push_back(pr);
-				repeatPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
-			}
-			else
-			{
-				double d = cv::norm(pt1-pt2);
-				// avoid keeping pairs that are too close together
-				if(d > 20)
-				{
-					newPairs.push_back(pr);
-					newPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
-				}
-			}
-		}
-
-	// For rotation compensation
-	SO3 att = data->imageData->att;
-	Array2D<double> euler = att.getAnglesZYX();
-	SO3 R_x( createRotMat(0, euler[0][0]) );
-	SO3 R_y( createRotMat(1, euler[1][0]) );
-	SO3 R_z( createRotMat(2, euler[2][0]) );
-	SO3 attYX = R_y*R_x; // R_y*R_x*R_x'*R_y'*R_z'*P = R_z'*P
-	SO3 rotYX = attYX*SO3(mRotCamToPhone);
-	double f = data->imageData->focalLength;
-	double cx = data->imageData->center.x;
-	double cy = data->imageData->center.y;
-
-	//////////////////////////// add measurements for the pairs we've seen before ///////////////////////////////////////////
-	cv::Point2f p1, p2;
-	Array2D<double> dirMeas(3,1);
-	Array2D<double> dirNom(3,1);
-	Array2D<double> r1(3,1), r2(3,1);
-	vector<Array2D<double>> dirMeasList(repeatPairs.size(),Array2D<double>(3,1));
-	vector<Array2D<double>> dirNomList(repeatPairs.size(),Array2D<double>(3,1));
-	vector<double> offsets(repeatPairs.size());
-	for(int i=0; i<repeatPairs.size(); i++)
-	{
-		p1 = repeatPairPoints[i].first;
-		p2 = repeatPairPoints[i].second;
-
-		dirMeas[0][0] = p2.x-p1.x;
-		dirMeas[1][0] = p2.y-p1.y;
-		dirMeas[2][0] = 0;
-		dirMeas.inject(1.0/norm2(dirMeas)*dirMeas);
-		dirMeas.inject(matmult(mRotCamToPhone, dirMeas));
-
-		dirNom.inject(mNominalDirMap[repeatPairs[i]]);
-
-		dirMeasList[i].inject(dirMeas);
-		dirNomList[i].inject(dirNom);
-
-		// rotation compensation
-		r1[0][0] = p1.x - cx;
-		r1[1][0] = p1.y - cy;
-		r1[2][0] = f;
-
-		r2[0][0] = p2.x - cx;
-		r2[1][0] = p2.y - cy;
-		r2[2][0] = f;
-
-		Array2D<double> delta = rotYX*(r2-r1);
-		double curAngle = atan2(delta[1][0], delta[0][0]);
-		double nomAngle = atan2(dirNom[1][0], dirNom[0][0]);
-		while( curAngle-nomAngle >= PI) curAngle -= 2*PI;
-		while( curAngle-nomAngle < -PI) curAngle += 2*PI;
-		offsets[i] = curAngle-nomAngle;
-	}
-
-	// Find the median offset for outlier rejection
-	double angleOffset = 0;
-	if(offsets.size() > 0)
-	{
-		vector<double> tempOffsets = offsets;
-		size_t medLoc = tempOffsets.size()/2;
-//		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
-		sort(tempOffsets.begin(), tempOffsets.end());
-		double medOffset = tempOffsets[medLoc];
-
-		// Now remove outliers
-		int numOutliers = 0;
-		int numInliers = 0;
-		vector<Array2D<double>> tempDirMeasList, tempDirNomList;
-		tempDirMeasList.swap(dirMeasList);
-		tempDirNomList.swap(dirNomList);
-		tempOffsets.clear();
-		tempOffsets.swap(offsets);
-		vector<double> lifeList;
-		double totalLife = 0;
-		int kingIndex = -1;
-		int kingLife = -1;
-		for(int i=0; i<tempOffsets.size(); i++)
-		{
-			if( abs(tempOffsets[i]-medOffset) < 0.1 )
-			{
-				double s = mNominalDirCreateTime[repeatPairs[i]].getElapsedTimeMS();
-				double e = s;
-//				double e = exp(-10*pow(tempOffsets[i]+euler[2][0],2));
-				totalLife += e;
-				lifeList.push_back(e);
-				dirMeasList.push_back(tempDirMeasList[i].copy());
-				dirNomList.push_back(tempDirNomList[i].copy());
-				angleOffset += s*tempOffsets[i];
-				offsets.push_back(offsets[i]);
-				numInliers++;
-
-				if(s > kingLife)
-				{
-					kingIndex = offsets.size()-1;
-					kingLife = s;
-				}
-			}
-			else // Remove this pair from history
-			{
-				mNominalDirMap.erase(repeatPairs[i]);
-				mNominalDirCreateTime.erase(repeatPairs[i]);
-				numOutliers++;
-			}
-		}
-
-		angleOffset = offsets[kingIndex];
-
-		if( abs(medOffset+euler[2][0]) < 0.1)
-		{
-			Array2D<double> dirMeas(3,1), dirNom(3,1,0.0);
-			dirNom[1][0] = 1;
-			dirNom[0][0] = 0;
-			dirNom[0][0] = 0;
-
-			Array2D<double> R = createRotMat_ZYX(-medOffset, euler[1][0], euler[0][0]);
-			dirMeas = matmult(transpose(R), dirNom);
-
-			double weight = 15;
-			Array2D<double> innovation = weight*cross(dirMeas, att.inv()*dirNom);
-			angleOffset = medOffset;
-
-
-			mMutex_visionInnovation.lock();
-//			mVisionInnovation.inject(innovation);
-			mVisionInnovation[0][0] = 0;
-			mVisionInnovation[1][0] = 0;
-			mVisionInnovation[2][0] = innovation[2][0];
-			mMutex_visionInnovation.unlock();
-		}
-		else
-		{
-Log::alert(String()+(int)mStartTime.getElapsedTimeMS()+" -- Bad bunch");
-			for(int i=0; i<repeatPairs.size(); i++)
-			{
-				mNominalDirMap.erase(repeatPairs[i]);
-				mNominalDirCreateTime.erase(repeatPairs[i]);
-			}
-			angleOffset = -euler[2][0];
-			mMutex_visionInnovation.lock();
-			mVisionInnovation[0][0] = 0;
-			mVisionInnovation[1][0] = 0;
-			mVisionInnovation[2][0] = 0;
-			mMutex_visionInnovation.unlock();
-		}
-	}
-
-	// If we don't have any repeats just use the current angle
-	// estimate
-	if(mNominalDirMap.size() == 0)
-		angleOffset = -euler[2][0];
-	else if(dirMeasList.size() == 0)
-		angleOffset = -euler[2][0];
-
-	/////////////////////////////////////////// set nominal directions for the known pairs ///////////////////////////////////////////
-	Array2D<double> dir(3,1);
-	SO3 rot2( createRotMat(2,angleOffset) );
-	for(int i=0; i<newPairs.size(); i++)
-	{
-		p1 = newPairPoints[i].first;
-		p2 = newPairPoints[i].second;
-		
-		// rotation compensation
-		// Right now we are assuming that the points are on horizontal planes
-		r1[0][0] = p1.x - cx;
-		r1[1][0] = p1.y - cy;
-		r1[2][0] = f;
-
-		r2[0][0] = p2.x - cx;
-		r2[1][0] = p2.y - cy;
-		r2[2][0] = f;
-		Array2D<double> delta =r2-r1;
-		delta = 1.0/norm2(delta)*delta;
-		dir = rot2.inv()*rotYX*delta;
-
-		mNominalDirMap[newPairs[i]] = dir.copy();
-		mNominalDirCreateTime[newPairs[i]] = data->imageData->timestamp;
-	}
-
-	mQuadLogger->addEntry(LOG_ID_VISION_INNOVATION, mVisionInnovation, LOG_FLAG_OBSV_BIAS);
-}
+//void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//{
+//	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 10)
+//		return; // don't set my initial nominal angle yet
+//
+//	mMutex_targetFindTime.lock();
+//	mLastTargetFindTime.setTime();
+//	mMutex_targetFindTime.unlock();
+//
+//	//////////////////////////// Bookeeping ///////////////////////////////////////////
+//	// check for dead regions
+//	vector<size_t> deadKeys;
+//	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
+//	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
+//		if( regionIter->second->getLife() <= 0)
+//			deadKeys.push_back(regionIter->second->getId());
+//	sort(deadKeys.begin(), deadKeys.end());
+//
+//	unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator angleIter;
+//	vector<unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator> removeIters;
+//	for(angleIter = mNominalDirMap.begin(); angleIter != mNominalDirMap.end(); angleIter++)
+//		if( binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.first) ||
+//			binary_search(deadKeys.begin(),deadKeys.end(),angleIter->first.second) )
+//			removeIters.push_back(angleIter);
+//
+//
+//	unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator timeIter;
+//	vector<unordered_map<pair<size_t,size_t>, Time, KeyHasher>::iterator> removeTimeIters;
+//	for(timeIter = mNominalDirCreateTime.begin(); timeIter != mNominalDirCreateTime.end(); timeIter++)
+//		if( binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.first) ||
+//			binary_search(deadKeys.begin(),deadKeys.end(),timeIter->first.second) )
+//			removeTimeIters.push_back(timeIter);
+//
+//	for(int i=0; i<removeIters.size(); i++)
+//		mNominalDirMap.erase( removeIters[i] );
+//	for(int i=0; i<removeTimeIters.size(); i++)
+//		mNominalDirCreateTime.erase( removeTimeIters[i] );
+//	for(int i=0; i<deadKeys.size(); i++)
+//		mRegionMap.erase( deadKeys[i] );
+//
+//	// add new stuff
+//	vector<shared_ptr<ActiveRegion>> repeatRegions;
+//	repeatRegions.reserve(data->repeatRegions.size());
+//	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
+//
+//	// need to make sure we actually know about all the repeat regions
+//	for(int i=0; i<data->repeatRegions.size(); i++)
+//		if( mRegionMap.count(data->repeatRegions[i]->getId()) > 0)
+//			repeatRegions.push_back(data->repeatRegions[i]);
+//		else
+//			newRegions.push_back(data->repeatRegions[i]);
+//
+//	for(int i=0; i<newRegions.size(); i++)
+//		mRegionMap[newRegions[i]->getId()] = newRegions[i];
+//
+//	// assemble everything into one vector
+//	vector<shared_ptr<ActiveRegion>> regions;
+//	regions.reserve(repeatRegions.size()+newRegions.size());
+//	regions.insert(regions.end(), repeatRegions.begin(), repeatRegions.end());
+//	regions.insert(regions.end(), newRegions.begin(), newRegions.end());
+//
+//	// go through and see what pairs we already know about
+//	vector<pair<size_t,size_t>> repeatPairs, newPairs;
+//	vector<pair<cv::Point2f, cv::Point2f>> repeatPairPoints, newPairPoints;
+//	for(int i=0; i<regions.size(); i++)
+//		for(int j=i+1; j<regions.size(); j++)
+//		{
+//			int id1 = min(regions[i]->getId(), regions[j]->getId());
+//			int id2 = max(regions[i]->getId(), regions[j]->getId());
+//
+//			pair<size_t,size_t> pr(id1, id2);
+//			cv::Point2f pt1 = mRegionMap[id1]->getFoundPos();
+//			cv::Point2f pt2 = mRegionMap[id2]->getFoundPos();
+//			if(mNominalDirMap.count(pr) > 0)
+//			{
+//				repeatPairs.push_back(pr);
+//				repeatPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
+//			}
+//			else
+//			{
+//				double d = cv::norm(pt1-pt2);
+//				// avoid keeping pairs that are too close together
+//				if(d > 20)
+//				{
+//					newPairs.push_back(pr);
+//					newPairPoints.push_back( pair<cv::Point2f, cv::Point2f>(pt1, pt2) );
+//				}
+//			}
+//		}
+//
+//	// For rotation compensation
+//	SO3 att = data->imageData->att;
+//	Array2D<double> euler = att.getAnglesZYX();
+//	SO3 R_x( createRotMat(0, euler[0][0]) );
+//	SO3 R_y( createRotMat(1, euler[1][0]) );
+//	SO3 R_z( createRotMat(2, euler[2][0]) );
+//	SO3 attYX = R_y*R_x; // R_y*R_x*R_x'*R_y'*R_z'*P = R_z'*P
+//	SO3 rotYX = attYX*SO3(mRotCamToPhone);
+//	double f = data->imageData->focalLength;
+//	double cx = data->imageData->center.x;
+//	double cy = data->imageData->center.y;
+//
+//	//////////////////////////// add measurements for the pairs we've seen before ///////////////////////////////////////////
+//	cv::Point2f p1, p2;
+//	Array2D<double> dirMeas(3,1);
+//	Array2D<double> dirNom(3,1);
+//	Array2D<double> r1(3,1), r2(3,1);
+//	vector<Array2D<double>> dirMeasList(repeatPairs.size(),Array2D<double>(3,1));
+//	vector<Array2D<double>> dirNomList(repeatPairs.size(),Array2D<double>(3,1));
+//	vector<double> offsets(repeatPairs.size());
+//	for(int i=0; i<repeatPairs.size(); i++)
+//	{
+//		p1 = repeatPairPoints[i].first;
+//		p2 = repeatPairPoints[i].second;
+//
+//		dirMeas[0][0] = p2.x-p1.x;
+//		dirMeas[1][0] = p2.y-p1.y;
+//		dirMeas[2][0] = 0;
+//		dirMeas.inject(1.0/norm2(dirMeas)*dirMeas);
+//		dirMeas.inject(matmult(mRotCamToPhone, dirMeas));
+//
+//		dirNom.inject(mNominalDirMap[repeatPairs[i]]);
+//
+//		dirMeasList[i].inject(dirMeas);
+//		dirNomList[i].inject(dirNom);
+//
+//		// rotation compensation
+//		r1[0][0] = p1.x - cx;
+//		r1[1][0] = p1.y - cy;
+//		r1[2][0] = f;
+//
+//		r2[0][0] = p2.x - cx;
+//		r2[1][0] = p2.y - cy;
+//		r2[2][0] = f;
+//
+//		Array2D<double> delta = rotYX*(r2-r1);
+//		double curAngle = atan2(delta[1][0], delta[0][0]);
+//		double nomAngle = atan2(dirNom[1][0], dirNom[0][0]);
+//		while( curAngle-nomAngle >= PI) curAngle -= 2*PI;
+//		while( curAngle-nomAngle < -PI) curAngle += 2*PI;
+//		offsets[i] = curAngle-nomAngle;
+//	}
+//
+//	// Find the median offset for outlier rejection
+//	double angleOffset = 0;
+//	if(offsets.size() > 0)
+//	{
+//		vector<double> tempOffsets = offsets;
+//		size_t medLoc = tempOffsets.size()/2;
+////		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
+//		sort(tempOffsets.begin(), tempOffsets.end());
+//		double medOffset = tempOffsets[medLoc];
+//
+//		// Now remove outliers
+//		int numOutliers = 0;
+//		int numInliers = 0;
+//		vector<Array2D<double>> tempDirMeasList, tempDirNomList;
+//		tempDirMeasList.swap(dirMeasList);
+//		tempDirNomList.swap(dirNomList);
+//		tempOffsets.clear();
+//		tempOffsets.swap(offsets);
+//		vector<double> lifeList;
+//		double totalLife = 0;
+//		int kingIndex = -1;
+//		int kingLife = -1;
+//		for(int i=0; i<tempOffsets.size(); i++)
+//		{
+//			if( abs(tempOffsets[i]-medOffset) < 0.1 )
+//			{
+//				double s = mNominalDirCreateTime[repeatPairs[i]].getElapsedTimeMS();
+//				double e = s;
+////				double e = exp(-10*pow(tempOffsets[i]+euler[2][0],2));
+//				totalLife += e;
+//				lifeList.push_back(e);
+//				dirMeasList.push_back(tempDirMeasList[i].copy());
+//				dirNomList.push_back(tempDirNomList[i].copy());
+//				angleOffset += s*tempOffsets[i];
+//				offsets.push_back(offsets[i]);
+//				numInliers++;
+//
+//				if(s > kingLife)
+//				{
+//					kingIndex = offsets.size()-1;
+//					kingLife = s;
+//				}
+//			}
+//			else // Remove this pair from history
+//			{
+//				mNominalDirMap.erase(repeatPairs[i]);
+//				mNominalDirCreateTime.erase(repeatPairs[i]);
+//				numOutliers++;
+//			}
+//		}
+//
+//		angleOffset = offsets[kingIndex];
+//
+//		if( abs(medOffset+euler[2][0]) < 0.1)
+//		{
+//			Array2D<double> dirMeas(3,1), dirNom(3,1,0.0);
+//			dirNom[1][0] = 1;
+//			dirNom[0][0] = 0;
+//			dirNom[0][0] = 0;
+//
+//			Array2D<double> R = createRotMat_ZYX(-medOffset, euler[1][0], euler[0][0]);
+//			dirMeas = matmult(transpose(R), dirNom);
+//
+//			double weight = 15;
+//			Array2D<double> innovation = weight*cross(dirMeas, att.inv()*dirNom);
+//			angleOffset = medOffset;
+//
+//
+//			mMutex_visionInnovation.lock();
+////			mVisionInnovation.inject(innovation);
+//			mVisionInnovation[0][0] = 0;
+//			mVisionInnovation[1][0] = 0;
+//			mVisionInnovation[2][0] = innovation[2][0];
+//			mMutex_visionInnovation.unlock();
+//		}
+//		else
+//		{
+//Log::alert(String()+(int)mStartTime.getElapsedTimeMS()+" -- Bad bunch");
+//			for(int i=0; i<repeatPairs.size(); i++)
+//			{
+//				mNominalDirMap.erase(repeatPairs[i]);
+//				mNominalDirCreateTime.erase(repeatPairs[i]);
+//			}
+//			angleOffset = -euler[2][0];
+//			mMutex_visionInnovation.lock();
+//			mVisionInnovation[0][0] = 0;
+//			mVisionInnovation[1][0] = 0;
+//			mVisionInnovation[2][0] = 0;
+//			mMutex_visionInnovation.unlock();
+//		}
+//	}
+//
+//	// If we don't have any repeats just use the current angle
+//	// estimate
+//	if(mNominalDirMap.size() == 0)
+//		angleOffset = -euler[2][0];
+//	else if(dirMeasList.size() == 0)
+//		angleOffset = -euler[2][0];
+//
+//	/////////////////////////////////////////// set nominal directions for the known pairs ///////////////////////////////////////////
+//	Array2D<double> dir(3,1);
+//	SO3 rot2( createRotMat(2,angleOffset) );
+//	for(int i=0; i<newPairs.size(); i++)
+//	{
+//		p1 = newPairPoints[i].first;
+//		p2 = newPairPoints[i].second;
+//		
+//		// rotation compensation
+//		// Right now we are assuming that the points are on horizontal planes
+//		r1[0][0] = p1.x - cx;
+//		r1[1][0] = p1.y - cy;
+//		r1[2][0] = f;
+//
+//		r2[0][0] = p2.x - cx;
+//		r2[1][0] = p2.y - cy;
+//		r2[2][0] = f;
+//		Array2D<double> delta =r2-r1;
+//		delta = 1.0/norm2(delta)*delta;
+//		dir = rot2.inv()*rotYX*delta;
+//
+//		mNominalDirMap[newPairs[i]] = dir.copy();
+//		mNominalDirCreateTime[newPairs[i]] = data->imageData->timestamp;
+//	}
+//
+//	mQuadLogger->addEntry(LOG_ID_VISION_INNOVATION, mVisionInnovation, LOG_FLAG_OBSV_BIAS);
+//}
 
 void Observer_Angular::onNewCommObserverReset()
 {

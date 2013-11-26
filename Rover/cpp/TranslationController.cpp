@@ -328,7 +328,7 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		// Predict the target's current position based on kinematics
 		vector<cv::Point2f> points = xlateData->goodPoints;
 		double dtImg = xlateData->timestamp.getElapsedTimeNS()/1.0e9;
-		double f = xlateData->imageTargetFindData->imageData->focalLength;
+		double f = xlateData->objectTrackingData->imageData->focalLength;
 		Array2D<double> vel(3,1);
 		double z;
 		if(mObsvTranslational == NULL)
@@ -561,17 +561,17 @@ Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
 		mMutex_target.unlock();
 	}
 
-	void TranslationController::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-	{
-		if(data == NULL || (data->repeatRegions.size() + data->newRegions.size()) == 0)
-			return;
-
-		mMutex_target.lock();
-		mTarget2Data = data;
-		mMutex_target.unlock();
-
-		mNewMeasAvailable = true;
-	}
+//	void TranslationController::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+//	{
+//		if(data == NULL || (data->repeatRegions.size() + data->newRegions.size()) == 0)
+//			return;
+//
+//		mMutex_target.lock();
+//		mTarget2Data = data;
+//		mMutex_target.unlock();
+//
+//		mNewMeasAvailable = true;
+//	}
 
 } // namespace Quadrotor
 } // namespace ICSL

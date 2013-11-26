@@ -178,10 +178,11 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	SO3 attCur = curFeatureData->imageData->att;
 
 	SO3 attChange = attCur*attOld.inv();
-	double theta;
-	Array2D<double> axis;
-	attChange.getAngleAxis(theta, axis);
-	Array2D<double> omega = theta/dt*axis;
+	Array2D<double> omega = 1.0/dt*attChange.log().toVector();
+//	double theta;
+//	Array2D<double> axis;
+//	attChange.getAngleAxis(theta, axis);
+//	Array2D<double> omega = theta/dt*axis;
 
 	// Ignore this case since it means we're probably sitting on the ground
 	if(oldState[2][0] <= 0)
@@ -191,8 +192,8 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 
 	// Rotate data to cam coords
 	omega.inject( matmult( mRotPhoneToCam, omega ));
-	Array2D<double> mRotPhoneToCam2 = blkdiag(mRotPhoneToCam, mRotPhoneToCam);
-	Array2D<double> mRotCamToPhone2 = blkdiag(mRotCamToPhone, mRotCamToPhone);
+//	Array2D<double> mRotPhoneToCam2 = blkdiag(mRotPhoneToCam, mRotPhoneToCam);
+//	Array2D<double> mRotCamToPhone2 = blkdiag(mRotCamToPhone, mRotCamToPhone);
 	curState = matmult( mRotPhoneToCam2, curState);
 	curErrCov = matmult( mRotPhoneToCam2, matmult(curErrCov, mRotCamToPhone2));
 
@@ -903,6 +904,15 @@ void VelocityEstimator::onNewCommVelEstProbNoCorr(float probNoCorr)
 	mMutex_params.unlock();
 
 	Log::alert(String()+"Probability of no correspondence set to "+probNoCorr);
+}
+
+void VelocityEstimator::setRotPhoneToCam(const TNT::Array2D<double> &rot)
+{
+	mRotPhoneToCam.inject(rot);
+	mRotCamToPhone.inject(transpose(rot));
+
+	mRotPhoneToCam2 = blkdiag(mRotPhoneToCam, mRotPhoneToCam);
+	mRotCamToPhone2 = blkdiag(mRotCamToPhone, mRotCamToPhone);
 }
 
 } // namespace Rover

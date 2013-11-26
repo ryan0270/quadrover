@@ -711,9 +711,9 @@ void Observer_Translational::onVelocityEstimator_newEstimate(const shared_ptr<Da
 	mMutex_events.unlock();
 }
 
-void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
 {
-	if(data == NULL || data->repeatRegions.size() + data->newRegions.size() == 0)
+	if(data == NULL || data->repeatObjects.size() + data->newObjects.size() == 0)
 		return;
 
 	mMutex_kfData.lock();
@@ -722,36 +722,36 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 	if(state[2][0] < 0.5 || !mUseIbvs)
 		return;
 
-	if( data->repeatRegions.size() + data->newRegions.size() < 5)
+	if( data->repeatObjects.size() + data->newObjects.size() < 5)
 		return;
 
 	///////////////////////////////// Bookeeping /////////////////////////////////////////
-	// check for dead regions
+	// check for dead objects
 	vector<size_t> deadKeys;
-	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
-	regionIter = mRegionMap.begin();
-	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
+	unordered_map<size_t, shared_ptr<TrackedObject>>::const_iterator objectIter;
+	objectIter = mObjectMap.begin();
+	for(objectIter = mObjectMap.begin(); objectIter != mObjectMap.end(); objectIter++)
 	{
-		if( regionIter->second->getLife() <= 0)
-			deadKeys.push_back(regionIter->second->getId());
+		if( !(objectIter->second->isAlive()) )
+			deadKeys.push_back(objectIter->second->getId());
 	}
 
 	for(int i=0; i<deadKeys.size(); i++)
 	{
-		mRegionNominalPosMap.erase( deadKeys[i] );
-		mRegionMap.erase( deadKeys[i] );
+		mObjectNominalPosMap.erase( deadKeys[i] );
+		mObjectMap.erase( deadKeys[i] );
 	}
 
 	///////////////////////////////// Bookeeping /////////////////////////////////////////
-	vector<shared_ptr<ActiveRegion>> repeatRegions;
-	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
+	vector<shared_ptr<TrackedObject>> repeatObjects;
+	vector<shared_ptr<TrackedObject>> newObjects = data->newObjects;
 
-	// need to make sure we actually know about all the repeat regions
-	for(int i=0; i<data->repeatRegions.size(); i++)
-		if( mRegionMap.count(data->repeatRegions[i]->getId()) > 0)
-			repeatRegions.push_back(data->repeatRegions[i]);
+	// need to make sure we actually know about all the repeat objects
+	for(int i=0; i<data->repeatObjects.size(); i++)
+		if( mObjectMap.count(data->repeatObjects[i]->getId()) > 0)
+			repeatObjects.push_back(data->repeatObjects[i]);
 		else
-			newRegions.push_back(data->repeatRegions[i]);
+			newObjects.push_back(data->repeatObjects[i]);
 
 	// adjust for attitude
 	// adjust for cam to phone
@@ -759,14 +759,14 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 	SO3 att = data->imageData->att;
 	SO3 rot = att*mRotCamToPhone;
 	double f = data->imageData->focalLength;
-	double cx = data->imageData->center.x;
-	double cy = data->imageData->center.y;
+	cv::Point2f center = data->imageData->center;
 	Array2D<double> p(3,1);
-	vector<cv::Point2f> repeatPoints(repeatRegions.size()), newPoints(newRegions.size());
+	vector<cv::Point2f> repeatPoints(repeatObjects.size());
+	vector<cv::Point2f> newPoints(newObjects.size());
 	for(int i=0; i<repeatPoints.size(); i++)
 	{
-		p[0][0] = repeatRegions[i]->getFoundPos().x - cx;
-		p[1][0] = repeatRegions[i]->getFoundPos().y - cy;
+		p[0][0] = repeatObjects[i]->getLocation().x - center.x;
+		p[1][0] = repeatObjects[i]->getLocation().y - center.y;
 		p[2][0] = f;
 		p = rot*p;
 		repeatPoints[i].x = p[0][0];
@@ -774,15 +774,15 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 	}
 	for(int i=0; i<newPoints.size(); i++)
 	{
-		p[0][0] = newRegions[i]->getFoundPos().x - cx;
-		p[1][0] = newRegions[i]->getFoundPos().y - cy;
+		p[0][0] = newObjects[i]->getLocation().x - center.x; 
+		p[1][0] = newObjects[i]->getLocation().y - center.y; 
 		p[2][0] = f;
 		p = rot*p;
 		newPoints[i].x = p[0][0];
 		newPoints[i].y = p[1][0];
 	}
 
-	// Find how much repeated regions have moved relative
+	// Find how much repeated objects have moved relative
 	// to their nominal position
 	cv::Point2f imageOffset(0,0);
 	vector<float> offsetsX(repeatPoints.size());
@@ -790,16 +790,13 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 	vector<cv::Point2f> nominalPoints(repeatPoints.size());
 	if(repeatPoints.size() > 0)
 	{
-		float lifeSum = 0;
-		float life;
 		for(int i=0; i<repeatPoints.size(); i++)
 		{
-			cv::Point2f nom = mRegionNominalPosMap[repeatRegions[i]->getId()];
+			cv::Point2f nom = mObjectNominalPosMap[repeatObjects[i]->getId()];
 			// scale the nominal to the current height
 			nom.x /= state[2][0];
 			nom.y /= state[2][0];
 
-			life = repeatRegions[i]->getLife();
 			offsetsX[i] = repeatPoints[i].x-nom.x;
 			offsetsY[i] = repeatPoints[i].y-nom.y;
 
@@ -844,11 +841,11 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 			}
 			else
 			{
-				// remove the offending region from memory
-				// remember that offsets is ordered the same as repeateRegions
-				mRegionNominalPosMap.erase(repeatRegions[i]->getId());
+				// remove the offending objects from memory
+				// remember that offsets is ordered the same as repeatObjects
+				mObjectNominalPosMap.erase(repeatObjects[i]->getId());
 				newPoints.push_back(repeatPoints[i]);
-				newRegions.push_back(repeatRegions[i]);
+				newObjects.push_back(repeatObjects[i]);
 				numOutliers++;
 			}
 		if(numInliers > 0) // it's still possible to have zero if X and Y inliers don't match
@@ -869,7 +866,7 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 	{
 		shared_ptr<ImageTranslationData> xlateData(new ImageTranslationData());
 		xlateData->timestamp.setTime(data->timestamp);
-		xlateData->imageTargetFindData = data;
+		xlateData->objectTrackingData = data;
 		xlateData->goodPoints.swap(goodPoints);
 		xlateData->nominalPoints.swap(nominalPoints);
 		mMutex_listeners.lock();
@@ -878,22 +875,22 @@ void Observer_Translational::onTargetFound(const shared_ptr<ImageTargetFindData>
 		mMutex_listeners.unlock();
 	}
 		
-	// Set the nominal position for the new regions
+	// Set the nominal position for the new objects
 	cv::Point2f newPoint;
 	for(int i=0; i<newPoints.size(); i++)
 	{
-		mRegionMap[newRegions[i]->getId()] = newRegions[i];
+		mObjectMap[newObjects[i]->getId()] = newObjects[i];
 		newPoint = newPoints[i]-imageOffset;
 		// scale the nominal point to how it would appear at 1m
 		newPoint.x *= state[2][0];
 		newPoint.y *= state[2][0];
-		mRegionNominalPosMap[newRegions[i]->getId()] = newPoint;
+		mObjectNominalPosMap[newObjects[i]->getId()] = newPoint;
 	}
 
 	mQuadLogger->addEntry(LOG_ID_IMAGE_OFFSET, imageOffset, data->timestamp, LOG_FLAG_CAM_RESULTS);
 
 	// first time finding anything fun
-	if(repeatRegions.size() == 0)
+	if(repeatObjects.size() == 0)
 		return;
 
 	// Position estimation

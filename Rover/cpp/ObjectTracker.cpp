@@ -127,10 +127,19 @@ void ObjectTracker::run()
 				to->updatePositionDistribution(mv, Sv, mz, varz, f, center, omega, curTime);
 			}
 
-			/////////////////// make matches ///////////////////////
+			// make matches
 			vector<ObjectMatch> goodMatches;
 			vector<shared_ptr<TrackedObject>> repeatObjects, newObjects;
 			matchify(curObjects, goodMatches, repeatObjects, newObjects, Sn, SnInv, probNoCorr, curTime);
+
+			// draw
+			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
+			featureData->imageData->image->copyTo(*imageAnnotated);
+			drawResults(*imageAnnotated, goodMatches, repeatObjects, newObjects);
+
+			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
+			imageAnnotatedData->imageAnnotated = imageAnnotated;
+			imageAnnotatedData->imageDataSource = featureData->imageData;
 
 			// Find the oldest ... just cuz
 			if(mTrackedObjects.size() > 0)
@@ -144,15 +153,17 @@ void ObjectTracker::run()
 			// Tell the world
 			shared_ptr<ObjectTrackerData> data(new ObjectTrackerData());
 			data->timestamp.setTime(featureData->imageData->timestamp);
-			data->trackedObjects.swap(repeatObjects);
+			data->repeatObjects.swap(repeatObjects);
 			data->newObjects.swap(newObjects);
 			data->imageData = featureData->imageData;
-			data->trackedObjectLocs.resize(repeatObjects.size());
+			data->imageAnnotatedData = imageAnnotatedData;
+			data->repeatObjectLocs.resize(repeatObjects.size());
 			data->newObjectLocs.resize(newObjects.size());
 			for(int i=0; i<repeatObjects.size(); i++)
-				data->trackedObjectLocs[i] = repeatObjects[i]->getLocation();
+				data->repeatObjectLocs[i] = repeatObjects[i]->getLocation();
 			for(int i=0; i<newObjects.size(); i++)
 				data->newObjectLocs[i] = newObjects[i]->getLocation();
+			data->matches.swap(goodMatches);
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObjectsTracked(data);
@@ -165,6 +176,38 @@ void ObjectTracker::run()
 	}
 
 	mFinished = true;
+}
+
+void ObjectTracker::drawResults(cv::Mat &img,
+								const vector<ObjectMatch> &matches,
+								const vector<shared_ptr<TrackedObject>> &repeatObjects,
+								const vector<shared_ptr<TrackedObject>> &newObjects)
+{
+//	for(int i=0; i<matches.size(); i++)
+//		line(img, matches[i].prevPos, matches[i].curPos, cv::Scalar(0,255,0), 2);
+
+	cv::Point2f p1, p2;
+	vector<pair<Time, cv::Point2f>>::const_iterator iter;
+	for(int i=0; i<repeatObjects.size(); i++)
+	{
+		const vector<pair<Time, cv::Point2f>> history = repeatObjects[i]->getHistory();
+		iter = history.begin();
+		p1 = iter->second;
+		iter++;
+		while(iter != history.end())
+		{
+			p2 = iter->second;
+			line(img, p1, p2, cv::Scalar(0,255,0),2);
+			p1 = p2;
+			iter++;
+		}
+	}
+
+	for(int i=0; i<newObjects.size(); i++)
+		circle(img, newObjects[i]->getLocation(), 4, cv::Scalar(255,0,0), -1);
+
+	for(int i=0; i<repeatObjects.size(); i++)
+		circle(img, repeatObjects[i]->getLocation(), 4, cv::Scalar(0,0,255), -1);
 }
 
 void ObjectTracker::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
