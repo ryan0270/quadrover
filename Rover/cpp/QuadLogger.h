@@ -87,6 +87,7 @@ enum LogID
 	LOG_ID_TORQUE_CMD=10000,
 	LOG_ID_REF_ATTITUDE_SYSTEM_STATE=11000,
 	LOG_ID_VISION_INNOVATION=12000,
+	LOG_ID_OBJECT_TRACKING_STATS=13000,
 };
 
 class LogEntry
@@ -123,6 +124,8 @@ class QuadLogger
 		void addEntry(const LogID &id, const shared_ptr<SO3Data<double>> &data, const shared_ptr<DataVector<double>> &velData, LogFlags type);
 		void addEntry(const LogID &id, const toadlet::egg::Collection<double> &data, LogFlags type);
 		void addEntry(const LogID &id, const toadlet::egg::Collection<float> &data, LogFlags type);
+		void addEntry(const LogID &id, const vector<double> &data, LogFlags type);
+		void addEntry(const LogID &id, const vector<float> &data, LogFlags type);
 		void addEntry(const LogID &id, const cv::Point2f &data, LogFlags type);
 		void addEntry(const LogID &id, const cv::Point2f &data, const Time &t, LogFlags type);
 		void addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type);

@@ -15,8 +15,6 @@ ObjectTracker::ObjectTracker()
 	mFeatureData = NULL;
 
 	mObsvTranslation = NULL;
-
-	mOldest = NULL;
 }
 
 ObjectTracker::~ObjectTracker()
@@ -48,11 +46,11 @@ void ObjectTracker::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
-	Array2D<double> Sn = 2*5*5*createIdentity((double)2);
+	Array2D<double> Sn = 5*5*createIdentity((double)2);
 	Array2D<double> SnInv(2,2,0.0);
 	SnInv[0][0] = 1.0/Sn[0][0];
 	SnInv[1][1] = 1.0/Sn[1][1];
-	double probNoCorr = 5e-4/2;
+	double probNoCorr = 5e-4/2/2;
 
 	shared_ptr<ImageFeatureData> featureData = NULL;
 	shared_ptr<ImageFeatureData> prevFeatureData = NULL;
@@ -65,7 +63,7 @@ void ObjectTracker::run()
 	double mz;
 	double varz;
 
-	SO3 curAtt, prevAtt, attChange = curAtt*prevAtt.inv();
+	SO3 curAtt, prevAtt, attChange;
 	Array2D<double> omega(3,1);
 
 	double f;
@@ -141,14 +139,20 @@ void ObjectTracker::run()
 			imageAnnotatedData->imageAnnotated = imageAnnotated;
 			imageAnnotatedData->imageDataSource = featureData->imageData;
 
-			// Find the oldest ... just cuz
-			if(mTrackedObjects.size() > 0)
+			// Sort by age for stats
+//			sort(mTrackedObjects.begin(), mTrackedObjects.end(), TrackedObject::sortAgePredicate);
+			sort(repeatObjects.begin(), repeatObjects.end(), TrackedObject::sortAgePredicate);
+			vector<double> stats(4);
+			if(repeatObjects.size() > 0)
 			{
-				mOldest = mTrackedObjects[0];
-				for(int i=1; i<mTrackedObjects.size(); i++)
-					if(mTrackedObjects[i]->getCreateTime() < mOldest->getCreateTime())
-						mOldest = mTrackedObjects[i];
+				stats[0] = repeatObjects[0]->getAge(); // oldest
+				int medIdx = repeatObjects.size()/2;
+				stats[1] = repeatObjects[medIdx]->getAge(); // median
 			}
+			else
+			{ stats[0] = stats[1] = 0; }
+			stats[2] = repeatObjects.size();
+			stats[3] = newObjects.size();
 
 			// Tell the world
 			shared_ptr<ObjectTrackerData> data(new ObjectTrackerData());
@@ -168,6 +172,8 @@ void ObjectTracker::run()
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObjectsTracked(data);
 
+			if(mQuadLogger != NULL)
+				mQuadLogger->addEntry(LOG_ID_OBJECT_TRACKING_STATS, stats, LOG_FLAG_CAM_RESULTS);
 
 			prevFeatureData = featureData;
 		}
@@ -237,7 +243,7 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 	vector<bool> prevMatched(N1, false);
 	vector<bool> curMatched(N2, false);
 	vector<cv::Point2f> offsets;
-	float matchThreshold = 0.6;
+	float matchThreshold = 0.7;
 	for(int i=0; i<N1; i++)
 	{
 		if(N2 == 0 || C[i][N2] > 1.0-matchThreshold)
@@ -256,7 +262,7 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 			}
 		}
 
-		if(maxScore < 0.6)
+		if(maxScore < matchThreshold)
 			continue;
 
 		curMatched[maxIndex] = true;

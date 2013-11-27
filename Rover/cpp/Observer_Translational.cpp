@@ -787,6 +787,7 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	cv::Point2f imageOffset(0,0);
 	vector<float> offsetsX(repeatPoints.size());
 	vector<float> offsetsY(repeatPoints.size());
+	vector<float> angles(repeatPoints.size());
 	vector<cv::Point2f> nominalPoints(repeatPoints.size());
 	if(repeatPoints.size() > 0)
 	{
@@ -804,6 +805,31 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 		}
 	}
 
+	// Try find a plateau of ages
+	// to use as way to separate
+	// old objects from young objects
+	int minPoints = min(10, (int)repeatObjects.size());
+	int numEntries = minPoints;
+	if(repeatObjects.size() > minPoints)
+	{
+		// Note that repeatObjects is already sorted by age
+		// so this list is also sorted
+		vector<double> ageList(repeatObjects.size());
+		for(int i=0; i<ageList.size(); i++)
+			ageList[i] = repeatObjects[i]->getAge();
+		vector<double> delta(ageList.size());
+		delta[0] = 0;
+		for(int i=1; i<delta.size(); i++)
+			delta[i] = ageList[i-1]-ageList[i];
+		double maxDelta = *max_element(delta.begin()+minPoints-1, delta.end());
+		vector<int> peakList;
+		for(int i=minPoints-1; i<delta.size(); i++)
+			if(delta[i] > 0.5*maxDelta)
+				peakList.push_back(i);
+		if(peakList.size() > 0)
+			numEntries = peakList[0];
+	}
+
 	// Outlier rejection
 	int numInliers = 0;
 	int numOutliers = 0;
@@ -813,26 +839,40 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	if(offsetsX.size() > 0)
 	{
 		cv::Point2f medOffset;
-		vector<float> tempOffsetsX = offsetsX;
-		size_t medLoc = tempOffsetsX.size()/2;
+		size_t medLoc = numEntries/2;
+
+		// calculate the median offest based on the oldest entries only
+		// recall that repeatObjects is already sorted, so offsetsX is as well
+		vector<float> tempOffsetsX(numEntries);
+		for(int i=0; i<numEntries; i++)
+			tempOffsetsX[i] = offsetsX[i];
 //		nth_element(tempOffsetsX.begin(), tempOffsetsX.begin()+medLoc, tempOffsetsX.end());
 // nth_element is giving me problems here so sort for now
 		sort(tempOffsetsX.begin(), tempOffsetsX.end());
 		medOffset.x = tempOffsetsX[medLoc];
 
-		vector<float> tempOffsetsY = offsetsY;
+		vector<float> tempOffsetsY(numEntries);
+		for(int i=0; i<numEntries; i++)
+			tempOffsetsY[i] = offsetsY[i];
 //		nth_element(tempOffsetsY.begin(), tempOffsetsY.begin()+medLoc, tempOffsetsY.end());
 // nth_element is giving me problems here so sort for now
 		sort(tempOffsetsY.begin(), tempOffsetsY.end());
 		medOffset.y = tempOffsetsY[medLoc];
 
 		// Now keep only offsets close to the median
+		double ageSum = 0;
+		double age;
+		vector<int> killList;
 		for(int i=0; i<offsetsX.size(); i++)
-			if( abs(offsetsX[i]-medOffset.x) < 10 && abs(offsetsY[i]-medOffset.y) < 10 )
+		{
+			if( abs(offsetsX[i]-medOffset.x) < 10 &&
+				abs(offsetsY[i]-medOffset.y) < 10 )
 			{
 				numInliers++;
-				imageOffset.x += offsetsX[i];
-				imageOffset.y += offsetsY[i];
+				age = repeatObjects[i]->getAge();
+				ageSum += age;
+				imageOffset.x += age*offsetsX[i];
+				imageOffset.y += age*offsetsY[i];
 				goodPoints.push_back(repeatPoints[i]);
 				goodPoints.back().x += offsetsX[i];
 				goodPoints.back().y += offsetsY[i];
@@ -841,22 +881,40 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 			}
 			else
 			{
-				// remove the offending objects from memory
-				// remember that offsets is ordered the same as repeatObjects
-				mObjectNominalPosMap.erase(repeatObjects[i]->getId());
-				newPoints.push_back(repeatPoints[i]);
-				newObjects.push_back(repeatObjects[i]);
+				killList.push_back(i);
 				numOutliers++;
 			}
-		if(numInliers > 0) // it's still possible to have zero if X and Y inliers don't match
-			imageOffset = 1.0/numInliers*imageOffset;
+		}
+		
+//		if(numInliers > 0) // it's still possible to have zero if X and Y inliers don't match
+//			imageOffset = 1.0/numInliers*imageOffset;
+		if(ageSum > 0)
+			imageOffset = 1.0/ageSum*imageOffset;
 
-		if(numOutliers <= max(1.0, 1.0/3*numInliers))
+		if(numOutliers <= max(1.0f, 0.5f*numInliers))
+		{
 			mLastImageOffset = imageOffset;
+
+			// remove the offending objects from memory
+			for(int i=0; i<killList.size(); i++)
+			{
+				mObjectNominalPosMap.erase(repeatObjects[killList[i]]->getId());
+				repeatObjects[killList[i]]->kill();
+			}
+		}
 		else
 		{
 			Log::alert(String() + "lot of outliers: " + numOutliers + " vs. "+ numInliers);
 			imageOffset = mLastImageOffset;
+
+			// remove everything from memory, since I'm not sure where the problem is
+			for(int i=0; i<repeatObjects.size(); i++)
+			{
+				mObjectNominalPosMap.erase(repeatObjects[i]->getId());
+				repeatObjects[i]->kill();
+			}
+
+			goodPoints.clear();
 		}
 	}
 
