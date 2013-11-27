@@ -99,6 +99,10 @@ camPos = phoneData(camPosIndices,3:5)';
 % angleStateRefTime = phoneData(angleStateRefIndices,1)'/1000;
 % angleStateRef = phoneData(angleStateRefIndices,3:8)';
 
+trackingStatsIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBJECT_TRACKING_STATS);
+trackingStatsTime = phoneData(trackingStatsIndices,1)'/1000;
+trackingStats = phoneData(trackingStatsIndices,3:6)';
+
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
@@ -408,6 +412,24 @@ if exist('angleRef','var') && ~isempty(angleRef)
 		ylabel(angleStateLabels{i});
 	end
 	legend('Cmd','Actual','Ref')
+end
+
+%%
+if exist('trackingStats','var') && ~isempty(trackingStats)
+% 	figure(13000);
+% 	statLabels = {'Oldest [s]', 'Median [s]', '# repeats', '# new'};
+% 	for i=1:4
+% 		subplot(4,1,i)
+% 		plot(trackingStatsTime, trackingStats(i,:));
+% 		xlabel('Time [s]');
+% 		ylabel(statLabels{i});
+% 	end
+	
+	fprintf('age stats:\t');
+	for i=1:4
+		fprintf('%1.2f\t',mean(trackingStats(i,:)));
+	end
+	fprintf('\n');
 end
 
 

@@ -281,40 +281,40 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-	cv::namedWindow("dispFeatureFind",1);
-	cv::namedWindow("dispObjectTrack",1);
-	cv::moveWindow("dispFeatureFind",0,0);
-	cv::moveWindow("dispObjectTrack",321,0);
-
-	class MyFeatureFinderListener : public FeatureFinderListener
-	{
-		public:
-		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-		{
-			imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated));
-			cv::waitKey(1);
-		}
-	} myFeatureFinderListener;
-	mFeatureFinder.addListener(&myFeatureFinderListener);
-
-	class MyObjectTrackerListenr : public ObjectTrackerListener
-	{
-		public:
-		void onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
-		{
-			stringstream ss;
-			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
-//			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
-			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
-			cv::waitKey(1);
-		};
-
-		int imgCnt;
-		string imgDir;
-	} myObjectTrackerListener;
-	myObjectTrackerListener.imgCnt = 0;
-	myObjectTrackerListener.imgDir = imgDir;
-	mObjectTracker.addListener(&myObjectTrackerListener);
+//	cv::namedWindow("dispFeatureFind",1);
+//	cv::namedWindow("dispObjectTrack",1);
+//	cv::moveWindow("dispFeatureFind",0,0);
+//	cv::moveWindow("dispObjectTrack",321,0);
+//
+//	class MyFeatureFinderListener : public FeatureFinderListener
+//	{
+//		public:
+//		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
+//		{
+//			imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated));
+//			cv::waitKey(1);
+//		}
+//	} myFeatureFinderListener;
+//	mFeatureFinder.addListener(&myFeatureFinderListener);
+//
+//	class MyObjectTrackerListenr : public ObjectTrackerListener
+//	{
+//		public:
+//		void onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
+//		{
+//			stringstream ss;
+//			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
+////			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+//			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
+//			cv::waitKey(1);
+//		};
+//
+//		int imgCnt;
+//		string imgDir;
+//	} myObjectTrackerListener;
+//	myObjectTrackerListener.imgCnt = 0;
+//	myObjectTrackerListener.imgDir = imgDir;
+//	mObjectTracker.addListener(&myObjectTrackerListener);
 
 //	class MyTargetFinderListener : public TargetFinderListener
 //	{
@@ -454,7 +454,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 300e3;
+	int endTimeDelta = 600e3;
 	float viconUpdateRate = 30; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
@@ -469,14 +469,8 @@ int main(int argv, char* argc[])
 	noiseStd[7][0] = 0.000;
 	noiseStd[8][0] = 0.010;
 
-//	string line;
-//	string dataFilename = dataDir+"/phoneLog.txt";
-//	ifstream file(dataFilename.c_str());
 	list<string> lines = loadLogFile(dataDir+"/phoneLog.txt");
-//	if(file.is_open())
 	{
-//		getline(file, line); // first line is a throw-away
-//		getline(file, line); // second line is also a throw-away
 
 		for(int i=0; i<commManagerListeners.size(); i++)
 			commManagerListeners[i]->onNewCommMotorOn();
@@ -499,11 +493,8 @@ int main(int argv, char* argc[])
 		list<string>::const_iterator lineIter = lines.begin();
 		list<pair<int, shared_ptr<cv::Mat>>>::const_iterator imageIter = imgList.begin();
 		toadlet::uint64 lastDispTimeMS;
-//		while(file.good() && startTime.getElapsedTimeMS()< firstTime+endTimeDelta)
 		while(lineIter != lines.end() && startTime.getElapsedTimeMS() < firstTime+endTimeDelta)
 		{
-//			getline(file, line);
-//			stringstream ss(line);
 			stringstream ss(*lineIter);
 			double time;
 			int type;
@@ -715,10 +706,7 @@ int main(int argv, char* argc[])
 			lineIter++;
 		}
 
-//		file.close();
 	}
-//	else
-//		cout << "File: " << dataFilename << " not found" << endl;
 
 	mQuadLogger.shutdown();
 	mTranslationController.shutdown();

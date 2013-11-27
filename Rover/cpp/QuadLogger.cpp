@@ -301,6 +301,30 @@ void QuadLogger::addEntry(const LogID &id, const Collection<float> &data, LogFla
 	}
 }
 
+void QuadLogger::addEntry(const LogID &id, const vector<double> &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		for(int i=0; i<data.size(); i++)
+			str = str+data[i]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
+void QuadLogger::addEntry(const LogID &id, const vector<float> &data, LogFlags type)
+{
+	if( (mTypeMask & type) && mRunning)
+	{
+		String str;
+		for(int i=0; i<data.size(); i++)
+			str = str+data[i]+"\t";
+
+		addEntry(Time(), id, str, type);
+	}
+}
+
 void QuadLogger::addEntry(const LogID &id, const cv::Point2f &data, LogFlags type)
 {
 	if( (mTypeMask & type) && mRunning)
@@ -405,6 +429,7 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_TORQUE_CMD="+LOG_ID_TORQUE_CMD+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_REF_ATTITUDE_SYSTEM_STATE="+LOG_ID_REF_ATTITUDE_SYSTEM_STATE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_VISION_INNOVATION="+LOG_ID_VISION_INNOVATION+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_OBJECT_TRACKING_STATS="+LOG_ID_OBJECT_TRACKING_STATS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}

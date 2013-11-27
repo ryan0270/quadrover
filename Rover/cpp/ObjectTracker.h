@@ -42,7 +42,6 @@ class ObjectTracker : public FeatureFinderListener
 	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
 
 	const vector<shared_ptr<TrackedObject>> &getTrackedObjects() const {return mTrackedObjects;}
-	const shared_ptr<TrackedObject> &getOldest() const {return mOldest;}
 
 	static void drawResults(cv::Mat &img,
 							const vector<ObjectMatch> &matches,
@@ -64,7 +63,6 @@ class ObjectTracker : public FeatureFinderListener
 	std::mutex mMutex_featureData;
 
 	vector<shared_ptr<TrackedObject>> mTrackedObjects;
-	shared_ptr<TrackedObject> mOldest;
 
 	vector<ObjectTrackerListener*> mListeners;
 

@@ -36,6 +36,7 @@ class TrackedObject
 	virtual const Time &getLastFoundTime() const {return mLastFoundTime;}
 	virtual int getId() const {return mId;}
 	virtual const Time &getCreateTime() const;
+	virtual double getAge() const {return mHistory[0].first.getElapsedTimeNS()/1.0e9;}
 	virtual const vector<pair<Time, cv::Point2f>> &getHistory() const {return mHistory;}
 
 	// assumes location distributions have already been calculated
@@ -56,8 +57,13 @@ class TrackedObject
 												   double probNoCorr);
 
 	// a hack leftover from the past, when I gave objects life and could sort on that
+	// this will put alive objects first and dead objects at the back
 	static bool sortAlivePredicate(const std::shared_ptr<TrackedObject> &to1, const std::shared_ptr<TrackedObject> &to2)
 	{ return to1->mIsAlive && !to2->mIsAlive; }
+
+	// sorts oldest first
+	static bool sortAgePredicate(const std::shared_ptr<TrackedObject> &to1, const std::shared_ptr<TrackedObject> &to2)
+	{ return to1->mHistory[0].first < to2->mHistory[0].first; }
 
 	protected:
 	cv::Point2f mLocation;
