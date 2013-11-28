@@ -213,6 +213,7 @@ int main(int argv, char* argc[])
 	mObsvTranslational.addListener(&mTranslationController);
 	mObsvAngular.addListener(&mObsvTranslational);
 	addCommManagerListener(&mObsvTranslational);
+//	mObsvTranslational.addListener(&mObsvAngular);
 
 	mFeatureFinder.initialize();
 	mFeatureFinder.setStartTime(startTime);
@@ -243,6 +244,7 @@ int main(int argv, char* argc[])
 	mObjectTracker.setObserverTranslation(&mObsvTranslational);
 	mObjectTracker.setObserverAngular(&mObsvAngular);
 	mObjectTracker.addListener(&mObsvTranslational);
+	mObjectTracker.addListener(&mObsvAngular);
 	mObjectTracker.start();
 	mFeatureFinder.addListener(&mObjectTracker);
 
@@ -281,60 +283,40 @@ int main(int argv, char* argc[])
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
 
-//	cv::namedWindow("dispFeatureFind",1);
-//	cv::namedWindow("dispObjectTrack",1);
-//	cv::moveWindow("dispFeatureFind",0,0);
-//	cv::moveWindow("dispObjectTrack",321,0);
-//
-//	class MyFeatureFinderListener : public FeatureFinderListener
-//	{
-//		public:
-//		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
-//		{
-//			imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated));
-//			cv::waitKey(1);
-//		}
-//	} myFeatureFinderListener;
-//	mFeatureFinder.addListener(&myFeatureFinderListener);
-//
-//	class MyObjectTrackerListenr : public ObjectTrackerListener
-//	{
-//		public:
-//		void onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
-//		{
-//			stringstream ss;
-//			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
-////			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
-//			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
-//			cv::waitKey(1);
-//		};
-//
-//		int imgCnt;
-//		string imgDir;
-//	} myObjectTrackerListener;
-//	myObjectTrackerListener.imgCnt = 0;
-//	myObjectTrackerListener.imgDir = imgDir;
-//	mObjectTracker.addListener(&myObjectTrackerListener);
+	cv::namedWindow("dispFeatureFind",1);
+	cv::namedWindow("dispObjectTrack",1);
+	cv::moveWindow("dispFeatureFind",0,0);
+	cv::moveWindow("dispObjectTrack",321,0);
 
-//	class MyTargetFinderListener : public TargetFinderListener
-//	{
-//		public:
-//		void onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-//		{
-//			stringstream ss;
-//			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
-////			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
-//			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
-//			cv::waitKey(1);
-//		};
-//
-//		int imgCnt;
-//		string imgDir;
-//
-//	} myTargetFinderListener;
-//	myTargetFinderListener.imgCnt = 0;
-//	myTargetFinderListener.imgDir = imgDir;
-//	mTargetFinder.addListener(&myTargetFinderListener);
+	class MyFeatureFinderListener : public FeatureFinderListener
+	{
+		public:
+		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
+		{
+			imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated));
+			cv::waitKey(1);
+		}
+	} myFeatureFinderListener;
+	mFeatureFinder.addListener(&myFeatureFinderListener);
+
+	class MyObjectTrackerListenr : public ObjectTrackerListener
+	{
+		public:
+		void onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
+		{
+			stringstream ss;
+			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
+//			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
+			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
+			cv::waitKey(1);
+		};
+
+		int imgCnt;
+		string imgDir;
+	} myObjectTrackerListener;
+	myObjectTrackerListener.imgCnt = 0;
+	myObjectTrackerListener.imgDir = imgDir;
+	mObjectTracker.addListener(&myObjectTrackerListener);
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Now to set parameters like they would have been online
@@ -343,7 +325,7 @@ int main(int argv, char* argc[])
 		double gainP = 0.5;
 		double gainI = 0.0001;
 		double accelWeight = 1;
-		double magWeight = 0;
+		double magWeight = 0.1*2*2*2;
 		Collection<float> nomMag;
 		nomMag.push_back(-21.2);
 		nomMag.push_back(13.4);
@@ -379,7 +361,7 @@ int main(int argv, char* argc[])
 
 		commManagerListeners[i]->onNewCommVisionFeatureFindQualityLevel(0.01);
 		commManagerListeners[i]->onNewCommVisionFeatureFindSeparationDistance(20);
-		commManagerListeners[i]->onNewCommVisionFeatureFindFASTThreshold(20);
+		commManagerListeners[i]->onNewCommVisionFeatureFindFASTThreshold(10);
 		commManagerListeners[i]->onNewCommVisionFeatureFindPointCntTarget(50);
 		commManagerListeners[i]->onNewCommVisionFeatureFindFASTAdaptRate(0.05);
 
@@ -394,8 +376,6 @@ int main(int argv, char* argc[])
 		for(int j=0; j<buff.size(); j++)
 			buff[j] = buff1[j];
 		commManagerListeners[i]->onNewCommSendControlSystem(buff);
-
-		commManagerListeners[i]->onNewCommUseIbvs(true);
 
 		Collection<float> posGains(3), velGains(3);
 		posGains[0] = 1;
@@ -454,8 +434,8 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 600e3;
-	float viconUpdateRate = 30; // Hz
+	int endTimeDelta = 400e3;
+	float viconUpdateRate = 100; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz
 	int heightUpdatePeriodMS = 1.0f/heightUpdateRate*1000+0.5;
@@ -559,6 +539,12 @@ int main(int argv, char* argc[])
 				for(int i=0; i<sensorManagerListeners.size(); i++)
 					sensorManagerListeners[i]->onNewSensorUpdate(heightData);
 			}
+
+			// Start IBVS
+//			if(startTime.getElapsedTimeMS() > 20e3)
+			if(curHeight > 0.5)
+				for(int i=0; i<commManagerListeners.size(); i++)
+					commManagerListeners[i]->onNewCommUseIbvs(true);
 
 			// Sensor updates
 			shared_ptr<IData> data = NULL;

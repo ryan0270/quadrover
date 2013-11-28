@@ -78,6 +78,34 @@ namespace TNT{
 		return sqrt(result);
 	}
 
+	/*!
+	  Does an inline normalization (original vector is modified)
+	  requires a 1D vector
+	  */
+	template <class T>
+	inline void normalize(Array2D<T> &mat)
+	{
+		assert(mat.dim1() == 1 || mat.dim2() == 1);
+
+		double den = 0;
+		if(mat.dim1() == 1)
+		{
+			for(int j=0; j<mat.dim2(); j++)
+				den += mat[0][j]*mat[0][j];
+			den = sqrt(den);
+			for(int j=0; j<mat.dim2(); j++)
+				mat[0][j] /= den;
+		}
+		else
+		{
+			for(int i=0; i<mat.dim1(); i++)
+				den += mat[i][0]*mat[0][i];
+			den = sqrt(den);
+			for(int i=0; i<mat.dim1(); i++)
+				mat[i][0] /= den;
+		}
+	}
+
 	template <class T>
 	inline T matmultS(const Array2D<T> &mat1, const Array2D<T> &mat2)
 	{

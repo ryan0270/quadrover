@@ -30,19 +30,19 @@ phoneData = phoneData(1:end-1,:);
 
 syncIndex = find(phoneData(:,2) == -500,1,'last');
 
-% angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
-% angleStateTime = phoneData(angleStateIndices,1)'/1000;
-% % angleState = phoneData(angleStateIndices,4:9)';
-% quatState = phoneData(angleStateIndices,4:10)';
-% temp = quat2angle(quatState(1:4,:));
-% angleState = [temp([3 2 1],:); quatState(5:7,:)];
+angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
+angleStateTime = phoneData(angleStateIndices,1)'/1000;
+% angleState = phoneData(angleStateIndices,4:9)';
+quatState = phoneData(angleStateIndices,4:10)';
+temp = quat2angle(quatState(1:4,:));
+angleState = [temp([3 2 1],:); quatState(5:7,:)];
 
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
 tranState = phoneData(tranStateIndices,3:8)';
 % accelBiasTime = tranStateTime;
 % accelBias = phoneData(tranStateIndices,9:11)';
-% 
+
 % attBiasIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_TRANS_ATT_BIAS);
 % attBiasTime = phoneData(attBiasIndices,1)'/1000;
 % attBias = phoneData(attBiasIndices,3:5)';
@@ -102,6 +102,12 @@ camPos = phoneData(camPosIndices,3:5)';
 trackingStatsIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBJECT_TRACKING_STATS);
 trackingStatsTime = phoneData(trackingStatsIndices,1)'/1000;
 trackingStats = phoneData(trackingStatsIndices,3:6)';
+
+% useViconYawIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_USE_VICON_YAW);
+% useViconYawTime = phoneData(useViconYawIndices,1)'/1000;
+% 
+% useViconXYIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_USE_VICON_XY);
+% useViconXYTime = phoneData(useViconXYIndices,1)'/1000;
 
 
 %% rotate from vicon to phone coords
@@ -430,6 +436,31 @@ if exist('trackingStats','var') && ~isempty(trackingStats)
 		fprintf('%1.2f\t',mean(trackingStats(i,:)));
 	end
 	fprintf('\n');
+end
+
+%%
+if exist('useViconYawTime','var')
+	figure(14000); clf
+	if isempty(useViconYawTime)
+		time = phoneData(syncIndex-1,1)/1000:0.1:phoneData(end,1)/1000;
+		plot(time, -0.25*ones(size(time)));hold all
+	else
+		plot(useViconYawTime,0.75*ones(size(useViconYawTime)),'o'); hold all
+	end
+	
+	if isempty(useViconXYTime)
+		time = phoneData(syncIndex-1,1)/1000:0.1:phoneData(end,1)/1000;
+		plot(time, -0.25*ones(size(time)));hold all
+	else
+		plot(useViconXYTime,ones(size(useViconXYTime)),'x'); hold all
+	end
+	hold off
+	
+	ax = axis;
+	axis([phoneData(syncIndex-1,1)/1000 phoneData(end,1)/1000 -0.5 1.5]);
+	xlabel('Time');
+	ylabel('Vicon Usage');
+	legend('Vicon Yaw','Vicon XY');
 end
 
 

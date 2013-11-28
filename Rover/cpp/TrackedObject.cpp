@@ -34,6 +34,14 @@ void TrackedObject::kill()
 	mIsAlive = false;
 }
 
+void TrackedObject::rebirth()
+{
+	mutex_lastID.lock(); mId = lastID++; mutex_lastID.unlock();
+	pair<Time, cv::Point2f> h = mHistory.back();
+	mHistory.clear();
+	mHistory.push_back(h);
+}
+
 
 // Hmm, should I change this so it does incremental updates instead of updating as
 // one big step from the last found time
