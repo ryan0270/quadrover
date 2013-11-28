@@ -45,20 +45,17 @@ stateTime = angleStateTime;
 state = [angleState; tranStateInterp];
 state_dt = mean(diff(stateTime));
 
-gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
-gyroTime = phoneData(gyroIndices,1)'/1000;
-gyro = phoneData(gyroIndices,4:end)';
-gyro_dt = mean(diff(gyroTime));
-
-magIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAGNOMETER);
-magTime = phoneData(magIndices,1)'/1000;
-mag = phoneData(magIndices,4:end)';
-mag_dt = mean(diff(magTime));
-
-accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
-accelTime = phoneData(accelIndices,3)'/1000;
-accel = phoneData(accelIndices,4:6)';
-accel_dt = mean(diff(accelTime));
+% gyroIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_GYRO);
+% gyroTime = phoneData(gyroIndices,1)'/1000;
+% gyro = phoneData(gyroIndices,4:end)';
+% 
+% magIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAGNOMETER);
+% magTime = phoneData(magIndices,1)'/1000;
+% mag = phoneData(magIndices,4:end)';
+% 
+% accelIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_ACCEL);
+% accelTime = phoneData(accelIndices,3)'/1000;
+% accel = phoneData(accelIndices,4:6)';
 
 pressureIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_PRESSURE);
 pressureTime = phoneData(pressureIndices,1)'/1000;
@@ -125,11 +122,11 @@ phoneTemp = phoneData(phoneTempIndices,3:6)';
 % viconReceiveIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_RECEIVE_VICON);
 % viconReceiveTime = phoneData(viconReceiveIndices,1)'/1000;
 % viconReceive = phoneData(viconReceiveIndices,3:14)';
-% 
+
 % fastThreshIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_FAST_THRESHOLD);
 % fastThreshTime = phoneData(fastThreshIndices,1)'/1000;
 % fastThresh = phoneData(fastThreshIndices,3)';
-% 
+
 % mapNumMatchesIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_NUM_MATCHES);
 % mapNumMatchesTime = phoneData(mapNumMatchesIndices,1)'/1000;
 % mapNumMatches = phoneData(mapNumMatchesIndices,3)';
@@ -146,10 +143,10 @@ numFeatures = phoneData(numFeaturesIndices,3)';
 % obsvTransProcTimeTime = phoneData(obsvTransProcTimeIndices,1)'/1000;
 % obsvTransProcTime = phoneData(obsvTransProcTimeIndices,3:6)';
 
-% attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
-% attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
-% attInnovation = phoneData(attInnovationIndices,3:5)';
-% 
+attInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBSV_ANG_INNOVATION);
+attInnovationTime = phoneData(attInnovationIndices,1)'/1000;
+attInnovation = phoneData(attInnovationIndices,3:5)';
+
 targetFindProcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_TARGET_FIND_PROC_TIME);
 targetFindProcTimeTime = phoneData(targetFindProcTimeIndices,1)'/1000;
 targetFindProcTime = phoneData(targetFindProcTimeIndices,3)';
@@ -188,6 +185,10 @@ angleRefModel = [temp([3 2 1],:); quatState(5:7,:)];
 visionInnovationIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_VISION_INNOVATION);
 visionInnovationTime = phoneData(visionInnovationIndices,1)'/1000;
 visionInnovation = phoneData(visionInnovationIndices,3:5)';
+
+trackingStatsIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OBJECT_TRACKING_STATS);
+trackingStatsTime = phoneData(trackingStatsIndices,1)'/1000;
+trackingStats = phoneData(trackingStatsIndices,3:6)';
 
 
 %%
@@ -627,6 +628,24 @@ if exist('visionInnovation','var') && ~isempty(visionInnovation)
 	xlabel('Time [s]');
 	ylabel('Innovation');
 	legend('x','y','z');
+end
+
+%%
+if exist('trackingStats','var') && ~isempty(trackingStats)
+	figure(13000);
+	statLabels = {'Oldest [s]', 'Median [s]', '# repeats', '# new'};
+	for i=1:4
+		subplot(4,1,i)
+		plot(trackingStatsTime, trackingStats(i,:));
+		xlabel('Time [s]');
+		ylabel(statLabels{i});
+	end
+	
+	fprintf('age stats:\t');
+	for i=1:4
+		fprintf('%1.2f\t',mean(trackingStats(i,:)));
+	end
+	fprintf('\n');
 end
 
 

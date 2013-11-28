@@ -65,13 +65,8 @@ public:
 	TNT::Array2D<double> getMagValue();
 	TNT::Array2D<double> getAttitude();
 	int getImageProcTimeMS(){mMutex_vision.lock(); int temp = mVelocityEstimator.getLastVisionDelayTimeUS()/1.0e3; mMutex_vision.unlock(); return temp;}
-//	void toggleViewType(){Log::alert("Not implemented");}
-//	void toggleUseIbvs(){onNewCommUseIbvs(!mUseIbvs);}
-//	toadlet::egg::Collection<int> getVisionParams();
-//	void setVisionParams(toadlet::egg::Collection<int> p);
 	bool pcIsConnected(){return mCommManager.pcIsConnected();}
 	void passNewImage(cv::Mat *img, int64_t const &timestampNS){mSensorManager.passNewImage(img, timestampNS);}
-//	vector<uint16_t> getMotorCmds() {return mMotorInterface.getMotorCmds();}
 	void onNewSonarReading(int heightMM, uint64_t timestampNS){mSensorManager.onNewSonarReading(heightMM, timestampNS);}
 
 	// Observer_AngularListener

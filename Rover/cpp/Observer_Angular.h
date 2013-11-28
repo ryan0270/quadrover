@@ -9,8 +9,8 @@
 
 #include <toadlet/egg.h>
 #include "TNT_Utils.h"
-#include "TNT/jama_lu.h"
-#include "TNT/jama_svd.h"
+//#include "TNT/jama_lu.h"
+//#include "TNT/jama_svd.h"
 
 #include "Data.h"
 #include "constants.h"

@@ -282,8 +282,7 @@ void Observer_Angular::doInnovationUpdate(double dt,
 
 	mGyroBias[0][0] += dt*mGainI*mInnovation[0][0];
 	mGyroBias[1][0] += dt*mGainI*mInnovation[1][0];
-//	if(!mIsDoingIbvs)
-		mGyroBias[2][0] += dt*mGainI*mInnovation[2][0];
+	mGyroBias[2][0] += dt*mGainI*mInnovation[2][0];
 
 	mQuadLogger->addEntry(LOG_ID_GYRO_BIAS, mGyroBias, LOG_FLAG_OBSV_BIAS);
 	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_INNOVATION, mInnovation, LOG_FLAG_OBSV_BIAS);
