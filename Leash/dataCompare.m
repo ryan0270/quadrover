@@ -115,6 +115,12 @@ sonarHeightIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_SONAR
 sonarHeightTime = phoneData(sonarHeightIndices,1)'/1000;
 sonarHeight = phoneData(sonarHeightIndices,4)';
 
+useViconYawIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_USE_VICON_YAW);
+useViconYawTime = phoneData(useViconYawIndices,1)'/1000;
+
+useViconXYIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_USE_VICON_XY);
+useViconXYTime = phoneData(useViconXYIndices,1)'/1000;
+
 
 %% rotate from vicon to phone coords
 RotViconToQuad = createRotMat(1, pi);
@@ -276,6 +282,31 @@ if exist('cameraPos','var') && ~isempty(cameraPos)
 % 		xlabel('Time [s]');
 % 		ylabel(stateLabels{i+6})
 % 	end
+end
+
+%%
+if exist('useViconYawTime','var')
+	figure(14000); clf
+	if isempty(useViconYawTime)
+		time = phoneData(syncIndex-1,1)/1000:0.1:phoneData(end,1)/1000;
+		plot(time, -0.25*ones(size(time)));hold all
+	else
+		plot(useViconYawTime,0.75*ones(size(useViconYawTime)),'o'); hold all
+	end
+	
+	if isempty(useViconXYTime)
+		time = phoneData(syncIndex-1,1)/1000:0.1:phoneData(end,1)/1000;
+		plot(time, -0.25*ones(size(time)));hold all
+	else
+		plot(useViconXYTime,ones(size(useViconXYTime)),'x'); hold all
+	end
+	hold off
+	
+	ax = axis;
+	axis([phoneData(syncIndex-1,1)/1000 phoneData(end,1)/1000 -0.5 1.5]);
+	xlabel('Time');
+	ylabel('Vicon Usage');
+	legend('Vicon Yaw','Vicon XY');
 end
 
 

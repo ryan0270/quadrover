@@ -84,7 +84,7 @@
       </Gain>
       <DirWeight>
          <Accel>1.000000</Accel>
-         <Mag>0.000000</Mag>
+         <Mag>1.500000</Mag>
       </DirWeight>
       <NomMag>
          <x>-21.200001</x>
@@ -107,14 +107,14 @@
 </Hardware>
 <Vision>
    <QualityLevel>0.010000</QualityLevel>
-   <SeparationDistance>10.000000</SeparationDistance>
+   <SeparationDistance>20.000000</SeparationDistance>
    <FASTThreshold>20.000000</FASTThreshold>
-   <PointCntTarget>30.000000</PointCntTarget>
+   <PointCntTarget>50.000000</PointCntTarget>
    <FASTAdaptRate>0.050000</FASTAdaptRate>
    <MeasurementCov>50.000000</MeasurementCov>
    <ProbNoCorr>0.000500</ProbNoCorr>
 </Vision>
-<LogMask>4763</LogMask>
+<LogMask>5115</LogMask>
 <ImgBufferSize>100</ImgBufferSize>
 <IP>192.168.100.107</IP>
 <Port>13120</Port>

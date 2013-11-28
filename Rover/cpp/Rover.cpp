@@ -132,13 +132,14 @@ void Rover::initialize()
 	mObjectTracker.initialize();
 	mObjectTracker.start();
 	mObjectTracker.addListener(this);
+	mObjectTracker.addListener(&mObsvTranslational);
 //	mObjectTracker.addListener(&mObsvAngular);
-//	mObjectTracker.addListener(&mObsvTranslational);
 //	mObjectTracker.addListener(&mTranslationController);
 //	mObjectTracker.addRegionListener(&mVelocityEstimator);
 //	mObjectTracker.addRegionListener(&mFeatureFinder);
 //	mSensorManager.addListener(&mObjectTracker);
 //	mCommManager.addListener(&mObjectTracker);
+	mFeatureFinder.addListener(&mObjectTracker);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
