@@ -35,7 +35,7 @@ Rover::Rover() :
 	mImageData = NULL;
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
-	mTargetData = NULL;
+	mObjectData = NULL;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -53,7 +53,7 @@ void Rover::initialize()
 	mObsvTranslational.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 	mFeatureFinder.setStartTime(mStartTime);
-	mTargetFinder.setStartTime(mStartTime);
+	mObjectTracker.setStartTime(mStartTime);
 	mTranslationController.setStartTime(mStartTime);
 	mAttitudeThrustController.setStartTime(mStartTime);
 	mQuadLogger.setStartTime(mStartTime);
@@ -68,7 +68,7 @@ void Rover::initialize()
 	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
 	mVelocityEstimator.setThreadPriority(sched,maxPriority-1);
 	mFeatureFinder.setThreadPriority(sched,maxPriority-2);
-	mTargetFinder.setThreadPriority(sched,maxPriority-2);
+	mObjectTracker.setThreadPriority(sched,maxPriority-2);
 	mTranslationController.setThreadPriority(sched,maxPriority-2);
 	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
 	mCommManager.setThreadPriority(sched,minPriority);
@@ -126,19 +126,19 @@ void Rover::initialize()
 	mCommManager.addListener(&mFeatureFinder);
 	mFeatureFinder.addListener(this);
 
-	mTargetFinder.setQuadLogger(&mQuadLogger);
-	mTargetFinder.setObserverAngular(&mObsvAngular);
-	mTargetFinder.setObserverTranslational(&mObsvTranslational);
-	mTargetFinder.initialize();
-	mTargetFinder.start();
-	mTargetFinder.addListener(this);
-	mTargetFinder.addListener(&mObsvAngular);
-	mTargetFinder.addListener(&mObsvTranslational);
-	mTargetFinder.addListener(&mTranslationController);
-	mTargetFinder.addRegionListener(&mVelocityEstimator);
-	mTargetFinder.addRegionListener(&mFeatureFinder);
-	mSensorManager.addListener(&mTargetFinder);
-	mCommManager.addListener(&mTargetFinder);
+	mObjectTracker.setQuadLogger(&mQuadLogger);
+	mObjectTracker.setObserverAngular(&mObsvAngular);
+	mObjectTracker.setObserverTranslation(&mObsvTranslational);
+	mObjectTracker.initialize();
+	mObjectTracker.start();
+	mObjectTracker.addListener(this);
+//	mObjectTracker.addListener(&mObsvAngular);
+//	mObjectTracker.addListener(&mObsvTranslational);
+//	mObjectTracker.addListener(&mTranslationController);
+//	mObjectTracker.addRegionListener(&mVelocityEstimator);
+//	mObjectTracker.addRegionListener(&mFeatureFinder);
+//	mSensorManager.addListener(&mObjectTracker);
+//	mCommManager.addListener(&mObjectTracker);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setQuadLogger(&mQuadLogger);
@@ -195,14 +195,14 @@ void Rover::shutdown()
 
 	mVelocityEstimator.shutdown();
 	mFeatureFinder.shutdown();
-	mTargetFinder.shutdown();
+	mObjectTracker.shutdown();
 	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
 	mObsvTranslational.shutdown(); 
 
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
-	mTargetData = NULL;
+	mObjectData = NULL;
 	mSensorManager.shutdown();
 
 	mMotorInterface.shutdown();
@@ -510,8 +510,8 @@ void Rover::transmitImage()
 
 	cv::Mat img;
 	mMutex_vision.lock();
-	if(mObsvTranslational.isTargetFound() && mTargetData != NULL)
-		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(img);
+	if(mObsvTranslational.isTargetFound() && mObjectData != NULL)
+		mObjectData->imageAnnotatedData->imageAnnotated->copyTo(img);
 	else if(mFeatureData != NULL)
 		mFeatureData->imageAnnotated->imageAnnotated->copyTo(img);
 	mMutex_vision.unlock();
@@ -592,7 +592,7 @@ void Rover::onNewCommTimeSync(int time)
 	mQuadLogger.setStartTime(mStartTime);
 
 	mFeatureFinder.setStartTime(mStartTime);
-	mTargetFinder.setStartTime(mStartTime);
+	mObjectTracker.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 
 	mMotorInterface.setStartTime(mStartTime);
@@ -644,10 +644,10 @@ void Rover::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 	mMutex_vision.unlock();
 }
 
-void Rover::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
+void Rover::onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
 {
 	mMutex_vision.lock();
-	mTargetData = data;
+	mObjectData = data;
 	mMutex_vision.unlock();
 }
 
@@ -657,8 +657,8 @@ void Rover::copyImageData(cv::Mat *m)
 		return;
 
 	mMutex_vision.lock();
-	if( mTargetData != NULL)
-		mTargetData->imageAnnotatedData->imageAnnotated->copyTo(*m);
+	if( mObjectData != NULL)
+		mObjectData->imageAnnotatedData->imageAnnotated->copyTo(*m);
 	else if(mFeatureData != NULL)
 		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
 	else if(mImageData != NULL)

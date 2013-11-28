@@ -60,8 +60,8 @@ set (SRC ${SRC}
 	./cpp/Observer_Translational.cpp
 	./cpp/QuadLogger.cpp
 	./cpp/CommManager.cpp
-	./cpp/TargetFinder.cpp
-	./cpp/ActiveRegion.cpp
+	./cpp/TrackedObject.cpp
+	./cpp/ObjectTracker.cpp
 	./cpp/FeatureFinder.cpp
 	./cpp/TranslationController.cpp
 	./cpp/AttitudeThrustController.cpp
@@ -86,12 +86,11 @@ set (H ${H}
 	./cpp/QuadLogger.h
 	./cpp/Time.h
 	./cpp/CommManager.h
-	./cpp/TargetFinder.h
-	./cpp/ActiveRegion.h
+	./cpp/TrackedObject.h
+	./cpp/ObjectTracker.h
 	./cpp/FeatureFinder.h
 	./cpp/TranslationController.h
 	./cpp/AttitudeThrustController.h
-#	./cpp/AttitudeThrustControllerListener.h
 	./cpp/MotorInterface.h
 	./cpp/SensorManager.h
 	./cpp/VideoMaker.h

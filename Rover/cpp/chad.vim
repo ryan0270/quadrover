@@ -64,8 +64,8 @@ badd +1 SensorManager.h
 badd +1 SensorManager.cpp
 badd +1 FeatureFinder.h
 badd +1 FeatureFinder.cpp
-badd +1 TargetFinder.h
-badd +1 TargetFinder.cpp
+badd +1 ObjectTracker.h
+badd +1 ObjectTracker.cpp
 badd +1 VelocityEstimator.h
 badd +1 VelocityEstimator.cpp
 badd +1 Common.h
@@ -76,8 +76,8 @@ badd +1 VideoMaker.h
 badd +1 VideoMaker.cpp
 badd +1 Rotation.h
 badd +1 Rotation.cpp
-badd +1 ActiveRegion.h
-badd +1 ActiveRegion.cpp
+badd +1 TrackedObject.h
+badd +1 TrackedObject.cpp
 badd +1 Listeners.h
 args Rover.h Rover.cpp
 edit Rover.cpp
