@@ -28,6 +28,7 @@ class TrackedObject
 
 	virtual void markFound(const Time &time, const cv::Point2f &pos);
 	virtual void setPosCov(const TNT::Array2D<double> cov){mPosCov.inject(cov);}
+	virtual void rebirth();
 	virtual void kill();
 	virtual bool isAlive() const {return mIsAlive;}
 

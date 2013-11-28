@@ -33,7 +33,7 @@ Observer_Angular::Observer_Angular() :
 	mMagDirNom[0][0] = -21.2;
 	mMagDirNom[1][0] = 13.4;
 	mMagDirNom[2][0] = -35.3;
-	mMagDirNom = 1.0/norm2(mMagDirNom)*mMagDirNom;
+	normalize(mMagDirNom);
 
 	mDoingBurnIn = true;
 
@@ -43,7 +43,7 @@ Observer_Angular::Observer_Angular() :
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 
 	mIsDoingIbvs = false;
-	mLastTargetFindTime.setTimeMS(0);
+	mLastObjectTrackedTime.setTimeMS(0);
 
 	mRotCamToPhone = matmult(createRotMat(2,-0.5*(double)PI),
 							 createRotMat(0,(double)PI));
@@ -235,47 +235,55 @@ void Observer_Angular::doInnovationUpdate(double dt,
 	Array2D<double> uB, uI, vB, vI, dMeas, dInertial;
 	mMutex_data.lock();
 
-//	if( abs(accel[2][0]-GRAVITY) < 6 )// && abs(norm2(accel)-GRAVITY) < 6 )
-//		mLastGoodAccel.inject(accel);
-//	else
-//		accel.inject(mLastGoodAccel);
 	if(abs(accel[2][0]-GRAVITY) > 4)
-//		accel[2][0] = GRAVITY;
 		accel[2][0] = mLastGoodAccel[2][0];
 	else
 		mLastGoodAccel.inject(accel);
 
 	// orthogonalize the directions (see Hua et al (2011) - Nonlinear attitude estimation with measurement decoupling and anti-windpu gyro-bias compensation)
-	uB = 1.0/norm2(accel)*accel;
+//	uB = 1.0/norm2(accel)*accel;
+//	uI = mAccelDirNom;
+//	vB = cross(-1.0*mAccelDirNom, mag);
+//	vB = 1.0/norm2(vB)*vB;
+//	vI = cross(-1.0*uI, mMagDirNom);
+//	vI = 1.0/norm2(vI)*vI;
+	normalize(accel);
+	normalize(mag);
+	uB = accel;
 	uI = mAccelDirNom;
 	vB = cross(-1.0*mAccelDirNom, mag);
-	vB = 1.0/norm2(vB)*vB;
 	vI = cross(-1.0*uI, mMagDirNom);
-	vI = 1.0/norm2(vI)*vI;
+	normalize(vB);
+	normalize(vI);
 
 	SO3 transR = mCurAttitude.inv();
 	mInnovation = mAccelWeight*cross(uB, transR*uI);
-	mInnovation += mMagWeight*cross(vB, transR*vI); 
+	if(mIsDoingIbvs) // while using Vicon ignore the magnometer
+		mInnovation += mMagWeight*cross(vB, transR*vI); 
 	mMutex_visionInnovation.lock();
 	mInnovation += mVisionInnovation;
+	mVisionInnovation = 0.5*mVisionInnovation; // add some decay in case it doesn't get updated
 	mMutex_visionInnovation.unlock();
 
 	// add any extra measurements that may have come in
 	// Right now this should just be coming from Vicon
-	while(mExtraDirsMeasured.size() > 0)
-	{
-		double k = mExtraDirsWeight.back();
-		dMeas = mExtraDirsMeasured.back();
-		dInertial = mExtraDirsInertial.back();
-		Array2D<double> dir = cross(dMeas, transR*dInertial);
-		mInnovation += k*cross(dMeas, transR*dInertial);
+//	while(mExtraDirsMeasured.size() > 0)
+//	{
+//		double k = mExtraDirsWeight.back();
+//		dMeas = mExtraDirsMeasured.back();
+//		dInertial = mExtraDirsInertial.back();
+//		Array2D<double> dir = cross(dMeas, transR*dInertial);
+//		mInnovation += k*cross(dMeas, transR*dInertial);
+//
+//		mExtraDirsWeight.pop_back();
+//		mExtraDirsMeasured.pop_back();
+//		mExtraDirsInertial.pop_back();
+//	}
 
-		mExtraDirsWeight.pop_back();
-		mExtraDirsMeasured.pop_back();
-		mExtraDirsInertial.pop_back();
-	}
-
-	mGyroBias += dt*mGainI*mInnovation;
+	mGyroBias[0][0] += dt*mGainI*mInnovation[0][0];
+	mGyroBias[1][0] += dt*mGainI*mInnovation[1][0];
+//	if(!mIsDoingIbvs)
+		mGyroBias[2][0] += dt*mGainI*mInnovation[2][0];
 
 	mQuadLogger->addEntry(LOG_ID_GYRO_BIAS, mGyroBias, LOG_FLAG_OBSV_BIAS);
 	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_INNOVATION, mInnovation, LOG_FLAG_OBSV_BIAS);
@@ -320,36 +328,6 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 
 	mQuadLogger->addEntry(LOG_ID_CUR_ATT, rotData, velData, LOG_FLAG_STATE);
 }
-
-//Array2D<double> Observer_Angular::convert_so3toCoord(const Array2D<double> &so3)
-//{
-//	Array2D<double> SO3(3,1);
-//	SO3[0][0] = so3[2][1];
-//	SO3[1][0] = so3[0][2];
-//	SO3[2][0] = so3[1][0];
-//
-//	return SO3;
-//}
-//
-//Array2D<double> Observer_Angular::convert_coordToso3(const Array2D<double> &SO3)
-//{
-//	Array2D<double> so3(3,3,0.0);
-//	so3[1][2] = -(so3[2][1] = SO3[0][0]);
-//	so3[2][0] = -(so3[0][2] = SO3[1][0]);
-//	so3[0][1] = -(so3[1][0] = SO3[2][0]);
-//
-//	return so3;
-//}
-
-//Array2D<double> Observer_Angular::extractEulerAngles(const Array2D<double> &rotMat)
-//{
-//	Array2D<double> euler(3,1);
-//	euler[0][0] = atan2(rotMat[2][1], rotMat[2][2]); // roll ... @TODO: this should be range checked
-//	euler[1][0] = atan2(-rotMat[2][0], sqrt(rotMat[0][0]*rotMat[0][0] + rotMat[1][0]*rotMat[1][0])); // pitch 
-//	euler[2][0] = atan2(rotMat[1][0], rotMat[0][0]);
-//
-//	return euler;
-//}
 
 SO3 Observer_Angular::estimateAttAtTime(const Time &t)
 {
@@ -450,7 +428,7 @@ void Observer_Angular::setYawZero()
 	Array2D<double> temp;
 	mMutex_data.lock();
 	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
-	double curYaw = curAngles[2][0];
+	double curYaw = curAngles[0][0];
 	SO3 rot( createRotMat(2, -curYaw) );
 //	mCurAttitude= rot*mCurAttitude;
 	mCurAttitude *= rot;
@@ -489,22 +467,22 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 }
 
 // This function is way too long, I should probably split it up sometime
-//void Observer_Angular::onTargetFound(const shared_ptr<ImageTargetFindData> &data)
-//{
-//	if(mNominalDirMap.size() == 0 && data->repeatRegions.size() + data->newRegions.size() < 10)
+void Observer_Angular::onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
+{
+//	if(mNominalDirMap.size() == 0 && data->repeatObjects.size() + data->newObjects.size() < 10)
 //		return; // don't set my initial nominal angle yet
 //
 //	mMutex_targetFindTime.lock();
-//	mLastTargetFindTime.setTime();
+//	mLastObjectTrackedTime.setTime();
 //	mMutex_targetFindTime.unlock();
 //
 //	//////////////////////////// Bookeeping ///////////////////////////////////////////
-//	// check for dead regions
+//	// check for dead objects
 //	vector<size_t> deadKeys;
-//	unordered_map<size_t, shared_ptr<ActiveRegion>>::const_iterator regionIter;
-//	for(regionIter = mRegionMap.begin(); regionIter != mRegionMap.end(); regionIter++)
-//		if( regionIter->second->getLife() <= 0)
-//			deadKeys.push_back(regionIter->second->getId());
+//	unordered_map<size_t, shared_ptr<TrackedObject>>::const_iterator objectIter;
+//	for(objectIter = mObjectMap.begin(); objectIter != mObjectMap.end(); objectIter++)
+//		if( !objectIter->second->isAlive() )
+//			deadKeys.push_back(objectIter->second->getId());
 //	sort(deadKeys.begin(), deadKeys.end());
 //
 //	unordered_map<pair<size_t,size_t>, Array2D<double>, KeyHasher>::iterator angleIter;
@@ -527,41 +505,41 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 //	for(int i=0; i<removeTimeIters.size(); i++)
 //		mNominalDirCreateTime.erase( removeTimeIters[i] );
 //	for(int i=0; i<deadKeys.size(); i++)
-//		mRegionMap.erase( deadKeys[i] );
+//		mObjectMap.erase( deadKeys[i] );
 //
 //	// add new stuff
-//	vector<shared_ptr<ActiveRegion>> repeatRegions;
-//	repeatRegions.reserve(data->repeatRegions.size());
-//	vector<shared_ptr<ActiveRegion>> newRegions = data->newRegions;
+//	vector<shared_ptr<TrackedObject>> repeatObjects;
+//	repeatObjects.reserve(data->repeatObjects.size());
+//	vector<shared_ptr<TrackedObject>> newObjects = data->newObjects;
 //
-//	// need to make sure we actually know about all the repeat regions
-//	for(int i=0; i<data->repeatRegions.size(); i++)
-//		if( mRegionMap.count(data->repeatRegions[i]->getId()) > 0)
-//			repeatRegions.push_back(data->repeatRegions[i]);
+//	// need to make sure we actually know about all the repeat objects
+//	for(int i=0; i<data->repeatObjects.size(); i++)
+//		if( mObjectMap.count(data->repeatObjects[i]->getId()) > 0)
+//			repeatObjects.push_back(data->repeatObjects[i]);
 //		else
-//			newRegions.push_back(data->repeatRegions[i]);
+//			newObjects.push_back(data->repeatObjects[i]);
 //
-//	for(int i=0; i<newRegions.size(); i++)
-//		mRegionMap[newRegions[i]->getId()] = newRegions[i];
+//	for(int i=0; i<newObjects.size(); i++)
+//		mObjectMap[newObjects[i]->getId()] = newObjects[i];
 //
 //	// assemble everything into one vector
-//	vector<shared_ptr<ActiveRegion>> regions;
-//	regions.reserve(repeatRegions.size()+newRegions.size());
-//	regions.insert(regions.end(), repeatRegions.begin(), repeatRegions.end());
-//	regions.insert(regions.end(), newRegions.begin(), newRegions.end());
+//	vector<shared_ptr<TrackedObject>> objects;
+//	objects.reserve(repeatObjects.size()+newObjects.size());
+//	objects.insert(objects.end(), repeatObjects.begin(), repeatObjects.end());
+//	objects.insert(objects.end(), newObjects.begin(), newObjects.end());
 //
 //	// go through and see what pairs we already know about
 //	vector<pair<size_t,size_t>> repeatPairs, newPairs;
 //	vector<pair<cv::Point2f, cv::Point2f>> repeatPairPoints, newPairPoints;
-//	for(int i=0; i<regions.size(); i++)
-//		for(int j=i+1; j<regions.size(); j++)
+//	for(int i=0; i<objects.size(); i++)
+//		for(int j=i+1; j<objects.size(); j++)
 //		{
-//			int id1 = min(regions[i]->getId(), regions[j]->getId());
-//			int id2 = max(regions[i]->getId(), regions[j]->getId());
+//			int id1 = min(objects[i]->getId(), objects[j]->getId());
+//			int id2 = max(objects[i]->getId(), objects[j]->getId());
 //
 //			pair<size_t,size_t> pr(id1, id2);
-//			cv::Point2f pt1 = mRegionMap[id1]->getFoundPos();
-//			cv::Point2f pt2 = mRegionMap[id2]->getFoundPos();
+//			cv::Point2f pt1 = mObjectMap[id1]->getLocation();
+//			cv::Point2f pt2 = mObjectMap[id2]->getLocation();
 //			if(mNominalDirMap.count(pr) > 0)
 //			{
 //				repeatPairs.push_back(pr);
@@ -581,11 +559,11 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 //
 //	// For rotation compensation
 //	SO3 att = data->imageData->att;
-//	Array2D<double> euler = att.getAnglesZYX();
-//	SO3 R_x( createRotMat(0, euler[0][0]) );
-//	SO3 R_y( createRotMat(1, euler[1][0]) );
-//	SO3 R_z( createRotMat(2, euler[2][0]) );
-//	SO3 attYX = R_y*R_x; // R_y*R_x*R_x'*R_y'*R_z'*P = R_z'*P
+//	Array2D<double> curAngles = att.getAnglesZYX();
+//	SO3 R_x( createRotMat(0, curAngles[2][0]) );
+//	SO3 R_y( createRotMat(1, curAngles[1][0]) );
+//	SO3 R_z( createRotMat(2, curAngles[0][0]) );
+//	SO3 attYX = R_y*R_x;
 //	SO3 rotYX = attYX*SO3(mRotCamToPhone);
 //	double f = data->imageData->focalLength;
 //	double cx = data->imageData->center.x;
@@ -596,8 +574,8 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 //	Array2D<double> dirMeas(3,1);
 //	Array2D<double> dirNom(3,1);
 //	Array2D<double> r1(3,1), r2(3,1);
-//	vector<Array2D<double>> dirMeasList(repeatPairs.size(),Array2D<double>(3,1));
-//	vector<Array2D<double>> dirNomList(repeatPairs.size(),Array2D<double>(3,1));
+////	vector<Array2D<double>> dirMeasList(repeatPairs.size(),Array2D<double>(3,1));
+////	vector<Array2D<double>> dirNomList(repeatPairs.size(),Array2D<double>(3,1));
 //	vector<double> offsets(repeatPairs.size());
 //	for(int i=0; i<repeatPairs.size(); i++)
 //	{
@@ -612,8 +590,8 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 //
 //		dirNom.inject(mNominalDirMap[repeatPairs[i]]);
 //
-//		dirMeasList[i].inject(dirMeas);
-//		dirNomList[i].inject(dirNom);
+////		dirMeasList[i].inject(dirMeas);
+////		dirNomList[i].inject(dirNom);
 //
 //		// rotation compensation
 //		r1[0][0] = p1.x - cx;
@@ -634,102 +612,105 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 //
 //	// Find the median offset for outlier rejection
 //	double angleOffset = 0;
-//	if(offsets.size() > 0)
+//	if(offsets.size() > 10)
 //	{
 //		vector<double> tempOffsets = offsets;
 //		size_t medLoc = tempOffsets.size()/2;
 ////		nth_element(tempOffsets.begin(), tempOffsets.begin()+medLoc, tempOffsets.end());
 //		sort(tempOffsets.begin(), tempOffsets.end());
 //		double medOffset = tempOffsets[medLoc];
+//		if(!mIsDoingIbvs)
+//			medOffset = -curAngles[0][0];
 //
 //		// Now remove outliers
 //		int numOutliers = 0;
 //		int numInliers = 0;
-//		vector<Array2D<double>> tempDirMeasList, tempDirNomList;
-//		tempDirMeasList.swap(dirMeasList);
-//		tempDirNomList.swap(dirNomList);
 //		tempOffsets.clear();
 //		tempOffsets.swap(offsets);
-//		vector<double> lifeList;
-//		double totalLife = 0;
-//		int kingIndex = -1;
-//		int kingLife = -1;
+//		vector<int> killList;
 //		for(int i=0; i<tempOffsets.size(); i++)
 //		{
-//			if( abs(tempOffsets[i]-medOffset) < 0.1 )
+//			if( abs(tempOffsets[i]-medOffset) < 0.05)
 //			{
-//				double s = mNominalDirCreateTime[repeatPairs[i]].getElapsedTimeMS();
-//				double e = s;
-////				double e = exp(-10*pow(tempOffsets[i]+euler[2][0],2));
-//				totalLife += e;
-//				lifeList.push_back(e);
-//				dirMeasList.push_back(tempDirMeasList[i].copy());
-//				dirNomList.push_back(tempDirNomList[i].copy());
-//				angleOffset += s*tempOffsets[i];
 //				offsets.push_back(offsets[i]);
 //				numInliers++;
-//
-//				if(s > kingLife)
-//				{
-//					kingIndex = offsets.size()-1;
-//					kingLife = s;
-//				}
 //			}
 //			else // Remove this pair from history
 //			{
-//				mNominalDirMap.erase(repeatPairs[i]);
-//				mNominalDirCreateTime.erase(repeatPairs[i]);
+//				killList.push_back(i);
 //				numOutliers++;
 //			}
 //		}
 //
-//		angleOffset = offsets[kingIndex];
+//		angleOffset = medOffset;
 //
-//		if( abs(medOffset+euler[2][0]) < 0.1)
+//		if( abs(medOffset+curAngles[0][0]) < 0.1 &&
+//			(float)numOutliers / numInliers < 1)
 //		{
 //			Array2D<double> dirMeas(3,1), dirNom(3,1,0.0);
 //			dirNom[1][0] = 1;
 //			dirNom[0][0] = 0;
 //			dirNom[0][0] = 0;
 //
-//			Array2D<double> R = createRotMat_ZYX(-medOffset, euler[1][0], euler[0][0]);
+//			Array2D<double> R = createRotMat_ZYX(-angleOffset, curAngles[1][0], curAngles[2][0]);
 //			dirMeas = matmult(transpose(R), dirNom);
 //
-//			double weight = 15;
+//			double weight = 5*2;
 //			Array2D<double> innovation = weight*cross(dirMeas, att.inv()*dirNom);
 //			angleOffset = medOffset;
 //
+//			if(mIsDoingIbvs)
+//			{
+//				mMutex_visionInnovation.lock();
+////				mVisionInnovation.inject(innovation);
+//				mVisionInnovation[0][0] = 0;
+//				mVisionInnovation[1][0] = 0;
+//				mVisionInnovation[2][0] = -0.5*2*2*(curAngles[0][0]+medOffset);//innovation[2][0];
+//				mMutex_visionInnovation.unlock();
+//			}
 //
-//			mMutex_visionInnovation.lock();
-////			mVisionInnovation.inject(innovation);
-//			mVisionInnovation[0][0] = 0;
-//			mVisionInnovation[1][0] = 0;
-//			mVisionInnovation[2][0] = innovation[2][0];
-//			mMutex_visionInnovation.unlock();
+//			for(int i=0; i<killList.size(); i++)
+//			{
+//				mNominalDirMap.erase(repeatPairs[killList[i]]);
+//				mNominalDirCreateTime.erase(repeatPairs[killList[i]]);
+//			}
 //		}
 //		else
 //		{
-//Log::alert(String()+(int)mStartTime.getElapsedTimeMS()+" -- Bad bunch");
+//Log::alert(String()+(int)mStartTime.getElapsedTimeMS()+" -- Bad bunch: " + numOutliers + " vs. " +  numInliers + " and " + abs(medOffset+curAngles[0][0]));
 //			for(int i=0; i<repeatPairs.size(); i++)
 //			{
 //				mNominalDirMap.erase(repeatPairs[i]);
 //				mNominalDirCreateTime.erase(repeatPairs[i]);
 //			}
-//			angleOffset = -euler[2][0];
+//			angleOffset = -curAngles[0][0];
 //			mMutex_visionInnovation.lock();
 //			mVisionInnovation[0][0] = 0;
 //			mVisionInnovation[1][0] = 0;
 //			mVisionInnovation[2][0] = 0;
 //			mMutex_visionInnovation.unlock();
+//
+//			for(int i=0; i<repeatPairs.size(); i++)
+//			{
+//				mNominalDirMap.erase(repeatPairs[i]);
+//				mNominalDirCreateTime.erase(repeatPairs[i]);
+//			}
 //		}
+//	}
+//	else
+//	{
+//		angleOffset = -curAngles[0][0];
+//		mMutex_visionInnovation.lock();
+//		mVisionInnovation[0][0] = 0;
+//		mVisionInnovation[1][0] = 0;
+//		mVisionInnovation[2][0] = 0;
+//		mMutex_visionInnovation.unlock();
 //	}
 //
 //	// If we don't have any repeats just use the current angle
 //	// estimate
-//	if(mNominalDirMap.size() == 0)
-//		angleOffset = -euler[2][0];
-//	else if(dirMeasList.size() == 0)
-//		angleOffset = -euler[2][0];
+//	if(mNominalDirMap.size() == 0 && mIsDoingIbvs)
+//		angleOffset = -curAngles[0][0];
 //
 //	/////////////////////////////////////////// set nominal directions for the known pairs ///////////////////////////////////////////
 //	Array2D<double> dir(3,1);
@@ -757,7 +738,7 @@ void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
 //	}
 //
 //	mQuadLogger->addEntry(LOG_ID_VISION_INNOVATION, mVisionInnovation, LOG_FLAG_OBSV_BIAS);
-//}
+}
 
 void Observer_Angular::onNewCommObserverReset()
 {
@@ -805,10 +786,111 @@ void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
 	}
 }
 
+//void Observer_Angular::onObserver_TranslationalImageProcessed(const shared_ptr<ImageTranslationData> &data)
+//{
+//	if(data->goodPoints.size() < 10 || !mIsDoingIbvs)
+//		return;
+//
+//	vector<shared_ptr<TrackedObject>> curObjects = data->goodObjects;
+//	vector<cv::Point2f> curPoints(curObjects.size());
+//
+//	// adjust for roll and pitch
+//	// also rotate to phone coords
+//	SO3 att = data->objectTrackingData->imageData->att;
+//	Array2D<double> curAngles = att.getAnglesZYX();
+//	SO3 R_x( createRotMat(0, curAngles[2][0]) );
+//	SO3 R_y( createRotMat(1, curAngles[1][0]) );
+//	SO3 R_z( createRotMat(2, curAngles[0][0]) );
+//	SO3 attYX = R_y*R_x;
+//	SO3 rotYX = attYX*SO3(mRotCamToPhone);
+//	Array2D<double> p(3,1);
+//	double f = data->objectTrackingData->imageData->focalLength;
+//	cv::Point2f center = data->objectTrackingData->imageData->center;
+//	for(int i=0; i<curObjects.size(); i++)
+//	{
+//		p[0][0] = curObjects[i]->getLocation().x - center.x;
+//		p[1][0] = curObjects[i]->getLocation().y - center.y;
+//		p[2][0] = f;
+//		p = rotYX*p;
+//		curPoints[i].x = p[0][0];
+//		curPoints[i].y = p[1][0];
+//		curPoints[i] += data->imageOffset;
+//	}
+//
+//
+//	vector<cv::Point2f> nomPoints = data->nominalPoints;
+//
+//	vector<cv::Point2f> curDeltaList, nomDeltaList;
+//	vector<double> distList, ageList;
+//	for(int i=0; i<curPoints.size(); i++)
+//		for(int j=i+1; j<curPoints.size(); j++)
+//		{
+//			cv::Point2f curDelta = curPoints[j]-curPoints[i];
+//			if(curDelta.x > 30 && curDelta.y > 30)
+//				continue;
+//
+//			cv::Point2f nomDelta = nomPoints[j]-nomPoints[i];
+//
+//			curDeltaList.push_back(curDelta);
+//			nomDeltaList.push_back(nomDelta);
+//			distList.push_back(norm(curDelta));
+//			ageList.push_back(curObjects[i]->getAge()+curObjects[j]->getAge());
+//		}
+//
+//	// Pick out only the furthest apart
+//	int numEntries = min(100, (int)curDeltaList.size());
+////	vector<int> distOrder(distList.size());
+////	for(int i=0; i<distOrder.size(); i++)
+////		distOrder[i] = i;
+////	sort(distOrder.begin(), distOrder.end(), [&](int i1, int i2){return distList[i1] > distList[i2];});
+////	nth_element(distOrder.begin(), distOrder.begin()+numEntries-1, distOrder.end(), [&](int i1, int i2){return distList[i1] > distList[i2];});
+//
+//	vector<int> ageOrder(ageList.size());
+//	for(int i=0; i<ageOrder.size(); i++)
+//		ageOrder[i] = i;
+//	sort(ageOrder.begin(), ageOrder.end(), [&](int i1, int i2){return ageList[i1] > ageList[i2];});
+//
+//	vector<int> sortOrder;
+////	sortOrder.swap(distOrder);
+//	sortOrder.swap(ageOrder);
+//
+//	Array2D<double> A_T(numEntries,2), B_T(numEntries,2);
+//	for(int i=0; i<numEntries; i++)
+//	{
+//		A_T[i][0] = curDeltaList[sortOrder[i]].x;
+//		A_T[i][1] = curDeltaList[sortOrder[i]].y;
+//               
+//		B_T[i][0] = nomDeltaList[sortOrder[i]].x;
+//		B_T[i][1] = nomDeltaList[sortOrder[i]].y;
+//	}
+//
+//	JAMA::LU<double> lu_B_T(B_T);
+//	Array2D<double> C_T = lu_B_T.solve(A_T);
+//	Array2D<double> C = transpose(submat(C_T,0,1,0,1));
+//
+//	// need to orthogonalize
+//	JAMA::SVD<double> svd_C(C);
+//	Array2D<double> U, S, V;
+//	svd_C.getU(U);
+//	svd_C.getV(V);
+//
+//	// Based on the Polar decomposition C = UP
+//	Array2D<double> rot = matmult(U, transpose(V));
+//	
+//	// Need to orthogonalize R
+//	double angle = acos(rot[0][0]);
+//
+//	mMutex_visionInnovation.lock();
+//	mVisionInnovation[0][0] = 0;
+//	mVisionInnovation[1][0] = 0;
+//	mVisionInnovation[2][0] = -0.5*(curAngles[0][0] + angle)*2*2*2*2*2*2;
+//	mMutex_visionInnovation.unlock();
+//}
+
 void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 {
 	mMutex_targetFindTime.lock();
-	Time lastTargetFindTime(mLastTargetFindTime);
+	Time lastTargetFindTime(mLastObjectTrackedTime);
 	mMutex_targetFindTime.unlock();
 	if(mIsDoingIbvs)// && lastTargetFindTime.getElapsedTimeMS() < 1e3)
 		return;
@@ -822,33 +904,32 @@ void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 	double viconYaw = -data[2];
 	mMutex_data.lock();
 	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
+	double curYaw = curAngles[0][0];
 	mMutex_data.unlock();
 
-	// Most accurate would be to rotate nomDir by the full Vicon
-	// attitude, but that would make my roll and pitch
-	// artificially more accurate. Instead, I'm using the current 
-	// roll and pitch estimate such that they will cancel out when
-	// I go to calculated the innovation and am left with (mostly) 
-	// just yaw.
-	Array2D<double> R = createRotMat_ZYX(viconYaw, curAngles[1][0], curAngles[0][0]);
-	Array2D<double> measDir = matmult(transpose(R),nomDir);
+	mMutex_visionInnovation.lock();
+	mVisionInnovation[0][0] = 0;
+	mVisionInnovation[1][0] = 0;
+	mVisionInnovation[2][0] = -0.1*2*2*2*2*2*(curYaw-viconYaw);
+	mMutex_visionInnovation.unlock();
+
+	mQuadLogger->addEntry(LOG_ID_USE_VICON_YAW, LOG_FLAG_PC_UPDATES);
+}
+
+void Observer_Angular::onNewCommUseIbvs(bool useIbvs)
+{
+	mIsDoingIbvs = true;
+
+	mMutex_cache.lock();
+	Array2D<double> mag = mMagData->dataCalibrated.copy();
+	mMutex_cache.unlock();
 
 	mMutex_data.lock();
-	mExtraDirsMeasured.push_back(measDir.copy());
-	mExtraDirsInertial.push_back(nomDir.copy());
-	mExtraDirsWeight.push_back(5);
+	SO3 att = mCurAttitude;
+	mag = att*mag;
+	normalize(mag);
+	mMagDirNom.inject(mag);
 	mMutex_data.unlock();
-
-//	mMutex_data.lock();
-//	double yawVicon = -data[2];
-//
-//	Array2D<double> curAngles = mCurAttitude.getAnglesZYX();
-//	double curYaw = curAngles[2][0];
-//	SO3 R1(createRotMat(2,-curYaw));
-//	SO3 R2(createRotMat(2,yawVicon));
-////	mCurAttitude = R2*R1*mCurAttitude;
-//	mCurAttitude *= R2*R1;
-//	mMutex_data.unlock();
 }
 
 };

@@ -189,9 +189,9 @@ Array2D<double> Quaternion::toAnglesZYX() const
 	Array2D<double> rotMat = toRotMat();
 
 	Array2D<double> euler(3,1);
-	euler[0][0] = atan2(rotMat[2][1], rotMat[2][2]); // roll ... @TODO: this should be range checked
+	euler[0][0] = atan2(rotMat[1][0], rotMat[0][0]);
 	euler[1][0] = atan2(-rotMat[2][0], sqrt(1.0-rotMat[2][0]*rotMat[2][0]));
-	euler[2][0] = atan2(rotMat[1][0], rotMat[0][0]);
+	euler[2][0] = atan2(rotMat[2][1], rotMat[2][2]); // roll ... @TODO: this should be range checked
 
 	return euler;
 }

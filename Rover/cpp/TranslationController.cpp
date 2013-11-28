@@ -119,7 +119,6 @@ using namespace toadlet::egg;
 			mDesState[1][0] = mCurState[1][0];
 			mMutex_state.unlock();
 
-//			accelCmd = calcControlIBVS();
 			accelCmd = calcControlIBVS2(error, dt);
 
 			// fake the system controller so when we switch back to 
@@ -188,141 +187,10 @@ using namespace toadlet::egg;
 		return accelCmd;
 	}
 
-	Array2D<double> TranslationController::calcControlIBVS()
-	{
-Log::alert("TranslationController::calcControlIBVS -- Why am I here?");
-		Array2D<double> accel(3,1,0.0);
-		accel[2][0] = GRAVITY;
-		return accel;
-//		mMutex_target.lock();
-//		shared_ptr<ImageTargetFindData> targetData = mTargetData;
-//		mMutex_target.unlock();
-//		
-//		vector<cv::Point2f> imgPoints;
-//		for(int i=0; i<targetData->target->squareData.size(); i++)
-//			for(int j=0; j<targetData->target->squareData[i]->contour.size(); j++)
-//				imgPoints.push_back(targetData->target->squareData[i]->contour[j]);
-//
-//		// move center from corner to middle
-//		double cx = targetData->imageData->center.x;
-//		double cy = targetData->imageData->center.y;
-//		cv::Point2f center(cx,cy);
-//		for(int i=0; i<imgPoints.size(); i++)
-//			imgPoints[i] -= center;
-//
-//		// Predict the target's current position based on kinematics
-//		double dt = targetData->timestamp.getElapsedTimeNS()/1.0e9;
-//		double f = targetData->imageData->focalLength;
-//		Array2D<double> vel(3,1);
-//		double z;
-//		if(mObsvTranslational == NULL)
-//		{
-//			Log::alert("crap, TranslationController's mObsvTranslational is null");
-//			vel[0][0] = vel[1][0] = vel[2][0] = 0;
-//			z = 1;
-//		}
-//		else
-//		{
-//			Array2D<double> imgState = mObsvTranslational->estimateStateAtTime(targetData->timestamp);
-//			z = imgState[2][0];
-//			vel[0][0] = imgState[3][0];
-//			vel[1][0] = imgState[4][0];
-//			vel[2][0] = imgState[5][0];
-//			vel.inject(mRotPhoneToCam*vel);
-//		}
-//		Array2D<double> Lv(2,3), delta(2,1);
-//		for(int i=0; i<imgPoints.size(); i++)
-//		{
-//			Lv[0][0] = -f; Lv[0][1] = 0;  Lv[0][2] = imgPoints[i].x;
-//			Lv[1][0] = 0;  Lv[1][1] = -f; Lv[1][2] = imgPoints[i].y;
-//
-//			delta.inject(dt/z*matmult(Lv,vel));
-//
-//			imgPoints[i].x += delta[0][0];
-//			imgPoints[i].y += delta[1][0];
-//		}
-//
-//		// project onto unit sphere
-//		vector<Array2D<double>> spherePoints;
-//		Array2D<double> p(3,1), moment(3,1,0.0);
-//		for(int i=0; i<imgPoints.size(); i++)
-//		{
-//			p[0][0] = imgPoints[i].x;
-//			p[1][0] = imgPoints[i].y;
-//			p[2][0] = f;
-//
-//			// Get it on the unit sphere
-//			p.inject(1.0/norm2(p)*p);
-//
-//			moment += p;
-//		}
-//		moment = 1.0/norm2(moment)*moment;
-//		moment = mRotCamToPhone*moment;
-//
-//		SO3 att = targetData->imageData->att;
-//		Array2D<double> desDir(3,1);
-//		desDir[0][0] = 0;
-//		desDir[1][0] = 0;
-//		desDir[2][0] = -524.0/2.0;;
-//		desDir = 1.0/norm2(desDir)*desDir;
-//		Array2D<double> desMoment = att.inv()*desDir;
-//
-//		mMutex_state.lock();
-//		Array2D<double> curState = mCurState.copy();
-//		Array2D<double> desState = mDesState.copy();
-//		mMutex_state.unlock();
-//		mMutex_gains.lock();
-//		Array2D<double> posGains = mIbvsPosGains;
-//		Array2D<double> velGains = mIbvsVelGains;
-//		mMutex_gains.unlock();
-//
-////		Array2D<double> visionErr = curState[2][0]*moment-desState[2][0]*desMoment;
-//		Array2D<double> visionErr = curState[2][0]*(moment-desMoment);
-//
-//		Array2D<double> desVel = posGains*visionErr; // remember that * is element-wise
-//
-//		// use real height for z vel
-//		desVel[2][0] = -mIbvsPosGains[2][0]*(curState[2][0]-desState[2][0]);
-//
-//		String logString;
-//		for(int i=0; i<desVel.dim1(); i++)
-//			logString = logString+desVel[i][0]+"\t";
-//		mQuadLogger->addEntry(LOG_ID_VEL_CMD, logString, LOG_FLAG_STATE_DES);
-//
-//		Array2D<double> velErr(3,1);
-//		velErr[0][0] = curState[3][0]-(desState[3][0]+desVel[0][0]);
-//		velErr[1][0] = curState[4][0]-(desState[4][0]+desVel[1][0]);
-//		velErr[2][0] = curState[5][0]-(desState[5][0]+desVel[2][0]);
-//
-//		Array2D<double> accelCmd = -1.0*velGains*velErr;
-//
-//		accelCmd[0][0] = min(2.0, max(-2.0, accelCmd[0][0]));
-//		accelCmd[1][0] = min(2.0, max(-2.0, accelCmd[1][0]));
-//
-//		accelCmd[2][0] += GRAVITY;
-//
-//		// Assume the PID integrated err holds the necessary
-//		// acceleration offset
-//		mMutex_data.lock();
-//		accelCmd[2][0] -= mGainI[2][0]*mErrInt[2][0];
-//		mMutex_data.unlock();
-//
-////Log::alert("--------------------------------------------------");
-////Log::alert(String()+"target center:\t"+targetData->target->meanCenter.x+"\t"+targetData->target->meanCenter.y);
-////printArray("moment:\t",moment);
-////printArray("desMoment:\t",desMoment);
-////printArray("desMoment2:\t",desMoment2);
-////printArray("desVel:\t",desVel);
-////printArray("accelCmd:\t",accelCmd);
-//
-//		mLastController = Controller::IBVS;
-//		return accelCmd;
-	}
-
 	Array2D<double> TranslationController::calcControlIBVS2(Array2D<double> &error, double dt)
 	{
 		mMutex_target.lock();
-		shared_ptr<ImageTranslationData> xlateData= mTargetTranslationData;
+		shared_ptr<ImageTranslationData> xlateData = mTargetTranslationData;
 		mMutex_target.unlock();
 		
 		// Predict the target's current position based on kinematics

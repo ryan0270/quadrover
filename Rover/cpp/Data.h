@@ -356,10 +356,11 @@ class ImageTranslationData : public IData
 {
 	public:
 	ImageTranslationData() : IData() {type = DATA_TYPE_IMAGE_TRANSLATION;}
-//	shared_ptr<ImageTargetFindData> imageTargetFindData;
 	shared_ptr<ObjectTrackerData> objectTrackingData;
+	vector<shared_ptr<TrackedObject>> goodObjects;
 	vector<cv::Point2f> goodPoints; // location of found points, already adjusted for current attitude and image offset
 	vector<cv::Point2f> nominalPoints; // nominal location of the respective found points
+	cv::Point2f imageOffset;
 };
 
 template <class T>

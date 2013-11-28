@@ -107,7 +107,11 @@ using namespace TNT;
 		mMutex_data.lock();
 		double n= norm2(mDesAccel);
 		SO3 curMotorAtt = mCurAtt;
-		Array2D<double> curEuler = curMotorAtt.getAnglesZYX();
+		Array2D<double> curAngles = curMotorAtt.getAnglesZYX();
+		Array2D<double> curEuler(3,1);
+		curEuler[0][0] = curAngles[2][0];
+		curEuler[1][0] = curAngles[1][0];
+		curEuler[2][0] = curAngles[0][0];
 		double c = cos(curEuler[2][0]); double s = sin(curEuler[2][0]);
 //c = 1; // don't try to compenstate for yaw error
 		double x =  mDesAccel[0][0]*c+mDesAccel[1][0]*s;

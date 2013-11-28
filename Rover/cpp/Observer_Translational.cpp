@@ -808,33 +808,36 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	// Try find a plateau of ages
 	// to use as way to separate
 	// old objects from young objects
-	int minPoints = min(10, (int)repeatObjects.size());
+	int minPoints = min(10, (int)offsetsX.size());
 	int numEntries = minPoints;
-	if(repeatObjects.size() > minPoints)
-	{
-		// Note that repeatObjects is already sorted by age
-		// so this list is also sorted
-		vector<double> ageList(repeatObjects.size());
-		for(int i=0; i<ageList.size(); i++)
-			ageList[i] = repeatObjects[i]->getAge();
-		vector<double> delta(ageList.size());
-		delta[0] = 0;
-		for(int i=1; i<delta.size(); i++)
-			delta[i] = ageList[i-1]-ageList[i];
-		double maxDelta = *max_element(delta.begin()+minPoints-1, delta.end());
-		vector<int> peakList;
-		for(int i=minPoints-1; i<delta.size(); i++)
-			if(delta[i] > 0.5*maxDelta)
-				peakList.push_back(i);
-		if(peakList.size() > 0)
-			numEntries = peakList[0];
-	}
+//	if(repeatObjects.size() > minPoints)
+//	{
+//		// Note that repeatObjects is already sorted by age
+//		// so this list is also sorted
+//		vector<double> ageList(repeatObjects.size());
+//		for(int i=0; i<ageList.size(); i++)
+//			ageList[i] = repeatObjects[i]->getAge();
+//		vector<double> delta(ageList.size());
+//		delta[0] = 0;
+//		for(int i=1; i<delta.size(); i++)
+//			delta[i] = ageList[i-1]-ageList[i];
+//		double maxDelta = *max_element(delta.begin()+minPoints-1, delta.end());
+//		vector<int> peakList;
+//		for(int i=minPoints-1; i<delta.size(); i++)
+//			if(delta[i] > 0.5*maxDelta)
+//				peakList.push_back(i);
+//		if(peakList.size() > 0)
+//			numEntries = peakList[0];
+//	}
+	numEntries = offsetsX.size();
 
 	// Outlier rejection
 	int numInliers = 0;
 	int numOutliers = 0;
 	vector<cv::Point2f> goodPoints, tempNominalPoints;
+	vector<shared_ptr<TrackedObject>> goodObjects;
 	goodPoints.reserve(repeatPoints.size());
+	goodObjects.reserve(repeatPoints.size());
 	tempNominalPoints.swap(nominalPoints);
 	if(offsetsX.size() > 0)
 	{
@@ -847,7 +850,6 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 		for(int i=0; i<numEntries; i++)
 			tempOffsetsX[i] = offsetsX[i];
 //		nth_element(tempOffsetsX.begin(), tempOffsetsX.begin()+medLoc, tempOffsetsX.end());
-// nth_element is giving me problems here so sort for now
 		sort(tempOffsetsX.begin(), tempOffsetsX.end());
 		medOffset.x = tempOffsetsX[medLoc];
 
@@ -855,7 +857,6 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 		for(int i=0; i<numEntries; i++)
 			tempOffsetsY[i] = offsetsY[i];
 //		nth_element(tempOffsetsY.begin(), tempOffsetsY.begin()+medLoc, tempOffsetsY.end());
-// nth_element is giving me problems here so sort for now
 		sort(tempOffsetsY.begin(), tempOffsetsY.end());
 		medOffset.y = tempOffsetsY[medLoc];
 
@@ -874,8 +875,9 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 				imageOffset.x += age*offsetsX[i];
 				imageOffset.y += age*offsetsY[i];
 				goodPoints.push_back(repeatPoints[i]);
-				goodPoints.back().x += offsetsX[i];
-				goodPoints.back().y += offsetsY[i];
+//				goodPoints.back().x += offsetsX[i];
+//				goodPoints.back().y += offsetsY[i];
+				goodObjects.push_back(repeatObjects[i]);
 
 				nominalPoints.push_back(tempNominalPoints[i]);
 			}
@@ -886,8 +888,6 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 			}
 		}
 		
-//		if(numInliers > 0) // it's still possible to have zero if X and Y inliers don't match
-//			imageOffset = 1.0/numInliers*imageOffset;
 		if(ageSum > 0)
 			imageOffset = 1.0/ageSum*imageOffset;
 
@@ -899,22 +899,27 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 			for(int i=0; i<killList.size(); i++)
 			{
 				mObjectNominalPosMap.erase(repeatObjects[killList[i]]->getId());
-				repeatObjects[killList[i]]->kill();
+//				repeatObjects[killList[i]]->kill();
+				repeatObjects[killList[i]]->rebirth();
+				newObjects.push_back(repeatObjects[killList[i]]);
 			}
 		}
 		else
 		{
-			Log::alert(String() + "lot of outliers: " + numOutliers + " vs. "+ numInliers);
+			Log::alert(String() + (int)mStartTime.getElapsedTimeMS() + " -- lot of outliers: " + numOutliers + " vs. "+ numInliers);
 			imageOffset = mLastImageOffset;
 
 			// remove everything from memory, since I'm not sure where the problem is
 			for(int i=0; i<repeatObjects.size(); i++)
 			{
 				mObjectNominalPosMap.erase(repeatObjects[i]->getId());
-				repeatObjects[i]->kill();
+//				repeatObjects[i]->kill();
+				repeatObjects[i]->rebirth();
+				newObjects.push_back(repeatObjects[i]);
 			}
 
 			goodPoints.clear();
+			goodObjects.clear();
 		}
 	}
 
@@ -922,11 +927,15 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	// I don't know if I like this way of doing this, but I'll use it for now
 	if(goodPoints.size() > 0)
 	{
+		for(int i=0; i<goodPoints.size(); i++)
+			goodPoints[i] += imageOffset;
 		shared_ptr<ImageTranslationData> xlateData(new ImageTranslationData());
 		xlateData->timestamp.setTime(data->timestamp);
 		xlateData->objectTrackingData = data;
+		xlateData->goodObjects.swap(goodObjects);
 		xlateData->goodPoints.swap(goodPoints);
 		xlateData->nominalPoints.swap(nominalPoints);
+		xlateData->imageOffset = imageOffset;
 		mMutex_listeners.lock();
 		for(int i=0; i<mListeners.size(); i++)
 			mListeners[i]->onObserver_TranslationalImageProcessed(xlateData);
@@ -1240,6 +1249,8 @@ Log::alert("No accel data");
 					Array2D<double> measCov = 1e-4*createIdentity((double)2.0);
 //						Array2D<double> measCov = submat(mPosMeasCov,0,1,0,1);
 					doMeasUpdateKF_xyOnly(meas, measCov, mStateKF, mErrCovKF, att);
+
+					mQuadLogger->addEntry(LOG_ID_USE_VICON_XY, LOG_FLAG_PC_UPDATES);
 				}
 				break;
 			case DATA_TYPE_MAP_VEL:
@@ -1274,7 +1285,6 @@ Log::alert("No accel data");
 		lastUpdateTime.setTime((*eventIter)->timestamp);
 		eventIter++;
 	}
-
 	mMutex_kfData.unlock();
 
 	return lastUpdateTime;

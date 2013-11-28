@@ -165,7 +165,7 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 	minDistance *= pyrScale;
 
 	vector<cv::KeyPoint> tempKp1;
-	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
+//	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
 //	int maxKp = 1000;
 //	int gridRows = 3;
 //	int gridCols = 3;

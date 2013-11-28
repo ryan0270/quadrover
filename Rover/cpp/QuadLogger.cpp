@@ -430,6 +430,8 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_REF_ATTITUDE_SYSTEM_STATE="+LOG_ID_REF_ATTITUDE_SYSTEM_STATE+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_VISION_INNOVATION="+LOG_ID_VISION_INNOVATION+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_OBJECT_TRACKING_STATS="+LOG_ID_OBJECT_TRACKING_STATS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_USE_VICON_YAW="+LOG_ID_USE_VICON_YAW+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_USE_VICON_XY="+LOG_ID_USE_VICON_XY+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}

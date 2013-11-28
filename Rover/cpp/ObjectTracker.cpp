@@ -50,7 +50,7 @@ void ObjectTracker::run()
 	Array2D<double> SnInv(2,2,0.0);
 	SnInv[0][0] = 1.0/Sn[0][0];
 	SnInv[1][1] = 1.0/Sn[1][1];
-	double probNoCorr = 5e-4/2/2;
+	double probNoCorr = 5e-4/2;
 
 	shared_ptr<ImageFeatureData> featureData = NULL;
 	shared_ptr<ImageFeatureData> prevFeatureData = NULL;
@@ -243,7 +243,7 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 	vector<bool> prevMatched(N1, false);
 	vector<bool> curMatched(N2, false);
 	vector<cv::Point2f> offsets;
-	float matchThreshold = 0.7;
+	float matchThreshold = 0.6;
 	for(int i=0; i<N1; i++)
 	{
 		if(N2 == 0 || C[i][N2] > 1.0-matchThreshold)
