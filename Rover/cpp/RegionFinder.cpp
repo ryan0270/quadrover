@@ -159,7 +159,7 @@ vector<vector<cv::Point2f>> RegionFinder::findRegions(const cv::Mat &image)
 	mserDetector(pyrImage, regions);
 
 	// now get the outer contours
-	vector<vector<cv::Point>> contours = getContours(image, regions);
+	vector<vector<cv::Point>> contours = getContours(pyrImage, regions);
 
 	// and return to original size
 	double s = 1.0/pyrScale;

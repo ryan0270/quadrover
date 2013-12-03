@@ -50,7 +50,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 8;
+	int dataSet = 9;
 	int startImg=0, endImg=0;
 	switch(dataSet)
 	{
@@ -98,6 +98,11 @@ int main(int argv, char* argc[])
 			dataDir = "../dataSets/Nov13_3";
 			startImg = 4686;
 			endImg = 7486;
+			break;
+		case 9:
+			dataDir = "../dataSets/Nov28";
+			startImg = 3457;
+			endImg = 5334;
 			break;
 	}
 
@@ -176,7 +181,6 @@ int main(int argv, char* argc[])
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
 	RegionFinder mRegionFinder;
-//	TargetFinder mTargetFinder;
 //	SensorManager mSensorManager;
 	MotorInterface mMotorInterface;
 //	CommManager mCommManager;
@@ -185,6 +189,9 @@ int main(int argv, char* argc[])
 	Time startTime;
 
 	// Make the appropriate connections
+	TrackedObject::setObserverAngular(&mObsvAngular);
+	TrackedObject::setObserverTranslational(&mObsvTranslational);
+
 	mTranslationController.setRotViconToPhone(mRotViconToPhone);
 	mTranslationController.setStartTime(startTime);
 	mTranslationController.setQuadLogger(&mQuadLogger);
@@ -240,7 +247,7 @@ int main(int argv, char* argc[])
 	mObjectTracker.addListener(&mObsvAngular);
 	mObjectTracker.start();
 	mFeatureFinder.addListener(&mObjectTracker);
-//	mRegionFinder.addListener(&mObjectTracker);
+	mRegionFinder.addListener(&mObjectTracker);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(startTime);
@@ -249,7 +256,7 @@ int main(int argv, char* argc[])
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
 	mVelocityEstimator.addListener(&mObsvTranslational);
 	mFeatureFinder.addListener(&mVelocityEstimator);
-//	mRegionFinder.addListener(&mVelocityEstimator);
+	mRegionFinder.addListener(&mVelocityEstimator);
 	addCommManagerListener(&mVelocityEstimator);
 	mVelocityEstimator.start();
 
@@ -273,7 +280,7 @@ int main(int argv, char* argc[])
 	logMask |= LOG_FLAG_CAM_RESULTS;
 //	logMask |= LOG_FLAG_CAM_IMAGES;
 //	logMask |= LOG_FLAG_PHONE_TEMP;
-	logMask |= LOG_FLAG_SONAR;
+//	logMask |= LOG_FLAG_SONAR;
 	mQuadLogger.setStartTime(startTime);
 	
 	////////////////////////////////////////////////////////////////////////////////////
@@ -303,7 +310,7 @@ int main(int argv, char* argc[])
 		void onRegionsFound(const shared_ptr<ImageRegionData> &data)
 		{
 			imshow("dispRegionFind",*(data->imageAnnotated->imageAnnotated));
-			cv::waitKey(1);
+//			cv::waitKey(1);
 		}
 	} myRegionFinderListener;
 	mRegionFinder.addListener(&myRegionFinderListener);
@@ -317,7 +324,7 @@ int main(int argv, char* argc[])
 			ss << imgDir << "/annotated_target/img_" << imgCnt++ << "_" << data->imageData->imageId << ".bmp";
 //			imwrite(ss.str().c_str(),*data->imageAnnotatedData->imageAnnotated);
 			imshow("dispObjectTrack",*(data->imageAnnotatedData->imageAnnotated));
-			cv::waitKey(1);
+//			cv::waitKey(1);
 		};
 
 		int imgCnt;

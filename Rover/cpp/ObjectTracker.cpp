@@ -13,6 +13,10 @@ ObjectTracker::ObjectTracker()
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
 
 	mFeatureData = NULL;
+	mRegionData = NULL;
+
+	mNewFeatureDataAvailable = false;
+	mNewRegionDataAvailable = false;
 
 	mObsvTranslation = NULL;
 }
@@ -46,101 +50,117 @@ void ObjectTracker::run()
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
 
-	Array2D<double> Sn = 5*5*createIdentity((double)2);
-	Array2D<double> SnInv(2,2,0.0);
-	SnInv[0][0] = 1.0/Sn[0][0];
-	SnInv[1][1] = 1.0/Sn[1][1];
-	double probNoCorr = 5e-4/2;
+	Array2D<double> SnPoint = 5*5*createIdentity((double)2);
+	Array2D<double> SnInvPoint(2,2,0.0);
+	SnInvPoint[0][0] = 1.0/SnPoint[0][0];
+	SnInvPoint[1][1] = 1.0/SnPoint[1][1];
+
+	Array2D<double> SnRegion = 10*10*createIdentity((double)2);
+	Array2D<double> SnInvRegion(2,2,0.0);
+	SnInvRegion[0][0] = 1.0/SnRegion[0][0];
+	SnInvRegion[1][1] = 1.0/SnRegion[1][1];
+	
+	Array2D<double> Sn(2,2), SnInv(2,2);
+
+	double probNoCorrPoints = 5e-4/2;
+	double probNoCorrRegions = 5e-7*2*2*2*2;
+	double probNoCorr;
 
 	shared_ptr<ImageFeatureData> featureData = NULL;
-	shared_ptr<ImageFeatureData> prevFeatureData = NULL;
-
-	double dt;
-	Array2D<double> curState(9,1,0.0);
-	Array2D<double> curErrCov(9,9,0.0);
-	Array2D<double> mv(3,1,0.0);
-	Array2D<double> Sv(3,3,0.0);
-	double mz;
-	double varz;
-
-	SO3 curAtt, prevAtt, attChange;
-	Array2D<double> omega(3,1);
+	shared_ptr<ImageRegionData> regionData = NULL;
 
 	double f;
 	cv::Point2f center;
 
-	vector<shared_ptr<TrackedPoint>> curPoints;
+	mNewFeatureDataAvailable = false;
+	mNewRegionDataAvailable = false;
+
+	vector<ObjectMatch> goodMatches;
+	vector<shared_ptr<TrackedObject>> repeatObjects, newObjects;
+
 	vector<shared_ptr<TrackedObject>> curObjects;
+	shared_ptr<DataImage> imageData = NULL;
 	while(mRunning)
 	{
-		mMutex_featureData.lock();
-		featureData = mFeatureData;
-		mFeatureData = NULL;
-		mMutex_featureData.unlock();
-
-		if(featureData != NULL)
+		Time curTime;
+		if(mNewFeatureDataAvailable)
 		{
-			Time curTime = featureData->imageData->timestamp;
-			Time prevTime;
-			if(prevFeatureData != NULL)
-			{
-				prevTime = prevFeatureData->imageData->timestamp;
-				dt = Time::calcDiffNS(prevTime, curTime)/1.0e9;
-			}
-			else
-				dt = 100;
+			mMutex_featureData.lock();
+			featureData = mFeatureData;
+			mMutex_featureData.unlock();
+			mNewFeatureDataAvailable = false;
 
-			// make objects
-			curPoints.clear();
-			curPoints.resize(featureData->featurePoints.size());
-			for(int i=0; i<curPoints.size(); i++)
-			{
-				curPoints[i] = shared_ptr<TrackedPoint>(new TrackedPoint(curTime, featureData->featurePoints[i]));
-				curPoints[i]->setPosCov(Sn);
-			}
-
-			curObjects.clear();
-			curObjects.resize(curPoints.size());
-			for(int i=0; i<curPoints.size(); i++)
-				curObjects[i] = curPoints[i];
-
-			/////////////////// Get location priors for active objects ///////////////////////
-			curState.inject(mObsvTranslation->estimateStateAtTime(curTime));
-			curErrCov.inject(mObsvTranslation->estimateErrCovAtTime(curTime));
-			mv.inject(submat(curState,3,5,0,0));
-			Sv.inject(submat(curErrCov,3,5,3,5));
-			mz = curState[2][0];
-			varz= curErrCov[2][2];
-
-			curAtt = mObsvAngular->estimateAttAtTime(curTime);
-			prevAtt = mObsvAngular->estimateAttAtTime(prevTime);
-			attChange = curAtt*prevAtt.inv();
-			omega.inject(1.0/dt*attChange.log().toVector());
-
+			curTime = featureData->imageData->timestamp;
 			f = featureData->imageData->focalLength;
 			center = featureData->imageData->center;
+			imageData = featureData->imageData;
+			probNoCorr = probNoCorrPoints;
+			Sn.inject(SnPoint);
+			SnInv.inject(SnInvPoint);
+
+			// make objects
+			if(featureData != NULL)
+			{
+				curObjects.clear();
+				curObjects.resize(featureData->featurePoints.size());
+				for(int i=0; i<curObjects.size(); i++)
+				{
+					curObjects[i] = shared_ptr<TrackedObject>(new TrackedPoint(curTime, featureData->featurePoints[i]));
+					curObjects[i]->setPosCov(Sn);
+				}
+			}
+		}
+		else if(mNewRegionDataAvailable)
+		{
+			mMutex_featureData.lock();
+			regionData = mRegionData;;
+			mMutex_featureData.unlock();
+			mNewRegionDataAvailable = false;
+
+			curTime = regionData->imageData->timestamp;
+			f = regionData->imageData->focalLength;
+			center = regionData->imageData->center;
+			imageData = regionData->imageData;
+			probNoCorr = probNoCorrRegions;
+			Sn.inject(SnRegion);
+			SnInv.inject(SnInvRegion);
+
+			curObjects.clear();
+			curObjects.resize(regionData->regionCentroids.size());
+			for(int i=0; i<curObjects.size(); i++)
+			{
+				curObjects[i] = shared_ptr<TrackedObject>(new TrackedRegion(curTime,
+							regionData->regionContours[i],
+							regionData->regionCentroids[i],
+							regionData->regionMoments[i]));
+				curObjects[i]->setPosCov(Sn);
+			}
+
+			doSimilarityCheck(curObjects);
+		}
+
+		if(curObjects.size() != 0)
+		{
+			/////////////////// Get location priors for active objects ///////////////////////
 			for(int i=0; i<mTrackedObjects.size(); i++)
 			{
 				shared_ptr<TrackedObject> to = mTrackedObjects[i];
-				to->updatePositionDistribution(mv, Sv, mz, varz, f, center, omega, curTime);
+				to->updatePositionDistribution(f, center, curTime);
 			}
 
 			// make matches
-			vector<ObjectMatch> goodMatches;
-			vector<shared_ptr<TrackedObject>> repeatObjects, newObjects;
 			matchify(curObjects, goodMatches, repeatObjects, newObjects, Sn, SnInv, probNoCorr, curTime);
 
 			// draw
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
-			featureData->imageData->image->copyTo(*imageAnnotated);
+			imageData->image->copyTo(*imageAnnotated);
 			drawResults(*imageAnnotated, goodMatches, repeatObjects, newObjects);
 
 			shared_ptr<DataAnnotatedImage> imageAnnotatedData(new DataAnnotatedImage());
 			imageAnnotatedData->imageAnnotated = imageAnnotated;
-			imageAnnotatedData->imageDataSource = featureData->imageData;
+			imageAnnotatedData->imageDataSource = imageData;
 
 			// Sort by age for stats
-//			sort(mTrackedObjects.begin(), mTrackedObjects.end(), TrackedObject::sortAgePredicate);
 			sort(repeatObjects.begin(), repeatObjects.end(), TrackedObject::sortAgePredicate);
 			vector<double> stats(4);
 			if(repeatObjects.size() > 0)
@@ -156,10 +176,10 @@ void ObjectTracker::run()
 
 			// Tell the world
 			shared_ptr<ObjectTrackerData> data(new ObjectTrackerData());
-			data->timestamp.setTime(featureData->imageData->timestamp);
-			data->repeatObjects.swap(repeatObjects);
-			data->newObjects.swap(newObjects);
-			data->imageData = featureData->imageData;
+			data->timestamp.setTime(imageData->timestamp);
+			data->repeatObjects = repeatObjects;
+			data->newObjects = newObjects;
+			data->imageData = imageData;
 			data->imageAnnotatedData = imageAnnotatedData;
 			data->repeatObjectLocs.resize(repeatObjects.size());
 			data->newObjectLocs.resize(newObjects.size());
@@ -167,15 +187,15 @@ void ObjectTracker::run()
 				data->repeatObjectLocs[i] = repeatObjects[i]->getLocation();
 			for(int i=0; i<newObjects.size(); i++)
 				data->newObjectLocs[i] = newObjects[i]->getLocation();
-			data->matches.swap(goodMatches);
+			data->matches = goodMatches;
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObjectsTracked(data);
 
-//			if(mQuadLogger != NULL)
-//				mQuadLogger->addEntry(LOG_ID_OBJECT_TRACKING_STATS, stats, LOG_FLAG_CAM_RESULTS);
+			if(mQuadLogger != NULL)
+				mQuadLogger->addEntry(LOG_ID_OBJECT_TRACKING_STATS, stats, LOG_FLAG_CAM_RESULTS);
 
-			prevFeatureData = featureData;
+			curObjects.clear();
 		}
 
 		System::msleep(1);
@@ -209,11 +229,41 @@ void ObjectTracker::drawResults(cv::Mat &img,
 		}
 	}
 
-	for(int i=0; i<newObjects.size(); i++)
-		circle(img, newObjects[i]->getLocation(), 4, cv::Scalar(255,0,0), -1);
+	if( (repeatObjects.size() > 0 && repeatObjects[0]->getType() == TrackedObjectType::REGION) ||
+		(newObjects.size() > 0 && newObjects[0]->getType() == TrackedObjectType::REGION) )
+	{
+		shared_ptr<TrackedRegion> region;
+		vector<vector<cv::Point>> contours(newObjects.size());
+		for(int i=0; i<newObjects.size(); i++)
+		{
+			region = static_pointer_cast<TrackedRegion>(newObjects[i]);
+			const vector<cv::Point2f> *contour = &region->getContour();;
+			contours[i].resize(contour->size());
+			for(int j=0; j<contours[i].size(); j++)
+				contours[i][j] = (*contour)[j];
+		}
+		cv::drawContours(img, contours, -1, cv::Scalar(255,0,0), 2);
 
-	for(int i=0; i<repeatObjects.size(); i++)
-		circle(img, repeatObjects[i]->getLocation(), 4, cv::Scalar(0,0,255), -1);
+		contours.clear();
+		contours.resize(repeatObjects.size());
+		for(int i=0; i<repeatObjects.size(); i++)
+		{
+			region = static_pointer_cast<TrackedRegion>(repeatObjects[i]);
+			const vector<cv::Point2f> *contour = &region->getContour();;
+			contours[i].resize(contour->size());
+			for(int j=0; j<contours[i].size(); j++)
+				contours[i][j] = (*contour)[j];
+		}
+		cv::drawContours(img, contours, -1, cv::Scalar(0,0,255), 2);
+	}
+	else
+	{
+		for(int i=0; i<newObjects.size(); i++)
+			circle(img, newObjects[i]->getLocation(), 4, cv::Scalar(255,0,0), -1);
+
+		for(int i=0; i<repeatObjects.size(); i++)
+			circle(img, repeatObjects[i]->getLocation(), 4, cv::Scalar(0,0,255), -1);
+	}
 }
 
 void ObjectTracker::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
@@ -221,6 +271,15 @@ void ObjectTracker::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 	mMutex_featureData.lock();
 	mFeatureData = data;
 	mMutex_featureData.unlock();
+	mNewFeatureDataAvailable = true;
+}
+
+void ObjectTracker::onRegionsFound(const shared_ptr<ImageRegionData> &data)
+{
+	mMutex_featureData.lock();
+	mRegionData = data;
+	mMutex_featureData.unlock();
+	mNewRegionDataAvailable = true;
 }
 
 void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::TrackedObject>> &curObjects,
@@ -232,9 +291,11 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 						     double probNoCorr,
 						     const ICSL::Quadrotor::Time &imageTime)
 {
+	goodMatches.clear();
+	repeatPoints.clear();
+	newPoints.clear();
 	/////////////////// Establish correspondence based on postiion ///////////////////////
 	Array2D<double> C = TrackedObject::calcCorrespondence(mTrackedObjects, curObjects, Sn, SnInv, probNoCorr);
-//	Array2D<double> C = TrackedObject::calcCorrespondence2(mTrackedObjects, curObjects, probNoCorr);
 
 	///////////////////  make matches ///////////////////////
 	shared_ptr<TrackedObject> toPrev, toCur;
@@ -242,7 +303,7 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 	int N2 = curObjects.size();
 	vector<bool> prevMatched(N1, false);
 	vector<bool> curMatched(N2, false);
-	vector<cv::Point2f> offsets;
+//	vector<cv::Point2f> offsets;
 	float matchThreshold = 0.6;
 	for(int i=0; i<N1; i++)
 	{
@@ -268,16 +329,16 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 		curMatched[maxIndex] = true;
 		toCur = curObjects[maxIndex];
 
-		cv::Point offset = toCur->getLocation()-toPrev->getLocation();
-		offsets.push_back(offset);
+//		cv::Point offset = toCur->getLocation()-toPrev->getLocation();
+//		offsets.push_back(offset);
 
-		int delay = Time::calcDiffMS(toPrev->getLastFoundTime(), toCur->getLastFoundTime()); 
 		ObjectMatch m;
 		m.prevPos= toPrev->getLocation();
 		m.curPos= toCur->getLocation();
 		m.score = C[i][maxIndex];
 		goodMatches.push_back(m);
-		toPrev->markFound(imageTime,toCur->getLocation());
+//		toPrev->markFound(imageTime,toCur->getLocation());
+		toPrev->markFound(toCur);
 		repeatPoints.push_back(toPrev);
 		toCur->kill();
 	}
@@ -327,6 +388,35 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 		mTrackedObjects.push_back(newPoints[i]);
 }
 
+void ObjectTracker::doSimilarityCheck(vector<shared_ptr<TrackedObject>> &objects)
+{
+	double probNoCorr = 0;
+	Array2D<double> C = TrackedObject::calcCorrespondence2(objects, objects, probNoCorr);
+
+	// Now keep only things that don't have confusion
+	// if there is confusion, only keep one
+	vector<shared_ptr<TrackedObject>> tempList;
+	tempList.swap(objects);
+	vector<bool> isStillGood(tempList.size(), true);
+	for(int i=0; i<tempList.size(); i++)
+	{
+		if(!isStillGood[i])
+		{
+			tempList[i]->kill();
+			continue;
+		}
+
+		vector<int> confusionList;
+		for(int j=i+1; j<tempList.size(); j++)
+			if(C[i][j] > 0.2)
+				confusionList.push_back(j);
+
+		for(int j=0; j<confusionList.size(); j++)
+			isStillGood[confusionList[j]] = false;
+
+		objects.push_back(tempList[i]);
+	}
+}
 
 } // namespace Quadrotor 
 } // namespace ICSL 

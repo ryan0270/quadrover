@@ -9,7 +9,8 @@ disp('start chadding')
 % dataDir = '../dataSets/Oct3_2';
 % dataDir = '../dataSets/Nov1';
 % dataDir = '../dataSets/Nov2';
-dataDir = '../dataSets/Nov13_3';
+% dataDir = '../dataSets/Nov13_3';
+dataDir = '../dataSets/Nov28';
 viconFile = [dataDir '/pcData.txt'];
 viconData = importdata(viconFile,'\t',0);
 
@@ -429,14 +430,14 @@ end
 
 %%
 if exist('trackingStats','var') && ~isempty(trackingStats)
-% 	figure(13000);
-% 	statLabels = {'Oldest [s]', 'Median [s]', '# repeats', '# new'};
-% 	for i=1:4
-% 		subplot(4,1,i)
-% 		plot(trackingStatsTime, trackingStats(i,:));
-% 		xlabel('Time [s]');
-% 		ylabel(statLabels{i});
-% 	end
+	figure(13000);
+	statLabels = {'Oldest [s]', 'Median [s]', '# repeats', '# new'};
+	for i=1:4
+		subplot(4,1,i)
+		plot(trackingStatsTime, trackingStats(i,:));
+		xlabel('Time [s]');
+		ylabel(statLabels{i});
+	end
 	
 	fprintf('age stats:\t');
 	for i=1:4
