@@ -55,13 +55,14 @@ class SensorManager : public CommManagerListener,
 	void setObserverAngular(Observer_Angular *obsv){mObsvAngular = obsv;}
 
 	// this comes from jni
-	void onNewSonarReading(int heightMM, uint64 timestampNS);
+	void onNewSonarReading(int heightMM, uint64_t timestampNS);
 
 	// used to pass images in from Java
-	void passNewImage(const cv::Mat *image, uint64 timestampNS);
+	void passNewImage(const cv::Mat *image, uint64_t timestampNS);
 
 	// for CommManagerListener
 	void onNewCommStateVicon(const toadlet::egg::Collection<float> &data);
+	void onNewCommAccelBias(float xBias, float yBias, float zBias);
 
 	// for SonarListener
 	void onNewSonar(const shared_ptr<HeightData<double>> &data);
@@ -101,6 +102,9 @@ class SensorManager : public CommManagerListener,
 	shared_ptr<cv::Mat> mCameraMatrix_640x480, mCameraMatrix_320x240, mCameraDistortionCoeffs;
 
 	Observer_Angular *mObsvAngular;
+
+	TNT::Array2D<double> mAccelBias;
+	bool mHaveNewParams;
 
 	double mLastHeight;
 	bool mNewHeightAvailable;

@@ -172,7 +172,7 @@ using namespace toadlet::egg;
 		if(mCntlSys.isInitialized())
 		{
 			mMutex_data.lock();
-			Array2D<double> u = mGainCntlSys*error;
+			Array2D<double> u = multElem(mGainCntlSys,error);
 			Array2D<double> x = mCntlSys.simulateEuler(u,dt);
 			accelCmd = matmult(mCntlSys.getC(),x) + matmult(mCntlSys.getD(),u);
 			accelCmd += mDesAccel;
@@ -281,7 +281,7 @@ using namespace toadlet::egg;
 		velErr[1][0] = curState[4][0]-(desState[4][0]+desVel[1][0]);
 		velErr[2][0] = curState[5][0]-(desState[5][0]+desVel[2][0]);
 
-		Array2D<double> accelCmd = posGains*visionErr-velGains*velErr;
+		Array2D<double> accelCmd = multElem(posGains,visionErr)-multElem(velGains,velErr);
 
 		// A bit of safety
 		accelCmd[0][0] = min(2.0, max(-2.0, accelCmd[0][0]));

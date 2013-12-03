@@ -40,6 +40,17 @@ Array2D<double> Quaternion::getVectorPart() const
 	return v;
 }
 
+Array2D<double> Quaternion::toVector() const
+{
+	Array2D<double> v(4,1);
+	v[0][0] = mVal[0]; 
+	v[1][0] = mVal[1];
+	v[2][0] = mVal[2];
+	v[3][0] = mVal[3];
+
+	return v;
+}
+
 // Adapted from the paper "Integrating generic sensor fusion algorithms with sound state representations through encapsulation of manifolds"
 void Quaternion::getAngleAxis1(double &angleOUT, Array2D<double> &axisOUT) const
 {
@@ -112,6 +123,13 @@ void Quaternion::setFromRotMat(const Array2D<double> &m)
 		mVal[2] = (m[1][2]+m[2][1])*s;
 		mVal[3] = 0.5*r;
 	}
+}
+
+void Quaternion::normalize()
+{
+	double nInv = 1.0/norm();
+	for(int i=0; i<4; i++)
+		mVal[i] *= nInv;
 }
 
 void Quaternion::set(double w, double x, double y, double z)

@@ -51,12 +51,14 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 0;
-	int startImg=0, endImg=0;
+	int dataSet = 1;
 	switch(dataSet)
 	{
 		case 0:
 			dataDir = "../dataSets/Nov13_3";
+			break;
+		case 1:
+			dataDir = "../dataSets/Nov28";
 			break;
 	}
 
@@ -96,8 +98,8 @@ int main(int argv, char* argc[])
 
 	list<shared_ptr<DataImage>>::const_iterator imgIter = imgDataBuffer.begin();
 	// Skip the first several images
-	for(int i=0; i<200; i++)
-		imgIter++;
+//	for(int i=0; i<200; i++)
+//		imgIter++;
 
 	int keypress = 0;
 	cv::Mat img(240,320, CV_8UC3, cv::Scalar(0)), oldImg(240,320,CV_8UC3,cv::Scalar(0)), imgGray;
@@ -129,7 +131,6 @@ int main(int argv, char* argc[])
 
 
 		myListener.data = NULL;
-Time start;
 		points = FeatureFinder::findFeaturePoints(imgGray, qualityLevel, sepDist, fastThresh);
 		if(points.size() > 0)
 		{
@@ -152,7 +153,7 @@ Time start;
 
 		const vector<shared_ptr<TrackedObject>> trackedObjects = objectTracker.getTrackedObjects();
 		vector<shared_ptr<TrackedObject>> repeatObjects, newObjects;
-		repeatObjects = myListener.data->trackedObjects;
+		repeatObjects = myListener.data->repeatObjects;
 		newObjects = myListener.data->newObjects;
 		
 		activeCnt += trackedObjects.size();
@@ -168,13 +169,14 @@ Time start;
 		img.copyTo(oldImg);
 		imshow("bob",img);
 
-		vector<vector<cv::Point2f>> repeatPts(repeatObjects.size());
-		for(int i=0; i<repeatObjects.size(); i++)
-			circle(img, repeatObjects[i]->getLocation(), 4, cv::Scalar(0,0,255), -1);
+//		vector<vector<cv::Point2f>> repeatPts(repeatObjects.size());
+//		for(int i=0; i<repeatObjects.size(); i++)
+//			circle(img, repeatObjects[i]->getLocation(), 4, cv::Scalar(0,0,255), -1);
+		myListener.data->imageAnnotatedData->imageAnnotated->copyTo(img);
 
-//		stringstream name;
-//		name << imgDir << "/annotated/img_" << imgCnt << ".bmp";
-//		imwrite(name.str().c_str(),img);
+		stringstream name;
+		name << imgDir << "/annotated/img_" << imgCnt << ".bmp";
+		imwrite(name.str().c_str(),img);
 
 		img.copyTo(dblImg(cv::Rect(oldImg.cols,0,img.cols,img.rows)));
 		cv::Point2f offset(321,0);
@@ -196,20 +198,20 @@ Time start;
 		imgIter++;
 		imgCnt++;
 
-		Time oldTime = objectTracker.getOldest()->getCreateTime();
-		double curLongLife = Time::calcDiffNS(oldTime, curTime)/1.0e9;
-		avgOldestLife += curLongLife;
-		avgOldestLifeCnt++;
-		if(curLongLife > longestLife)
-		{
-			longestLife = curLongLife;
-//			cout << "New record: " << longestLife << endl;
-		}
-		if(imgCnt % 100 == 0)
-		{
-			cout << "Tracked points: " << trackedObjects.size() << "\t\t";
-			cout << "Oldest life time: " << curLongLife << endl;
-		}
+//		Time oldTime = objectTracker.getOldest()->getCreateTime();
+//		double curLongLife = Time::calcDiffNS(oldTime, curTime)/1.0e9;
+//		avgOldestLife += curLongLife;
+//		avgOldestLifeCnt++;
+//		if(curLongLife > longestLife)
+//		{
+//			longestLife = curLongLife;
+////			cout << "New record: " << longestLife << endl;
+//		}
+//		if(imgCnt % 100 == 0)
+//		{
+//			cout << "Tracked points: " << trackedObjects.size() << "\t\t";
+//			cout << "Oldest life time: " << curLongLife << endl;
+//		}
 	}
 
 	cout << "Avg oldest life: " << avgOldestLife/avgOldestLifeCnt << endl;

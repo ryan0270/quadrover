@@ -70,11 +70,11 @@ motor_dt = mean(diff(motorTime));
 targetFindTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_IMG_PROC_TIME_TARGET_FIND);
 targetFindTimeTime = phoneData(targetFindTimeIndices,1)'/1000;
 targetFindTime = phoneData(targetFindTimeIndices,3)';
-% 
+
 % mapVelCalcTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_MAP_VEL_CALC_TIME);
 % mapVelCalcTimeTime = phoneData(mapVelCalcTimeIndices,1)'/1000;
 % mapVelCalcTime = phoneData(mapVelCalcTimeIndices,3)';
-% 
+
 velCalcDelayTotalTimeIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_OPTIC_FLOW_VELOCITY_DELAY);
 velCalcDelayTotalTimeTime = phoneData(velCalcDelayTotalTimeIndices,1)'/1000;
 velCalcDelayTotalTime = phoneData(velCalcDelayTotalTimeIndices,3)';
@@ -632,10 +632,14 @@ end
 
 %%
 if exist('trackingStats','var') && ~isempty(trackingStats)
-	figure(13000);
+	figure(13000);clf
+	set(gcf,'Units','Inches');
+	curPos = get(gcf,'Position'); figSize = [6 4];
+	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+
 	statLabels = {'Oldest [s]', 'Median [s]', '# repeats', '# new'};
-	for i=1:4
-		subplot(4,1,i)
+	for i=1:2
+		subplot(2,1,i)
 		plot(trackingStatsTime, trackingStats(i,:));
 		xlabel('Time [s]');
 		ylabel(statLabels{i});

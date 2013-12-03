@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>999</width>
-    <height>741</height>
+    <width>1018</width>
+    <height>743</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -176,7 +176,7 @@
     <item row="0" column="1" rowspan="2">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="tabController">
        <attribute name="title">
@@ -531,8 +531,6 @@
           </layout>
           <zorder>tblIbvsCntl</zorder>
           <zorder>horizontalSpacer_17</zorder>
-          <zorder>groupBox_4</zorder>
-          <zorder>groupBox_3</zorder>
          </widget>
         </item>
         <item row="2" column="0">
@@ -1529,14 +1527,14 @@
           </property>
          </spacer>
         </item>
-        <item row="2" column="0" colspan="3">
+        <item row="2" column="0" colspan="2">
          <widget class="QCheckBox" name="chkLogMotorCmds">
           <property name="text">
            <string>Motor cmds</string>
           </property>
          </widget>
         </item>
-        <item row="3" column="0" colspan="3">
+        <item row="3" column="0" colspan="2">
          <widget class="QCheckBox" name="chkLogPcUpdates">
           <property name="text">
            <string>PC Updates</string>
@@ -1632,7 +1630,7 @@
           </property>
          </widget>
         </item>
-        <item row="10" column="0" colspan="3">
+        <item row="10" column="0" colspan="2">
          <widget class="QCheckBox" name="chkLogGyroscope">
           <property name="text">
            <string>Gyroscope</string>
@@ -1660,7 +1658,14 @@
           </property>
          </widget>
         </item>
-        <item row="14" column="2">
+        <item row="14" column="0" colspan="3">
+         <widget class="QCheckBox" name="chkLogSonar">
+          <property name="text">
+           <string>Sonar</string>
+          </property>
+         </widget>
+        </item>
+        <item row="15" column="2">
          <spacer name="verticalSpacer_10">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -2951,8 +2956,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>999</width>
-     <height>25</height>
+     <width>1018</width>
+     <height>26</height>
     </rect>
    </property>
   </widget>

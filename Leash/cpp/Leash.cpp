@@ -1522,6 +1522,7 @@ void Leash::applyDataLoggingConfig()
 	if(ui->chkLogCameraImages->isChecked()) mLogMask |= LOG_FLAG_CAM_IMAGES;
 	if(ui->chkLogPressure->isChecked()) mLogMask |= LOG_FLAG_PRESSURE;
 	if(ui->chkLogPhoneTemperature->isChecked()) mLogMask |= LOG_FLAG_PHONE_TEMP;
+	if(ui->chkLogSonar->isChecked()) mLogMask |= LOG_FLAG_SONAR;
 
 	mImgBufferSize = ui->spnImgBufferSize->value();
 }

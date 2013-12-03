@@ -1,5 +1,5 @@
-#ifndef ICSL_FEATUREFINDER_H
-#define ICSL_FEATUREFINDER_H
+#ifndef ICSL_REGIONFINDER_H
+#define ICSL_REGIONFINDER_H
 #include <memory>
 #include <sched.h>
 #include <thread>
@@ -21,15 +21,15 @@
 
 namespace ICSL {
 namespace Quadrotor {
-class FeatureFinder : public CommManagerListener,
+class RegionFinder : public CommManagerListener,
 						public SensorManagerListener
 {
 	public:
-	explicit FeatureFinder();
-	virtual ~FeatureFinder(){};
+	explicit RegionFinder();
+	virtual ~RegionFinder(){};
 
 	void shutdown();
-	void start(){ thread th(&FeatureFinder::run, this); th.detach(); }
+	void start(){ thread th(&RegionFinder::run, this); th.detach(); }
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 	void setStartTime(Time t){mStartTime = t;}
@@ -39,22 +39,15 @@ class FeatureFinder : public CommManagerListener,
 	int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
 	void getLastImage(cv::Mat *outImage);
 	void getLastImageAnnotated(cv::Mat *outImage);
-	toadlet::egg::Collection<int> getVisionParams();
 
-	static vector<cv::Point2f> findFeaturePoints(const cv::Mat &image, 
-														 double qualityLevel,
-														 double minDistance,
-														 int fastThreshold);
-	static void drawPoints(const vector<cv::Point2f> &points, cv::Mat &img);
+	static vector<vector<cv::Point2f>> findRegions(const cv::Mat &image);
+	static void drawRegions(cv::Mat &image,
+							const vector<vector<cv::Point2f>> &regions,
+							const vector<cv::Point2f> &centroids);
 
-	void addListener(FeatureFinderListener *listener){mListeners.push_back(listener);}
+	void addListener(RegionFinderListener *listener){mListeners.push_back(listener);}
 
 	// CommManagerListener functions
-	void onNewCommVisionFeatureFindQualityLevel(float qLevel);
-	void onNewCommVisionFeatureFindSeparationDistance(int sepDist);
-	void onNewCommVisionFeatureFindFASTThreshold(int thresh);
-	void onNewCommVisionFeatureFindPointCntTarget(int target);
-	void onNewCommVisionFeatureFindFASTAdaptRate(float r);
 	void onNewCommMotorOn(){mIsMotorOn = true;};
 	void onNewCommMotorOff(){mIsMotorOn = false;};
 	
@@ -64,7 +57,7 @@ class FeatureFinder : public CommManagerListener,
 	protected:
 	bool mUseIbvs;
 	bool mRunning, mFinished;
-	bool mNewImageReady; //, mNewImageReady_targetFind;
+	bool mNewImageReady;
 	bool mHaveUpdatedSettings;
 	bool mIsMotorOn;
 
@@ -81,7 +74,7 @@ class FeatureFinder : public CommManagerListener,
 	std::mutex mMutex_logger;
 	std::mutex mMutex_params;
 
-	toadlet::egg::Collection<FeatureFinderListener*> mListeners;
+	toadlet::egg::Collection<RegionFinderListener*> mListeners;
 
 	float mQualityLevel, mFASTThreshold, mFASTAdaptRate;
 	int mSepDist, mPointCntTarget;
@@ -90,7 +83,7 @@ class FeatureFinder : public CommManagerListener,
 
 	int mThreadPriority, mScheduler;
 
-	static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
+	static vector<vector<cv::Point>> getContours(const cv::Mat &image, const vector<vector<cv::Point>> &regions);
 };
 
 } // namespace Quadrotor

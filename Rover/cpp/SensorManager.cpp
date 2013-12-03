@@ -10,7 +10,8 @@ SensorManager::SensorManager() :
 	mLastAccel(3,1,0.0),
 	mLastGyro(3,1,0.0),
 	mLastMag(3,1,0.0),
-	mLastPressure(0)
+	mLastPressure(0),
+	mAccelBias(3,1,0.0)
 {
 	mRunning = false;
 	mDone = true;
@@ -36,6 +37,10 @@ SensorManager::SensorManager() :
 
 	mLastHeight = 0;
 	mNewHeightAvailable = false;
+
+	mAccelBias[0][0] = -0.07;//-0.3-0.2-0.1;
+	mAccelBias[1][0] = -0.12;//+0.2+0.1+0.1;
+	mAccelBias[2][0] = -0.3;
 }
 
 SensorManager::~SensorManager()
@@ -175,19 +180,10 @@ void SensorManager::run()
 	thread tempMonitorTh(&SensorManager::runTemperatureMonitor, this);
 	thread heightMonitorTh(&SensorManager::runHeightMonitor, this);
 
-	// For S3
-	double accelOffX = -0.07;//-0.3-0.2-0.1;
-	double accelOffY = -0.12;//+0.2+0.1+0.1;
-	double accelOffZ = -0.3;
-
-	// For S4
-//	double accelOffX =  0.02-0.1;
-//	double accelOffY = -0.28+0.05;
-//	double accelOffZ = -0.31;
-
-//	double gyroScale[] = {0.9, 0.97, 0.95};
-
 	Array2D<double> accelCalibrated(3,1), gyroCalibrated(3,1), magCalibrated(3,1);
+
+	mHaveNewParams = true;
+	Array2D<double> accelBias(3,1,0.0);
 
 	mDone = false;
 	sched_param sp;
@@ -196,6 +192,11 @@ void SensorManager::run()
 	uint64_t eventTimeNS;
 	while(mRunning)
 	{
+		if(mHaveNewParams)
+		{
+			accelBias.inject(mAccelBias);
+		}
+
 		ASensorEvent event;
 		while(ASensorEventQueue_getEvents(mSensorEventQueue, &event, 1) > 0)
 		{
@@ -230,7 +231,7 @@ void SensorManager::run()
 //							data = shared_ptr<Data<double> >(new Data<double>(event.pressure, DATA_TYPE_PRESSURE));
 						data = shared_ptr<IData>(new Data<double>());
 						data->type = DATA_TYPE_PRESSURE;
-						static_pointer_cast<Data<double> >(data)->data = event.pressure;
+						static_pointer_cast<Data<double> >(data)->dataRaw = event.pressure;
 						static_pointer_cast<Data<double> >(data)->dataCalibrated = event.pressure;
 						mLastPressure = event.pressure;
 					}
@@ -244,12 +245,10 @@ void SensorManager::run()
 						mLastAccel[0][0] = event.data[0];
 						mLastAccel[1][0] = event.data[1];
 						mLastAccel[2][0] = event.data[2];
-						accelCalibrated[0][0] = event.data[0]-accelOffX;
-						accelCalibrated[1][0] = event.data[1]-accelOffY;
-						accelCalibrated[2][0] = event.data[2]-accelOffZ;
+						accelCalibrated.inject(mLastAccel-accelBias);
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_ACCEL;
-						static_pointer_cast<DataVector<double> >(data)->data = mLastAccel.copy();
+						static_pointer_cast<DataVector<double> >(data)->dataRaw = mLastAccel.copy();
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = accelCalibrated.copy();
 						mMutex_data.unlock();
 					}
@@ -265,10 +264,8 @@ void SensorManager::run()
 						mLastGyro[2][0] = event.data[2];
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_GYRO;
-						static_pointer_cast<DataVector<double> >(data)->data = mLastGyro.copy();
+						static_pointer_cast<DataVector<double> >(data)->dataRaw = mLastGyro.copy();
 						gyroCalibrated.inject(mLastGyro);
-//						for(int i=0; i<3; i++)
-//							gyroCalibrated[i][0] /= gyroScale[i];
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = gyroCalibrated.copy();
 						mMutex_data.unlock();
 					}
@@ -283,7 +280,7 @@ void SensorManager::run()
 						mLastMag[2][0] = event.data[2];
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_MAG;
-						static_pointer_cast<DataVector<double> >(data)->data = mLastMag.copy();
+						static_pointer_cast<DataVector<double> >(data)->dataRaw = mLastMag.copy();
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = mLastMag.copy();
 						mMutex_data.unlock();
 					}
@@ -500,6 +497,17 @@ void SensorManager::onNewCommStateVicon(const Collection<float> &data)
 	mMutex_vicon.unlock();
 
 	mNewHeightAvailable = true;
+}
+
+void SensorManager::onNewCommAccelBias(float xBias, float yBias, float zBias)
+{
+	mMutex_data.lock();
+	mAccelBias[0][0] = xBias;
+	mAccelBias[1][0] = yBias;
+	mAccelBias[2][0] = zBias;
+	mMutex_data.unlock();
+
+	mHaveNewParams = true;
 }
 
 void SensorManager::onNewSonarReading(int heightMM, uint64_t timestampNS)

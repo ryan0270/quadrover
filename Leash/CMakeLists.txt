@@ -42,7 +42,7 @@ set(LIBS ${LIBS}
 
 # Includes
 set (includeDirs ${includeDirs}
-	${leash_SOURCE_DIR/src}
+	${leash_SOURCE_DIR/cpp}
 	${ICSL_ICSL_DIR}
 	${ICSL_QUADROVER_DIR}
 	${ICSL_EXTERNALSOFTWARE_DIR}
@@ -53,20 +53,20 @@ set (includeDirs ${includeDirs}
 
 # Source files
 set (SRC ${SRC}
-	src/Leash.cpp
+	./cpp/Leash.cpp
 	${ICSL_QUADROVER_DIR}/TelemetryVicon/src/TelemetryVicon.cpp
-	src/main.cpp
+	cpp/main.cpp
 )
 
 # Headers
 set (H ${H}
-	src/Leash.h
-	../Rover/cpp/Common.h
+	cpp/Leash.h
+	${ICSL_QUADROVER_DIR}/Rover/cpp/Common.h
 	${ICSL_QUADROVER_DIR}/TelemetryVicon/src/TelemetryVicon.h
 )
 
 set (FORMS ${FORMS}
-	src/Leash.ui
+	./cpp/Leash.ui
 	)
 
 set (RES ${RES})
@@ -107,18 +107,14 @@ QT4_WRAP_CPP(H_MOC ${H})
 QT4_WRAP_UI(FORM_HEADERS ${FORMS})
 QT4_ADD_RESOURCES(RES_RCC ${RES})
 
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/main.cpp)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.ui)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.h)
-SOURCE_GROUP(QuadRover\\Leash FILES ./src/Leash.cpp)
+SOURCE_GROUP(QuadRover\\Leash FILES ./cpp/main.cpp)
+SOURCE_GROUP(QuadRover\\Leash FILES ./cpp/Leash.ui)
+SOURCE_GROUP(QuadRover\\Leash FILES ./cpp/Leash.h)
+SOURCE_GROUP(QuadRover\\Leash FILES ./cpp/Leash.cpp)
 SOURCE_GROUP(TelemetryVicon ${ICSL_QUADROVER_DIR}/TelemetryVicon/.*)
 SOURCE_GROUP(QuadRover\\Moc ../.*moc.*)
 
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -std=c++11)
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wreorder -Wunused-but-set-variable -Wunused-variable -Wsign-compare")
-#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-endif()
 
 include_directories (${includeDirs})
 # Executable

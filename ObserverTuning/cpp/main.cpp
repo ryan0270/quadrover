@@ -26,7 +26,7 @@
 #include "VideoMaker.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
-//#include "TargetFinder.h"
+#include "RegionFinder.h"
 #include "ObjectTracker.h"
 #include "VelocityEstimator.h"
 #include "Rotation.h"
@@ -175,6 +175,7 @@ int main(int argv, char* argc[])
 	QuadLogger mQuadLogger;
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
+	RegionFinder mRegionFinder;
 //	TargetFinder mTargetFinder;
 //	SensorManager mSensorManager;
 	MotorInterface mMotorInterface;
@@ -222,20 +223,12 @@ int main(int argv, char* argc[])
 	addCommManagerListener(&mFeatureFinder);
 	mFeatureFinder.start();
 
-//	mTargetFinder.initialize();
-//	mTargetFinder.setStartTime(startTime);
-//	mTargetFinder.setQuadLogger(&mQuadLogger);
-//	mTargetFinder.addListener(&mObsvAngular);
-//	mTargetFinder.addListener(&mObsvTranslational);
-//	mTargetFinder.addListener(&mTranslationController);
-////	mTargetFinder.addListener(&mVelocityEstimator);
-//	mTargetFinder.addRegionListener(&mVelocityEstimator);
-//	mTargetFinder.addRegionListener(&mFeatureFinder);
-//	mTargetFinder.setObserverAngular(&mObsvAngular);
-//	mTargetFinder.setObserverTranslational(&mObsvTranslational);
-//	addSensorManagerListener(&mTargetFinder);
-//	addCommManagerListener(&mTargetFinder);
-//	mTargetFinder.start();
+	mRegionFinder.initialize();
+	mRegionFinder.setStartTime(startTime);
+	mRegionFinder.setQuadLogger(&mQuadLogger);
+	addSensorManagerListener(&mRegionFinder);
+	addCommManagerListener(&mRegionFinder);
+	mRegionFinder.start();
 
 	ObjectTracker mObjectTracker;
 	mObjectTracker.initialize();
@@ -247,6 +240,7 @@ int main(int argv, char* argc[])
 	mObjectTracker.addListener(&mObsvAngular);
 	mObjectTracker.start();
 	mFeatureFinder.addListener(&mObjectTracker);
+//	mRegionFinder.addListener(&mObjectTracker);
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(startTime);
@@ -254,7 +248,8 @@ int main(int argv, char* argc[])
 	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
 	mVelocityEstimator.addListener(&mObsvTranslational);
-	mFeatureFinder.addListener(&mVelocityEstimator);
+//	mFeatureFinder.addListener(&mVelocityEstimator);
+	mRegionFinder.addListener(&mVelocityEstimator);
 	addCommManagerListener(&mVelocityEstimator);
 	mVelocityEstimator.start();
 
@@ -284,9 +279,11 @@ int main(int argv, char* argc[])
 	// Add some vision event listeners so I can display the images
 
 	cv::namedWindow("dispFeatureFind",1);
+	cv::namedWindow("dispRegionFind",1);
 	cv::namedWindow("dispObjectTrack",1);
 	cv::moveWindow("dispFeatureFind",0,0);
-	cv::moveWindow("dispObjectTrack",321,0);
+	cv::moveWindow("dispRegionFind",321,0);
+	cv::moveWindow("dispObjectTrack",642,0);
 
 	class MyFeatureFinderListener : public FeatureFinderListener
 	{
@@ -298,6 +295,17 @@ int main(int argv, char* argc[])
 		}
 	} myFeatureFinderListener;
 	mFeatureFinder.addListener(&myFeatureFinderListener);
+
+	class MyRegionFinderListener : public RegionFinderListener
+	{
+		public:
+		void onRegionsFound(const shared_ptr<ImageRegionData> &data)
+		{
+			imshow("dispRegionFind",*(data->imageAnnotated->imageAnnotated));
+			cv::waitKey(1);
+		}
+	} myRegionFinderListener;
+	mRegionFinder.addListener(&myRegionFinderListener);
 
 	class MyObjectTrackerListenr : public ObjectTrackerListener
 	{
@@ -462,7 +470,7 @@ int main(int argv, char* argc[])
 		gyroBias[2][0] = -0.008;
 		shared_ptr<IData> gyroBiasData(new DataVector<double>());
 		gyroBiasData->type = DATA_TYPE_GYRO;
-		static_pointer_cast<DataVector<double> >(gyroBiasData)->data = gyroBias.copy();
+		static_pointer_cast<DataVector<double> >(gyroBiasData)->dataRaw = gyroBias.copy();
 		static_pointer_cast<DataVector<double> >(gyroBiasData)->dataCalibrated = gyroBias.copy();
 		for(int i=0; i<2000; i++)
 		{
@@ -569,7 +577,7 @@ int main(int argv, char* argc[])
 
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_ACCEL;
-						static_pointer_cast<DataVector<double> >(data)->data = accel;
+						static_pointer_cast<DataVector<double> >(data)->dataRaw = accel;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = accelCal;
 
 						data->timestamp.setTimeMS(startTime.getMS()+dataTime);
@@ -590,7 +598,7 @@ int main(int argv, char* argc[])
 
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_GYRO;
-						static_pointer_cast<DataVector<double> >(data)->data = gyro;
+						static_pointer_cast<DataVector<double> >(data)->dataRaw = gyro;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = gyro;
 
 						data->timestamp.setTimeMS(startTime.getMS()+dataTime);
@@ -611,7 +619,7 @@ int main(int argv, char* argc[])
 
 						data = shared_ptr<IData>(new DataVector<double>());
 						data->type = DATA_TYPE_MAG;
-						static_pointer_cast<DataVector<double> >(data)->data = mag;
+						static_pointer_cast<DataVector<double> >(data)->dataRaw = mag;
 						static_pointer_cast<DataVector<double> >(data)->dataCalibrated = mag;
 
 						data->timestamp.setTimeMS(startTime.getMS()+dataTime);

@@ -72,7 +72,7 @@ void VideoMaker::run()
 void VideoMaker::onNewSensorUpdate(const shared_ptr<IData> &data)
 {
 	if(data->type == DATA_TYPE_IMAGE
-			&& mMotorOn
+//			&& mMotorOn
 			)
 	{
 		shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);

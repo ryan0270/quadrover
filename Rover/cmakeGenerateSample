@@ -1,0 +1,13 @@
+cmake .. \
+-DCMAKE_TOOLCHAIN_FILE=$HOME/toadlet/cmake/Toolchains/Android.cmake  \
+-DANDROID_NDK=/opt/android-ndk/  \
+-DANDROID_NDK_API_LEVEL=14  \
+-DANDROID_SDK=/opt/android-sdk/  \
+-DANDROID_SDK_API_LEVEL=14  \
+-DARM_TARGET="armeabi-v7a with NEON"  \
+-DMXML_DIR=$HOME/Software/ExternalSoftware/mxml/2.7/android14/ \
+-DANDROID_STL=GNU_STATIC \
+-DCMAKE_BUILD_TYPE=Release  \
+-DCMAKE_MODULE_PATH=$HOME/toadlet/cmake/Modules/  \
+-DCMAKE_PREFIX_PATH=$HOME/toadlet/android14 \
+-DOpenCV_DIR=$HOME/Software/OpenCV/OpenCV-2.4.6-android-sdk/sdk/native/jni
