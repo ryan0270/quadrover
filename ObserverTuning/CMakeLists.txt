@@ -36,6 +36,7 @@ set (LIBS
 
 # Source files
 set (SRC ${SRC}
+	${ROVER_DIR}/cpp/RegionFinder.cpp
 	${ROVER_DIR}/cpp/TrackedObject.cpp
 	${ROVER_DIR}/cpp/ObjectTracker.cpp
 	${ROVER_DIR}/cpp/QuadLogger.cpp
@@ -59,6 +60,7 @@ set (SRC ${SRC}
 
 # Headers
 set (H ${H}
+	${ROVER_DIR}/cpp/RegionFinder.h
 	${ROVER_DIR}/cpp/TrackedObject.h
 	${ROVER_DIR}/cpp/ObjectTracker.h
 	${ROVER_DIR}/cpp/Rotation.h

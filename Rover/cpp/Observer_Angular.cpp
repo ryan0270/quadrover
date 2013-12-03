@@ -310,7 +310,8 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 	shared_ptr<DataVector<double>> velData(new DataVector<double> );
 	velData->type = DATA_TYPE_ANGULAR_VEL;
 	velData->timestamp.setTime(gyroTime);
-	velData->data = mCurVel.copy();
+	velData->dataRaw = mCurVel.copy();
+	velData->dataCalibrated = mCurVel.copy();
 
 	mMutex_SO3Buffer.lock();
 	shared_ptr<SO3Data<double>> rotData(new SO3Data<double>());
@@ -376,7 +377,7 @@ Array2D<double> Observer_Angular::getLastGyro()
 	Array2D<double> lastGyro(3,1,0.0);
 	mMutex_cache.lock();
 	if(mGyroData != NULL)
-	{ mGyroData->lock(); lastGyro = mGyroData->data.copy(); mGyroData->unlock(); }
+	{ mGyroData->lock(); lastGyro = mGyroData->dataCalibrated.copy(); mGyroData->unlock(); }
 	mMutex_cache.unlock(); 
 	return lastGyro;
 }

@@ -546,7 +546,7 @@ void Rover::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData
 {
 	mMutex_observer.lock();
 	mCurAtt.inject(attData->rotation.getAnglesZYX());
-	mCurAngularVel.inject(angularVelData->data);
+	mCurAngularVel.inject(angularVelData->dataCalibrated);
 	mMutex_observer.unlock();
 }
 
@@ -627,7 +627,7 @@ void Rover::onNewSensorUpdate(const shared_ptr<IData> &data)
 	switch(data->type)
 	{
 		case DATA_TYPE_PRESSURE:
-			mPressure = static_pointer_cast<Data<double>>(data)->data;
+			mPressure = static_pointer_cast<Data<double>>(data)->dataCalibrated;
 			break;
 		case DATA_TYPE_PHONE_TEMP:
 			mPhoneTemp = static_pointer_cast<DataPhoneTemp<double>>(data)->secTemp;

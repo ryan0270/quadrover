@@ -58,7 +58,7 @@ class VelocityEstimator : public FeatureFinderListener,
 	void onFeaturesFound(const shared_ptr<ImageFeatureData> &data);
 
 	// for RegionFinderListener 
-	void onRegionsFound(const shared_ptr<ImageRegionLocData> &data);
+	void onRegionsFound(const shared_ptr<ImageRegionData> &data);
 
 	protected:
 	bool mRunning, mDone;
@@ -72,7 +72,7 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	bool mNewImageDataAvailable, mNewRegionDataAvailable;
 	shared_ptr<ImageFeatureData> mLastImageFeatureData;
-	shared_ptr<ImageRegionLocData> mLastRegionData;
+	shared_ptr<ImageRegionData> mLastRegionData;
 
 	std::mutex mMutex_imageData, mMutex_data, mMutex_params;
 
@@ -88,8 +88,8 @@ class VelocityEstimator : public FeatureFinderListener,
 							double &heightEstOUT,
 							double visionMeasCov,
 							double probNoCorr) const;
-	bool doVelocityEstimate(const shared_ptr<ImageRegionLocData> oldRegionData,
-						    const shared_ptr<ImageRegionLocData> curRegionData,
+	bool doVelocityEstimate(const shared_ptr<ImageRegionData> oldRegionData,
+						    const shared_ptr<ImageRegionData> curRegionData,
 							Array2D<double> &velEst, 
 							double &heightEst,
 							double visionMeasCov,

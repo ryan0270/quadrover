@@ -16,10 +16,10 @@ QuadLogger::QuadLogger()
 	mLogStream = NULL;
 	mTypeMask = 0;
 	mTypeMask |= LOG_FLAG_PC_UPDATES ;
-	mTypeMask |= LOG_FLAG_STATE;
-	mTypeMask |= LOG_FLAG_STATE_DES;
+//	mTypeMask |= LOG_FLAG_STATE;
+//	mTypeMask |= LOG_FLAG_STATE_DES;
 //	mTypeMask |= LOG_FLAG_MOTORS;
-	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
+//	mTypeMask |= LOG_FLAG_OBSV_UPDATE;
 //	mTypeMask |= LOG_FLAG_OBSV_BIAS;
 //	mTypeMask |= LOG_FLAG_MAGNOMETER;
 //	mTypeMask |= LOG_FLAG_ACCEL;
@@ -28,7 +28,7 @@ QuadLogger::QuadLogger()
 	mTypeMask |= LOG_FLAG_CAM_RESULTS;
 //	mTypeMask |= LOG_FLAG_CAM_IMAGES;
 	mTypeMask |= LOG_FLAG_PHONE_TEMP;
-	mTypeMask |= LOG_FLAG_SONAR;
+//	mTypeMask |= LOG_FLAG_SONAR;
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
@@ -235,9 +235,9 @@ void QuadLogger::addEntry(const LogID &id, const shared_ptr<DataVector<double>> 
 	if( (mTypeMask & type) && mRunning)
 	{
 		String str;
-		for(int i=0; i<data->data.dim1(); i++)
-			for(int j=0; j<data->data.dim2(); j++)
-				str = str+data->data[i][j]+"\t";
+		for(int i=0; i<data->dataRaw.dim1(); i++)
+			for(int j=0; j<data->dataRaw.dim2(); j++)
+				str = str+data->dataRaw[i][j]+"\t";
 
 		addEntry(Time(), id, str, type);
 	}
@@ -270,8 +270,8 @@ void QuadLogger::addEntry(const LogID &id, const shared_ptr<SO3Data<double>> &da
 		str = str +w+"\t";
 		for(int i=0; i<v.dim1(); i++)
 			str = str +v[i][0] + "\t";
-		for(int i=0; i<velData->data.dim1(); i++)
-			str = str +velData->data[i][0]+"\t";
+		for(int i=0; i<velData->dataRaw.dim1(); i++)
+			str = str +velData->dataRaw[i][0]+"\t";
 
 		addEntry(Time(), id, str, type);
 	}
@@ -432,6 +432,8 @@ void QuadLogger::generateMatlabHeader()
 		str = String()+"LOG_ID_OBJECT_TRACKING_STATS="+LOG_ID_OBJECT_TRACKING_STATS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_USE_VICON_YAW="+LOG_ID_USE_VICON_YAW+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 		str = String()+"LOG_ID_USE_VICON_XY="+LOG_ID_USE_VICON_XY+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_REGION_FIND_TIME="+LOG_ID_REGION_FIND_TIME+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
+		str = String()+"LOG_ID_NUM_REGIONS="+LOG_ID_NUM_REGIONS+";\n"; logStream->write((tbyte*)str.c_str(),str.length());
 
 		logStream->close();
 	}

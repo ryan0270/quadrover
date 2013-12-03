@@ -184,6 +184,16 @@ namespace TNT{
 				mat[r][c] = val;
 	}
 
+	template <class T1, class T2>
+	inline void assignSubmat(Array2D<T1> &mat, int rowStart, int colStart, const Array2D<T2> &submat)
+	{
+		assert(mat.dim1() >= rowStart+submat.dim1() && mat.dim2() >= colStart+submat.dim2());
+
+		for(int i=0; i<submat.dim1(); i++)
+			for(int j=0; j<submat.dim2(); j++)
+				mat[rowStart+i][colStart+j] = submat[i][j];
+	}
+
 	template <class T>
 	inline Array2D<T> stackVertical(const Array2D<T> &matTop, const Array2D<T> &matBottom)
 	{

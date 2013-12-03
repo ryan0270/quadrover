@@ -68,7 +68,7 @@ enum DataType
 	DATA_TYPE_HEIGHT,
 	DATA_TYPE_TARGET_FIND,
 	DATA_TYPE_IMAGE_TRANSLATION,
-	DATA_TYPE_REGION_LOCS,
+	DATA_TYPE_IMAGE_REGIONS,
 	DATA_TYPE_OBJECT_TRACKER,
 }; 
 template<class T> class Data;
@@ -123,21 +123,9 @@ class Data : public IData
 {
 	public:
 	Data() : IData() {type = DATA_TYPE_UNDEFINED;}
-	Data(Tclass d, DataType t) : IData() {data = d; type = t;}
+	Data(Tclass d, DataType t) : IData() {dataRaw = d; type = t;}
 
-	virtual void copyTo(Data &d) {
-		if(&d == this)
-			return;
-		lock();
-		d.lock();
-		d.timestamp.setTime(timestamp); 
-		d.type = type;
-		d.data = data; 
-		d.dataCalibrated = dataCalibrated;
-		d.unlock();
-		unlock();
-	}
-	Tclass data, dataCalibrated;
+	Tclass dataRaw, dataCalibrated;
 };
 
 template <class Tclass>
@@ -145,21 +133,8 @@ class DataVector : public IData
 {
 	public:
 	DataVector() : IData() {type = DATA_TYPE_UNDEFINED;};
-//	DataVector(TNT::Array2D<doubleconst > &d, DataType t){data = d.copy(); type = t;}
 
-	void copyTo(DataVector &d) {
-		if(&d == this)
-			return;
-		lock();
-		d.lock();
-		d.timestamp.setTime(timestamp); 
-		d.data = data.copy(); 
-		d.dataCalibrated = dataCalibrated.copy();
-		d.type = type;
-		d.unlock();
-		unlock();
-	}
-	TNT::Array2D<Tclass> data, dataCalibrated;
+	TNT::Array2D<Tclass> dataRaw, dataCalibrated;
 };
 
 class DataImage : public IData
@@ -236,106 +211,19 @@ class ImageFeatureData : public IData
 	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotated != NULL) imageAnnotated->unlock();}
 };
 
-class Rect
+class ImageRegionData : public IData
 {
 	public:
-	Rect(){center.x = 0; center.y = 0; area = 0;}
-	Rect(vector<cv::Point2f> startContour)
-	{
-		contourInt.resize(startContour.size());
-		for(int i=0; i<startContour.size(); i++)
-		{
-			contourInt[i].x = (int)(startContour[i].x+0.5);
-			contourInt[i].y = (int)(startContour[i].y+0.5);
-			contour.push_back(startContour[i]);
-		}
-
-		mom = moments(startContour);
-		center.x = mom.m10/mom.m00;
-		center.y = mom.m01/mom.m00;
-		area = mom.m00;
-
-		int maxIndex;
-		double maxLength = -1;
-		for(int i=0; i<contour.size(); i++)
-		{
-			lineLengths.push_back( norm(contour[(i+1)%4]-contour[i]) );
-			if(lineLengths[i] > maxLength)
-			{
-				maxIndex = i;
-				maxLength = lineLengths[i];
-			}
-		}
-
-		cv::Point2f p1, p2;
-		p1 = contour[maxIndex];
-		p2 = contour[(maxIndex+1)%4];
-		angle = atan2(p2.y-p1.y, p2.x-p1.x);
-		while(angle < -PI/2.0)
-			angle += PI; // yes, I really do mean PI and not 2*PI
-		while(angle > PI/2.0)
-			angle -= PI;
-	}
-
-	vector<cv::Point> contourInt;
-	vector<cv::Point2f> contour;
-	cv::Point2f center;
-	double area;
-	cv::Moments mom;
-	vector<double> lineLengths;
-	double angle; // of the longest line, from -PI/2 to PI/2
-
-	static double accumAreaFunc(double val, const shared_ptr<Rect> &data){return val+data->area;}
-	static cv::Point2f accumCenterFunc(const cv::Point2f &val, const shared_ptr<Rect> &data){return val+data->center;}
-};
-
-class RectGroup
-{
-	public:
-	RectGroup() : zeroPoint(0,0) {};
-	RectGroup(shared_ptr<Rect> &data){add(data);}
-
-	cv::Point2f meanCenter;
-	double meanArea;
-	vector<shared_ptr<Rect>> squareData;
-
-	void add(shared_ptr<Rect> &data)
-	{
-		squareData.push_back(data);
-
-		meanArea = accumulate(squareData.begin(), squareData.end(), 0.0, Rect::accumAreaFunc) / (float)squareData.size();
-		meanCenter = accumulate(squareData.begin(), squareData.end(), zeroPoint, Rect::accumCenterFunc);
-		meanCenter.x /= (float)squareData.size();
-		meanCenter.y /= (float)squareData.size();
-	}
-
-	private:
-	const cv::Point2f zeroPoint; // this should be static but then I'd have to make a .cpp file just for it
-};
-
-class ImageRegionLocData : public IData
-{
-	public:
-	ImageRegionLocData() : IData() {type = DATA_TYPE_REGION_LOCS;};
-	vector<cv::Point2f> regionLocs; // a bit of a hack since pointing to the region doesn't work. It always updates it's current position and I need the previous position
+	ImageRegionData() : IData() {type = DATA_TYPE_IMAGE_REGIONS;}
+	vector<vector<cv::Point2f>> regionContours;
+	vector<cv::Point2f> regionCentroids;
+	vector<cv::Moments> regionMoments;
 	shared_ptr<DataImage> imageData;
-//	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
+	shared_ptr<DataAnnotatedImage> imageAnnotated;
 
-	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock();}// if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
-	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock();}// if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotated != NULL) imageAnnotated->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotated != NULL) imageAnnotated->unlock();}
 };
-
-//class ImageTargetFindData : public IData
-//{
-//	public:
-//	ImageTargetFindData() : IData() {type = DATA_TYPE_IMAGE_TARGET_FIND;}
-//	vector<shared_ptr<ActiveRegion>> repeatRegions, newRegions;
-//	shared_ptr<DataImage> imageData;
-//	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
-//
-//	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
-//	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
-//};
 
 class ObjectTrackerData : public IData
 {
@@ -389,12 +277,18 @@ TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVect
 	if(d.size() == 0)
 		return TNT::Array2D<T>();
 
-	TNT::Array2D<T> interp;
+	TNT::Array2D<T> interpRaw, interpCalibrated;
 
 	if(t <= d.front()->timestamp)
-		interp = d.front()->data.copy();
+	{
+		interpRaw = d.front()->dataRaw.copy();
+		interpCalibrated = d.front()->dataCalibrated.copy();
+	}
 	else if(t >= d.back()->timestamp)
-		interp = d.back()->data.copy();
+	{
+		interpRaw = d.back()->dataRaw.copy();
+		interpCalibrated = d.back()->dataCalibrated.copy();
+	}
 	else
 	{
 		shared_ptr<DataVector<T>> d1, d2;
@@ -410,21 +304,30 @@ TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVect
 			double a = Time::calcDiffNS(d1->timestamp,t);
 			double b = Time::calcDiffNS(t, d2->timestamp);
 			if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
-				interp = d2->data;
+			{
+				interpRaw = d2->dataRaw;
+				interpCalibrated = d2->dataCalibrated;
+			}
 			else
-				interp= b/(a+b)*d1->data + a/(a+b)*d2->data;
+			{
+				interpRaw = b/(a+b)*d1->dataRaw + a/(a+b)*d2->dataRaw;
+				interpCalibrated = b/(a+b)*d1->dataCalibrated + a/(a+b)*d2->dataCalibrated;
+			}
 		}
 		else
-			interp = d1->data.copy();
+		{
+			interpRaw = d1->dataRaw.copy();
+			interpCalibrated = d1->dataCalibrated.copy();
+		}
 	}
 
-	return interp;
+	return interpCalibrated;
 }
 
 template <class T1, class T2>
 TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, const DataVector<T2> &d2)
 {
-	TNT::Array2D<double> interp;
+	TNT::Array2D<double> interpRaw, interpCalibrated;
 
 	const DataVector<T1> *d1p, *d2p;
 	if(d1.timestamp < d2.timestamp)
@@ -439,26 +342,38 @@ TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, con
 	}
 
 	if(t < d1p->timestamp)
-		interp= d1p->data.copy();
+	{
+		interpRaw = d1p->dataRaw.copy();
+		interpCalibrated = d1p->dataCalibrated.copy();
+	}
 	else if(t > d2p->timestamp)
-		interp= d2p->data.copy();
+	{
+		interpRaw = d2p->dataRaw.copy();
+		interpCalibrated = d2p->dataCalibrated.copy();
+	}
 	else
 	{
 		double a = Time::calcDiffNS(d1p->timestamp,t);
 		double b = Time::calcDiffNS(t, d2p->timestamp);
 		if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
-			interp = d2->data;
+		{
+			interpRaw = d2->dataRaw;
+			interpCalibrated = d2->dataCalibrated;
+		}
 		else
-			interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
+		{
+			interpRaw= b/(a+b)*d1p->dataRaw+a/(a+b)*d2p->dataRaw;
+			interpCalibrated= b/(a+b)*d1p->dataCalibrated+a/(a+b)*d2p->dataCalibrated;
+		}
 	}
 
-	return interp;
+	return interpCalibrated;
 }
 
 template <class T1, class T2>
 T1 IData::interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2)
 {
-	T1 interp;
+	T1 interpRaw, interpCalibrated;
 
 	const Data<T1> *d1p;
 	const Data<T2> *d2p;
@@ -474,20 +389,32 @@ T1 IData::interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2)
 	}
 
 	if(t < d1p->timestamp)
-		interp = d1p->data;
+	{
+		interpRaw = d1p->dataRaw;
+		interpCalibrated = d1p->dataCalibrated;
+	}
 	else if(t > d2p->timestamp)
-		interp = d2p->data;
+	{
+		interpRaw = d2p->dataRaw;
+		interpCalibrated = d2p->dataCalibrated;
+	}
 	else
 	{
 		double a = Time::calcDiffNS(d1p->timestamp,t);
 		double b = Time::calcDiffNS(t, d2p->timestamp);
 		if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
-			interp = d2->data;
+		{
+			interpRaw = d2->dataRaw;
+			interpCalibrated = d2->dataCalibrated;
+		}
 		else
-			interp= b/(a+b)*d1p->data+a/(a+b)*d2p->data;
+		{
+			interpRaw= b/(a+b)*d1p->dataRaw+a/(a+b)*d2p->dataRaw;
+			interpCalibrated= b/(a+b)*d1p->dataCalibrated+a/(a+b)*d2p->dataCalibrated;
+		}
 	}
 
-	return interp;
+	return interpCalibrated;
 }
 
 template <class T>
@@ -495,12 +422,19 @@ T IData::interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d)
 {
 	if(d.size() == 0)
 		return 0;
-	T interp;
+
+	T interpRaw, interpCalibrated;
 
 	if(t < d.front()->timestamp)
-		interp = d.front()->data;
+	{
+		interpRaw = d.front()->dataRaw;
+		interpCalibrated = d.front()->dataCalibrated;
+	}
 	else if(t > d.back()->timestamp)
-		interp = d.back()->data;
+	{
+		interpRaw = d.back()->dataRaw;
+		interpCalibrated = d.back()->dataCalibrated;
+	}
 	else
 	{
 		shared_ptr<Data<T>> d1, d2;
@@ -516,15 +450,24 @@ T IData::interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d)
 			double a = Time::calcDiffNS(d1->timestamp,t);
 			double b = Time::calcDiffNS(t, d2->timestamp);
 			if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
-				interp = d2->data;
+			{
+				interpRaw = d2->dataRaw;
+				interpCalibrated = d2->dataCalibrated;
+			}
 			else
-				interp= b/(a+b)*d1->data+a/(a+b)*d2->data;
+			{
+				interpRaw= b/(a+b)*d1->dataRaw+a/(a+b)*d2->dataRaw;
+				interpCalibrated= b/(a+b)*d1->dataCalibrated+a/(a+b)*d2->dataCalibrated;
+			}
 		}
 		else
-			interp = d1->data;
+		{
+			interpRaw = d1->dataRaw;
+			interpCalibrated = d1->dataCalibrated;
+		}
 	}
 
-	return interp;
+	return interpCalibrated;
 }
 
 template <class T>

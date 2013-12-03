@@ -1,0 +1,6 @@
+cmake .. \
+-DROVER_DIR=/home/ryantr/Software/QuadRover/Rover \
+-DCMAKE_BUILD_TYPE=Debug \
+-DCMAKE_MODULE_PATH=/home/ryantr/toadlet/cmake/Modules/  \
+-DCMAKE_PREFIX_PATH=/home/ryantr/toadlet/linux \
+-DANDROID_NDK=/home/ryantr/Software/QuadRover/ndk_sim \

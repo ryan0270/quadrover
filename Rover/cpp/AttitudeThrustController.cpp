@@ -155,24 +155,28 @@ using namespace TNT;
 		SO3 attErr = refAtt.inv()*curMotorAtt;
 		Array2D<double> refRate = submat(mRefState,3,5,0,0);
 	
-		Array2D<double> rotMatErr = attErr.getRotMat();
+		Array2D<double> rotMatErr = attErr.toRotMat();
 		Array2D<double> rotMatErr_AS = rotMatErr-transpose(rotMatErr);
 		Array2D<double> rotErr(3,1);
 		rotErr[0][0] = rotMatErr_AS[2][1];
 		rotErr[1][0] = rotMatErr_AS[0][2];
 		rotErr[2][0] = rotMatErr_AS[1][0];
 
+// TODO: Make this user-defined
 		Array2D<double> inertia(3,1);
 		inertia[0][0] = 0.005;
 		inertia[1][0] = 0.005;
 		inertia[2][0] = 0.020;
-		Array2D<double> torque = -1.0*mGainAngle*rotErr-mGainRate*(mCurAngularVel-refRate)+inertia*accel;
+		Array2D<double> torque = -1.0*multElem(mGainAngle,rotErr)-
+								      multElem(mGainRate,mCurAngularVel-refRate)+
+									  multElem(inertia,accel);
 		double cmdRoll = torque[0][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdPitch = torque[1][0]/mForceScaling/mMotorArmLength/4.0;
 		double cmdYaw = torque[2][0]/mTorqueScaling/4.0;
 		double cmdThrust = mThrust/mForceScaling/4.0;
 		mMutex_data.unlock();
 		
+		// make sure the commands are within range
 		Collection<double> cmds(4);
 		bool sane = false;
 		int cnt = 0;
@@ -269,7 +273,7 @@ using namespace TNT;
 	{
 		mMutex_data.lock();
 		mCurAtt = attData->rotation;
-		mCurAngularVel.inject(angularVelData->data);
+		mCurAngularVel.inject(angularVelData->dataCalibrated);
 		mMutex_data.unlock();
 	
 		mDoControl = true;

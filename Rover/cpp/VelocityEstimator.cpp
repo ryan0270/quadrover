@@ -54,7 +54,7 @@ void VelocityEstimator::run()
 
 	shared_ptr<ImageFeatureData> oldImageFeatureData, curImageFeatureData;
 	oldImageFeatureData = curImageFeatureData = NULL;
-	shared_ptr<ImageRegionLocData> oldRegionData, curRegionData;
+	shared_ptr<ImageRegionData> oldRegionData, curRegionData;
 	oldRegionData = curRegionData = NULL;
 	Time procTimer;
 	double procTime, delayTime;
@@ -102,8 +102,8 @@ void VelocityEstimator::run()
 
 			curTime.setTime(curRegionData->imageData->timestamp);
 			
-			if(oldRegionData != NULL && oldRegionData->regionLocs.size() > 5 &&
-			   curRegionData->regionLocs.size() > 5)
+			if(oldRegionData != NULL && oldRegionData->regionCentroids.size() > 5 &&
+			   curRegionData->regionCentroids.size() > 5)
 			{
 				mMutex_params.lock();
 				measCov = mMeasCov;
@@ -119,12 +119,14 @@ void VelocityEstimator::run()
 		if(success)
 		{
 			shared_ptr<DataVector<double>> velData(new DataVector<double>());
-			velData->data = velEst.copy();
+			velData->dataRaw = velEst.copy();
+			velData->dataCalibrated = velEst.copy();
 			velData->type = DATA_TYPE_MAP_VEL;
 			velData->timestamp.setTime(curTime);
 
 			shared_ptr<Data<double>> heightData(new Data<double>());
-			heightData->data = heightEst;
+			heightData->dataRaw = heightEst;
+			heightData->dataCalibrated = heightEst;
 			heightData->type = DATA_TYPE_MAP_HEIGHT;
 			heightData->timestamp.setTime(curTime);
 
@@ -245,8 +247,8 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 }
 
 // TODO: combine this with the above to be one function that just operates on locations
-bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageRegionLocData> oldRegionData,
-										   const shared_ptr<ImageRegionLocData> curRegionData,
+bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageRegionData> oldRegionData,
+										   const shared_ptr<ImageRegionData> curRegionData,
 										   Array2D<double> &velEst, 
 										   double &heightEst,
 										   double visionMeasCov,
@@ -289,13 +291,9 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageRegionLocData> 
 	curErrCov = matmult( mRotPhoneToCam2, matmult(curErrCov, mRotCamToPhone2));
 
 	// get prior distributions
-	vector<cv::Point2f> oldPoints(oldRegionData->regionLocs.size());
-	for(int i=0; i<oldPoints.size(); i++)
-		oldPoints[i] = oldRegionData->regionLocs[i]-center;
+	vector<cv::Point2f> oldPoints = oldRegionData->regionCentroids;
+	vector<cv::Point2f> curPoints = curRegionData->regionCentroids;
 
-	vector<cv::Point2f> curPoints(curRegionData->regionLocs.size());
-	for(int i=0; i<curPoints.size(); i++)
-		curPoints[i] = curRegionData->regionLocs[i]-center;
 	Array2D<double> mv = submat(curState,3,5,0,0);
 	Array2D<double> Sv = submat(curErrCov,3,5,3,5);
 	double mz = max(-curState[2][0], 0.130);
@@ -343,7 +341,7 @@ void VelocityEstimator::onFeaturesFound(const shared_ptr<ImageFeatureData> &data
 	mMutex_data.unlock();
 }
 
-void VelocityEstimator::onRegionsFound(const shared_ptr<ImageRegionLocData> &data)
+void VelocityEstimator::onRegionsFound(const shared_ptr<ImageRegionData> &data)
 {
 	mMutex_data.lock();
 	mLastRegionData= data;

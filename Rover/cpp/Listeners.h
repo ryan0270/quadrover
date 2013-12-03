@@ -63,6 +63,14 @@ class FeatureFinderListener
 		virtual void onFeaturesFound(const std::shared_ptr<ImageFeatureData> &data)=0;
 };
 
+class RegionFinderListener
+{
+	public:
+		virtual ~RegionFinderListener(){};
+
+		virtual void onRegionsFound(const std::shared_ptr<ImageRegionData> &data)=0;
+};
+
 class VelocityEstimatorListener
 {
 	public:
@@ -70,20 +78,6 @@ class VelocityEstimatorListener
 	virtual ~VelocityEstimatorListener(){};
 
 	virtual void onVelocityEstimator_newEstimate(const std::shared_ptr<DataVector<double> > &velData, const std::shared_ptr<Data<double> > &heightData)=0;
-};
-
-//class TargetFinderListener
-//{
-//	public:
-//	virtual ~TargetFinderListener(){};
-//
-//	virtual void onTargetFound(const std::shared_ptr<ImageTargetFindData> &data)=0;
-//};
-
-class RegionFinderListener
-{
-	public:
-	virtual void onRegionsFound(const std::shared_ptr<ImageRegionLocData> &data)=0;
 };
 
 class ObjectTrackerListener

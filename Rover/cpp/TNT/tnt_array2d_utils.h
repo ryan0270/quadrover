@@ -116,7 +116,8 @@ Array2D<T> operator-(const Array2D<T> &A, const Array2D<T> &B)
 
 
 template <class T>
-Array2D<T> operator*(const Array2D<T> &A, const Array2D<T> &B)
+//Array2D<T> operator*(const Array2D<T> &A, const Array2D<T> &B)
+Array2D<T> multElem(const Array2D<T> &A, const Array2D<T> &B)
 {
 	int m = A.dim1();
 	int n = A.dim2();
@@ -137,21 +138,21 @@ Array2D<T> operator*(const Array2D<T> &A, const Array2D<T> &B)
 	}
 }
 
-// Added by Tyler because it's useful
-template <class T>
-Array2D<T> operator*(T a, const Array2D<T> &B)
-{
-	int m = B.dim1();
-	int n = B.dim2();
-
-	Array2D<T> C(m,n);
-	for (int i=0; i<m; i++)
-	{
-		for (int j=0; j<n; j++)
-			C[i][j] = a * B[i][j];
-	}
-	return C;
-}
+//// Added by Tyler because it's useful
+//template <class T>
+//Array2D<T> operator*(T a, const Array2D<T> &B)
+//{
+//	int m = B.dim1();
+//	int n = B.dim2();
+//
+//	Array2D<T> C(m,n);
+//	for (int i=0; i<m; i++)
+//	{
+//		for (int j=0; j<n; j++)
+//			C[i][j] = a * B[i][j];
+//	}
+//	return C;
+//}
 
 template <class T>
 Array2D<T> operator/(const Array2D<T> &A, const Array2D<T> &B)

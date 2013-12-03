@@ -172,8 +172,8 @@ void ObjectTracker::run()
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObjectsTracked(data);
 
-			if(mQuadLogger != NULL)
-				mQuadLogger->addEntry(LOG_ID_OBJECT_TRACKING_STATS, stats, LOG_FLAG_CAM_RESULTS);
+//			if(mQuadLogger != NULL)
+//				mQuadLogger->addEntry(LOG_ID_OBJECT_TRACKING_STATS, stats, LOG_FLAG_CAM_RESULTS);
 
 			prevFeatureData = featureData;
 		}

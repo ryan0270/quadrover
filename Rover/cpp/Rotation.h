@@ -19,12 +19,14 @@ class Quaternion
 
 	double getScalarPart() const {return mVal[0];}
 	TNT::Array2D<double> getVectorPart() const;
+	TNT::Array2D<double> toVector() const;
 	TNT::Array2D<double> toRotMat() const;
 
 	void set(double w, double x, double y, double z);
 	void set(const Quaternion &q);
 //	void setFromRotMat2(const TNT::Array2D<double> &m);
 	void setFromRotMat(const TNT::Array2D<double> &m);
+	void normalize();
 
 	Quaternion conj() const;
 	double dot(const Quaternion &q) const;
@@ -120,7 +122,7 @@ class SO3
 
 	void setRotMat(const TNT::Array2D<double> &R){mQuaternion.setFromRotMat(R);}
 
-	TNT::Array2D<double> getRotMat() const {return mQuaternion.toRotMat();}
+	TNT::Array2D<double> toRotMat() const {return mQuaternion.toRotMat();}
 	TNT::Array2D<double> getAnglesZYX() const;
 	Quaternion getQuaternion() const {return mQuaternion;}
 

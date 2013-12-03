@@ -153,7 +153,7 @@ void Observer_Translational::run()
 			// need to advance time to the first event
 			if(mRawAccelDataBuffer.size() > 0)
 			{
-				mMutex_accel.lock(); accel.inject(mRawAccelDataBuffer.back()->data); mMutex_accel.unlock();
+				mMutex_accel.lock(); accel.inject(mRawAccelDataBuffer.back()->dataRaw); mMutex_accel.unlock();
 				accel += GRAVITY*gravityDir;
 			}
 			dt = Time::calcDiffNS(lastUpdateTime, events.front()->timestamp)/1.0e9;
@@ -170,7 +170,7 @@ void Observer_Translational::run()
 
 		if(mRawAccelDataBuffer.size() > 0)
 		{
-			mMutex_accel.lock(); accel.inject(mRawAccelDataBuffer.back()->data); mMutex_accel.unlock();
+			mMutex_accel.lock(); accel.inject(mRawAccelDataBuffer.back()->dataRaw); mMutex_accel.unlock();
 			accel += GRAVITY*gravityDir;
 		}
 
@@ -205,10 +205,12 @@ void Observer_Translational::run()
 		errCovData->timestamp.setTime(lastUpdateTime);
 
 		mMutex_kfData.lock();
-		stateData->data = mStateKF.copy();
+		stateData->dataRaw = mStateKF.copy();
+		stateData->dataCalibrated = mStateKF.copy();
 		mStateBuffer.push_back(stateData);
 
-		errCovData->data = mErrCovKF.copy();
+		errCovData->dataRaw = mErrCovKF.copy();
+		errCovData->dataCalibrated = mErrCovKF.copy();
 		mErrCovKFBuffer.push_back(errCovData);
 
 		for(int i=0; i<3; i++)
@@ -528,7 +530,8 @@ void Observer_Translational::onNewCommStateVicon(const Collection<float> &data)
 	shared_ptr<DataVector<double>> posData(new DataVector<double>() );
 	posData->type = DATA_TYPE_VICON_POS;
 	posData->timestamp.setTime(now);
-	posData->data = pos.copy();
+	posData->dataRaw = pos.copy();
+	posData->dataCalibrated = pos.copy();
 
 	mMutex_events.lock();
 	mNewEventsBuffer.push_back(posData);
@@ -602,12 +605,14 @@ void Observer_Translational::onNewCommAccelBias(float xBias, float yBias, float 
 //
 //		shared_ptr<DataVector<double>> stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
 //		stateData->type = DATA_TYPE_STATE_TRAN;
-//		stateData->data = mStateKF.copy();
+//		stateData->dataRaw = mStateKF.copy();
+//		stateData->dataCalibrated = mStateKF.copy();
 //		mStateBuffer.push_back(stateData);
 //
 //		shared_ptr<DataVector<double>> errCovData = shared_ptr<DataVector<double>>(new DataVector<double>());
 //		errCovData->type = DATA_TYPE_KF_ERR_COV;
-//		errCovData->data = mErrCovKF.copy();
+//		errCovData->dataRaw = mErrCovKF.copy();
+//		errCovData->dataCalibrated = mErrCovKF.copy();
 //		mErrCovKFBuffer.push_back(errCovData);
 //for(int st=0; st<mStateKF.dim1(); st++)
 //	if(isnan(mStateKF[st][0]))
@@ -660,11 +665,10 @@ void Observer_Translational::onNewSensorUpdate(const shared_ptr<IData> &data)
 				// keep velocity in check
 				accel[2][0] = GRAVITY;
 
-
 				shared_ptr<DataVector<double>> accelData(new DataVector<double>());
 				accelData->type = DATA_TYPE_RAW_ACCEL;
 				accelData->timestamp = data->timestamp;
-				accelData->data = accel.copy();
+				accelData->dataRaw = accel.copy();
 
 				mMutex_events.lock();
 				mNewEventsBuffer.push_back(accelData);
@@ -719,6 +723,11 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	mMutex_kfData.lock();
 	const Array2D<double> state = IData::interpolate(data->timestamp, mStateBuffer);
 	mMutex_kfData.unlock();
+	if(state.dim1() == 0)
+	{
+		Log::alert("Failed to get state data");
+		return;
+	}
 	if(state[2][0] < 0.5 || !mUseIbvs)
 		return;
 
@@ -989,7 +998,8 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	shared_ptr<DataVector<double>> posData(new DataVector<double>());
 	posData->type = DATA_TYPE_CAMERA_POS;
 	posData->timestamp.setTime(data->imageData->timestamp);
-	posData->data = pos.copy();
+	posData->dataRaw = pos.copy();
+	posData->dataCalibrated = pos.copy();
 	mMutex_events.lock();
 	mNewEventsBuffer.push_back(posData);
 	mMutex_events.unlock();
@@ -1020,11 +1030,11 @@ Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
 					bool bad = false;
-					for(int i=0; i<d->data.dim1(); i++)
+					for(int i=0; i<d->dataRaw.dim1(); i++)
 					{
-						if(isnan(d->data[i][0]))
+						if(isnan(d->dataRaw[i][0]))
 						{
-							printArray("accel is nan:\t",d->data);
+							printArray("accel is nan:\t",d->dataRaw);
 							bad = true;
 							break;
 						}
@@ -1037,11 +1047,11 @@ Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
 					bool bad = false;
-					for(int i=0; i<d->data.dim1(); i++)
+					for(int i=0; i<d->dataRaw.dim1(); i++)
 					{
-						if(isnan(d->data[i][0]))
+						if(isnan(d->dataRaw[i][0]))
 						{
-							printArray("vicon pos is nan:\t",d->data);
+							printArray("vicon pos is nan:\t",d->dataRaw);
 							bad = true;
 							break;
 						}
@@ -1054,11 +1064,11 @@ Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
 					bool bad = false;
-					for(int i=0; i<d->data.dim1(); i++)
+					for(int i=0; i<d->dataRaw.dim1(); i++)
 					{
-						if(isnan(d->data[i][0]))
+						if(isnan(d->dataRaw[i][0]))
 						{
-							printArray("camera pos is nan:\t",d->data);
+							printArray("camera pos is nan:\t",d->dataRaw);
 							bad = true;
 							break;
 						}
@@ -1071,11 +1081,11 @@ Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(data);
 					bool bad = false;
-					for(int i=0; i<d->data.dim1(); i++)
+					for(int i=0; i<d->dataRaw.dim1(); i++)
 					{
-						if(isnan(d->data[i][0]))
+						if(isnan(d->dataRaw[i][0]))
 						{
-							printArray("map vel is nan:\t",d->data);
+							printArray("map vel is nan:\t",d->dataRaw);
 							bad = true;
 							break;
 						}
@@ -1087,7 +1097,7 @@ Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
 			case DATA_TYPE_MAP_HEIGHT:
 				{
 					shared_ptr<Data<double>> d = static_pointer_cast<Data<double>>(data);
-					bool bad = isnan(d->data);
+					bool bad = isnan(d->dataRaw);
 					if(!bad)
 						mMapHeightBuffer.push_back(d);
 					else
@@ -1198,9 +1208,9 @@ Log::alert("No accel data");
 	gravDir[2][0] = -1;
 
 //		if(rawAccelIter != mRawAccelDataBuffer.end())
-//			accelRaw.inject((*rawAccelIter)->data);
+//			accelRaw.inject((*rawAccelIter)->dataRaw);
 //		else
-//			accelRaw.inject(mRawAccelDataBuffer.back()->data);
+//			accelRaw.inject(mRawAccelDataBuffer.back()->dataRaw);
 //		accel.inject(IData::interpolate(startTime,mRawAccelDataBuffer);
 //		accel.inject(accelRaw + GRAVITY*gravDir);
 
@@ -1228,15 +1238,15 @@ Log::alert("No accel data");
 		{
 			case DATA_TYPE_RAW_ACCEL:
 				// this is now handled by the above interpolation
-//					accelRaw.inject( static_pointer_cast<DataVector<double>>(*eventIter)->data);
+//					accelRaw.inject( static_pointer_cast<DataVector<double>>(*eventIter)->dataRaw);
 //					accel.inject(accelRaw+GRAVITY*gravDir);
 				break;
 			case DATA_TYPE_CAMERA_POS:
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
 					Array2D<double> meas(2,1);
-					meas[0][0] = d->data[0][0];
-					meas[1][0] = d->data[1][0];
+					meas[0][0] = d->dataRaw[0][0];
+					meas[1][0] = d->dataRaw[1][0];
 					doMeasUpdateKF_xyOnly(meas, submat(mPosMeasCov,0,1,0,1), mStateKF, mErrCovKF, att);
 				}
 				break;
@@ -1244,8 +1254,8 @@ Log::alert("No accel data");
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
 					Array2D<double> meas(2,1);
-					meas[0][0] = d->data[0][0];
-					meas[1][0] = d->data[1][0];
+					meas[0][0] = d->dataRaw[0][0];
+					meas[1][0] = d->dataRaw[1][0];
 					Array2D<double> measCov = 1e-4*createIdentity((double)2.0);
 //						Array2D<double> measCov = submat(mPosMeasCov,0,1,0,1);
 					doMeasUpdateKF_xyOnly(meas, measCov, mStateKF, mErrCovKF, att);
@@ -1256,12 +1266,12 @@ Log::alert("No accel data");
 			case DATA_TYPE_MAP_VEL:
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
-					Array2D<double> vel = d->data;
+					Array2D<double> vel = d->dataRaw;
 					doMeasUpdateKF_velOnly(vel,mVelMeasCov, mStateKF, mErrCovKF, att);
 				}
 				break;
 			case DATA_TYPE_MAP_HEIGHT:
-				doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(*eventIter)->data, mMAPHeightMeasCov, mStateKF, mErrCovKF, att);
+				doMeasUpdateKF_heightOnly(static_pointer_cast<Data<double>>(*eventIter)->dataRaw, mMAPHeightMeasCov, mStateKF, mErrCovKF, att);
 				break;
 			case DATA_TYPE_HEIGHT:
 				doMeasUpdateKF_heightOnly(static_pointer_cast<HeightData<double>>(*eventIter)->height, mPosMeasCov[2][2], mStateKF, mErrCovKF, att);
@@ -1273,13 +1283,15 @@ Log::alert("No accel data");
 		stateData = shared_ptr<DataVector<double>>(new DataVector<double>());
 		stateData->type = DATA_TYPE_STATE_TRAN;
 		stateData->timestamp.setTime( (*eventIter)->timestamp);
-		stateData->data = mStateKF.copy();
+		stateData->dataRaw = mStateKF.copy();
+		stateData->dataCalibrated = mStateKF.copy();
 		mStateBuffer.push_back(stateData);
 
 		errCovData = shared_ptr<DataVector<double>>(new DataVector<double>());
 		errCovData->type = DATA_TYPE_KF_ERR_COV;
 		errCovData->timestamp.setTime( (*eventIter)->timestamp);
-		errCovData->data = mErrCovKF.copy();
+		errCovData->dataRaw = mErrCovKF.copy();
+		errCovData->dataCalibrated = mErrCovKF.copy();
 		mErrCovKFBuffer.push_back(errCovData);
 
 		lastUpdateTime.setTime((*eventIter)->timestamp);
