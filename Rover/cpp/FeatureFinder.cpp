@@ -130,7 +130,7 @@ void FeatureFinder::run()
 			mImageAnnotatedLast = imageAnnotatedData;
 
 			shared_ptr<ImageFeatureData> data(new ImageFeatureData());
-			data->featurePoints.swap(points);
+			data->featurePoints = points;
 			data->imageData = imageData;
 			data->imageAnnotated = imageAnnotatedData;
 			data->timestamp.setTime(imageData->timestamp);
@@ -166,12 +166,12 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 
 	vector<cv::KeyPoint> tempKp1;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
-	int maxKp = 1000;
-	int gridRows = 3;
-	int gridCols = 3;
-	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
-	detector.detect(pyrImage, tempKp1);
-//	FAST(pyrImage, tempKp1, fastThreshold, true);
+//	int maxKp = 1000;
+//	int gridRows = 3;
+//	int gridCols = 3;
+//	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
+//	detector.detect(pyrImage, tempKp1);
+	FAST(pyrImage, tempKp1, fastThreshold, true);
 	int blockSize = 5;
 	eigenValResponses(pyrImage, tempKp1, blockSize);
 
