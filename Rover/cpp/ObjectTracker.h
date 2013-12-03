@@ -26,7 +26,8 @@ namespace ICSL {
 namespace Quadrotor {
 using namespace std;
 
-class ObjectTracker : public FeatureFinderListener
+class ObjectTracker : public FeatureFinderListener,
+					  public RegionFinderListener
 {
 	public:
 	ObjectTracker();
@@ -53,13 +54,18 @@ class ObjectTracker : public FeatureFinderListener
 	// for FeatureFinderListener
 	void onFeaturesFound(const shared_ptr<ImageFeatureData> &data);
 
+	// for RegionFinderListener
+	void onRegionsFound(const shared_ptr<ImageRegionData> &data);
+
 	protected:
 	bool mRunning, mFinished;
 	QuadLogger *mQuadLogger;
 	Time mStartTime;
 	int mThreadPriority, mScheduler;
 
+	bool mNewFeatureDataAvailable, mNewRegionDataAvailable;
 	shared_ptr<ImageFeatureData> mFeatureData;
+	shared_ptr<ImageRegionData> mRegionData;
 	std::mutex mMutex_featureData;
 
 	vector<shared_ptr<TrackedObject>> mTrackedObjects;
@@ -79,6 +85,8 @@ class ObjectTracker : public FeatureFinderListener
 				  const TNT::Array2D<double> SnInv,
 				  double probNoCorr,
 				  const ICSL::Quadrotor::Time &imageTime);
+
+	static void doSimilarityCheck(vector<shared_ptr<TrackedObject>> &objects);
 };
 
 } // namespace Quadrotor

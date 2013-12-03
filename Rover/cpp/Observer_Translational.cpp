@@ -669,6 +669,7 @@ void Observer_Translational::onNewSensorUpdate(const shared_ptr<IData> &data)
 				accelData->type = DATA_TYPE_RAW_ACCEL;
 				accelData->timestamp = data->timestamp;
 				accelData->dataRaw = accel.copy();
+				accelData->dataCalibrated = accel.copy();
 
 				mMutex_events.lock();
 				mNewEventsBuffer.push_back(accelData);
@@ -682,7 +683,7 @@ void Observer_Translational::onNewSensorUpdate(const shared_ptr<IData> &data)
 				mMutex_kfData.unlock();
 				const shared_ptr<HeightData<double>> d = static_pointer_cast<HeightData<double>>(data);
 
-				if( abs(d->height-curHeight) < 0.2 )
+				if( abs(d->height-curHeight) < 0.1 )
 				{
 					mMutex_events.lock();
 					mNewEventsBuffer.push_back( static_pointer_cast<HeightData<double>>(data) );

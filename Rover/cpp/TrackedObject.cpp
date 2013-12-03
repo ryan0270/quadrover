@@ -1,4 +1,6 @@
 #include "TrackedObject.h"
+#include <Observer_Angular.h>
+#include <Observer_Translational.h>
 
 namespace ICSL{
 namespace Quadrotor{
@@ -7,6 +9,9 @@ using namespace TNT;
 using namespace ICSL::Constants;
 using namespace toadlet::egg;
 
+Observer_Angular *TrackedObject::mObsvAngular = NULL;
+Observer_Translational *TrackedObject::mObsvTranslation = NULL;
+
 size_t TrackedObject::lastID = 0;
 std::mutex TrackedObject::mutex_lastID;
 
@@ -14,6 +19,7 @@ TrackedObject::TrackedObject() :
 	mExpectedPos(2,1,0.0),
 	mPosCov(2,2,0.0)
 {
+	mType = TrackedObjectType::UNKNOWN;
 	mutex_lastID.lock(); mId = lastID++; mutex_lastID.unlock();
 
 	// make sure this is pos def
@@ -22,11 +28,11 @@ TrackedObject::TrackedObject() :
 	mIsAlive = true;
 }
 
-void TrackedObject::markFound(const Time &time, const cv::Point2f &point)
+void TrackedObject::markFound(shared_ptr<TrackedObject> &match)
 {
-	mLastFoundTime.setTime(time);
-	mLocation = point;
-	mHistory.push_back(pair<Time, cv::Point2f>(time, point));
+	mLastFoundTime.setTime(match->mLastFoundTime);
+	mLocation = match->mLocation;
+	mHistory.push_back(pair<Time, cv::Point2f>(mLastFoundTime, mLocation));
 }
 
 void TrackedObject::kill()
@@ -42,15 +48,24 @@ void TrackedObject::rebirth()
 	mHistory.push_back(h);
 }
 
-
 // Hmm, should I change this so it does incremental updates instead of updating as
 // one big step from the last found time
-void TrackedObject::updatePositionDistribution(const Array2D<double> &mv, const Array2D<double> &Sv, 
-									double mz, double varz, 
-									double focalLength, const cv::Point2f &center,
-									const Array2D<double> &omega,
-									const Time &curTime)
+void TrackedObject::updatePositionDistribution(double focalLength, const cv::Point2f &center, const Time &curTime)
 {
+	double dt = Time::calcDiffNS(mLastFoundTime, curTime)/1.0e9; 
+
+	Array2D<double> curState = mObsvTranslation->estimateStateAtTime(curTime);
+	Array2D<double> curErrCov = mObsvTranslation->estimateErrCovAtTime(curTime);
+	Array2D<double> mv = submat(curState,3,5,0,0);
+	Array2D<double> Sv = submat(curErrCov,3,5,3,5);
+	double mz = curState[2][0];
+	double varz= curErrCov[2][2];
+
+	SO3 curAtt = mObsvAngular->estimateAttAtTime(curTime);
+	SO3 prevAtt = mObsvAngular->estimateAttAtTime(mLastFoundTime);
+	SO3 attChange = curAtt*prevAtt.inv();
+	Array2D<double> omega = 1.0/dt*attChange.log().toVector();
+
 	const double mvx = mv[0][0];
 	const double mvy = mv[1][0];
 	const double mvz = mv[2][0];
@@ -100,7 +115,6 @@ void TrackedObject::updatePositionDistribution(const Array2D<double> &mv, const 
 
 	double x = mLocation.x-center.x;
 	double y = mLocation.y-center.y;
-	double dt = Time::calcDiffNS(mLastFoundTime, curTime)/1.0e9;
 
 	// delta_x = q_x*v_z*dt-f*v_x*dt
 	Array2D<double> mDelta(2,1), SDelta(2,2);
@@ -245,6 +259,11 @@ Array2D<double> TrackedObject::calcCorrespondence(const vector<shared_ptr<Tracke
 		y = curObjectList[j]->mLocation.y;
 		for(int i=0; i<N1; i++)
 		{
+			if(curObjectList[j]->mType != prevObjectList[i]->mType)
+			{
+				C[i][j] = 0;
+				continue;
+			}
 			md.inject(prevObjectList[i]->mExpectedPos);
 			if(abs(x-md[0][0]) < xRangeList[i] && abs(y-md[1][0]) < yRangeList[i] )
 				chad.push_back(make_pair(i, j));
@@ -401,6 +420,11 @@ Array2D<double> TrackedObject::calcCorrespondence2(const vector<shared_ptr<Track
 		SnInv[1][1] = det_SnInv*Sn[0][0];
 		for(int i=0; i<N1; i++)
 		{
+			if(curObjectList[j]->mType != prevObjectList[i]->mType)
+			{
+				C[i][j] = 0;
+				continue;
+			}
 			Sd.inject(SdList[i]);
 			S.inject(Sd+Sn);
 			eigMid = 0.5*(S[0][0]+S[1][1]);
@@ -543,15 +567,43 @@ const Time &TrackedObject::getCreateTime() const
 
 TrackedPoint::TrackedPoint() : TrackedObject()
 {
+	mType = TrackedObjectType::POINT;
 }
 
-TrackedPoint::TrackedPoint(const Time & time, const cv::Point2f &point) : TrackedObject()
+TrackedPoint::TrackedPoint(const Time & time, const cv::Point2f &point) : TrackedPoint()
 {
 	mLocation = point;
 	mExpectedPos[0][0] = point.x;
 	mExpectedPos[1][0] = point.y;
 	mHistory.push_back(pair<Time, cv::Point2f>(time, point));
 	mLastFoundTime.setTime(time);
+}
+
+TrackedRegion::TrackedRegion() : TrackedObject()
+{
+	mType = TrackedObjectType::REGION;
+}
+
+TrackedRegion::TrackedRegion(const Time &time,
+							 const vector<cv::Point2f> &contour,
+							 const cv::Point2f &point,
+							 const cv::Moments &mom) : TrackedRegion()
+{
+	mLocation = point;
+	mExpectedPos[0][0] = point.x;
+	mExpectedPos[1][0] = point.y;
+	mHistory.push_back(pair<Time, cv::Point2f>(time, point));
+	mLastFoundTime.setTime(time);
+
+	mContour = contour;
+	mMoments = mom;
+}
+
+void TrackedRegion::markFound(shared_ptr<TrackedObject> &match)
+{
+	TrackedObject::markFound(match);
+	mContour = static_pointer_cast<TrackedRegion>(match)->mContour;
+	mMoments = static_pointer_cast<TrackedRegion>(match)->mMoments;
 }
 
 }
