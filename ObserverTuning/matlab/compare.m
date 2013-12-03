@@ -30,12 +30,12 @@ phoneData = phoneData(1:end-1,:);
 
 syncIndex = find(phoneData(:,2) == -500,1,'last');
 
-angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
-angleStateTime = phoneData(angleStateIndices,1)'/1000;
-% angleState = phoneData(angleStateIndices,4:9)';
-quatState = phoneData(angleStateIndices,4:10)';
-temp = quat2angle(quatState(1:4,:));
-angleState = [temp([3 2 1],:); quatState(5:7,:)];
+% angleStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_ATT);
+% angleStateTime = phoneData(angleStateIndices,1)'/1000;
+% % angleState = phoneData(angleStateIndices,4:9)';
+% quatState = phoneData(angleStateIndices,4:10)';
+% temp = quat2angle(quatState(1:4,:));
+% angleState = [temp([3 2 1],:); quatState(5:7,:)];
 
 tranStateIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_CUR_TRANS_STATE);
 tranStateTime = phoneData(tranStateIndices,1)'/1000;
@@ -108,6 +108,10 @@ trackingStats = phoneData(trackingStatsIndices,3:6)';
 % 
 % useViconXYIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_USE_VICON_XY);
 % useViconXYTime = phoneData(useViconXYIndices,1)'/1000;
+
+sonarHeightIndices = syncIndex-1+find(phoneData(syncIndex:end,2) == LOG_ID_SONAR_HEIGHT);
+sonarHeightTime = phoneData(sonarHeightIndices,1)'/1000;
+sonarHeight = phoneData(sonarHeightIndices,4)';
 
 
 %% rotate from vicon to phone coords
@@ -232,11 +236,14 @@ if exist('tranState','var') && ~isempty(tranState)
 		if i<=2
 			plot(camPosTime,camPos(i,:),'.'); hold all
 		end
-% 		if i == 3 && ~isempty(mapHeight)
-% 			plot(mapHeightTime, mapHeight,'.'); hold all
-% 		elseif i>3 && ~isempty(mapVel)
-% 			plot(mapVelTime, mapVel(i-3,:), '.'); hold all
-% 		end
+		if i == 3 && ~isempty(mapHeight)
+			plot(mapHeightTime, mapHeight,'.'); hold all
+		elseif i>3 && ~isempty(mapVel)
+			plot(mapVelTime, mapVel(i-3,:), '.'); hold all
+		end
+		if i == 3 && exist('sonarHeight','var') && ~isempty(sonarHeight)
+			plot(sonarHeightTime, sonarHeight,'.'); hold all
+		end
 		hold off
 % 		axis([tranStateTime(1) tranStateTime(end) -0.4 0.4]);
 % 		ax = axis;

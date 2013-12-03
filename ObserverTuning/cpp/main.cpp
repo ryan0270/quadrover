@@ -228,7 +228,7 @@ int main(int argv, char* argc[])
 	mRegionFinder.setQuadLogger(&mQuadLogger);
 	addSensorManagerListener(&mRegionFinder);
 	addCommManagerListener(&mRegionFinder);
-	mRegionFinder.start();
+//	mRegionFinder.start();
 
 	ObjectTracker mObjectTracker;
 	mObjectTracker.initialize();
@@ -248,8 +248,8 @@ int main(int argv, char* argc[])
 	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
 	mVelocityEstimator.addListener(&mObsvTranslational);
-//	mFeatureFinder.addListener(&mVelocityEstimator);
-	mRegionFinder.addListener(&mVelocityEstimator);
+	mFeatureFinder.addListener(&mVelocityEstimator);
+//	mRegionFinder.addListener(&mVelocityEstimator);
 	addCommManagerListener(&mVelocityEstimator);
 	mVelocityEstimator.start();
 
@@ -273,6 +273,7 @@ int main(int argv, char* argc[])
 	logMask |= LOG_FLAG_CAM_RESULTS;
 //	logMask |= LOG_FLAG_CAM_IMAGES;
 //	logMask |= LOG_FLAG_PHONE_TEMP;
+	logMask |= LOG_FLAG_SONAR;
 	mQuadLogger.setStartTime(startTime);
 	
 	////////////////////////////////////////////////////////////////////////////////////
