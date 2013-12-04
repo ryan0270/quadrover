@@ -62,8 +62,8 @@ void ObjectTracker::run()
 	
 	Array2D<double> Sn(2,2), SnInv(2,2);
 
-	double probNoCorrPoints = 5e-4/2;
-	double probNoCorrRegions = 5e-7*2*2*2*2;
+	double probNoCorrPoints = 2e-4;
+	double probNoCorrRegions = 2e-5;
 	double probNoCorr;
 
 	shared_ptr<ImageFeatureData> featureData = NULL;
@@ -177,8 +177,8 @@ void ObjectTracker::run()
 			// Tell the world
 			shared_ptr<ObjectTrackerData> data(new ObjectTrackerData());
 			data->timestamp.setTime(imageData->timestamp);
-			data->repeatObjects = repeatObjects;
-			data->newObjects = newObjects;
+			data->repeatObjects.swap(repeatObjects);
+			data->newObjects.swap(newObjects);
 			data->imageData = imageData;
 			data->imageAnnotatedData = imageAnnotatedData;
 			data->repeatObjectLocs.resize(repeatObjects.size());
@@ -187,7 +187,7 @@ void ObjectTracker::run()
 				data->repeatObjectLocs[i] = repeatObjects[i]->getLocation();
 			for(int i=0; i<newObjects.size(); i++)
 				data->newObjectLocs[i] = newObjects[i]->getLocation();
-			data->matches = goodMatches;
+			data->matches.swap(goodMatches);
 
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onObjectsTracked(data);

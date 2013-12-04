@@ -229,7 +229,7 @@ class ObjectTrackerData : public IData
 {
 	public:
 	ObjectTrackerData() : IData() {type = DATA_TYPE_OBJECT_TRACKER;}
-	vector<cv::Point2f> repeatObjectLocs, newObjectLocs; // something that will not change
+	vector<cv::Point2f> repeatObjectLocs, newObjectLocs; // data that will not change
 	vector<shared_ptr<TrackedObject>> repeatObjects, newObjects; // these are just pointers, so the object location might change before it's used
 	vector<ObjectMatch> matches;
 
@@ -247,6 +247,7 @@ class ImageTranslationData : public IData
 	shared_ptr<ObjectTrackerData> objectTrackingData;
 	vector<shared_ptr<TrackedObject>> goodObjects;
 	vector<cv::Point2f> goodPoints; // location of found points, already adjusted for current attitude and image offset
+	vector<double> goodPointScores; // match score when finding this point
 	vector<cv::Point2f> nominalPoints; // nominal location of the respective found points
 	cv::Point2f imageOffset;
 };

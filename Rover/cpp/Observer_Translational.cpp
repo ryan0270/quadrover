@@ -846,8 +846,10 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	int numOutliers = 0;
 	vector<cv::Point2f> goodPoints, tempNominalPoints;
 	vector<shared_ptr<TrackedObject>> goodObjects;
+	vector<double> goodPointScores;
 	goodPoints.reserve(repeatPoints.size());
 	goodObjects.reserve(repeatPoints.size());
+	goodPointScores.reserve(repeatPoints.size());
 	tempNominalPoints.swap(nominalPoints);
 	if(offsetsX.size() > 0)
 	{
@@ -871,8 +873,8 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 		medOffset.y = tempOffsetsY[medLoc];
 
 		// Now keep only offsets close to the median
-		double ageSum = 0;
-		double age;
+		double weightSum = 0;
+		double weight;
 		vector<int> killList;
 		for(int i=0; i<offsetsX.size(); i++)
 		{
@@ -880,14 +882,14 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 				abs(offsetsY[i]-medOffset.y) < 10 )
 			{
 				numInliers++;
-				age = repeatObjects[i]->getAge();
-				ageSum += age;
-				imageOffset.x += age*offsetsX[i];
-				imageOffset.y += age*offsetsY[i];
+//				weight = repeatObjects[i]->getAge();
+				weight = data->matches[i].score;
+				weightSum += weight;
+				imageOffset.x += weight*offsetsX[i];
+				imageOffset.y += weight*offsetsY[i];
 				goodPoints.push_back(repeatPoints[i]);
-//				goodPoints.back().x += offsetsX[i];
-//				goodPoints.back().y += offsetsY[i];
 				goodObjects.push_back(repeatObjects[i]);
+				goodPointScores.push_back(weight);
 
 				nominalPoints.push_back(tempNominalPoints[i]);
 			}
@@ -898,8 +900,8 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 			}
 		}
 		
-		if(ageSum > 0)
-			imageOffset = 1.0/ageSum*imageOffset;
+		if(weightSum > 0)
+			imageOffset = 1.0/weightSum*imageOffset;
 
 		if(numOutliers <= max(1.0f, 0.5f*numInliers))
 		{
@@ -930,6 +932,7 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 
 			goodPoints.clear();
 			goodObjects.clear();
+			goodPointScores.clear();
 		}
 	}
 
@@ -944,6 +947,7 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 		xlateData->objectTrackingData = data;
 		xlateData->goodObjects.swap(goodObjects);
 		xlateData->goodPoints.swap(goodPoints);
+		xlateData->goodPointScores.swap(goodPointScores);
 		xlateData->nominalPoints.swap(nominalPoints);
 		xlateData->imageOffset = imageOffset;
 		mMutex_listeners.lock();

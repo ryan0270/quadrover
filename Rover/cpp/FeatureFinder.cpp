@@ -130,7 +130,7 @@ void FeatureFinder::run()
 			mImageAnnotatedLast = imageAnnotatedData;
 
 			shared_ptr<ImageFeatureData> data(new ImageFeatureData());
-			data->featurePoints = points;
+			data->featurePoints.swap(points);
 			data->imageData = imageData;
 			data->imageAnnotated = imageAnnotatedData;
 			data->timestamp.setTime(imageData->timestamp);

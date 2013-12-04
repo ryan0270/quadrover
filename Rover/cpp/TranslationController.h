@@ -10,7 +10,7 @@
 #include "constants.h"
 
 #include "QuadLogger.h"
-#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
+//#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
 #include "Time.h"
 #include "Observer_Translational.h"
 #include "Rotation.h"
@@ -20,8 +20,7 @@ namespace ICSL {
 namespace Quadrotor {
 class TranslationController : 	public Observer_TranslationalListener,
 								public CommManagerListener,
-								public MotorInterfaceListener//,
-//								public TargetFinderListener
+								public MotorInterfaceListener
 {
 	public:
 	TranslationController();
@@ -95,9 +94,9 @@ class TranslationController : 	public Observer_TranslationalListener,
 	TNT::Array2D<double> calcControlPID(const TNT::Array2D<double> &error, double dt);
 
 	// for the Hinf controller
-	ICSL::SystemModelLinear mCntlSys;
-	TNT::Array2D<double> mGainCntlSys;
-	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
+//	ICSL::SystemModelLinear mCntlSys;
+//	TNT::Array2D<double> mGainCntlSys;
+//	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
 
 	TNT::Array2D<double> calcControlIBVS2(TNT::Array2D<double> &error, double dt);
 	TNT::Array2D<double> mIbvsPosGains, mIbvsVelGains;
