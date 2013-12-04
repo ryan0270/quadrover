@@ -90,30 +90,31 @@ void VelocityEstimator::run()
 
 			procTime = procTimer.getElapsedTimeNS()/1.0e9;
 		}
-		else if(mNewRegionDataAvailable) // we want to do only one of these on any given pass
+		else if(mNewRegionDataAvailable) // we will do only one of these on any given pass
 		{
-//			procTimer.setTime();
-//
-//			mMutex_data.lock();
-//			oldRegionData = curRegionData;
-//			curRegionData = mLastRegionData;
-//			mNewRegionDataAvailable = false;
-//			mMutex_data.unlock();
-//
-//			curTime.setTime(curRegionData->imageData->timestamp);
-//			
-//			if(oldRegionData != NULL && oldRegionData->regionCentroids.size() > 5 &&
-//			   curRegionData->regionrentroids.size() > 5)
-//			{
-//				mMutex_params.lock();
-//				measCov = mMeasCov;
-//				probNoCorr = mProbNoCorr;
-//				mMutex_params.unlock();
-//
-//				success = doVelocityEstimate(oldRegionData, curRegionData, velEst, heightEst, measCov, probNoCorr);
-//			}
-//
-//			procTime = procTimer.getElapsedTimeNS()/1.0e9;
+			procTimer.setTime();
+
+			mMutex_data.lock();
+			oldRegionData = curRegionData;
+			curRegionData = mLastRegionData;
+			mNewRegionDataAvailable = false;
+			mMutex_data.unlock();
+
+			curTime.setTime(curRegionData->imageData->timestamp);
+			
+			if(oldRegionData != NULL && oldRegionData->regionCentroids.size() > 5 &&
+			   curRegionData->regionCentroids.size() > 5)
+			{
+				mMutex_params.lock();
+				// HACK: These should have their own, separate variables
+				measCov = 4*mMeasCov;
+				probNoCorr = 0.1*mProbNoCorr;
+				mMutex_params.unlock();
+
+				success = doVelocityEstimate(oldRegionData, curRegionData, velEst, heightEst, measCov, probNoCorr);
+			}
+
+			procTime = procTimer.getElapsedTimeNS()/1.0e9;
 		}
 
 		if(success)

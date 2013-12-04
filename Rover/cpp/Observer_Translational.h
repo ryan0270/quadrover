@@ -22,7 +22,7 @@
 #include "Time.h"
 #include "QuadLogger.h"
 #include "Observer_Angular.h"
-#include "ActiveRegion.h"
+//#include "ActiveRegion.h"
 #include "Listeners.h"
 #include "TrackedObject.h"
 

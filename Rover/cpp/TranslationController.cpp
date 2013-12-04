@@ -17,7 +17,7 @@ using namespace toadlet::egg;
 		mGainI(3,1,0.0),
 		mErrInt(3,1,0.0),
 		mErrIntLimit(3,1,0.0),
-		mGainCntlSys(6,1,1.0),
+//		mGainCntlSys(6,1,1.0),
 		mRotViconToPhone(3,3,0.0),
 		mDesAccel(3,1,0.0),
 		mIbvsPosGains(3,1,1.0),
@@ -120,18 +120,9 @@ using namespace toadlet::egg;
 			mMutex_state.unlock();
 
 			accelCmd = calcControlIBVS2(error, dt);
-
-			// fake the system controller so when we switch back to 
-			// it the integrator is still valid
-//			for(int i=0; i<error.dim1(); i++)
-//				error[i][0] = 0;
-//			calcControlSystem(error, dt);
 		}
 		else
-		{
-//			accelCmd = calcControlSystem(error,dt);
 			accelCmd = calcControlPID(error,dt);
-		}
 
 		double accelLimit = 10;
 		accelCmd[0][0] = min(accelLimit, max(-accelLimit, accelCmd[0][0]));
@@ -166,26 +157,26 @@ using namespace toadlet::egg;
 		return accelCmd;
 	}
 
-	Array2D<double> TranslationController::calcControlSystem(const Array2D<double> &error, double dt)
-	{
-		Array2D<double> accelCmd(3,1);
-		if(mCntlSys.isInitialized())
-		{
-			mMutex_data.lock();
-			Array2D<double> u = multElem(mGainCntlSys,error);
-			Array2D<double> x = mCntlSys.simulateEuler(u,dt);
-			accelCmd = matmult(mCntlSys.getC(),x) + matmult(mCntlSys.getD(),u);
-			accelCmd += mDesAccel;
-			mMutex_data.unlock();
-		}
-		else
-		{ accelCmd[0][0] = accelCmd[1][0] = accelCmd[2][0] = 0; }
-
-		accelCmd[2][0] += GRAVITY;
-
-		mLastController = Controller::SYSTEM;
-		return accelCmd;
-	}
+//	Array2D<double> TranslationController::calcControlSystem(const Array2D<double> &error, double dt)
+//	{
+//		Array2D<double> accelCmd(3,1);
+//		if(mCntlSys.isInitialized())
+//		{
+//			mMutex_data.lock();
+//			Array2D<double> u = multElem(mGainCntlSys,error);
+//			Array2D<double> x = mCntlSys.simulateEuler(u,dt);
+//			accelCmd = matmult(mCntlSys.getC(),x) + matmult(mCntlSys.getD(),u);
+//			accelCmd += mDesAccel;
+//			mMutex_data.unlock();
+//		}
+//		else
+//		{ accelCmd[0][0] = accelCmd[1][0] = accelCmd[2][0] = 0; }
+//
+//		accelCmd[2][0] += GRAVITY;
+//
+//		mLastController = Controller::SYSTEM;
+//		return accelCmd;
+//	}
 
 	Array2D<double> TranslationController::calcControlIBVS2(Array2D<double> &error, double dt)
 	{
@@ -195,6 +186,7 @@ using namespace toadlet::egg;
 		
 		// Predict the target's current position based on kinematics
 		vector<cv::Point2f> points = xlateData->goodPoints;
+		const vector<double> scores = xlateData->goodPointScores;
 		double dtImg = xlateData->timestamp.getElapsedTimeNS()/1.0e9;
 		double f = xlateData->objectTrackingData->imageData->focalLength;
 		Array2D<double> vel(3,1);
@@ -239,7 +231,7 @@ using namespace toadlet::egg;
 			// Get it on the unit sphere
 			p.inject(1.0/norm2(p)*p);
 
-			moment += p;
+			moment += scores[i]*p;
 		}
 		moment = 1.0/norm2(moment)*moment;
 //		moment = mRotCamToPhone*moment;
@@ -252,7 +244,7 @@ using namespace toadlet::egg;
 			temp[1][0] = nominalPoints[i].y;
 			temp[2][0] = -f;
 
-			desMoment += 1.0/norm2(temp)*temp;
+			desMoment += scores[i]/norm2(temp)*temp;
 		}
 		desMoment = 1.0/norm2(desMoment)*desMoment;
 
@@ -305,7 +297,7 @@ using namespace toadlet::egg;
 		for(int i=0; i<mErrInt.dim1(); i++)
 			mErrInt[i][0] = 0;
 
-		mCntlSys.reset();
+//		mCntlSys.reset();
 		mMutex_data.unlock();
 	}
 
@@ -319,8 +311,8 @@ using namespace toadlet::egg;
 			mGainI[i][0] = gains[i+6];
 			mErrIntLimit[i][0] = gains[i+9];
 
-			mGainCntlSys[i][0] = gains[i];
-			mGainCntlSys[i+3][0] = gains[i+3];
+//			mGainCntlSys[i][0] = gains[i];
+//			mGainCntlSys[i+3][0] = gains[i+3];
 		}
 		mMutex_data.unlock();
 
@@ -370,19 +362,20 @@ using namespace toadlet::egg;
 
 	void TranslationController::onNewCommSendControlSystem(const Collection<tbyte> &buff)
 	{
-		mMutex_data.lock();
-		mCntlSys.deserialize(buff);
-
-		int numIn = mCntlSys.getNumInputs();
-		int numState = mCntlSys.getNumStates();
-		int numOut = mCntlSys.getNumOutputs();
-
-		mCntlSys.setCurState(Array2D<double>(numState,1,0.0));
-		mMutex_data.unlock();
-
-		String str = String()+"TranslationController -- Received controller system: ";
-		str = str +numIn+" inputs x "+numOut+" outputs x "+numState+" states";
-		Log::alert(str);
+		Log::alert("Ignoring controller system");
+//		mMutex_data.lock();
+//		mCntlSys.deserialize(buff);
+//
+//		int numIn = mCntlSys.getNumInputs();
+//		int numState = mCntlSys.getNumStates();
+//		int numOut = mCntlSys.getNumOutputs();
+//
+//		mCntlSys.setCurState(Array2D<double>(numState,1,0.0));
+//		mMutex_data.unlock();
+//
+//		String str = String()+"TranslationController -- Received controller system: ";
+//		str = str +numIn+" inputs x "+numOut+" outputs x "+numState+" states";
+//		Log::alert(str);
 	}
 
 	void TranslationController::onNewCommIbvsGains(const Collection<float> &posGains, const Collection<float> &velGains)

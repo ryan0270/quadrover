@@ -288,34 +288,34 @@ end
 
 %%
 if exist('accelBias','var') && ~isempty(accelBias)
-%   	figure(3); clf;
-% % 	set(gcf,'Units','Inches');
-% % 	curPos = get(gcf,'Position'); figSize = [6 4];
-% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 	for i=1:3
-% 		plot(accelBiasTime, accelBias(i,:)); hold all
-% 	end
-% 	hold off
-% 	xlabel('Time [s]')
-% 	ylabel('Accel bias [m/s^2]');
-% 	legend('x','y','z','location','best');
+  	figure(3); clf;
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	for i=1:3
+		plot(accelBiasTime, accelBias(i,:)); hold all
+	end
+	hold off
+	xlabel('Time [s]')
+	ylabel('Accel bias [m/s^2]');
+	legend('x','y','z','location','best');
 end
 
 %%
 if exist('accelCmd','var') && ~isempty(accelCmd)
-% 	figure(5); clf
-% % 	set(gcf,'Units','Inches');
-% % 	curPos = get(gcf,'Position'); figSize = [6 4];
-% % 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
-% 	accelCmdTemp = accelCmd;
-% 	accelCmdTemp(3,:) = accelCmdTemp(3,:)-9.81;
-% 	plot(accelCmdTime, accelCmdTemp');hold all
-% 	ax = axis;
-% 	plot([ax(1) ax(2)],[0 0],'k--'); hold all
-% 	hold off
-% 	xlabel('Time [s]');
-% 	ylabel('Accel cmd [m/s^2]')
-% 	legend('x','y','z');
+	figure(5); clf
+% 	set(gcf,'Units','Inches');
+% 	curPos = get(gcf,'Position'); figSize = [6 4];
+% 	set(gcf,'PaperSize',figSize,'PaperPosition',[0 0 figSize],'Position',[curPos(1:2) figSize]);
+	accelCmdTemp = accelCmd;
+	accelCmdTemp(3,:) = accelCmdTemp(3,:)-9.81;
+	plot(accelCmdTime, accelCmdTemp');hold all
+	ax = axis;
+	plot([ax(1) ax(2)],[0 0],'k--'); hold all
+	hold off
+	xlabel('Time [s]');
+	ylabel('Accel cmd [m/s^2]')
+	legend('x','y','z');
 end
 
 %%

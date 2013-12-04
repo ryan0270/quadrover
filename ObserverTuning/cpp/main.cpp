@@ -235,7 +235,7 @@ int main(int argv, char* argc[])
 	mRegionFinder.setQuadLogger(&mQuadLogger);
 	addSensorManagerListener(&mRegionFinder);
 	addCommManagerListener(&mRegionFinder);
-//	mRegionFinder.start();
+	mRegionFinder.start();
 
 	ObjectTracker mObjectTracker;
 	mObjectTracker.initialize();
@@ -384,14 +384,14 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommVelEstMeasCov(2*pow(5,2));
 		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005);
 
-		SystemModelLinear sys;
-		sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
-		vector<tbyte> buff1;
-		sys.serialize(buff1);
-		Collection<tbyte> buff(buff1.size());
-		for(int j=0; j<buff.size(); j++)
-			buff[j] = buff1[j];
-		commManagerListeners[i]->onNewCommSendControlSystem(buff);
+//		SystemModelLinear sys;
+//		sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
+//		vector<tbyte> buff1;
+//		sys.serialize(buff1);
+//		Collection<tbyte> buff(buff1.size());
+//		for(int j=0; j<buff.size(); j++)
+//			buff[j] = buff1[j];
+//		commManagerListeners[i]->onNewCommSendControlSystem(buff);
 
 		Collection<float> posGains(3), velGains(3);
 		posGains[0] = 1;

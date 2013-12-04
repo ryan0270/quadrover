@@ -40,8 +40,6 @@ set (SRC ${SRC}
 	${ROVER_DIR}/cpp/TrackedObject.cpp
 	${ROVER_DIR}/cpp/ObjectTracker.cpp
 	${ROVER_DIR}/cpp/QuadLogger.cpp
-#	${ROVER_DIR}/cpp/ActiveRegion.cpp
-#	${ROVER_DIR}/cpp/TargetFinder.cpp
 	${ROVER_DIR}/cpp/Rotation.cpp
 	${ROVER_DIR}/cpp/CommManager.cpp
 	${ROVER_DIR}/cpp/FeatureFinder.cpp
@@ -49,7 +47,7 @@ set (SRC ${SRC}
 	${ROVER_DIR}/cpp/VideoMaker.cpp
 	${ROVER_DIR}/cpp/Observer_Angular.cpp
 	${ROVER_DIR}/cpp/VelocityEstimator.cpp
-	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
+#	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 	${ROVER_DIR}/cpp/Observer_Translational.cpp
 	${ROVER_DIR}/cpp/QuadLogger.cpp
 	${ROVER_DIR}/cpp/TranslationController.cpp
@@ -71,11 +69,9 @@ set (H ${H}
 	${ROVER_DIR}/cpp/Observer_Translational.h
 	${ROVER_DIR}/cpp/Time.h
 	${ROVER_DIR}/cpp/CommManager.h
-#	${ROVER_DIR}/cpp/TargetFinder.h
 	${ROVER_DIR}/cpp/FeatureFinder.h
 	${ROVER_DIR}/cpp/TranslationController.h
 	${ROVER_DIR}/cpp/AttitudeThrustController.h
-#	${ROVER_DIR}/cpp/ActiveRegion.h
 	${ROVER_DIR}/cpp/MotorInterface.h
 	${ROVER_DIR}/cpp/Listeners.h
 #	${ROVER_DIR}/cpp/SensorManager.h
@@ -85,7 +81,7 @@ set (H ${H}
 	${ROVER_DIR}/cpp/TNT_Utils.h
 	${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModel.h
 	${ROVER_DIR}/cpp/ICSL/SystemModel/ISystemModelAffine.h
-	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
+#	${ROVER_DIR}/cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
 )
 
 
