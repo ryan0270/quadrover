@@ -20,9 +20,8 @@
 
 #include "Data.h"
 #include "Time.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "Observer_Angular.h"
-//#include "ActiveRegion.h"
 #include "Listeners.h"
 #include "TrackedObject.h"
 
@@ -48,7 +47,7 @@ class Observer_Translational : public Observer_AngularListener,
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	void setStartTime(Time t);
-	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setRotViconToPhone(const TNT::Array2D<double> &rot){mRotViconToPhone.inject(rot);}
 
 	void addListener(Observer_TranslationalListener *listener){mMutex_listeners.lock(); mListeners.push_back(listener); mMutex_listeners.unlock();}
@@ -95,7 +94,7 @@ class Observer_Translational : public Observer_AngularListener,
 	TNT::Array2D<double> mViconCameraOffset;
 
 	TNT::Array2D<double> mRotViconToPhone;
-	QuadLogger *mQuadLogger;
+	DataLogger *mDataLogger;
 
 	toadlet::egg::Collection<Observer_TranslationalListener*> mListeners;
 	std::mutex mMutex_listeners;

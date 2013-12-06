@@ -18,7 +18,7 @@
 #include "Data.h"
 #include "Observer_Angular.h"
 #include "Observer_Translational.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "CommManager.h"
 #include "Time.h"
 #include "TranslationController.h"
@@ -177,7 +177,7 @@ int main(int argv, char* argc[])
 	AttitudeThrustController mAttitudeThrustController;
 	Observer_Angular mObsvAngular;
 	Observer_Translational mObsvTranslational;
-	QuadLogger mQuadLogger;
+	DataLogger mDataLogger;
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
 	RegionFinder mRegionFinder;
@@ -194,13 +194,13 @@ int main(int argv, char* argc[])
 
 	mTranslationController.setRotViconToPhone(mRotViconToPhone);
 	mTranslationController.setStartTime(startTime);
-	mTranslationController.setQuadLogger(&mQuadLogger);
+	mTranslationController.setDataLogger(&mDataLogger);
 	mTranslationController.initialize();
 	mTranslationController.setObserverTranslational(&mObsvTranslational);
 	addCommManagerListener(&mTranslationController);
 
 	mAttitudeThrustController.setStartTime(startTime);
-	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
+	mAttitudeThrustController.setDataLogger(&mDataLogger);
 	mAttitudeThrustController.setMotorInterface(&mMotorInterface);
 	mAttitudeThrustController.initialize();
 	mTranslationController.addListener(&mAttitudeThrustController);
@@ -208,12 +208,12 @@ int main(int argv, char* argc[])
 
 	mObsvAngular.initialize();
 	mObsvAngular.setStartTime(startTime);
-	mObsvAngular.setQuadLogger(&mQuadLogger);
+	mObsvAngular.setDataLogger(&mDataLogger);
 	mObsvAngular.addListener(&mAttitudeThrustController);
 	mObsvAngular.start();
 	addCommManagerListener(&mObsvAngular);
 
-	mObsvTranslational.setQuadLogger(&mQuadLogger);
+	mObsvTranslational.setDataLogger(&mDataLogger);
 	mObsvTranslational.setStartTime(startTime);
 	mObsvTranslational.setRotViconToPhone(mRotViconToPhone);
 	mObsvTranslational.setObserverAngular(&mObsvAngular);
@@ -225,14 +225,14 @@ int main(int argv, char* argc[])
 
 	mFeatureFinder.initialize();
 	mFeatureFinder.setStartTime(startTime);
-	mFeatureFinder.setQuadLogger(&mQuadLogger);
+	mFeatureFinder.setDataLogger(&mDataLogger);
 	addSensorManagerListener(&mFeatureFinder);
 	addCommManagerListener(&mFeatureFinder);
 	mFeatureFinder.start();
 
 	mRegionFinder.initialize();
 	mRegionFinder.setStartTime(startTime);
-	mRegionFinder.setQuadLogger(&mQuadLogger);
+	mRegionFinder.setDataLogger(&mDataLogger);
 	addSensorManagerListener(&mRegionFinder);
 	addCommManagerListener(&mRegionFinder);
 	mRegionFinder.start();
@@ -240,7 +240,7 @@ int main(int argv, char* argc[])
 	ObjectTracker mObjectTracker;
 	mObjectTracker.initialize();
 	mObjectTracker.setStartTime(startTime);
-	mObjectTracker.setQuadLogger(&mQuadLogger);
+	mObjectTracker.setDataLogger(&mDataLogger);
 	mObjectTracker.setObserverTranslation(&mObsvTranslational);
 	mObjectTracker.setObserverAngular(&mObsvAngular);
 	mObjectTracker.addListener(&mObsvTranslational);
@@ -251,7 +251,7 @@ int main(int argv, char* argc[])
 
 	mVelocityEstimator.initialize();
 	mVelocityEstimator.setStartTime(startTime);
-	mVelocityEstimator.setQuadLogger(&mQuadLogger);
+	mVelocityEstimator.setDataLogger(&mDataLogger);
 	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
 	mVelocityEstimator.addListener(&mObsvTranslational);
@@ -281,7 +281,7 @@ int main(int argv, char* argc[])
 //	logMask |= LOG_FLAG_CAM_IMAGES;
 //	logMask |= LOG_FLAG_PHONE_TEMP;
 //	logMask |= LOG_FLAG_SONAR;
-	mQuadLogger.setStartTime(startTime);
+	mDataLogger.setStartTime(startTime);
 	
 	////////////////////////////////////////////////////////////////////////////////////
 	// Add some vision event listeners so I can display the images
@@ -298,7 +298,7 @@ int main(int argv, char* argc[])
 		public:
 		void onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 		{
-			imshow("dispFeatureFind",*(data->imageAnnotated->imageAnnotated));
+			imshow("dispFeatureFind",*(data->imageAnnotatedData->imageAnnotated));
 			cv::waitKey(1);
 		}
 	} myFeatureFinderListener;
@@ -309,7 +309,7 @@ int main(int argv, char* argc[])
 		public:
 		void onRegionsFound(const shared_ptr<ImageRegionData> &data)
 		{
-			imshow("dispRegionFind",*(data->imageAnnotated->imageAnnotated));
+			imshow("dispRegionFind",*(data->imageAnnotatedData->imageAnnotated));
 //			cv::waitKey(1);
 		}
 	} myRegionFinderListener;
@@ -384,15 +384,6 @@ int main(int argv, char* argc[])
 		commManagerListeners[i]->onNewCommVelEstMeasCov(2*pow(5,2));
 		commManagerListeners[i]->onNewCommVelEstProbNoCorr(0.0005);
 
-//		SystemModelLinear sys;
-//		sys.loadFromFile(dataDir+"/tranCntlSys9.xml");
-//		vector<tbyte> buff1;
-//		sys.serialize(buff1);
-//		Collection<tbyte> buff(buff1.size());
-//		for(int j=0; j<buff.size(); j++)
-//			buff[j] = buff1[j];
-//		commManagerListeners[i]->onNewCommSendControlSystem(buff);
-
 		Collection<float> posGains(3), velGains(3);
 		posGains[0] = 1;
 		posGains[1] = 1;
@@ -421,9 +412,9 @@ int main(int argv, char* argc[])
 
 	}
 
-	mQuadLogger.setMask(logMask);
-	mQuadLogger.setDir(dataDir.c_str());
-	mQuadLogger.setFilename("obsvLog.txt");
+	mDataLogger.setMask(logMask);
+	mDataLogger.setDir(dataDir.c_str());
+	mDataLogger.setFilename("obsvLog.txt");
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// load data and manually feed them to the appropriate listener ... hopefully
@@ -511,9 +502,9 @@ int main(int argv, char* argc[])
 //				mTargetFinder.setStartTime(startTime);
 				mObjectTracker.setStartTime(startTime);
 				mVelocityEstimator.setStartTime(startTime);
-				mQuadLogger.setStartTime(startTime);
+				mDataLogger.setStartTime(startTime);
 
-				mQuadLogger.start();
+				mDataLogger.start();
 				mObsvTranslational.start();
 				mAttitudeThrustController.start();
 				mTranslationController.start();
@@ -710,7 +701,7 @@ int main(int argv, char* argc[])
 
 	}
 
-	mQuadLogger.shutdown();
+	mDataLogger.shutdown();
 	mTranslationController.shutdown();
 	mAttitudeThrustController.shutdown();
 //	mCommManager.shutdown();

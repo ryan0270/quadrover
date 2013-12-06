@@ -72,16 +72,16 @@ void VideoMaker::run()
 void VideoMaker::onNewSensorUpdate(const shared_ptr<IData> &data)
 {
 	if(data->type == DATA_TYPE_IMAGE
-//			&& mMotorOn
+			&& mMotorOn
 			)
 	{
-		shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);
-		mMutex_imageQueue.lock();
-		if(mImageQueue.size() < 100)
-			mImageQueue.push(imgData);
-		else
-			Log::alert("Chad can't get it up");
-		mMutex_imageQueue.unlock();
+//		shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);
+//		mMutex_imageQueue.lock();
+//		if(mImageQueue.size() < 100)
+//			mImageQueue.push(imgData);
+//		else
+//			Log::alert("Chad can't get it up");
+//		mMutex_imageQueue.unlock();
 	}
 }
 

@@ -187,17 +187,17 @@ class DataPhoneTemp : public IData
 	T battTemp, secTemp, fgTemp;//, tmuTemp;
 };
 
-class ImageMatchData : public IData
-{
-	public:
-	ImageMatchData() : IData(){type = DATA_TYPE_IMAGE_MATCH;}
-	vector<vector<cv::Point2f>> featurePoints;
-	shared_ptr<DataImage> imageData0, imageData1;
-	shared_ptr<DataAnnotatedImage> imageAnnotated;
-
-	void lock(){mMutex.lock(); if(imageData0 != NULL) imageData0->lock(); if(imageData1 != NULL) imageData1->lock();}
-	void unlock(){mMutex.unlock(); if(imageData0 != NULL) imageData0->unlock(); if(imageData1 != NULL) imageData1->unlock();}
-};
+//class ImageMatchData : public IData
+//{
+//	public:
+//	ImageMatchData() : IData(){type = DATA_TYPE_IMAGE_MATCH;}
+//	vector<vector<cv::Point2f>> featurePoints;
+//	shared_ptr<DataImage> imageData0, imageData1;
+//	shared_ptr<DataAnnotatedImage> imageAnnotated;
+//
+//	void lock(){mMutex.lock(); if(imageData0 != NULL) imageData0->lock(); if(imageData1 != NULL) imageData1->lock();}
+//	void unlock(){mMutex.unlock(); if(imageData0 != NULL) imageData0->unlock(); if(imageData1 != NULL) imageData1->unlock();}
+//};
 
 class ImageFeatureData : public IData
 {
@@ -205,10 +205,10 @@ class ImageFeatureData : public IData
 	ImageFeatureData() : IData() {type = DATA_TYPE_IMAGE_FEATURES;}
 	vector<cv::Point2f> featurePoints;
 	shared_ptr<DataImage> imageData;
-	shared_ptr<DataAnnotatedImage> imageAnnotated;
+	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
 
-	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotated != NULL) imageAnnotated->lock();}
-	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotated != NULL) imageAnnotated->unlock();}
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 };
 
 class ImageRegionData : public IData
@@ -219,10 +219,10 @@ class ImageRegionData : public IData
 	vector<cv::Point2f> regionCentroids;
 	vector<cv::Moments> regionMoments;
 	shared_ptr<DataImage> imageData;
-	shared_ptr<DataAnnotatedImage> imageAnnotated;
+	shared_ptr<DataAnnotatedImage> imageAnnotatedData;
 
-	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotated != NULL) imageAnnotated->lock();}
-	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotated != NULL) imageAnnotated->unlock();}
+	void lock(){mMutex.lock(); if(imageData != NULL) imageData->lock(); if(imageAnnotatedData != NULL) imageAnnotatedData->lock();}
+	void unlock(){mMutex.unlock(); if(imageData != NULL) imageData->unlock(); if(imageAnnotatedData != NULL) imageAnnotatedData->unlock();}
 };
 
 class ObjectTrackerData : public IData
@@ -278,16 +278,16 @@ TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVect
 	if(d.size() == 0)
 		return TNT::Array2D<T>();
 
-	TNT::Array2D<T> interpRaw, interpCalibrated;
+	TNT::Array2D<T> /*interpRaw,*/ interpCalibrated;
 
 	if(t <= d.front()->timestamp)
 	{
-		interpRaw = d.front()->dataRaw.copy();
+//		interpRaw = d.front()->dataRaw.copy();
 		interpCalibrated = d.front()->dataCalibrated.copy();
 	}
 	else if(t >= d.back()->timestamp)
 	{
-		interpRaw = d.back()->dataRaw.copy();
+//		interpRaw = d.back()->dataRaw.copy();
 		interpCalibrated = d.back()->dataCalibrated.copy();
 	}
 	else
@@ -306,18 +306,18 @@ TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVect
 			double b = Time::calcDiffNS(t, d2->timestamp);
 			if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
 			{
-				interpRaw = d2->dataRaw;
+//				interpRaw = d2->dataRaw;
 				interpCalibrated = d2->dataCalibrated;
 			}
 			else
 			{
-				interpRaw = b/(a+b)*d1->dataRaw + a/(a+b)*d2->dataRaw;
+//				interpRaw = b/(a+b)*d1->dataRaw + a/(a+b)*d2->dataRaw;
 				interpCalibrated = b/(a+b)*d1->dataCalibrated + a/(a+b)*d2->dataCalibrated;
 			}
 		}
 		else
 		{
-			interpRaw = d1->dataRaw.copy();
+//			interpRaw = d1->dataRaw.copy();
 			interpCalibrated = d1->dataCalibrated.copy();
 		}
 	}
@@ -328,7 +328,7 @@ TNT::Array2D<T> IData::interpolate(const Time &t, const list<shared_ptr<DataVect
 template <class T1, class T2>
 TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, const DataVector<T2> &d2)
 {
-	TNT::Array2D<double> interpRaw, interpCalibrated;
+	TNT::Array2D<double> /*interpRaw,*/ interpCalibrated;
 
 	const DataVector<T1> *d1p, *d2p;
 	if(d1.timestamp < d2.timestamp)
@@ -344,12 +344,12 @@ TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, con
 
 	if(t < d1p->timestamp)
 	{
-		interpRaw = d1p->dataRaw.copy();
+//		interpRaw = d1p->dataRaw.copy();
 		interpCalibrated = d1p->dataCalibrated.copy();
 	}
 	else if(t > d2p->timestamp)
 	{
-		interpRaw = d2p->dataRaw.copy();
+//		interpRaw = d2p->dataRaw.copy();
 		interpCalibrated = d2p->dataCalibrated.copy();
 	}
 	else
@@ -358,12 +358,12 @@ TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, con
 		double b = Time::calcDiffNS(t, d2p->timestamp);
 		if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
 		{
-			interpRaw = d2->dataRaw;
+//			interpRaw = d2->dataRaw;
 			interpCalibrated = d2->dataCalibrated;
 		}
 		else
 		{
-			interpRaw= b/(a+b)*d1p->dataRaw+a/(a+b)*d2p->dataRaw;
+//			interpRaw= b/(a+b)*d1p->dataRaw+a/(a+b)*d2p->dataRaw;
 			interpCalibrated= b/(a+b)*d1p->dataCalibrated+a/(a+b)*d2p->dataCalibrated;
 		}
 	}
@@ -374,7 +374,7 @@ TNT::Array2D<T1> IData::interpolate(const Time &t, const DataVector<T1> &d1, con
 template <class T1, class T2>
 T1 IData::interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2)
 {
-	T1 interpRaw, interpCalibrated;
+	T1 /*interpRaw,*/ interpCalibrated;
 
 	const Data<T1> *d1p;
 	const Data<T2> *d2p;
@@ -391,12 +391,12 @@ T1 IData::interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2)
 
 	if(t < d1p->timestamp)
 	{
-		interpRaw = d1p->dataRaw;
+//		interpRaw = d1p->dataRaw;
 		interpCalibrated = d1p->dataCalibrated;
 	}
 	else if(t > d2p->timestamp)
 	{
-		interpRaw = d2p->dataRaw;
+//		interpRaw = d2p->dataRaw;
 		interpCalibrated = d2p->dataCalibrated;
 	}
 	else
@@ -405,12 +405,12 @@ T1 IData::interpolate(const Time &t, const Data<T1> &d1, const Data<T2> &d2)
 		double b = Time::calcDiffNS(t, d2p->timestamp);
 		if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
 		{
-			interpRaw = d2->dataRaw;
+//			interpRaw = d2->dataRaw;
 			interpCalibrated = d2->dataCalibrated;
 		}
 		else
 		{
-			interpRaw= b/(a+b)*d1p->dataRaw+a/(a+b)*d2p->dataRaw;
+//			interpRaw= b/(a+b)*d1p->dataRaw+a/(a+b)*d2p->dataRaw;
 			interpCalibrated= b/(a+b)*d1p->dataCalibrated+a/(a+b)*d2p->dataCalibrated;
 		}
 	}
@@ -424,16 +424,16 @@ T IData::interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d)
 	if(d.size() == 0)
 		return 0;
 
-	T interpRaw, interpCalibrated;
+	T /*interpRaw,*/ interpCalibrated;
 
 	if(t < d.front()->timestamp)
 	{
-		interpRaw = d.front()->dataRaw;
+//		interpRaw = d.front()->dataRaw;
 		interpCalibrated = d.front()->dataCalibrated;
 	}
 	else if(t > d.back()->timestamp)
 	{
-		interpRaw = d.back()->dataRaw;
+//		interpRaw = d.back()->dataRaw;
 		interpCalibrated = d.back()->dataCalibrated;
 	}
 	else
@@ -452,18 +452,18 @@ T IData::interpolate(const Time &t, const std::list<shared_ptr<Data<T>>> &d)
 			double b = Time::calcDiffNS(t, d2->timestamp);
 			if(a+b == 0) // shouldn't happen in reality, but it possibly could happen here
 			{
-				interpRaw = d2->dataRaw;
+//				interpRaw = d2->dataRaw;
 				interpCalibrated = d2->dataCalibrated;
 			}
 			else
 			{
-				interpRaw= b/(a+b)*d1->dataRaw+a/(a+b)*d2->dataRaw;
+//				interpRaw= b/(a+b)*d1->dataRaw+a/(a+b)*d2->dataRaw;
 				interpCalibrated= b/(a+b)*d1->dataCalibrated+a/(a+b)*d2->dataCalibrated;
 			}
 		}
 		else
 		{
-			interpRaw = d1->dataRaw;
+//			interpRaw = d1->dataRaw;
 			interpCalibrated = d1->dataCalibrated;
 		}
 	}

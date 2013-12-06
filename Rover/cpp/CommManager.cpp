@@ -39,11 +39,11 @@ void CommManager::initialize()
 	mSocketTCP = Socket::ptr(mServerSocketTCP->accept());
 	if(mSocketTCP != NULL)
 	{
-		Log::alert(String("Connected to PC"));
+		Log::alert("Connected to PC");
 		mLastCmdRcvTime.setTime();
 	}
 	else
-		Log::alert(String("Not connected to PC"));
+		Log::alert("Not connected to PC");
 	mSocketUDP = Socket::ptr(Socket::createUDPSocket());
 	mSocketUDP->bind(13120);
 //	mSocketUDP->listen(1);
@@ -116,7 +116,7 @@ void CommManager::run()
 			mSocketTCP = Socket::ptr(mServerSocketTCP->accept());
 			if(mSocketTCP != NULL)
 			{
-				Log::alert(String("Connected to PC"));
+				Log::alert("Connected to PC");
 				mAddrPC = mSocketTCP->getHostIPAddress();
 //				mPortPC = mSocketTCP->getHostPort();
 mPortPC = 13120;
@@ -192,7 +192,7 @@ void CommManager::pollUDP()
 			}
 			else
 			{
-				Log::alert(String("Ignoring old packet"));
+				Log::alert("Ignoring old packet");
 				continue;
 			}
 
@@ -721,7 +721,7 @@ int CommManager::receiveTCP(tbyte* data, int size)
 	int received= mSocketTCP->receive(data, size);
 	while(received > 0 && received < size)
 	{
-		Log::alert(String("Saving teh world"));
+		Log::alert("Saving teh world");
 		received += mSocketTCP->receive(data+received, size-received);
 	}
 	if(received != size)
@@ -756,7 +756,7 @@ bool CommManager::sendLogFile(const char* filename)
 	if(mSocketTCP==NULL)
 		return false;
 
-	Log::alert(String("Sending log file"));
+	Log::alert("Sending log file");
 	mMutex_socketTCP.lock();
 	FileStream logFile(filename, FileStream::Open_BIT_READ);
 	int buffSize = 1<<10;

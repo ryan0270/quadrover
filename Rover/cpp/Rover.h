@@ -20,7 +20,7 @@
 #include "Data.h"
 #include "Observer_Angular.h"
 #include "Observer_Translational.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "CommManager.h"
 #include "Time.h"
 #include "TranslationController.h"
@@ -29,6 +29,7 @@
 #include "VideoMaker.h"
 #include "MotorInterface.h"
 #include "FeatureFinder.h"
+#include "RegionFinder.h"
 #include "ObjectTracker.h"
 #include "VelocityEstimator.h"
 #include "Listeners.h"
@@ -39,6 +40,7 @@ class Rover: public Observer_AngularListener,
 				 public CommManagerListener,
 				 public SensorManagerListener,
 				 public FeatureFinderListener,
+				 public RegionFinderListener,
 				 public ObjectTrackerListener
 {
 public:
@@ -84,6 +86,9 @@ public:
 	// for FeatureFinderListener
 	void onFeaturesFound(shared_ptr<ImageFeatureData> const &data);
 
+	// for RegionFinderListener
+	void onRegionsFound(shared_ptr<ImageRegionData> const &data);
+
 	// for ObjectTrackerListener
 	void onObjectsTracked(const shared_ptr<ObjectTrackerData> &data);
 protected:
@@ -107,10 +112,11 @@ protected:
 	void transmitDataUDP();
 	void transmitImage();
 
-	QuadLogger mQuadLogger;
+	DataLogger mDataLogger;
 
 	VelocityEstimator mVelocityEstimator;
 	FeatureFinder mFeatureFinder;
+	RegionFinder mRegionFinder;
 	ObjectTracker mObjectTracker;
 
 	SensorManager mSensorManager;
@@ -125,6 +131,7 @@ protected:
 
 	shared_ptr<DataImage> mImageData;
 	shared_ptr<ImageFeatureData> mFeatureData;
+	shared_ptr<ImageRegionData> mRegionData;
 	shared_ptr<ObjectTrackerData> mObjectData;
 
 	VideoMaker mVideoMaker;

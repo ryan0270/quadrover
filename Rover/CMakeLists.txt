@@ -27,8 +27,8 @@ set (INC ${INC}
 	${Rover_SOURCE_DIR}/cpp
 	${TOADLET_INCLUDE_DIR}
 	${OpenCV_INCLUDE_DIRS}
-	${MXML_DIR}/include
-	${TBB_DIR}/include # note that the TBB lib comes in with OpenCV libs
+#	${MXML_DIR}/include
+#	${TBB_DIR}/include # note that the TBB lib comes in with OpenCV libs
 	${CPUFEATURES_PATH}
 	)
 include_directories (${INC})
@@ -47,8 +47,8 @@ endforeach()
 set (LIBS 
 	${TOADLET_EGG_LIB} 
 	${OpenCV_LIBS_OPT} 
-	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
-	${TBB_DIR}/libs/${NDK_NAME_ARCH}/libtbb.a
+#	${MXML_DIR}/lib/${NDK_NAME_ARCH}/libmxml.a
+#	${TBB_DIR}/libs/${NDK_NAME_ARCH}/libtbb.a
 	-lgnustl_static # this is already included by the toadlet toolchain, but the link order causes problems for OpenCV so adding it again here seems to help
 	-lz -llog -ldl EGL android
 )
@@ -58,11 +58,12 @@ set (SRC ${SRC}
 	./cpp/Rotation.cpp
 	./cpp/SensorManager.cpp
 	./cpp/Observer_Translational.cpp
-	./cpp/QuadLogger.cpp
+	./cpp/DataLogger.cpp
 	./cpp/CommManager.cpp
 	./cpp/TrackedObject.cpp
 	./cpp/ObjectTracker.cpp
 	./cpp/FeatureFinder.cpp
+	./cpp/RegionFinder.cpp
 	./cpp/TranslationController.cpp
 	./cpp/AttitudeThrustController.cpp
 	./cpp/MotorInterface.cpp
@@ -70,7 +71,7 @@ set (SRC ${SRC}
 	./cpp/Observer_Angular.cpp
 	./cpp/VelocityEstimator.cpp
 	${CPUFEATURES_PATH}/cpu-features.c
-	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
+#	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.cpp
 	./cpp/Rover.cpp
 	jni/jni_part.cpp
 )
@@ -83,12 +84,13 @@ set (H ${H}
 	./cpp/Rover.h
 	./cpp/Observer_Angular.h
 	./cpp/Observer_Translational.h
-	./cpp/QuadLogger.h
+	./cpp/DataLogger.h
 	./cpp/Time.h
 	./cpp/CommManager.h
 	./cpp/TrackedObject.h
 	./cpp/ObjectTracker.h
 	./cpp/FeatureFinder.h
+	./cpp/RegionFinder.h
 	./cpp/TranslationController.h
 	./cpp/AttitudeThrustController.h
 	./cpp/MotorInterface.h
@@ -98,13 +100,14 @@ set (H ${H}
 	./cpp/Data.h
 	./cpp/VelocityEstimator.h
 	${CPUFEATURES_PATH}/cpu-features.h
-	./cpp/ICSL/SystemModel/ISystemModel.h
-	./cpp/ICSL/SystemModel/ISystemModelAffine.h
-	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
+#	./cpp/ICSL/SystemModel/ISystemModel.h
+#	./cpp/ICSL/SystemModel/ISystemModelAffine.h
+#	./cpp/ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h
 )
 
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -std=c++0x")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti  -std=c++11")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
 set (OpenCV_LIB_DIR_OPT "${OpenCV_LIB_DIR_OPT}/${NDK_NAME_ARCH}")
 

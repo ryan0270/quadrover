@@ -290,10 +290,10 @@ void SensorManager::run()
 			}
 			data->timestamp.setTimeNS(eventTimeNS);
 
-			if(mQuadLogger != NULL && logFlag != -1 && data != NULL)
+			if(mDataLogger != NULL && logFlag != -1 && data != NULL)
 			{
 				mMutex_logger.lock();
-				mQuadLogger->addEntry(logID,event,data->timestamp,logFlag);
+				mDataLogger->addEntry(logID,event,data->timestamp,logFlag);
 				mMutex_logger.unlock();
 			}
 
@@ -336,21 +336,21 @@ void SensorManager::runTemperatureMonitor()
 			mListeners[i]->onNewSensorUpdate(data);
 		mMutex_listeners.unlock();
 
-		if(mQuadLogger != NULL)
+		if(mDataLogger != NULL)
 		{
 //			String s = String();
 //			s = s+battTemp+"\t";
 //			s = s+secTemp+"\t";
 //			s = s+fgTemp+"\t";
 //			mMutex_logger.lock();
-//			mQuadLogger->addEntry(LOG_ID_PHONE_TEMP,s,LOG_FLAG_PHONE_TEMP);
+//			mDataLogger->addEntry(LOG_ID_PHONE_TEMP,s,LOG_FLAG_PHONE_TEMP);
 //			mMutex_logger.unlock();
 			Collection<double> data(3);
 			data[0] = battTemp;
 			data[1] = secTemp;
 			data[2] = fgTemp;
 			mMutex_logger.lock();
-			mQuadLogger->addEntry(LOG_ID_PHONE_TEMP,data,LOG_FLAG_PHONE_TEMP);
+			mDataLogger->addEntry(LOG_ID_PHONE_TEMP,data,LOG_FLAG_PHONE_TEMP);
 			mMutex_logger.unlock();
 		}
 
@@ -404,7 +404,9 @@ int SensorManager::getBatteryTemp()
 		ss >> temp;
 	}
 	else
+	{
 		Log::alert("Failed to open "+String(filename.c_str()));
+	}
 
 	return temp;
 }
@@ -425,7 +427,9 @@ int SensorManager::getSecTemp()
 		ss >> temp;
 	}
 	else
+	{
 		Log::alert("Failed to open "+String(filename.c_str()));
+	}
 
 	return temp;
 }
@@ -445,7 +449,9 @@ int SensorManager::getFuelgaugeTemp()
 		ss >> temp;
 	}
 	else
-		(("Failed to open "+filename).c_str());
+	{
+		Log::alert(String(("Failed to open "+filename).c_str()));
+	}
 
 	return temp;
 }
@@ -456,10 +462,10 @@ void SensorManager::passNewImage(const cv::Mat *imageYUV, uint64_t timestampNS)
 	data->type = DATA_TYPE_IMAGE;
 	data->timestamp.setTimeNS(timestampNS);
 
-	if(mQuadLogger != NULL)
+	if(mDataLogger != NULL)
 	{
 		mMutex_logger.lock();
-		mQuadLogger->addEntry(LOG_ID_IMAGE, data, LOG_FLAG_CAM_RESULTS);
+		mDataLogger->addEntry(LOG_ID_IMAGE, data, LOG_FLAG_CAM_RESULTS);
 		mMutex_logger.unlock();
 	}
 
@@ -524,7 +530,7 @@ void SensorManager::onNewSonarReading(int heightMM, uint64_t timestampNS)
 	mMutex_listeners.unlock();
 
 	mMutex_logger.lock();
-	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, data->heightRaw, data->timestamp, LOG_FLAG_SONAR);
+	mDataLogger->addEntry(LOG_ID_SONAR_HEIGHT, data->heightRaw, data->timestamp, LOG_FLAG_SONAR);
 	mMutex_logger.unlock();
 }
 
@@ -536,7 +542,7 @@ void SensorManager::onNewSonar(const shared_ptr<HeightData<double>> &data)
 	mMutex_listeners.unlock();
 
 	mMutex_logger.lock();
-	mQuadLogger->addEntry(LOG_ID_SONAR_HEIGHT, data->heightRaw, data->timestamp, LOG_FLAG_SONAR);
+	mDataLogger->addEntry(LOG_ID_SONAR_HEIGHT, data->heightRaw, data->timestamp, LOG_FLAG_SONAR);
 	mMutex_logger.unlock();
 }
 

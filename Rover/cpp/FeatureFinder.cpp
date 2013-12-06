@@ -81,7 +81,7 @@ void FeatureFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-			&& mIsMotorOn
+//			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -132,18 +132,18 @@ void FeatureFinder::run()
 			shared_ptr<ImageFeatureData> data(new ImageFeatureData());
 			data->featurePoints.swap(points);
 			data->imageData = imageData;
-			data->imageAnnotated = imageAnnotatedData;
+			data->imageAnnotatedData = imageAnnotatedData;
 			data->timestamp.setTime(imageData->timestamp);
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onFeaturesFound(data);
 
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
-			if(mQuadLogger != NULL)
+			if(mDataLogger != NULL)
 			{
 				mMutex_logger.lock();
-				mQuadLogger->addEntry(LOG_ID_FEATURE_FIND_TIME, mImageProcTimeUS/1.0e6, LOG_FLAG_CAM_RESULTS);
-				mQuadLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS, points.size(), LOG_FLAG_CAM_RESULTS);
-				mQuadLogger->addEntry(LOG_ID_FAST_THRESHOLD, fastThresh, LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_FEATURE_FIND_TIME, mImageProcTimeUS/1.0e6, LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS, points.size(), LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_FAST_THRESHOLD, fastThresh, LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 			}
 		}
@@ -166,12 +166,12 @@ vector<cv::Point2f> FeatureFinder::findFeaturePoints(const cv::Mat &image,
 
 	vector<cv::KeyPoint> tempKp1;
 	cv::Ptr<cv::FastFeatureDetector> fastDetector(new cv::FastFeatureDetector(fastThreshold));
-//	int maxKp = 1000;
-//	int gridRows = 3;
-//	int gridCols = 3;
-//	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
-//	detector.detect(pyrImage, tempKp1);
-	FAST(pyrImage, tempKp1, fastThreshold, true);
+	int maxKp = 1000;
+	int gridRows = 3;
+	int gridCols = 3;
+	cv::GridAdaptedFeatureDetector detector(fastDetector, maxKp, gridRows, gridCols);
+	detector.detect(pyrImage, tempKp1);
+//	FAST(pyrImage, tempKp1, fastThreshold, true);
 	int blockSize = 5;
 	eigenValResponses(pyrImage, tempKp1, blockSize);
 

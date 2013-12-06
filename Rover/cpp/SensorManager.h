@@ -18,7 +18,7 @@
 
 #include "constants.h"
 #include "Common.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "Time.h"
 #include "Observer_Angular.h"
 #include "Listeners.h"
@@ -47,7 +47,7 @@ class SensorManager : public CommManagerListener,
 	void shutdown();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
-	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime.setTime(time); /*mTimestampOffsetNS = 0;*/ mMutex_startTime.unlock();}
 
 	void addListener(SensorManagerListener *l){mMutex_listeners.lock(); mListeners.push_back(l); mMutex_listeners.unlock();}
@@ -79,7 +79,7 @@ class SensorManager : public CommManagerListener,
 	void runTemperatureMonitor();
 	void runHeightMonitor();
 
-	QuadLogger *mQuadLogger;
+	DataLogger *mDataLogger;
 
 	TNT::Array2D<double> mLastAccel, mLastGyro, mLastMag;
 	double mLastPressure;

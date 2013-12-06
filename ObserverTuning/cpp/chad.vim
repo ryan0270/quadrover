@@ -68,23 +68,19 @@ badd +1 ~/Software/QuadRover/Rover/cpp/VelocityEstimator.h
 badd +1 ~/Software/QuadRover/Rover/cpp/VelocityEstimator.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/Common.h
 badd +1 ~/Software/QuadRover/Rover/cpp/Data.h
-badd +1 ~/Software/QuadRover/Rover/cpp/QuadLogger.h
-badd +1 ~/Software/QuadRover/Rover/cpp/QuadLogger.cpp
+badd +1 ~/Software/QuadRover/Rover/cpp/DataLogger.h
+badd +1 ~/Software/QuadRover/Rover/cpp/DataLogger.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.h
 badd +1 ~/Software/QuadRover/Rover/cpp/VideoMaker.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/Time.h
 badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.h
 badd +1 ~/Software/QuadRover/Rover/cpp/Rotation.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.h
-badd +1 ~/Software/QuadRover/Rover/cpp/ActiveRegion.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/Listeners.h
 badd +1 ~/Software/QuadRover/Rover/cpp/TNT_Utils.h
 badd +1 ~/Software/QuadRover/Rover/cpp/TrackedObject.h
 badd +1 ~/Software/QuadRover/Rover/cpp/TrackedObject.cpp
 badd +1 ~/Software/QuadRover/Rover/cpp/ObjectTracker.h
 badd +1 ~/Software/QuadRover/Rover/cpp/ObjectTracker.cpp
-badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder.h
-badd +1 ~/Software/QuadRover/Rover/cpp/TargetFinder.cpp
 args main.cpp main.cpp
 edit main.cpp
 set splitbelow splitright

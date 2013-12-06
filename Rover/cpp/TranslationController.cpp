@@ -31,7 +31,7 @@ using namespace toadlet::egg;
 		mRotViconToPhone.inject(createIdentity((double)3));
 		mLastControlTime.setTimeMS(0);
 
-		mQuadLogger = NULL;
+		mDataLogger = NULL;
 		
 		mMass = 0.850;
 
@@ -133,8 +133,8 @@ using namespace toadlet::egg;
 			mListeners[i]->onTranslationControllerAccelCmdUpdated(accelCmd);
 	
 		// Logging
-		if(mQuadLogger != NULL)
-			mQuadLogger->addEntry(LOG_ID_ACCEL_CMD, accelCmd, LOG_FLAG_STATE_DES);
+		if(mDataLogger != NULL)
+			mDataLogger->addEntry(LOG_ID_ACCEL_CMD, accelCmd, LOG_FLAG_STATE_DES);
 	}
 
 	Array2D<double> TranslationController::calcControlPID(const Array2D<double> &error,double dt)
@@ -200,11 +200,20 @@ using namespace toadlet::egg;
 		else
 		{
 			Array2D<double> imgState = mObsvTranslational->estimateStateAtTime(xlateData->timestamp);
-			z = imgState[2][0];
-			vel[0][0] = imgState[3][0];
-			vel[1][0] = imgState[4][0];
-			vel[2][0] = imgState[5][0];
-			vel.inject(mRotPhoneToCam*vel);
+			if(imgState.dim1() >= 3)
+			{
+				z = imgState[2][0];
+				vel[0][0] = imgState[3][0];
+				vel[1][0] = imgState[4][0];
+				vel[2][0] = imgState[5][0];
+				vel.inject(mRotPhoneToCam*vel);
+			}
+			else
+			{
+				Log::alert("Failed to get state data");
+				vel[0][0] = vel[1][0] = vel[2][0] = 0;
+				z = 1;
+			}
 		}
 		Array2D<double> Lv(2,3), delta(2,1);
 		for(int i=0; i<points.size(); i++)
@@ -266,7 +275,7 @@ using namespace toadlet::egg;
 		// use real height for z vel
 //		desVel[2][0] = -mIbvsPosGains[2][0]*(curState[2][0]-desState[2][0]);
 
-		mQuadLogger->addEntry(LOG_ID_VEL_CMD, desVel, LOG_FLAG_STATE_DES);
+		mDataLogger->addEntry(LOG_ID_VEL_CMD, desVel, LOG_FLAG_STATE_DES);
 
 		Array2D<double> velErr(3,1);
 		velErr[0][0] = curState[3][0]-(desState[3][0]+desVel[0][0]);

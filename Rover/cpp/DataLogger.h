@@ -11,8 +11,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "mxml.h"
-
 #include <cmath>
 
 #include "TNT/tnt.h"
@@ -102,11 +100,11 @@ class LogEntry
 	LogID id;
 };
 
-class QuadLogger
+class DataLogger
 {
 	public:
-		explicit QuadLogger();
-		virtual ~QuadLogger();
+		explicit DataLogger();
+		virtual ~DataLogger();
 
 		toadlet::egg::String getDir(){return mDir;}
 		toadlet::egg::String getFilename(){return mFilename;}
@@ -140,7 +138,7 @@ class QuadLogger
 		void resume(){mPaused = false;}
 
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
-		void start(){ thread th(&QuadLogger::run, this); th.detach(); }
+		void start(){ thread th(&DataLogger::run, this); th.detach(); }
 		void run();
 		void shutdown();
 		void clearLog(){shutdown(); start();}
@@ -151,7 +149,7 @@ class QuadLogger
 		toadlet::egg::String mDir, mFilename;
 		uint32_t mTypeMask;
 		toadlet::egg::FileStream::ptr mLogStream;
-		std::mutex mMutex_file, mMutex_logQueue, mMutex_addLine;
+		std::mutex mMutex_file, mMutex_logQueue, mMutex_addLine, mMutex_typeMask;
 		Time mStartTime;
 
 		bool mPaused;

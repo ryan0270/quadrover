@@ -25,7 +25,7 @@ Observer_Angular::Observer_Angular() :
 	mAccelWeight = 5;
 	mMagWeight = 1;
 
-	mQuadLogger = NULL;
+	mDataLogger = NULL;
 
 	mBurnCount = 0;
 
@@ -284,8 +284,8 @@ void Observer_Angular::doInnovationUpdate(double dt,
 	mGyroBias[1][0] += dt*mGainI*mInnovation[1][0];
 	mGyroBias[2][0] += dt*mGainI*mInnovation[2][0];
 
-	mQuadLogger->addEntry(LOG_ID_GYRO_BIAS, mGyroBias, LOG_FLAG_OBSV_BIAS);
-	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_INNOVATION, mInnovation, LOG_FLAG_OBSV_BIAS);
+	mDataLogger->addEntry(LOG_ID_GYRO_BIAS, mGyroBias, LOG_FLAG_OBSV_BIAS);
+	mDataLogger->addEntry(LOG_ID_OBSV_ANG_INNOVATION, mInnovation, LOG_FLAG_OBSV_BIAS);
 	mMutex_data.unlock();
 }
 
@@ -326,7 +326,7 @@ void Observer_Angular::doGyroUpdate(double dt, const shared_ptr<DataVector<doubl
 	for(int i=0; i<mListeners.size(); i++)
 		mListeners[i]->onObserver_AngularUpdated(rotData, velData);
 
-	mQuadLogger->addEntry(LOG_ID_CUR_ATT, rotData, velData, LOG_FLAG_STATE);
+	mDataLogger->addEntry(LOG_ID_CUR_ATT, rotData, velData, LOG_FLAG_STATE);
 }
 
 SO3 Observer_Angular::estimateAttAtTime(const Time &t)
@@ -438,7 +438,7 @@ void Observer_Angular::setYawZero()
 	temp = mMagDirNom.copy();
 	mMutex_data.unlock();
 
-	mQuadLogger->addEntry(LOG_ID_SET_YAW_ZERO, temp, LOG_FLAG_PC_UPDATES);
+	mDataLogger->addEntry(LOG_ID_SET_YAW_ZERO, temp, LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewSensorUpdate(const shared_ptr<IData> &data)
@@ -737,14 +737,14 @@ void Observer_Angular::onObjectsTracked(const shared_ptr<ObjectTrackerData> &dat
 //		mNominalDirCreateTime[newPairs[i]] = data->imageData->timestamp;
 //	}
 //
-//	mQuadLogger->addEntry(LOG_ID_VISION_INNOVATION, mVisionInnovation, LOG_FLAG_OBSV_BIAS);
+//	mDataLogger->addEntry(LOG_ID_VISION_INNOVATION, mVisionInnovation, LOG_FLAG_OBSV_BIAS);
 }
 
 void Observer_Angular::onNewCommObserverReset()
 {
 	reset();
 	Log::alert("Observer reset");
-	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_RESET, LOG_FLAG_PC_UPDATES);
+	mDataLogger->addEntry(LOG_ID_OBSV_ANG_RESET, LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, double accelWeight, double magWeight)
@@ -767,7 +767,7 @@ void Observer_Angular::onNewCommAttObserverGain(double gainP, double gainI, doub
 	vals[1][0] = gainI;
 	vals[2][0] = accelWeight;
 	vals[3][0] = magWeight;
-	mQuadLogger->addEntry(LOG_ID_OBSV_ANG_GAINS_UPDATED, vals,LOG_FLAG_PC_UPDATES);
+	mDataLogger->addEntry(LOG_ID_OBSV_ANG_GAINS_UPDATED, vals,LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommNominalMag(const Collection<float> &nomMag)
@@ -913,7 +913,7 @@ void Observer_Angular::onNewCommStateVicon(const Collection<float> &data)
 	mVisionInnovation[2][0] = -0.1*2*2*2*2*2*(curYaw-viconYaw);
 	mMutex_visionInnovation.unlock();
 
-	mQuadLogger->addEntry(LOG_ID_USE_VICON_YAW, LOG_FLAG_PC_UPDATES);
+	mDataLogger->addEntry(LOG_ID_USE_VICON_YAW, LOG_FLAG_PC_UPDATES);
 }
 
 void Observer_Angular::onNewCommUseIbvs(bool useIbvs)

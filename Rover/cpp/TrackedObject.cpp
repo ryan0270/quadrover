@@ -54,12 +54,23 @@ void TrackedObject::updatePositionDistribution(double focalLength, const cv::Poi
 {
 	double dt = Time::calcDiffNS(mLastFoundTime, curTime)/1.0e9; 
 
+	if(mObsvTranslation == NULL)
+	{
+		Log::alert("TrackedObject translation observer is NULL");
+		return;
+	}
 	Array2D<double> curState = mObsvTranslation->estimateStateAtTime(curTime);
 	Array2D<double> curErrCov = mObsvTranslation->estimateErrCovAtTime(curTime);
+	if(curState.dim1() == 0)
+	{
+		Log::alert("TrackedObject failed to get the state");
+		return;
+	}
+
 	Array2D<double> mv = submat(curState,3,5,0,0);
 	Array2D<double> Sv = submat(curErrCov,3,5,3,5);
-	double mz = curState[2][0];
-	double varz= curErrCov[2][2];
+	double mz = max(0.01,curState[2][0]);
+	double varz = curErrCov[2][2];
 
 	SO3 curAtt = mObsvAngular->estimateAttAtTime(curTime);
 	SO3 prevAtt = mObsvAngular->estimateAttAtTime(mLastFoundTime);
@@ -400,6 +411,7 @@ Array2D<double> TrackedObject::calcCorrespondence2(const vector<shared_ptr<Track
 	Array2D<double> S(2,2), Sn(2,2), SnInv(2,2), Sa(2,2), SaInv(2,2);
 	Array2D<double> ma(2,1), mq(2,1), SnInvmq(2,1);
 	Array2D<double> V(2,2), D(2,2);
+	Array2D<double> temp1(2,1,0.0);
 	double det_Sa, coeff;
 	double x, y, fC, f, det_Sn, det_SnInv;
 	double theta1, theta2, r1, r2;
@@ -481,14 +493,14 @@ Array2D<double> TrackedObject::calcCorrespondence2(const vector<shared_ptr<Track
 				Sa[1][0] = Sa[0][1];
 				Sa[1][1] = SaInv[0][0]/den;
 
-				ma = matmult(Sa,SdInvmdList[i]+SnInvmq);
-//				temp1.inject(SdInvmdList[i]+SnInvmq);
-//				ma[0][0] = Sa[0][0]*temp1[0][0] + Sa[0][1]*temp1[1][0];
-//				ma[1][0] = Sa[1][0]*temp1[0][0] + Sa[1][1]*temp1[1][0];
+//				ma = matmult(Sa,SdInvmdList[i]+SnInvmq);
+				temp1.inject(SdInvmdList[i]+SnInvmq);
+				ma[0][0] = Sa[0][0]*temp1[0][0] + Sa[0][1]*temp1[1][0];
+				ma[1][0] = Sa[1][0]*temp1[0][0] + Sa[1][1]*temp1[1][0];
 
-				f = -1.0*matmultS(transpose(ma),matmult(SaInv,ma))+fBList[i]+fC;
-//				f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
-//					+ fBList[i] + fC;
+//				f = -1.0*matmultS(transpose(ma),matmult(SaInv,ma))+fBList[i]+fC;
+				f = -1.0*(SaInv[0][0]*ma[0][0]*ma[0][0] + 2.0*SaInv[0][1]*ma[0][0]*ma[1][0] + SaInv[1][1]*ma[1][0]*ma[1][0])
+					+ fBList[i] + fC;
 
 				det_Sd = det_SdList[i];
 				det_Sa = Sa[0][0]*Sa[1][1] - Sa[0][1]*Sa[1][0];
