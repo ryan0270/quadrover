@@ -72,12 +72,11 @@ void RegionFinder::run()
 	vector<vector<cv::Point2f>> regions;
 	shared_ptr<DataImage> imageData;
 	cv::Mat curImage, curImageGray, imageAnnotated;
-	String logString;
 	Time procStart;
 	while(mRunning)
 	{
 		if(mNewImageReady
-			&& mIsMotorOn
+//			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -122,17 +121,17 @@ void RegionFinder::run()
 			data->regionCentroids.swap(centroids);
 			data->regionMoments.swap(moms);
 			data->imageData = imageData;
-			data->imageAnnotated = imageAnnotatedData;
+			data->imageAnnotatedData = imageAnnotatedData;
 			data->timestamp.setTime(imageData->timestamp);
 			for(int i=0; i<mListeners.size(); i++)
 				mListeners[i]->onRegionsFound(data);
 
 			mImageProcTimeUS = procStart.getElapsedTimeUS();
-			if(mQuadLogger != NULL)
+			if(mDataLogger != NULL)
 			{
 				mMutex_logger.lock();
-				mQuadLogger->addEntry(LOG_ID_REGION_FIND_TIME, mImageProcTimeUS/1.0e6, LOG_FLAG_CAM_RESULTS);
-				mQuadLogger->addEntry(LOG_ID_NUM_REGIONS, regions.size(), LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_REGION_FIND_TIME, mImageProcTimeUS/1.0e6, LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_NUM_REGIONS, regions.size(), LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 			}
 		}

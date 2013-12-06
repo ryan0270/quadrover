@@ -13,7 +13,7 @@
 #include <toadlet/egg.h>
 
 #include "constants.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "Common.h"
 #include "Time.h"
 #include "Data.h"
@@ -33,7 +33,7 @@ class RegionFinder : public CommManagerListener,
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 	void setStartTime(Time t){mStartTime = t;}
-	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setDataLogger(DataLogger *log){mDataLogger = log;}
 
 	int getImageProcTimeMS(){mMutex_data.lock(); int temp = mImageProcTimeUS/1000.0; mMutex_data.unlock(); return temp;}
 	int getImageProcTimeUS(){mMutex_data.lock(); int temp = mImageProcTimeUS; mMutex_data.unlock(); return temp;}
@@ -68,7 +68,7 @@ class RegionFinder : public CommManagerListener,
 
 	uint32_t mImageProcTimeUS;
 
-	QuadLogger *mQuadLogger;
+	DataLogger *mDataLogger;
 
 	std::mutex mMutex_data, mMutex_image, mMutex_imageData, mMutex_buffers;
 	std::mutex mMutex_logger;

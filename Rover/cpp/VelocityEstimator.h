@@ -15,7 +15,7 @@
 
 #include "Data.h"
 #include "Time.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "Observer_Translational.h"
 #include "FeatureFinder.h"
 #include "Listeners.h"
@@ -42,7 +42,7 @@ class VelocityEstimator : public FeatureFinderListener,
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 
 	void setStartTime(Time t){mStartTime.setTime(t);}
-	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setObserverTranslational(Observer_Translational *obsv){mObsvTranslational = obsv;}
 	void setRotPhoneToCam(const TNT::Array2D<double> &rot);
 
@@ -65,7 +65,7 @@ class VelocityEstimator : public FeatureFinderListener,
 	int mThreadPriority, mScheduler;
 	TNT::Array2D<double> mRotPhoneToCam, mRotCamToPhone;
 	TNT::Array2D<double> mRotPhoneToCam2, mRotCamToPhone2;
-	QuadLogger *mQuadLogger;
+	DataLogger *mDataLogger;
 	Time mStartTime;
 
 	Collection<VelocityEstimatorListener*> mListeners;

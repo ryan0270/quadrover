@@ -247,25 +247,25 @@ using namespace TNT;
 			mListeners[i]->onAttitudeThrustControllerCmdsSent(cmds);
 	
 		// Logging
-		if(mQuadLogger != NULL)
+		if(mDataLogger != NULL)
 		{
 			Collection<double> data(4);
 			data[0] = cmdRoll;
 			data[1] = cmdPitch;
 			data[2] = cmdYaw;
 			data[3] = cmdThrust;
-			mQuadLogger->addEntry(LOG_ID_TORQUE_CMD, data, LOG_FLAG_MOTORS);
+			mDataLogger->addEntry(LOG_ID_TORQUE_CMD, data, LOG_FLAG_MOTORS);
 
-			mQuadLogger->addEntry(LOG_ID_MOTOR_CMDS, cmds, LOG_FLAG_MOTORS);
+			mDataLogger->addEntry(LOG_ID_MOTOR_CMDS, cmds, LOG_FLAG_MOTORS);
 
 			data.clear();
 			data.resize(3);
 			data[0] = desRoll;
 			data[1] = desPitch;
 			data[2] = desYaw;
-			mQuadLogger->addEntry(LOG_ID_DES_ATT,data,LOG_FLAG_STATE_DES);
+			mDataLogger->addEntry(LOG_ID_DES_ATT,data,LOG_FLAG_STATE_DES);
 
-			mQuadLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, refAtt, refRate, LOG_FLAG_STATE_DES);
+			mDataLogger->addEntry(LOG_ID_REF_ATTITUDE_SYSTEM_STATE, refAtt, refRate, LOG_FLAG_STATE_DES);
 		}
 	}
 	
@@ -301,7 +301,7 @@ using namespace TNT;
 	void AttitudeThrustController::onNewCommMotorOff()
 	{
 		mPcIsConnected = true;
-		Log::alert(String("Turning motors off"));
+		Log::alert("Turning motors off");
 //		mMutex_motorInterface.lock();
 //		mMotorInterface->enableMotors(false);
 //		mMutex_motorInterface.unlock();

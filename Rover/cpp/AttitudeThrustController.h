@@ -6,9 +6,7 @@
 
 #include "TNT/tnt.h"
 
-#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
-
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "Time.h"
 #include "Listeners.h"
 #include "MotorInterface.h"
@@ -35,7 +33,7 @@ class AttitudeThrustController : public CommManagerListener,
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
 	void setStartTime(Time t){mStartTime = t;}
-	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setMotorInterface(MotorInterface *mi){mMotorInterface = mi;}
 
 	void calcControl();
@@ -69,7 +67,7 @@ class AttitudeThrustController : public CommManagerListener,
 	bool mRunning, mDone;
 	bool mDoControl, mPcIsConnected;
 	Time mStartTime, mLastControlTime;
-	QuadLogger *mQuadLogger;
+	DataLogger *mDataLogger;
 
 	double mForceScaling, mTorqueScaling;
 	int mMotorTrim[4];
@@ -93,7 +91,7 @@ class AttitudeThrustController : public CommManagerListener,
 	SO3 mMotorPlaneBias;
 
 	// For the reference model
-	Array2D<double> mRefState;
+	TNT::Array2D<double> mRefState;
 //	double mRefDamping, mRefNaturalFreq;
 	double mRefB, mRefC;
 };

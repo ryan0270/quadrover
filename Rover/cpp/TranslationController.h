@@ -9,8 +9,7 @@
 
 #include "constants.h"
 
-#include "QuadLogger.h"
-//#include "ICSL/SystemModel/SystemModelLinear/src/SystemModelLinear.h"
+#include "DataLogger.h"
 #include "Time.h"
 #include "Observer_Translational.h"
 #include "Rotation.h"
@@ -40,7 +39,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void reset();
 
 	void setStartTime(Time t){mStartTime = t;}
-	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setRotViconToPhone(const TNT::Array2D<double> &rot){mRotViconToPhone.inject(rot);}
 	void setDesPosAccel(const TNT::Array2D<double> &a);
 
@@ -74,7 +73,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	bool mRunning, mDone;
 	bool mNewMeasAvailable;
 	bool mUseIbvs;
-	QuadLogger *mQuadLogger;
+	DataLogger *mDataLogger;
 	TNT::Array2D<double> mCurState, mDesState, mDesPosAccel;
 	TNT::Array2D<double> mGainP, mGainD, mGainI;
 	TNT::Array2D<double> mErrInt, mErrIntLimit;
@@ -92,11 +91,6 @@ class TranslationController : 	public Observer_TranslationalListener,
 	{ return min(maxVal, max(minVal, val)); }
 
 	TNT::Array2D<double> calcControlPID(const TNT::Array2D<double> &error, double dt);
-
-	// for the Hinf controller
-//	ICSL::SystemModelLinear mCntlSys;
-//	TNT::Array2D<double> mGainCntlSys;
-//	TNT::Array2D<double> calcControlSystem(const TNT::Array2D<double> &error, double dt);
 
 	TNT::Array2D<double> calcControlIBVS2(TNT::Array2D<double> &error, double dt);
 	TNT::Array2D<double> mIbvsPosGains, mIbvsVelGains;

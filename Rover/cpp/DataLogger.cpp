@@ -1,4 +1,4 @@
-#include "QuadLogger.h"
+#include "DataLogger.h"
 
 #include <unistd.h>
 
@@ -9,10 +9,10 @@ using namespace toadlet;
 using namespace toadlet::egg;
 using namespace TNT;
 
-QuadLogger::QuadLogger()
+DataLogger::DataLogger()
 {
 	mDir = ".";
-	mFilename = "quadLog.txt";
+	mFilename = "dataLog.txt";
 	mLogStream = NULL;
 	mTypeMask = 0;
 	mTypeMask |= LOG_FLAG_PC_UPDATES ;
@@ -38,20 +38,20 @@ QuadLogger::QuadLogger()
 	mDone = true;
 }
 
-QuadLogger::~QuadLogger()
+DataLogger::~DataLogger()
 {
 }
 
-void QuadLogger::shutdown()
+void DataLogger::shutdown()
 {
-	Log::alert("------------------------- QuadLogger shutdown started");
+	Log::alert("------------------------- DataLogger shutdown started");
 	mRunning = false;
 	while(!mDone)
 		System::msleep(10);
-	Log::alert("------------------------- QuadLogger shutdown done");
+	Log::alert("------------------------- DataLogger shutdown done");
 }
 
-void QuadLogger::run()
+void DataLogger::run()
 {
 	mDone = false;
 	mRunning = true;
@@ -156,10 +156,18 @@ void QuadLogger::run()
 	mDone = true;
 }
 
-void QuadLogger::addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type)
+void DataLogger::addEntry(const Time &t, const LogID &id, const toadlet::egg::String &str, LogFlags type)
 {
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	mMutex_addLine.lock();
-	if( (mTypeMask & type) && mRunning)
 	{
 		shared_ptr<LogEntry> entry(new LogEntry());
 		entry->timestamp.setTime(t);
@@ -178,20 +186,36 @@ void QuadLogger::addEntry(const Time &t, const LogID &id, const toadlet::egg::St
 	mMutex_addLine.unlock();
 }
 
-void QuadLogger::addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const toadlet::egg::String &str, LogFlags type)
 {
 	addEntry(Time(), id, str, type);
 }
 
-void QuadLogger::addEntry(const LogID &id, LogFlags type)
+void DataLogger::addEntry(const LogID &id, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
-		addEntry(Time(), id, "", type);
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
+	addEntry(Time(), id, "", type);
 }
 
-void QuadLogger::addEntry(const LogID &id, int data, const Time &t, LogFlags type)
+void DataLogger::addEntry(const LogID &id, int data, const Time &t, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		str = str+(int)Time::calcDiffMS(mStartTime, t)+"\t";
@@ -200,15 +224,31 @@ void QuadLogger::addEntry(const LogID &id, int data, const Time &t, LogFlags typ
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, double data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, double data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
-		addEntry(Time(), id, String()+data, type);
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
+	addEntry(Time(), id, String()+data, type);
 }
 
-void QuadLogger::addEntry(const LogID &id, double data, const Time &t, LogFlags type)
+void DataLogger::addEntry(const LogID &id, double data, const Time &t, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		str = str+(int)Time::calcDiffMS(mStartTime, t)+"\t";
@@ -217,9 +257,17 @@ void QuadLogger::addEntry(const LogID &id, double data, const Time &t, LogFlags 
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const Array2D<double> &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const Array2D<double> &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		for(int i=0; i<data.dim1(); i++)
@@ -230,9 +278,17 @@ void QuadLogger::addEntry(const LogID &id, const Array2D<double> &data, LogFlags
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const shared_ptr<DataVector<double>> &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const shared_ptr<DataVector<double>> &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		for(int i=0; i<data->dataRaw.dim1(); i++)
@@ -243,9 +299,17 @@ void QuadLogger::addEntry(const LogID &id, const shared_ptr<DataVector<double>> 
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const SO3 &data, const Array2D<double> &velData, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const SO3 &data, const Array2D<double> &velData, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		double w = data.getQuaternion().getScalarPart();
 		const Array2D<double> v = data.getQuaternion().getVectorPart();
@@ -260,9 +324,17 @@ void QuadLogger::addEntry(const LogID &id, const SO3 &data, const Array2D<double
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const shared_ptr<SO3Data<double>> &data, const shared_ptr<DataVector<double>> &velData, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const shared_ptr<SO3Data<double>> &data, const shared_ptr<DataVector<double>> &velData, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		double w =data->rotation.getQuaternion().getScalarPart();
 		const Array2D<double> v = data->rotation.getQuaternion().getVectorPart();
@@ -277,9 +349,17 @@ void QuadLogger::addEntry(const LogID &id, const shared_ptr<SO3Data<double>> &da
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const Collection<double> &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const Collection<double> &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		for(int i=0; i<data.size(); i++)
@@ -289,9 +369,17 @@ void QuadLogger::addEntry(const LogID &id, const Collection<double> &data, LogFl
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const Collection<float> &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const Collection<float> &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		for(int i=0; i<data.size(); i++)
@@ -301,9 +389,17 @@ void QuadLogger::addEntry(const LogID &id, const Collection<float> &data, LogFla
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const vector<double> &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const vector<double> &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		for(int i=0; i<data.size(); i++)
@@ -313,9 +409,17 @@ void QuadLogger::addEntry(const LogID &id, const vector<double> &data, LogFlags 
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const vector<float> &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const vector<float> &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		for(int i=0; i<data.size(); i++)
@@ -325,27 +429,51 @@ void QuadLogger::addEntry(const LogID &id, const vector<float> &data, LogFlags t
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const cv::Point2f &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const cv::Point2f &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str = String()+data.x+"\t"+data.y;
 		addEntry(Time(), id, str, type);
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const cv::Point2f &data, const Time &t, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const cv::Point2f &data, const Time &t, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str = String()+(int)Time::calcDiffMS(mStartTime,t)+"\t"+data.x+"\t"+data.y;
 		addEntry(Time(), id, str, type);
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const ASensorEvent &event, const Time &t, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str;
 		str = str+(int)Time::calcDiffMS(mStartTime, t)+"\t";
@@ -354,9 +482,17 @@ void QuadLogger::addEntry(const LogID &id, const ASensorEvent &event, const Time
 	}
 }
 
-void QuadLogger::addEntry(const LogID &id, const shared_ptr<DataImage> &data, LogFlags type)
+void DataLogger::addEntry(const LogID &id, const shared_ptr<DataImage> &data, LogFlags type)
 {
-	if( (mTypeMask & type) && mRunning)
+	if( !mRunning )
+		return;
+
+	mMutex_typeMask.lock();
+	bool doLog = (mTypeMask & type) > 0;
+	mMutex_typeMask.unlock();
+	if(!doLog)
+		return;
+
 	{
 		String str = String()+(int)Time::calcDiffMS(mStartTime,data->timestamp)+"\t";
 		str = str+data->imageId;
@@ -366,7 +502,7 @@ void QuadLogger::addEntry(const LogID &id, const shared_ptr<DataImage> &data, Lo
 }
 
 
-void QuadLogger::generateMatlabHeader()
+void DataLogger::generateMatlabHeader()
 {
 	FileStream::ptr logStream = FileStream::ptr(new FileStream(mDir+"/log_ids.m", FileStream::Open_BIT_WRITE));
 

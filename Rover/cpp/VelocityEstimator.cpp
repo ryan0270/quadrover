@@ -139,12 +139,12 @@ void VelocityEstimator::run()
 			mLastDelayTimeUS = delayTime*1.0e6;
 			mMutex_data.unlock();
 
-			if(mQuadLogger != NULL)
+			if(mDataLogger != NULL)
 			{
-				mQuadLogger->addEntry(LOG_ID_MAP_VEL, velEst, LOG_FLAG_CAM_RESULTS);
-				mQuadLogger->addEntry(LOG_ID_MAP_HEIGHT, heightEst, LOG_FLAG_CAM_RESULTS);
-				mQuadLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME, procTime, LOG_FLAG_CAM_RESULTS);
-				mQuadLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY, delayTime, LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_MAP_VEL, velEst, LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_MAP_HEIGHT, heightEst, LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_MAP_VEL_CALC_TIME, procTime, LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_OPTIC_FLOW_VELOCITY_DELAY, delayTime, LOG_FLAG_CAM_RESULTS);
 			}
 		}
 
@@ -179,6 +179,12 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	Array2D<double> curState = mObsvTranslational->estimateStateAtTime(curTime);
 	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
 	SO3 attCur = curFeatureData->imageData->att;
+
+	if(oldState.dim1() == 0 || curState.dim1() == 0)
+	{
+		Log::alert("Velocity estimator failed to get the state");
+		return false;
+	}
 
 	SO3 attChange = attCur*attOld.inv();
 	Array2D<double> omega = 1.0/dt*attChange.log().toVector();
@@ -230,7 +236,7 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageFeatureData> ol
 	for(int i=0; i<C.dim1()-1; i++)
 		for(int j=0; j<C.dim2()-1; j++)
 			numMatches += C[i][j];
-	mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
+	mDataLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
 	
 	// Find map vel
 	Array2D<double> vel(3,1), covVel(3,3);
@@ -271,6 +277,12 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageRegionData> old
 	Array2D<double> curState = mObsvTranslational->estimateStateAtTime(curTime);
 	Array2D<double> curErrCov = mObsvTranslational->estimateErrCovAtTime(curTime);
 	SO3 attCur = curRegionData->imageData->att;
+
+	if(oldState.dim1() == 0 || curState.dim1() == 0)
+	{
+		Log::alert("Velocity estimator failed to get the state");
+		return false;
+	}
 
 	SO3 attChange = attCur*attOld.inv();
 	double theta;
@@ -317,7 +329,7 @@ bool VelocityEstimator::doVelocityEstimate(const shared_ptr<ImageRegionData> old
 	for(int i=0; i<C.dim1()-1; i++)
 		for(int j=0; j<C.dim2()-1; j++)
 			numMatches += C[i][j];
-	mQuadLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
+	mDataLogger->addEntry(LOG_ID_MAP_NUM_MATCHES, numMatches, LOG_FLAG_CAM_RESULTS);
 	
 	// Find map vel
 	Array2D<double> vel(3,1), covVel(3,3);
@@ -426,7 +438,9 @@ vector<pair<Array2D<double>, Array2D<double>>> VelocityEstimator::calcPriorDistr
 	// so the subsequent calculations can sometimes cause problems.
 //	mz2Inv = max(mz2Inv, mz1Inv*mz1Inv);
 	if(mz2Inv < mz1Inv*mz1Inv)
+	{
 		Log::alert(String()+"crap, mz2Inv >= mz1Inv*mz1Inv");
+	}
 
 	// calc distribution moments
 	vector<pair<Array2D<double>, Array2D<double>>> priorDistList(mDeltaList.size());

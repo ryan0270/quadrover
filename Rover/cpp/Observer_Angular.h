@@ -15,7 +15,7 @@
 #include "Data.h"
 #include "constants.h"
 #include "TNT/tnt.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "Common.h"
 #include "Time.h"
 #include "TrackedObject.h"
@@ -59,7 +59,7 @@ class Observer_Angular : public CommManagerListener,
 	
 	void addListener(Observer_AngularListener* chad){mListeners.push_back(chad);};
 
-	void setQuadLogger(QuadLogger *log){mQuadLogger = log;}
+	void setDataLogger(DataLogger *log){mDataLogger = log;}
 
 	void addDirectionMeasurement(const TNT::Array2D<double> &dirMeas, const TNT::Array2D<double> &dirInertial, double weight);
 
@@ -110,7 +110,7 @@ class Observer_Angular : public CommManagerListener,
 
 	toadlet::egg::Collection<Observer_AngularListener*> mListeners;
 
-	QuadLogger *mQuadLogger;
+	DataLogger *mDataLogger;
 
 	int mThreadPriority, mScheduler;
 

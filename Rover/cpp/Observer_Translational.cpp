@@ -121,7 +121,7 @@ void Observer_Translational::run()
 		if(mHaveFirstCameraPos && mLastCameraPosTime.getElapsedTimeMS() > 1000)
 		{
 			mHaveFirstCameraPos = false;
-			mQuadLogger->addEntry(LOG_ID_TARGET_LOST, LOG_FLAG_PC_UPDATES);
+			mDataLogger->addEntry(LOG_ID_TARGET_LOST, LOG_FLAG_PC_UPDATES);
 			mCameraVelBuffer.clear();
 		}
 		mMutex_posTime.unlock();
@@ -233,7 +233,7 @@ void Observer_Translational::run()
 			while(mDataBuffers[i]->size() > 0 && mDataBuffers[i]->front()->timestamp.getElapsedTimeMS() > 0.5e3)
 				mDataBuffers[i]->pop_front();
 
-		mQuadLogger->addEntry(LOG_ID_CUR_TRANS_STATE, mStateKF, LOG_FLAG_STATE);
+		mDataLogger->addEntry(LOG_ID_CUR_TRANS_STATE, mStateKF, LOG_FLAG_STATE);
 
 		mMutex_kfData.unlock();
 
@@ -537,7 +537,7 @@ void Observer_Translational::onNewCommStateVicon(const Collection<float> &data)
 	mNewEventsBuffer.push_back(posData);
 	mMutex_events.unlock();
 
-	mQuadLogger->addEntry(LOG_ID_RECEIVE_VICON, data, LOG_FLAG_STATE);
+	mDataLogger->addEntry(LOG_ID_RECEIVE_VICON, data, LOG_FLAG_STATE);
 
 	mNewViconPosAvailable = true;
 }
@@ -571,12 +571,11 @@ void Observer_Translational::onNewCommKalmanDynVar(const Collection<float> &var)
 void Observer_Translational::onNewCommUseIbvs(bool useIbvs)
 {
 	mUseIbvs = useIbvs;
-	String s;
 	if(useIbvs)
-		mQuadLogger->addEntry(LOG_ID_IBVS_ENABLED, LOG_FLAG_PC_UPDATES);
+		mDataLogger->addEntry(LOG_ID_IBVS_ENABLED, LOG_FLAG_PC_UPDATES);
 	else
 	{
-		mQuadLogger->addEntry(LOG_ID_IBVS_DISABLED, LOG_FLAG_PC_UPDATES);
+		mDataLogger->addEntry(LOG_ID_IBVS_DISABLED, LOG_FLAG_PC_UPDATES);
 		mHaveFirstCameraPos = false;
 	}
 }
@@ -968,7 +967,7 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 		mObjectNominalPosMap[newObjects[i]->getId()] = newPoint;
 	}
 
-	mQuadLogger->addEntry(LOG_ID_IMAGE_OFFSET, imageOffset, data->timestamp, LOG_FLAG_CAM_RESULTS);
+	mDataLogger->addEntry(LOG_ID_IMAGE_OFFSET, imageOffset, data->timestamp, LOG_FLAG_CAM_RESULTS);
 
 	// first time finding anything fun
 	if(repeatObjects.size() == 0)
@@ -978,7 +977,7 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	bool resetViconOffset = false;
 	if(!mHaveFirstCameraPos)
 	{
-		mQuadLogger->addEntry(LOG_ID_TARGET_ACQUIRED, LOG_FLAG_PC_UPDATES);
+		mDataLogger->addEntry(LOG_ID_TARGET_ACQUIRED, LOG_FLAG_PC_UPDATES);
 		resetViconOffset = true;
 	}
 	mHaveFirstCameraPos = true;
@@ -1009,7 +1008,7 @@ void Observer_Translational::onObjectsTracked(const shared_ptr<ObjectTrackerData
 	mNewEventsBuffer.push_back(posData);
 	mMutex_events.unlock();
 
-	mQuadLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, pos, LOG_FLAG_CAM_RESULTS);
+	mDataLogger->addEntry(LOG_ID_TARGET_ESTIMATED_POS, pos, LOG_FLAG_CAM_RESULTS);
 }
 
 Time Observer_Translational::applyData(list<shared_ptr<IData>> &newEvents)
@@ -1250,8 +1249,8 @@ Log::alert("No accel data");
 				{
 					shared_ptr<DataVector<double>> d = static_pointer_cast<DataVector<double>>(*eventIter);
 					Array2D<double> meas(2,1);
-					meas[0][0] = d->dataRaw[0][0];
-					meas[1][0] = d->dataRaw[1][0];
+					meas[0][0] = d->dataCalibrated[0][0];
+					meas[1][0] = d->dataCalibrated[1][0];
 					doMeasUpdateKF_xyOnly(meas, submat(mPosMeasCov,0,1,0,1), mStateKF, mErrCovKF, att);
 				}
 				break;
@@ -1265,7 +1264,7 @@ Log::alert("No accel data");
 //						Array2D<double> measCov = submat(mPosMeasCov,0,1,0,1);
 					doMeasUpdateKF_xyOnly(meas, measCov, mStateKF, mErrCovKF, att);
 
-					mQuadLogger->addEntry(LOG_ID_USE_VICON_XY, LOG_FLAG_PC_UPDATES);
+					mDataLogger->addEntry(LOG_ID_USE_VICON_XY, LOG_FLAG_PC_UPDATES);
 				}
 				break;
 			case DATA_TYPE_MAP_VEL:

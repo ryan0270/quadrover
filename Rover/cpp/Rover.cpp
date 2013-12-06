@@ -35,6 +35,7 @@ Rover::Rover() :
 	mImageData = NULL;
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
+	mRegionData = NULL;
 	mObjectData = NULL;
 
 	mScheduler = SCHED_NORMAL;
@@ -53,10 +54,11 @@ void Rover::initialize()
 	mObsvTranslational.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 	mFeatureFinder.setStartTime(mStartTime);
+	mRegionFinder.setStartTime(mStartTime);
 	mObjectTracker.setStartTime(mStartTime);
 	mTranslationController.setStartTime(mStartTime);
 	mAttitudeThrustController.setStartTime(mStartTime);
-	mQuadLogger.setStartTime(mStartTime);
+	mDataLogger.setStartTime(mStartTime);
 
 	int sched = SCHED_NORMAL;
 	int maxPriority = sched_get_priority_max(sched);
@@ -68,11 +70,12 @@ void Rover::initialize()
 	mObsvTranslational.setThreadPriority(sched,maxPriority-1);
 	mVelocityEstimator.setThreadPriority(sched,maxPriority-1);
 	mFeatureFinder.setThreadPriority(sched,maxPriority-2);
+	mRegionFinder.setThreadPriority(sched,maxPriority-2);
 	mObjectTracker.setThreadPriority(sched,maxPriority-2);
 	mTranslationController.setThreadPriority(sched,maxPriority-2);
 	mAttitudeThrustController.setThreadPriority(sched,maxPriority-2);
 	mCommManager.setThreadPriority(sched,minPriority);
-	mQuadLogger.setThreadPriority(sched,minPriority);
+	mDataLogger.setThreadPriority(sched,minPriority);
 	mVideoMaker.setThreadPriority(sched,minPriority);
 	this->setThreadPriority(sched,minPriority);
 
@@ -87,13 +90,13 @@ void Rover::initialize()
 	
 	mMutex_cntl.lock();
 	mTranslationController.setRotViconToPhone(mRotViconToPhone);
-	mTranslationController.setQuadLogger(&mQuadLogger);
+	mTranslationController.setDataLogger(&mDataLogger);
 	mTranslationController.initialize();
 	mTranslationController.setObserverTranslational(&mObsvTranslational);
 	mTranslationController.start();
 	mCommManager.addListener(&mTranslationController);
 
-	mAttitudeThrustController.setQuadLogger(&mQuadLogger);
+	mAttitudeThrustController.setDataLogger(&mDataLogger);
 	mAttitudeThrustController.setMotorInterface(&mMotorInterface);
 	mAttitudeThrustController.initialize();
 	mAttitudeThrustController.start();
@@ -103,13 +106,13 @@ void Rover::initialize()
 	mMutex_cntl.unlock();
 
 	mObsvAngular.initialize();
-	mObsvAngular.setQuadLogger(&mQuadLogger);
+	mObsvAngular.setDataLogger(&mDataLogger);
 	mObsvAngular.start();
 	mObsvAngular.addListener(this);
 	mObsvAngular.addListener(&mAttitudeThrustController);
 	mCommManager.addListener(&mObsvAngular);
 
-	mObsvTranslational.setQuadLogger(&mQuadLogger);
+	mObsvTranslational.setDataLogger(&mDataLogger);
 	mObsvTranslational.setRotViconToPhone(mRotViconToPhone);
 	mObsvTranslational.setObserverAngular(&mObsvAngular);
 	mObsvTranslational.initialize();
@@ -120,34 +123,40 @@ void Rover::initialize()
 //	mAttitudeThrustController.addListener(&mObsvTranslational);
 
 	mFeatureFinder.initialize();
-	mFeatureFinder.setQuadLogger(&mQuadLogger);
-	mFeatureFinder.start();
-	mSensorManager.addListener(&mFeatureFinder);
-	mCommManager.addListener(&mFeatureFinder);
+	mFeatureFinder.setDataLogger(&mDataLogger);
 	mFeatureFinder.addListener(this);
+	mSensorManager.addListener(&mFeatureFinder);
+	mSensorManager.addListener(&mRegionFinder);
+	mCommManager.addListener(&mFeatureFinder);
+	mFeatureFinder.start();
 
-	mObjectTracker.setQuadLogger(&mQuadLogger);
+	mRegionFinder.initialize();
+	mRegionFinder.setDataLogger(&mDataLogger);
+	mRegionFinder.addListener(this);
+	mSensorManager.addListener(&mRegionFinder);
+	mCommManager.addListener(&mRegionFinder);
+	mRegionFinder.start();
+
+	TrackedObject::setObserverAngular(&mObsvAngular);
+	TrackedObject::setObserverTranslational(&mObsvTranslational);
+	mObjectTracker.setDataLogger(&mDataLogger);
 	mObjectTracker.setObserverAngular(&mObsvAngular);
 	mObjectTracker.setObserverTranslation(&mObsvTranslational);
 	mObjectTracker.initialize();
 	mObjectTracker.start();
 	mObjectTracker.addListener(this);
 	mObjectTracker.addListener(&mObsvTranslational);
-//	mObjectTracker.addListener(&mObsvAngular);
-//	mObjectTracker.addListener(&mTranslationController);
-//	mObjectTracker.addRegionListener(&mVelocityEstimator);
-//	mObjectTracker.addRegionListener(&mFeatureFinder);
-//	mSensorManager.addListener(&mObjectTracker);
-//	mCommManager.addListener(&mObjectTracker);
 	mFeatureFinder.addListener(&mObjectTracker);
+	mRegionFinder.addListener(&mObjectTracker);
 
 	mVelocityEstimator.initialize();
-	mVelocityEstimator.setQuadLogger(&mQuadLogger);
+	mVelocityEstimator.setDataLogger(&mDataLogger);
 	mVelocityEstimator.setObserverTranslational(&mObsvTranslational);
 	mVelocityEstimator.setRotPhoneToCam(mRotPhoneToCam);
 	mVelocityEstimator.start();
 	mVelocityEstimator.addListener(&mObsvTranslational);
 	mFeatureFinder.addListener(&mVelocityEstimator);
+	mRegionFinder.addListener(&mVelocityEstimator);
 	mCommManager.addListener(&mVelocityEstimator);
 
 	mVideoMaker.initialize();
@@ -155,7 +164,7 @@ void Rover::initialize()
 	mCommManager.addListener(&mVideoMaker);
 	mSensorManager.addListener(&mVideoMaker);
 
-	mSensorManager.setQuadLogger(&mQuadLogger);
+	mSensorManager.setDataLogger(&mDataLogger);
 	mSensorManager.initialize();
 	mSensorManager.setObserverAngular(&mObsvAngular);
 	mSensorManager.start();
@@ -179,7 +188,7 @@ void Rover::initialize()
 void Rover::shutdown()
 {
 	Log::alert("Main shutdown started");
-	mQuadLogger.shutdown();
+	mDataLogger.shutdown();
 	mRunning = false;
 	mMutex_cntl.lock();
 	mMotorInterface.enableMotors(false);
@@ -196,6 +205,7 @@ void Rover::shutdown()
 
 	mVelocityEstimator.shutdown();
 	mFeatureFinder.shutdown();
+	mRegionFinder.shutdown();
 	mObjectTracker.shutdown();
 	mVideoMaker.shutdown();
 	mObsvAngular.shutdown(); 
@@ -203,12 +213,13 @@ void Rover::shutdown()
 
 //	mImageMatchData = NULL;
 	mFeatureData = NULL;
+	mRegionData = NULL;
 	mObjectData = NULL;
 	mSensorManager.shutdown();
 
 	mMotorInterface.shutdown();
 
-	Log::alert(String("----------------- really dead -------------"));
+	Log::alert("----------------- really dead -------------");
 }
 
 void Rover::run()
@@ -276,7 +287,6 @@ void Rover::run()
 
 			if(cpuUsageCur[0][0] != 0 && cpuUsagePrev[0][0] != 0)
 			{
-				String str;
 				// overall total has to be handled separately since it only counts cpus that were turned on
 				// Assume that the total avaible was 4*maxTotal
 				double used = 0;
@@ -284,12 +294,12 @@ void Rover::run()
 					used += cpuUsageCur[0][j]-cpuUsagePrev[0][j];
 				usage[0] = used/maxTotal/(double)mNumCpuCores;
 
-				mQuadLogger.addEntry(LOG_ID_CPU_USAGE, usage, LOG_FLAG_PC_UPDATES);
+				mDataLogger.addEntry(LOG_ID_CPU_USAGE, usage, LOG_FLAG_PC_UPDATES);
 			}
 			cpuUsagePrev.inject(cpuUsageCur);
 
 			// also log cpu freq
-			mQuadLogger.addEntry(LOG_ID_CPU_FREQ, freqAcc/freqCnt, LOG_FLAG_PC_UPDATES);
+			mDataLogger.addEntry(LOG_ID_CPU_FREQ, freqAcc/freqCnt, LOG_FLAG_PC_UPDATES);
 			freqCnt = 0;
 			freqAcc = 0;
 		}
@@ -302,7 +312,7 @@ void Rover::run()
 	if(imageSendTh.joinable())
 		imageSendTh.join();
 
-	Log::alert(String("----------------- Rover runner dead -------------"));
+	Log::alert("----------------- Rover runner dead -------------");
 	mRunnerIsDone = true;
 }
 
@@ -513,8 +523,10 @@ void Rover::transmitImage()
 	mMutex_vision.lock();
 	if(mObsvTranslational.isTargetFound() && mObjectData != NULL)
 		mObjectData->imageAnnotatedData->imageAnnotated->copyTo(img);
+	else if(mRegionData != NULL)
+		mRegionData->imageAnnotatedData->imageAnnotated->copyTo(img);
 	else if(mFeatureData != NULL)
-		mFeatureData->imageAnnotated->imageAnnotated->copyTo(img);
+		mFeatureData->imageAnnotatedData->imageAnnotated->copyTo(img);
 	mMutex_vision.unlock();
 
 	if(img.rows == 0 || img.cols == 0)
@@ -551,24 +563,24 @@ void Rover::onObserver_AngularUpdated(const shared_ptr<SO3Data<double>> &attData
 }
 
 void Rover::startLogging(){
-	mQuadLogger.setFilename("log.txt");
-	mQuadLogger.start();
+	mDataLogger.setFilename("log.txt");
+	mDataLogger.start();
 }
 
 void Rover::stopLogging()
 {
-	mQuadLogger.shutdown();
+	mDataLogger.shutdown();
 }
 
 void Rover::setLogFilename(String name)
 {
-	mQuadLogger.setFilename(name);
+	mDataLogger.setFilename(name);
 }
 
 void Rover::setLogDir(String dir)
 {
-	mQuadLogger.setDir(dir);
-	Log::alert("Log dir set to: " + mQuadLogger.getFullPath());
+	mDataLogger.setDir(dir);
+	Log::alert("Log dir set to: " + mDataLogger.getFullPath());
 }
 
 void Rover::onNewCommTimeSync(int time)
@@ -590,35 +602,36 @@ void Rover::onNewCommTimeSync(int time)
 	mMutex_cntl.unlock();
 	
 	mSensorManager.setStartTime(mStartTime);
-	mQuadLogger.setStartTime(mStartTime);
+	mDataLogger.setStartTime(mStartTime);
 
 	mFeatureFinder.setStartTime(mStartTime);
+	mRegionFinder.setStartTime(mStartTime);
 	mObjectTracker.setStartTime(mStartTime);
 	mVelocityEstimator.setStartTime(mStartTime);
 
 	mMotorInterface.setStartTime(mStartTime);
 
-	mQuadLogger.addEntry(LOG_ID_TIME_SYNC, delta,LOG_FLAG_PC_UPDATES);
+	mDataLogger.addEntry(LOG_ID_TIME_SYNC, delta,LOG_FLAG_PC_UPDATES);
 }
 
 void Rover::onNewCommLogTransfer()
 {
-//	mQuadLogger.close();
-	mQuadLogger.pause();
-	mCommManager.sendLogFile(mQuadLogger.getFullPath().c_str());
-	mQuadLogger.resume();
-//	mQuadLogger.start();
+//	mDataLogger.close();
+	mDataLogger.pause();
+	mCommManager.sendLogFile(mDataLogger.getFullPath().c_str());
+	mDataLogger.resume();
+//	mDataLogger.start();
 }
 
 void Rover::onNewCommLogMask(uint32 mask)
 {
-	mQuadLogger.setMask(mask);
-	Log::alert(String()+"Log mask set to "+mQuadLogger.getMask());
+	mDataLogger.setMask(mask);
+	Log::alert(String()+"Log mask set to "+mDataLogger.getMask());
 }
 
 void Rover::onNewCommLogClear()
 {
-	mQuadLogger.clearLog();
+	mDataLogger.clearLog();
 	Log::alert(String()+"Log cleared");
 }
 
@@ -645,6 +658,13 @@ void Rover::onFeaturesFound(const shared_ptr<ImageFeatureData> &data)
 	mMutex_vision.unlock();
 }
 
+void Rover::onRegionsFound(const shared_ptr<ImageRegionData> &data)
+{
+	mMutex_vision.lock();
+	mRegionData = data;
+	mMutex_vision.unlock();
+}
+
 void Rover::onObjectsTracked(const shared_ptr<ObjectTrackerData> &data)
 {
 	mMutex_vision.lock();
@@ -660,8 +680,10 @@ void Rover::copyImageData(cv::Mat *m)
 	mMutex_vision.lock();
 	if( mObjectData != NULL)
 		mObjectData->imageAnnotatedData->imageAnnotated->copyTo(*m);
+	else if(mRegionData != NULL)
+		mRegionData->imageAnnotatedData->imageAnnotated->copyTo(*m);
 	else if(mFeatureData != NULL)
-		mFeatureData->imageAnnotated->imageAnnotated->copyTo(*m);
+		mFeatureData->imageAnnotatedData->imageAnnotated->copyTo(*m);
 	else if(mImageData != NULL)
 		mImageData->image->copyTo(*m);
 	mMutex_vision.unlock();
@@ -710,12 +732,6 @@ Array2D<double> Rover::getAttitude()
 	att = mCurAtt.copy();
 	mMutex_observer.unlock();
 
-//	{
-//		String str = "Att: \t";
-//		for(int i=0; i<att.dim1(); i++)
-//			str = str+att[i][0]+"\t";
-//		Log::alert(str);
-//	}
 	return att;
 }
 
@@ -738,7 +754,9 @@ Array2D<int> Rover::getCpuUsage(int numCpuCores)
 			stringstream stream(line);
 			stream >> tok;
 			if(strncmp("cpu",tok.c_str(),3) == 0) // this is a cpu line
+			{
 				lines.push_back(String(line.c_str()));
+			}
 		}
 		file.close();
 	}
@@ -800,7 +818,9 @@ int Rover::getCpuFreq()
 		stringstream(line) >> freq;
 	}
 	else
+	{
 		Log::alert(String()+"Failed to open " +filename.c_str());
+	}
 
 	return freq;
 }
