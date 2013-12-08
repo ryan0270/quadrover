@@ -40,6 +40,7 @@ Rover::Rover() :
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 }
 
 Rover::~Rover()
@@ -78,6 +79,23 @@ void Rover::initialize()
 	mDataLogger.setThreadPriority(sched,minPriority);
 	mVideoMaker.setThreadPriority(sched,minPriority);
 	this->setThreadPriority(sched,minPriority);
+
+	int maxNice = 20;
+	int minNice = -20;
+	mMotorInterface.setThreadNice(minNice);
+	mSensorManager.setThreadNice(minNice);
+	mObsvAngular.setThreadNice(minNice);
+	mObsvTranslational.setThreadNice(minNice+1);
+	mVelocityEstimator.setThreadNice(minNice+1);
+	mFeatureFinder.setThreadNice(minNice+2);
+	mTranslationController.setThreadNice(minNice+2);
+	mAttitudeThrustController.setThreadNice(minNice+2);
+	mRegionFinder.setThreadNice(minNice+3);
+	mObjectTracker.setThreadNice(minNice+3);
+	mCommManager.setThreadNice(0);
+	mVideoMaker.setThreadNice(0);
+	this->setThreadNice(0);
+	mDataLogger.setThreadNice(maxNice);
 
 	mCommManager.initialize();
 	mCommManager.addListener(this);
@@ -124,18 +142,17 @@ void Rover::initialize()
 
 	mFeatureFinder.initialize();
 	mFeatureFinder.setDataLogger(&mDataLogger);
+	mFeatureFinder.start();
 	mFeatureFinder.addListener(this);
 	mSensorManager.addListener(&mFeatureFinder);
-	mSensorManager.addListener(&mRegionFinder);
 	mCommManager.addListener(&mFeatureFinder);
-	mFeatureFinder.start();
 
 	mRegionFinder.initialize();
 	mRegionFinder.setDataLogger(&mDataLogger);
 	mRegionFinder.addListener(this);
-	mSensorManager.addListener(&mRegionFinder);
+//	mRegionFinder.start();
 	mCommManager.addListener(&mRegionFinder);
-	mRegionFinder.start();
+	mSensorManager.addListener(&mRegionFinder);
 
 	TrackedObject::setObserverAngular(&mObsvAngular);
 	TrackedObject::setObserverTranslational(&mObsvTranslational);
@@ -233,6 +250,9 @@ void Rover::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"Rover nice value: "+nice);
 
 	double freq, freqAcc, freqCnt;
 	freq = freqAcc = freqCnt = 0;

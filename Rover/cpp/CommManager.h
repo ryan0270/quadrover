@@ -1,6 +1,8 @@
 #ifndef ICSL_COMM_MANAGER
 #define ICSL_COMM_MANAGER
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 
@@ -27,6 +29,7 @@ class CommManager
 	void start(){ thread th(&CommManager::run, this); th.detach(); }
 	void run();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 	void addListener(CommManagerListener* listener){mListeners.push_back(listener);}
 	void transmitUDP(Packet &pck);
@@ -51,7 +54,7 @@ class CommManager
 	int receiveTCP(tbyte* data, int size);
 	bool receivePacket(Packet &pck, int size);
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 }; // class CommManager
 } // namespace Quadrotor
 } // namespace ICSL

@@ -38,6 +38,7 @@ Observer_Translational::Observer_Translational() :
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 
 	mUseCameraPos = false;
 	mUseViconPos = true;
@@ -104,6 +105,9 @@ void Observer_Translational::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"Observer_Translational nice value: "+nice);
 
 	Time loopTime;
 	uint64_t t;

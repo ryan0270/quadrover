@@ -2,6 +2,8 @@
 #define ICSL_FEATUREFINDER_H
 #include <memory>
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 #include <cmath>
@@ -32,6 +34,7 @@ class FeatureFinder : public CommManagerListener,
 	void start(){ thread th(&FeatureFinder::run, this); th.detach(); }
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 	void setStartTime(Time t){mStartTime = t;}
 	void setDataLogger(DataLogger *log){mDataLogger = log;}
 
@@ -88,7 +91,7 @@ class FeatureFinder : public CommManagerListener,
 
 	void run();
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	static void eigenValResponses(const cv::Mat& img, vector<cv::KeyPoint>& pts, int blockSize);
 };

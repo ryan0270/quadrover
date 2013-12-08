@@ -11,6 +11,7 @@ ObjectTracker::ObjectTracker()
 	mFinished = true;
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 
 	mFeatureData = NULL;
 	mRegionData = NULL;
@@ -49,6 +50,9 @@ void ObjectTracker::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"ObjectTracker nice value: "+nice);
 
 	Array2D<double> SnPoint = 5*5*createIdentity((double)2);
 	Array2D<double> SnInvPoint(2,2,0.0);

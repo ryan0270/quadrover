@@ -1,6 +1,8 @@
 #ifndef MOTORINTERFACE
 #define MOTORINTERFACE
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 #include <memory>
@@ -34,6 +36,7 @@ class MotorInterface : public CommManagerListener
 	void shutdown();
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 	inline bool isConnectedSend() const;
 	inline bool isConnectedReceive() const;
@@ -69,7 +72,7 @@ class MotorInterface : public CommManagerListener
 	// skips enabled/disabled checks
 	void sendCommandForced(const toadlet::egg::Collection<uint16_t> &cmds);
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	bool mDoMotorWarmup;
 	Time mMotorWarmupStartTime;

@@ -22,6 +22,7 @@ RegionFinder::RegionFinder()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 
 	mQualityLevel = 0.05;
 	mSepDist = 10;
@@ -68,6 +69,9 @@ void RegionFinder::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"RegionFinder nice value: "+nice);
 
 	vector<vector<cv::Point2f>> regions;
 	shared_ptr<DataImage> imageData;
@@ -76,7 +80,7 @@ void RegionFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-//			&& mIsMotorOn
+			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();

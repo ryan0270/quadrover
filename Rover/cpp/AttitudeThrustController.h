@@ -1,6 +1,8 @@
 #ifndef ICSL_ATITTUDETHRUSTCONTROLLER
 #define ICSL_ATITTUDETHRUSTCONTROLLER
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 
@@ -32,6 +34,7 @@ class AttitudeThrustController : public CommManagerListener,
 	void shutdown();
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 	void setStartTime(Time t){mStartTime = t;}
 	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setMotorInterface(MotorInterface *mi){mMotorInterface = mi;}
@@ -83,7 +86,7 @@ class AttitudeThrustController : public CommManagerListener,
 
 	std::mutex mMutex_data, mMutex_motorInterface;
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	TNT::Array2D<double> mDesAccel;
 

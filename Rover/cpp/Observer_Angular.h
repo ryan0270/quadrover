@@ -2,6 +2,8 @@
 #define ICSL_OBSERVER_ANGULAR 
 #include <memory>
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 #include <unordered_map>
@@ -69,6 +71,7 @@ class Observer_Angular : public CommManagerListener,
 	void shutdown();
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 	SO3 estimateAttAtTime(const Time &t);
 
@@ -112,7 +115,7 @@ class Observer_Angular : public CommManagerListener,
 
 	DataLogger *mDataLogger;
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	list<shared_ptr<SO3Data<double>>> mSO3Buffer;
 	std::mutex mMutex_SO3Buffer;

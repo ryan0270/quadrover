@@ -32,6 +32,7 @@ DataLogger::DataLogger()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 
 	mPaused = false;
 	mRunning = false;;
@@ -77,6 +78,9 @@ void DataLogger::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"DataLogger nice value: "+nice);
 
 	while(mLogQueue.size() > 0)
 		mLogQueue.pop_front();

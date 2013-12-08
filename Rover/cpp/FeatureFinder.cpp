@@ -22,6 +22,7 @@ FeatureFinder::FeatureFinder()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 
 	mQualityLevel = 0.05;
 	mSepDist = 10;
@@ -68,6 +69,9 @@ void FeatureFinder::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"FeatureFinder nice value: "+nice);
 
 	vector<cv::Point2f> points;
 	shared_ptr<DataImage> imageData;
@@ -81,7 +85,7 @@ void FeatureFinder::run()
 	while(mRunning)
 	{
 		if(mNewImageReady
-//			&& mIsMotorOn
+			&& mIsMotorOn
 			)
 		{
 			procStart.setTime();
@@ -115,6 +119,7 @@ void FeatureFinder::run()
 				for(int i=0; i<points.size(); i++)
 					points[i] = points[i]*f+center;
 			}
+			int numPoints = points.size(); // for logging
 
 			// A little adaptation to achieve the target number of points
 			fastThresh += min(1.0f, max(-1.0f, fastAdaptRate*((float)points.size()-pointCntTarget)));
@@ -142,7 +147,7 @@ void FeatureFinder::run()
 			{
 				mMutex_logger.lock();
 				mDataLogger->addEntry(LOG_ID_FEATURE_FIND_TIME, mImageProcTimeUS/1.0e6, LOG_FLAG_CAM_RESULTS);
-				mDataLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS, points.size(), LOG_FLAG_CAM_RESULTS);
+				mDataLogger->addEntry(LOG_ID_NUM_FEATURE_POINTS, numPoints, LOG_FLAG_CAM_RESULTS);
 				mDataLogger->addEntry(LOG_ID_FAST_THRESHOLD, fastThresh, LOG_FLAG_CAM_RESULTS);
 				mMutex_logger.unlock();
 			}
