@@ -1,7 +1,8 @@
 #ifndef ICSL_SENSOR_MANAGER
 #define ICSL_SENSOR_MANAGER
-
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 
@@ -46,6 +47,7 @@ class SensorManager : public CommManagerListener,
 	void initialize();
 	void shutdown();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setStartTime(Time time){mMutex_startTime.lock(); mStartTime.setTime(time); /*mTimestampOffsetNS = 0;*/ mMutex_startTime.unlock();}
@@ -93,7 +95,7 @@ class SensorManager : public CommManagerListener,
 	TNT::Array2D<double> mRotCamToPhone, mRotPhoneToCam;
 
 	int64_t mTimestampOffsetNS, mTimestampOffsetNS_mag; // because on the S4 right now the mag uses epoch time while everything else uses uptime
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	Time mLastImageTime;
 	double mImageDT;

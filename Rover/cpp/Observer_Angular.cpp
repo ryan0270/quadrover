@@ -41,6 +41,7 @@ Observer_Angular::Observer_Angular() :
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 
 	mIsDoingIbvs = false;
 	mLastObjectTrackedTime.setTimeMS(0);
@@ -108,6 +109,10 @@ void Observer_Angular::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"Observer_Angular nice value: "+nice);
+
 	shared_ptr<DataVector<double>> gyroData, accelData, magData;
 	gyroData = accelData = magData = NULL;
 	Array2D<double> lastInnovation(3,1,0.0);

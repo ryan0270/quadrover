@@ -22,6 +22,7 @@ CommManager::CommManager()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 }
 
 CommManager::~CommManager()
@@ -81,6 +82,10 @@ void CommManager::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"Rover nice value: "+nice);
+
 	while(mRun)
 	{
 		mMutex_socketTCP.lock();

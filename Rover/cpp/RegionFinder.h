@@ -2,6 +2,8 @@
 #define ICSL_REGIONFINDER_H
 #include <memory>
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 #include <cmath>
@@ -32,6 +34,7 @@ class RegionFinder : public CommManagerListener,
 	void start(){ thread th(&RegionFinder::run, this); th.detach(); }
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 	void setStartTime(Time t){mStartTime = t;}
 	void setDataLogger(DataLogger *log){mDataLogger = log;}
 
@@ -81,7 +84,7 @@ class RegionFinder : public CommManagerListener,
 
 	void run();
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	static vector<vector<cv::Point>> getContours(const cv::Mat &image, const vector<vector<cv::Point>> &regions);
 };

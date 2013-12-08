@@ -1,6 +1,9 @@
 #ifndef ICSL_VIDEOMAKER_H
 #define ICSL_VIDEOMAKER_H
 #include <sched.h>
+#include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <queue>
 #include <thread>
 #include <mutex>
@@ -28,6 +31,7 @@ class VideoMaker : 	public SensorManagerListener,
 		void run();
 		void shutdown();
 		void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+		void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 		// for SensorManagerListener
 		void onNewSensorUpdate(const shared_ptr<IData> &data);
@@ -44,7 +48,7 @@ class VideoMaker : 	public SensorManagerListener,
 
 		Time mLastImageTime;
 		std::mutex mMutex_imageQueue;
-		int mThreadPriority, mScheduler;
+		int mThreadPriority, mScheduler, mThreadNiceValue;
 };
 } // namespace Quadrotor
 } // namespace ICSL

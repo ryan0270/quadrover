@@ -5,6 +5,9 @@
 #include <sstream>
 #include <thread>
 #include <mutex>
+#include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include <cpu-features.h>
 
@@ -59,6 +62,7 @@ public:
 	void run();
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 	
 	// these functions are primarily for the jni interface
 	void copyImageData(cv::Mat *m);
@@ -138,7 +142,7 @@ protected:
 	
 	MotorInterface mMotorInterface;
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	int getCpuFreq();
 }; // class Rover

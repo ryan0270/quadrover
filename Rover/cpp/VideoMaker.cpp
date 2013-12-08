@@ -11,6 +11,7 @@ VideoMaker::VideoMaker()
 
 	mScheduler = SCHED_NORMAL;
 	mThreadPriority = sched_get_priority_min(SCHED_NORMAL);
+	mThreadNiceValue = 0;
 
 	mMotorOn = false;
 }
@@ -46,6 +47,10 @@ void VideoMaker::run()
 	sched_param sp;
 	sp.sched_priority = mThreadPriority;
 	sched_setscheduler(0, mScheduler, &sp);
+	setpriority(PRIO_PROCESS, 0, mThreadNiceValue);
+	int nice = getpriority(PRIO_PROCESS, 0);
+	Log::alert(String()+"VideoMaker nice value: "+nice);
+
 	while(mRunning)
 	{
 		mMutex_imageQueue.lock();
@@ -75,13 +80,13 @@ void VideoMaker::onNewSensorUpdate(const shared_ptr<IData> &data)
 			&& mMotorOn
 			)
 	{
-//		shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);
-//		mMutex_imageQueue.lock();
-//		if(mImageQueue.size() < 100)
-//			mImageQueue.push(imgData);
-//		else
-//			Log::alert("Chad can't get it up");
-//		mMutex_imageQueue.unlock();
+		shared_ptr<DataImage> imgData = static_pointer_cast<DataImage>(data);
+		mMutex_imageQueue.lock();
+		if(mImageQueue.size() < 100)
+			mImageQueue.push(imgData);
+		else
+			Log::alert("Chad can't get it up");
+		mMutex_imageQueue.unlock();
 	}
 }
 

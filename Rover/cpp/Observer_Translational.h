@@ -3,6 +3,8 @@
 #include <memory>
 #include <fstream>
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 #include <unordered_map>
@@ -45,6 +47,7 @@ class Observer_Translational : public Observer_AngularListener,
 	void shutdown();
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 	void setStartTime(Time t);
 	void setDataLogger(DataLogger *log){mDataLogger = log;}
@@ -152,7 +155,7 @@ class Observer_Translational : public Observer_AngularListener,
 
 	Observer_Angular *mObsvAngular;
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	vector<list<shared_ptr<IData>> *> mDataBuffers;
 	list<shared_ptr<DataVector<double>>> mStateBuffer, mErrCovKFBuffer, mViconPosBuffer, mCameraPosBuffer;

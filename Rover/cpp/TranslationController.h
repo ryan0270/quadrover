@@ -1,6 +1,8 @@
 #ifndef ICSL_TRANSLATIONALCONTROLLER
 #define ICSL_TRANSLATIONALCONTROLLER
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 
 #include "TNT/tnt.h"
@@ -30,6 +32,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	void run();
 	void shutdown();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 	const TNT::Array2D<double> getDesiredState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mDesState.copy(); mMutex_data.unlock(); return tempState;}
 	const TNT::Array2D<double> getCurState(){mMutex_data.lock(); TNT::Array2D<double> tempState = mCurState.copy(); mMutex_data.unlock(); return tempState;}
@@ -99,7 +102,7 @@ class TranslationController : 	public Observer_TranslationalListener,
 	TNT::Array2D<double> mStateVicon;
 	std::mutex mMutex_viconState;
 
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 //	shared_ptr<ImageTargetFindData> mTarget2Data;
 	shared_ptr<ImageTranslationData> mTargetTranslationData;

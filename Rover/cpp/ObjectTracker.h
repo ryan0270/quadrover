@@ -2,6 +2,8 @@
 #define ICSL_OBJECT_TRACKER_H
 #include <memory>
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 #include <vector>
@@ -37,6 +39,7 @@ class ObjectTracker : public FeatureFinderListener,
 	void start(){ thread th(&ObjectTracker::run, this); th.detach(); }
 	void initialize();
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 	void setStartTime(Time t){mStartTime = t;}
 	void setDataLogger(DataLogger *log){mDataLogger = log;}
 	void setObserverTranslation(Observer_Translational *obsv){mObsvTranslation = obsv;}
@@ -61,7 +64,7 @@ class ObjectTracker : public FeatureFinderListener,
 	bool mRunning, mFinished;
 	DataLogger *mDataLogger;
 	Time mStartTime;
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 
 	bool mNewFeatureDataAvailable, mNewRegionDataAvailable;
 	shared_ptr<ImageFeatureData> mFeatureData;

@@ -2,6 +2,8 @@
 #define ICSL_VELOCITY_ESTIMATOR_H
 #include <memory>
 #include <sched.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #include <thread>
 #include <mutex>
 
@@ -40,6 +42,7 @@ class VelocityEstimator : public FeatureFinderListener,
 	void initialize();
 
 	void setThreadPriority(int sched, int priority){mScheduler = sched; mThreadPriority = priority;};
+	void setThreadNice(int nice){mThreadNiceValue = nice;};
 
 	void setStartTime(Time t){mStartTime.setTime(t);}
 	void setDataLogger(DataLogger *log){mDataLogger = log;}
@@ -62,7 +65,7 @@ class VelocityEstimator : public FeatureFinderListener,
 
 	protected:
 	bool mRunning, mDone;
-	int mThreadPriority, mScheduler;
+	int mThreadPriority, mScheduler, mThreadNiceValue;
 	TNT::Array2D<double> mRotPhoneToCam, mRotCamToPhone;
 	TNT::Array2D<double> mRotPhoneToCam2, mRotCamToPhone2;
 	DataLogger *mDataLogger;
