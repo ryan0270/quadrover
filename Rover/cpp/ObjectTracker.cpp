@@ -76,6 +76,10 @@ void ObjectTracker::run()
 	double f;
 	cv::Point2f center;
 
+	// Keep in memory to avoid reallocation
+	Array2D<double> C(50,50);
+	vector<Array2D<double>> SdInvmdList, SaInvList, SaList;
+
 	mNewFeatureDataAvailable = false;
 	mNewRegionDataAvailable = false;
 
@@ -84,8 +88,11 @@ void ObjectTracker::run()
 
 	vector<shared_ptr<TrackedObject>> curObjects;
 	shared_ptr<DataImage> imageData = NULL;
+
+	bool processedImage;
 	while(mRunning)
 	{
+		processedImage = false;
 		Time curTime;
 		if(mNewFeatureDataAvailable)
 		{
@@ -113,6 +120,8 @@ void ObjectTracker::run()
 					curObjects[i]->setPosCov(Sn);
 				}
 			}
+
+			processedImage = true;
 		}
 		else if(mNewRegionDataAvailable)
 		{
@@ -141,9 +150,11 @@ void ObjectTracker::run()
 			}
 
 			doSimilarityCheck(curObjects);
+
+			processedImage = true;
 		}
 
-		if(curObjects.size() != 0)
+		if(processedImage)//curObjects.size() != 0)
 		{
 			/////////////////// Get location priors for active objects ///////////////////////
 			for(int i=0; i<mTrackedObjects.size(); i++)
@@ -153,7 +164,8 @@ void ObjectTracker::run()
 			}
 
 			// make matches
-			matchify(curObjects, goodMatches, repeatObjects, newObjects, Sn, SnInv, probNoCorr, curTime);
+			matchify(curObjects, goodMatches, repeatObjects, newObjects, Sn, SnInv, probNoCorr, curTime,
+					C, SdInvmdList, SaInvList, SaList );
 
 			// draw
 			shared_ptr<cv::Mat> imageAnnotated(new cv::Mat());
@@ -293,13 +305,18 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 						     const TNT::Array2D<double> Sn,
 						     const TNT::Array2D<double> SnInv,
 						     double probNoCorr,
-						     const ICSL::Quadrotor::Time &imageTime)
+						     const ICSL::Quadrotor::Time &imageTime,
+							 Array2D<double> &C,
+							 vector<Array2D<double>> &SdInvmdList,
+							 vector<Array2D<double>> &SaInvList,
+							 vector<Array2D<double>> &SaList)
 {
 	goodMatches.clear();
 	repeatPoints.clear();
 	newPoints.clear();
 	/////////////////// Establish correspondence based on postiion ///////////////////////
-	Array2D<double> C = TrackedObject::calcCorrespondence(mTrackedObjects, curObjects, Sn, SnInv, probNoCorr);
+//	Array2D<double> C = TrackedObject::calcCorrespondence(mTrackedObjects, curObjects, Sn, SnInv, probNoCorr);
+	TrackedObject::calcCorrespondence(C, mTrackedObjects, curObjects, Sn, SnInv, SdInvmdList, SaInvList, SaList, probNoCorr);
 
 	///////////////////  make matches ///////////////////////
 	shared_ptr<TrackedObject> toPrev, toCur;
@@ -354,7 +371,7 @@ void ObjectTracker::matchify(const std::vector<std::shared_ptr<ICSL::Quadrotor::
 			// first check to see if we didn't match because there
 			// were too many similar objects
 			bool addMe = true;
-			if(C.dim1() > 0 && C.dim2() > 0 && C[N1][j] < 0.5)
+			if(C.dim1() >= N1 && C.dim2() >= j && C[N1][j] < 0.5)
 			{
 				// yup, now we should clear out the riff raff
 				for(int i=0; i<N1; i++)

@@ -7,7 +7,7 @@ set (SRC ${SRC}
 	${ROVER_DIR}/cpp/FeatureFinder.cpp
 	${ROVER_DIR}/cpp/TrackedObject.cpp
 	${ROVER_DIR}/cpp/ObjectTracker.cpp
-	${ROVER_DIR}/cpp/QuadLogger.cpp
+	${ROVER_DIR}/cpp/DataLogger.cpp
 	${ROVER_DIR}/cpp/Rotation.cpp
 	)
 
@@ -21,7 +21,7 @@ set (H ${H}
 	${ROVER_DIR}/cpp/Time.h
 	${ROVER_DIR}/cpp/TNT_Utils.h
 	${ROVER_DIR}/cpp/Listeners.h
-	${ROVER_DIR}/cpp/QuadLogger.h
+	${ROVER_DIR}/cpp/DataLogger.h
 	${ROVER_DIR}/cpp/Rotation.h
 	${ROVER_DIR}/cpp/Data.h
 	)

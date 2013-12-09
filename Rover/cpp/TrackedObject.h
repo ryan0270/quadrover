@@ -68,6 +68,16 @@ class TrackedObject
 												   const TNT::Array2D<double> &SnInv,
 												   double probNoCorr);
 
+	static void calcCorrespondence(TNT::Array2D<double> &C,
+								   const vector<shared_ptr<TrackedObject>> &prevObjectList,
+								   const vector<shared_ptr<TrackedObject>> &curObjectList,
+								   const TNT::Array2D<double> &Sn1,
+								   const TNT::Array2D<double> &SnInv1,
+								   vector<TNT::Array2D<double>> &SdInvmdList,
+								   vector<TNT::Array2D<double>> &SaInvList,
+								   vector<TNT::Array2D<double>> &SaList,
+								   double probNoCorr);
+
 	static TNT::Array2D<double> calcCorrespondence2(const vector<shared_ptr<TrackedObject>> &prevPointList,
 												   const vector<shared_ptr<TrackedObject>> &curPointList,
 												   double probNoCorr);
