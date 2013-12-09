@@ -87,7 +87,11 @@ class ObjectTracker : public FeatureFinderListener,
 				  const TNT::Array2D<double> Sn,
 				  const TNT::Array2D<double> SnInv,
 				  double probNoCorr,
-				  const ICSL::Quadrotor::Time &imageTime);
+				  const ICSL::Quadrotor::Time &imageTime,
+				  TNT::Array2D<double> &C,
+				  vector<TNT::Array2D<double>> &SdInvmdList,
+				  vector<TNT::Array2D<double>> &SaInvList,
+				  vector<TNT::Array2D<double>> &SaList);
 
 	static void doSimilarityCheck(vector<shared_ptr<TrackedObject>> &objects);
 };

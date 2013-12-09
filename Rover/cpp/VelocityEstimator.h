@@ -26,7 +26,6 @@
 
 namespace ICSL {
 namespace Quadrotor {
-using namespace TNT;
 
 class VelocityEstimator : public FeatureFinderListener,
 						  public RegionFinderListener,
@@ -90,47 +89,111 @@ class VelocityEstimator : public FeatureFinderListener,
 							TNT::Array2D<double> &velEstOUT,
 							double &heightEstOUT,
 							double visionMeasCov,
-							double probNoCorr) const;
+							double probNoCorr,
+							vector<cv::Point2f> &oldPoints,
+							vector<cv::Point2f> &curPoints,
+							vector<TNT::Array2D<double>> &mDeltaList,
+							vector<TNT::Array2D<double>> &SDeltaList,
+							vector<pair<TNT::Array2D<double>, TNT::Array2D<double>>> &priorDistList,
+							vector<TNT::Array2D<double>> &SdInvmdList,
+							vector<TNT::Array2D<double>> &SaInvList,
+							vector<TNT::Array2D<double>> &SaList,
+							TNT::Array2D<double> &C,
+							vector<TNT::Array2D<double>> &LvList,
+							vector<TNT::Array2D<double>> &q1HatList,
+							vector<TNT::Array2D<double>> &AjList) const;
+
 	bool doVelocityEstimate(const shared_ptr<ImageRegionData> oldRegionData,
 						    const shared_ptr<ImageRegionData> curRegionData,
-							Array2D<double> &velEst, 
+							TNT::Array2D<double> &velEst, 
 							double &heightEst,
 							double visionMeasCov,
 							double probNoCorr) const;
 
 	static inline double fact2ln(int n){return lgamma(2*n+1)-n*log(2)-lgamma(n+1);}
-	static vector<pair<Array2D<double>, Array2D<double> > > calcPriorDistributions(const vector<cv::Point2f> &points, 
-														const Array2D<double> &mv, const Array2D<double> &Sv, 
-														double mz, double varz, 
-														double focalLength, double dt,
-														const Array2D<double> &omega);
-	static Array2D<double> calcCorrespondence(const vector<pair<Array2D<double>, Array2D<double> > > &priorDistList, 
-										const vector<cv::Point2f> &curPointList, 
-										const Array2D<double> &Sn, 
-										const Array2D<double> &SnInv,
-										float probNoCorr);
+
+	static vector<pair<TNT::Array2D<double>, TNT::Array2D<double>>> calcPriorDistributions(
+																	const vector<cv::Point2f> &points, 
+																	const TNT::Array2D<double> &mv, const TNT::Array2D<double> &Sv, 
+																	double mz, double varz, 
+																	double focalLength, double dt,
+																	const TNT::Array2D<double> &omega);
+
+	static void  calcPriorDistributions(vector<TNT::Array2D<double>> &mDeltaList,
+										vector<TNT::Array2D<double>> &SDeltaList,
+										vector<pair<TNT::Array2D<double>, TNT::Array2D<double>>> &priorDistList,
+										const vector<cv::Point2f> &points, 
+										const TNT::Array2D<double> &mv, const TNT::Array2D<double> &Sv, 
+										double mz, double varz, 
+										double focalLength, double dt,
+										const TNT::Array2D<double> &omega);
+
+	static TNT::Array2D<double> calcCorrespondence(const vector<pair<TNT::Array2D<double>, TNT::Array2D<double>>> &priorDistList, 
+											  const vector<cv::Point2f> &curPointList, 
+											  const TNT::Array2D<double> &Sn, 
+											  const TNT::Array2D<double> &SnInv,
+											  float probNoCorr);
+
+	static void calcCorrespondence(TNT::Array2D<double> &C,
+							  const vector<pair<TNT::Array2D<double>, TNT::Array2D<double>>> &priorDistList, 
+							  const vector<cv::Point2f> &curPointList, 
+							  const TNT::Array2D<double> &Sn, 
+							  const TNT::Array2D<double> &SnInv,
+							  vector<TNT::Array2D<double>> &SdInvmdList,
+							  vector<TNT::Array2D<double>> &SaInvList,
+							  vector<TNT::Array2D<double>> &SaList,
+							  float probNoCorr);
 	
-	static void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+	static void computeMAPEstimate(TNT::Array2D<double> &velMAP /*out*/, TNT::Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 							const vector<cv::Point2f> &prevPoints,
 							const vector<cv::Point2f> &curPoints, 
-							const Array2D<double> &C, // correspondence matrix
-							const Array2D<double> &mv, // velocity mean
-							const Array2D<double> &Sv, // velocity covariance
+							const TNT::Array2D<double> &C, // correspondence matrix
+							const TNT::Array2D<double> &mv, // velocity mean
+							const TNT::Array2D<double> &Sv, // velocity covariance
 							double mz, // height mean
 							double vz, // height variance
-							const Array2D<double> &Sn, // feature measurement covariance
-							double focalLength, double dt, const Array2D<double> &omega);
-	
-	static void computeMAPEstimate(Array2D<double> &velMAP /*out*/, Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+							const TNT::Array2D<double> &Sn, // feature measurement covariance
+							double focalLength, double dt, const TNT::Array2D<double> &omega);
+
+	static void computeMAPEstimate(TNT::Array2D<double> &velMAP /*out*/, TNT::Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
 							const vector<cv::Point2f> &prevPoints,
 							const vector<cv::Point2f> &curPoints, 
-							const Array2D<double> &C, // correspondence matrix
-							const Array2D<double> &mv, // velocity mean
-							const Array2D<double> &Sv, // velocity covariance
+							const TNT::Array2D<double> &C, // correspondence matrix
+							const TNT::Array2D<double> &mv, // velocity mean
+							const TNT::Array2D<double> &Sv, // velocity covariance
+							vector<TNT::Array2D<double>> &LvList, // temp variable
+							vector<TNT::Array2D<double>> &q1HatList,
+							vector<TNT::Array2D<double>> &AjList,
 							double mz, // height mean
 							double vz, // height variance
-							const Array2D<double> &Sn, // feature measurement covariance
-							double focalLength, double dt, const Array2D<double> &omega,
+							const TNT::Array2D<double> &Sn, // feature measurement covariance
+							double focalLength, double dt, const TNT::Array2D<double> &omega);
+	
+	static void computeMAPEstimate(TNT::Array2D<double> &velMAP /*out*/, TNT::Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+							const vector<cv::Point2f> &prevPoints,
+							const vector<cv::Point2f> &curPoints, 
+							const TNT::Array2D<double> &C, // correspondence matrix
+							const TNT::Array2D<double> &mv, // velocity mean
+							const TNT::Array2D<double> &Sv, // velocity covariance
+							double mz, // height mean
+							double vz, // height variance
+							const TNT::Array2D<double> &Sn, // feature measurement covariance
+							double focalLength, double dt, const TNT::Array2D<double> &omega,
+							int maxPointCnt);
+
+	static void computeMAPEstimate(TNT::Array2D<double> &velMAP /*out*/, TNT::Array2D<double> &covVel /*out*/, double &heightMAP /*out*/,
+							const vector<cv::Point2f> &prevPoints,
+							const vector<cv::Point2f> &curPoints, 
+							const TNT::Array2D<double> &C, // correspondence matrix
+							const TNT::Array2D<double> &mv, // velocity mean
+							const TNT::Array2D<double> &Sv, // velocity covariance
+							vector<TNT::Array2D<double>> &LvList, // temp variable
+							vector<TNT::Array2D<double>> &q1HatList,
+							vector<TNT::Array2D<double>> &AjList,
+							double mz, // height mean
+							double vz, // height variance
+							const TNT::Array2D<double> &Sn, // feature measurement covariance
+							double focalLength, double dt, const TNT::Array2D<double> &omega,
 							int maxPointCnt);
 	
 };

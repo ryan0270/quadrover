@@ -159,8 +159,6 @@ void TrackedObject::updatePositionDistribution(double focalLength, const cv::Poi
 	mExpectedPos[1][0] += center.y;
 }
 
-// TODO: This should operate on S1 and S2 (the covariances of each point being matched)
-// instead of assuming a constant Sn for curObjectList
 Array2D<double> TrackedObject::calcCorrespondence(const vector<shared_ptr<TrackedObject>> &prevObjectList,
 												 const vector<shared_ptr<TrackedObject>> &curObjectList,
 												 const Array2D<double> &Sn1,
@@ -168,17 +166,44 @@ Array2D<double> TrackedObject::calcCorrespondence(const vector<shared_ptr<Tracke
 												 double probNoCorr)
 {
 	int N1 = prevObjectList.size();
+//	int N2 = curObjectList.size();
+	Array2D<double> C;
+	vector<Array2D<double>> SdInvmdList(N1), SaInvList(N1), SaList(N1);
+	calcCorrespondence(C, prevObjectList, curObjectList, Sn1, SnInv1, SdInvmdList, SaInvList, SaList, probNoCorr);
+
+	return C;
+}
+
+void TrackedObject::calcCorrespondence(Array2D<double> &C,
+									   const vector<shared_ptr<TrackedObject>> &prevObjectList,
+									   const vector<shared_ptr<TrackedObject>> &curObjectList,
+									   const Array2D<double> &Sn1,
+									   const Array2D<double> &SnInv1,
+									   vector<Array2D<double>> &SdInvmdList,
+									   vector<Array2D<double>> &SaInvList,
+									   vector<Array2D<double>> &SaList,
+									   double probNoCorr)
+{
+	int N1 = prevObjectList.size();
 	int N2 = curObjectList.size();
 
 	if(N1 == 0 || N2 == 0)
-		return Array2D<double>();
+	{
+		for(int i=0; i<C.dim1(); i++)
+			for(int j=0; j<C.dim2(); j++)
+				C[i][j] = 0;
+		return;
+	}
 
 	// To account for measurement noise both in the previous object and the current object
 	Array2D<double> Sn = 2.0*Sn1;
 	Array2D<double> SnInv = 0.5*SnInv1;
 
 	// Precompute some things
-	vector<Array2D<double>> SdInvmdList(N1), SaInvList(N1), SaList(N1);
+//	vector<Array2D<double>> SdInvmdList(N1), SaInvList(N1), SaList(N1);
+	SdInvmdList.clear(); SdInvmdList.resize(N1);	
+	SaInvList.clear(); SaInvList.resize(N1);
+	SaList.clear(); SaList.resize(N1);
 	vector<double> fBList(N1), coeffList(N1), xRangeList(N1), yRangeList(N1);
 	Array2D<double> eye2 = createIdentity((double)2.0);
 	double det_Sn = Sn[0][0]*Sn[1][1] - Sn[0][1]*Sn[1][0];
@@ -261,7 +286,13 @@ Array2D<double> TrackedObject::calcCorrespondence(const vector<shared_ptr<Tracke
 		yRangeList[i] = yrange;
 	}
 
-	Array2D<double> C(N1+1, N2+1);
+//	Array2D<double> C(N1+1, N2+1);
+	if(C.dim1() < N1+1 || C.dim2() < N2+1)
+	{
+		int N = max(C.dim1(), max(C.dim2(), max(N1+1, N2+1)));
+		C = Array2D<double>(N, N);
+		Log::alert(String()+"Reallocating TrackedObject correspondence matrix: " + C.dim1() + "x" + C.dim2());
+	}
 	vector<pair<int, int>> chad;
 	double x, y, fC, f;
 	for(int j=0; j<N2; j++)
@@ -327,7 +358,7 @@ Array2D<double> TrackedObject::calcCorrespondence(const vector<shared_ptr<Tracke
 
 	// nothing else to do here since the last colum and row have to be zeros
 	if(probNoCorr == 0)
-		return C;
+		return;
 
 	// Now check if any of the rows sum to over 1
 	double rowSum;
@@ -359,8 +390,6 @@ Array2D<double> TrackedObject::calcCorrespondence(const vector<shared_ptr<Tracke
 	}
 
 //printArray("C:\n",C);
-
-	return C;
 }
 
 Array2D<double> TrackedObject::calcCorrespondence2(const vector<shared_ptr<TrackedObject>> &prevObjectList,

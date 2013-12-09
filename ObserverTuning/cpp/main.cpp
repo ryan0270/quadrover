@@ -233,9 +233,9 @@ int main(int argv, char* argc[])
 	mRegionFinder.initialize();
 	mRegionFinder.setStartTime(startTime);
 	mRegionFinder.setDataLogger(&mDataLogger);
+//	mRegionFinder.start();
 	addSensorManagerListener(&mRegionFinder);
 	addCommManagerListener(&mRegionFinder);
-	mRegionFinder.start();
 
 	ObjectTracker mObjectTracker;
 	mObjectTracker.initialize();
@@ -441,7 +441,7 @@ int main(int argv, char* argc[])
 
 	////////////////////////////////////////////////////////////////////////////////////
 	// Run settings
-	int endTimeDelta = 400e3;
+	int endTimeDelta = 200e3;
 	float viconUpdateRate = 100; // Hz
 	int viconUpdatePeriodMS = 1.0f/viconUpdateRate*1000+0.5;
 	float heightUpdateRate = 20; // Hz

@@ -18,7 +18,7 @@
 #include "FeatureFinder.h"
 #include "TrackedObject.h"
 #include "ObjectTracker.h"
-#include "QuadLogger.h"
+#include "DataLogger.h"
 #include "Data.h"
 #include "Rotation.h"
 #include "Observer_Translational.h"
@@ -51,7 +51,7 @@ int main(int argv, char* argc[])
 	cout << "start chadding" << endl;
 
 	string dataDir;
-	int dataSet = 1;
+	int dataSet = 2;
 	switch(dataSet)
 	{
 		case 0:
@@ -59,6 +59,9 @@ int main(int argv, char* argc[])
 			break;
 		case 1:
 			dataDir = "../dataSets/Nov28";
+			break;
+		case 2:
+			dataDir = "../dataSets/Dec8";
 			break;
 	}
 
@@ -89,8 +92,9 @@ int main(int argv, char* argc[])
 	ObjectTracker objectTracker;
 	objectTracker.initialize();
 	objectTracker.start();
-	objectTracker.setObserverTranslation(&obsvTranslation);
-	objectTracker.setObserverAngular(&obsvAngular);
+
+	TrackedObject::setObserverTranslational(&obsvTranslation);
+	TrackedObject::setObserverAngular(&obsvAngular);
 
 	MyListener myListener;
 	myListener.data = NULL;
@@ -328,7 +332,8 @@ void loadData(const std::string &dataDir, const std::string &imgDir,
 							ss >> tranState[i][0];
 						shared_ptr<DataVector<double>> data(new DataVector<double>);
 						data->timestamp.setTimeMS(time);
-						data->data = tranState.copy();
+						data->dataRaw = tranState.copy();
+						data->dataCalibrated = tranState.copy();
 						tranStateBuffer.push_back(data);
 					}
 					break;
