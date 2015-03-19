@@ -1,0 +1,1 @@
+This class is central in the sense that it holds everything else, but there's not much done inside of it. It's biggest responsibility is creating everything else and making the necessary connections between them. It also collects information to be sent back to Leash.

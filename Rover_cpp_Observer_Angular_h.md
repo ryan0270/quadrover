@@ -1,0 +1,3 @@
+This is probably the most important single functional class. As the name suggest, is the algorithm for attitude estimation. This is done by fusing the gyroscope readings with the accelerometer and magnetometer readings. Actually, the magnetometer is pretty unreliable both because of the noise caused by electric motors and, more significantly, the distortions caused by the iron beams using in building construction. I typically have the magnetometer weight set to zero and rely on vision to provide additional information.
+
+The algorithm itself is my implementation of Hamel and Mahony's SO3 observer ("Attitude estimation on SO [3](3.md) based on direct inertial measurements." Robotics and Automation, Proceedings 2006 International Conference on. IEEE)
